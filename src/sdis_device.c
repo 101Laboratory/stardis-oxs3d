@@ -1,0 +1,101 @@
+/* Copyright (C) |Meso|Star> 2016-2017 (contact@meso-star.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>. */
+
+#include "sdis.h"
+#include "sdis_device_c.h"
+
+#include <rsys/logger.h>
+#include <rsys/mem_allocator.h>
+
+#include <omp.h>
+
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static void
+device_release(ref_T* ref)
+{
+  struct sdis_device* dev;
+  ASSERT(ref);
+  dev = CONTAINER_OF(ref, struct sdis_device, ref);
+  MEM_RM(dev->allocator, dev);
+}
+
+/*******************************************************************************
+ * Exported functions
+ ******************************************************************************/
+res_T
+sdis_device_create
+  (struct logger* logger,
+   struct mem_allocator* mem_allocator,
+   const unsigned nthreads_hint,
+   const int verbose,
+   struct sdis_device** out_dev)
+{
+  struct logger* log = NULL;
+  struct sdis_device* dev = NULL;
+  struct mem_allocator* allocator = NULL;
+  res_T res = RES_BAD_ARG;
+
+  if(nthreads_hint == 0 || !out_dev) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  log = logger ? logger : LOGGER_DEFAULT;
+  allocator = mem_allocator ? mem_allocator : &mem_default_allocator;
+  dev = MEM_CALLOC(allocator, 1, sizeof(struct sdis_device));
+  if(!dev) {
+    if(verbose) {
+      /* Do not use helper log functions since dev is not initialised */
+      CHK(logger_print
+        (log, LOG_ERROR, "Cannot allocate the Stardis device.\n") == RES_OK);
+    }
+    res = RES_MEM_ERR;
+    goto error;
+  }
+  dev->logger = log;
+  dev->allocator = allocator;
+  dev->verbose = verbose;
+  dev->nthreads = MMIN(nthreads_hint, (unsigned)omp_get_num_procs());
+  ref_init(&dev->ref);
+
+exit:
+  if(out_dev) *out_dev = dev;
+  return res;
+error:
+  if(dev) {
+    SDIS(device_ref_put(dev));
+    dev = NULL;
+  }
+  goto exit;
+}
+
+res_T
+sdis_device_ref_get(struct sdis_device* dev)
+{
+  if(!dev) return RES_BAD_ARG;
+  ref_get(&dev->ref);
+  return RES_OK;
+}
+
+res_T
+sdis_device_ref_put(struct sdis_device* dev)
+{
+  if(!dev) return RES_BAD_ARG;
+  ref_put(&dev->ref, device_release);
+  return RES_OK;
+}
+
