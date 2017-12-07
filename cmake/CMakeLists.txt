@@ -95,6 +95,8 @@ if(NOT NO_TEST)
     build_test(${_name})
     register_test(${_name} ${_name})
   endfunction()
+
+  new_test(test_sdis_device)
 endif()
 
 ################################################################################

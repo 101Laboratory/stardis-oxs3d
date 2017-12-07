@@ -47,7 +47,7 @@ sdis_device_create
   struct logger* log = NULL;
   struct sdis_device* dev = NULL;
   struct mem_allocator* allocator = NULL;
-  res_T res = RES_BAD_ARG;
+  res_T res = RES_OK;
 
   if(nthreads_hint == 0 || !out_dev) {
     res = RES_BAD_ARG;
