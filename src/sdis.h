@@ -63,6 +63,12 @@ enum sdis_side_flag {
   SDIS_SIDE_NULL__ = BIT(2)
 };
 
+enum sdis_medium_type {
+  SDIS_MEDIUM_FLUID,
+  SDIS_MEDIUM_SOLID,
+  SDIS_MEDIUM_TYPES_COUNT__
+};
+
 /* Random walk vertex */
 struct sdis_rwalk_vertex {
   double P[3]; /* World space position */
@@ -106,8 +112,6 @@ struct sdis_solid_shader {
   sdis_medium_getter_T volumic_mass;
   sdis_medium_getter_T delta_solid;
   sdis_medium_getter_T delta_boundary;
-  sdis_medium_getter_T absorption_coef;
-  sdis_medium_getter_T scattering_coef;
 
   /* Initial condition */
   sdis_medium_getter_T initial_temperature;
@@ -120,8 +124,6 @@ struct sdis_fluid_shader {
   /* Properties */
   sdis_medium_getter_T calorific_capacity;
   sdis_medium_getter_T volumic_mass;
-  sdis_medium_getter_T absorption_coef;
-  sdis_medium_getter_T scattering_coef;
 
   /* Initial condition */
   sdis_medium_getter_T initial_temperature;
@@ -192,37 +194,26 @@ sdis_data_cget
  * A medium encapsulates the properties of either a fluid or a solid.
  ******************************************************************************/
 SDIS_API res_T
+sdis_fluid_create
+  (struct sdis_device* dev,
+   const struct sdis_fluid_shader* shader,
+   struct sdis_data* data, /* Data send to the shader. May be NULL */
+   struct sdis_medium** fluid);
+
+SDIS_API res_T
+sdis_solid_create
+  (struct sdis_device* dev,
+   const struct sdis_solid_shader* shader,
+   struct sdis_data* data, /* Data send to the shader. May be NULL */
+   struct sdis_medium** solid);
+
+SDIS_API res_T
 sdis_medium_ref_get
   (struct sdis_medium* medium);
 
 SDIS_API res_T
 sdis_medium_ref_put
   (struct sdis_medium* medium);
-
-SDIS_API res_T
-sdis_medium_set_data
-  (struct sdis_medium* medium,
-   struct sdis_data* data);
-
-SDIS_API res_T
-sdis_fluid_create
-  (struct sdis_device* dev,
-   struct sdis_medium** fluid);
-
-SDIS_API res_T
-sdis_fluid_setup
-  (struct sdis_medium* fluid,
-   const struct sdis_fluid_shader* shader);
-
-SDIS_API res_T
-sdis_solid_create
-  (struct sdis_device* dev,
-   struct sdis_medium** solid);
-
-SDIS_API res_T
-sdis_solid_setup
-  (struct sdis_medium* solid,
-   const struct sdis_solid_shader* shader);
 
 /*******************************************************************************
  * An interface is the boundary between 2 mediums.
