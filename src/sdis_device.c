@@ -25,6 +25,21 @@
  * Helper functions
  ******************************************************************************/
 static void
+log_msg
+  (struct sdis_device* dev,
+   const enum log_type stream,
+   const char* msg,
+   va_list vargs)
+{
+  ASSERT(dev && msg);
+  if(dev->verbose) {
+    res_T res; (void)res;
+    res = logger_vprint(dev->logger, stream, msg, vargs);
+    ASSERT(res == RES_OK);
+  }
+}
+
+static void
 device_release(ref_T* ref)
 {
   struct sdis_device* dev;
@@ -97,5 +112,30 @@ sdis_device_ref_put(struct sdis_device* dev)
   if(!dev) return RES_BAD_ARG;
   ref_put(&dev->ref, device_release);
   return RES_OK;
+}
+
+/*******************************************************************************
+ * Local functions
+ ******************************************************************************/
+void
+log_err(struct sdis_device* dev, const char* msg, ...)
+{
+  va_list vargs_list;
+  ASSERT(dev && msg);
+
+  va_start(vargs_list, msg);
+  log_msg(dev, LOG_ERROR, msg, vargs_list);
+  va_end(vargs_list);
+}
+
+void
+log_warn(struct sdis_device* dev, const char* msg, ...)
+{
+  va_list vargs_list;
+  ASSERT(dev && msg);
+
+  va_start(vargs_list, msg);
+  log_msg(dev, LOG_WARNING, msg, vargs_list);
+  va_end(vargs_list);
 }
 
