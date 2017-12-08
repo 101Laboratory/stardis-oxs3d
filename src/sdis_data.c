@@ -33,8 +33,8 @@ struct sdis_data {
 static void
 data_release(ref_T* ref)
 {
-  struct sdis_data* data;
-  struct sdis_device* dev;
+  struct sdis_data* data = NULL;
+  struct sdis_device* dev = NULL;
   ASSERT(ref);
   data = CONTAINER_OF(ref, struct sdis_data, ref);
   dev = data->dev;
@@ -65,7 +65,7 @@ sdis_data_create
 
   data = MEM_CALLOC(dev->allocator, 1, sizeof(struct sdis_data));
   if(!data) {
-    log_err(dev, "Could not allocate the Stardis dataeter.\n");
+    log_err(dev, "%s: could not allocate the Stardis data.\n", FUNC_NAME);
     res = RES_MEM_ERR;
     goto error;
   }
@@ -76,8 +76,8 @@ sdis_data_create
 
   data->mem = MEM_ALLOC_ALIGNED(dev->allocator, size, align);
   if(!data->mem) {
-    log_err(dev, "Could not allocate the memory of the Stardis dataeter. "
-      "Size: %lu; alignment: %lu\n.", size, align);
+    log_err(dev, "%s: could not allocate the memory of the Stardis data. "
+      "Size: %lu; alignment: %lu\n.", FUNC_NAME, size, align);
     res = RES_MEM_ERR;
     goto error;
   }
