@@ -97,6 +97,7 @@ if(NOT NO_TEST)
     register_test(${_name} ${_name})
   endfunction()
 
+  new_test(test_sdis_data)
   new_test(test_sdis_device)
 endif()
 
