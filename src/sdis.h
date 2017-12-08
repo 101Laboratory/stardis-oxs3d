@@ -54,7 +54,7 @@ struct mem_allocator;
 struct sdis_device;
 struct sdis_interface;
 struct sdis_medium;
-struct sdis_param_buffer;
+struct sdis_data;
 struct sdis_scene;
 
 enum sdis_side_flag {
@@ -87,7 +87,7 @@ static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
 typedef void
 (*sdis_medium_getter_T)
   (struct sdis_device* dev,
-   struct sdis_param_buffer* buf,
+   struct sdis_data* data,
    const struct sdis_rwalk_vertex* vert,
    double* val);
 
@@ -95,7 +95,7 @@ typedef void
 typedef void
 (*sdis_interface_getter_T)
   (struct sdis_device dev,
-   struct sdis_param_buffer* buf,
+   struct sdis_data* data,
    const struct sdis_interface_fragment* frag,
    double* val);
 
@@ -159,43 +159,34 @@ sdis_device_ref_put
   (struct sdis_device* dev);
 
 /*******************************************************************************
- * Buffer of parameters. Store in the Stardis memory space a set of user
- * defined data.
+ * A data stores in the Stardis memory space a set of user defined data.
  ******************************************************************************/
 SDIS_API res_T
-sdis_param_buffer_create
+sdis_data_create
   (struct sdis_device* dev,
-   const size_t capacity,
-   struct sdis_param_buffer** buf);
+   const size_t size, /* Size in bytes */
+   const size_t align, /* Data alignment. Must be a power of 2 */
+   void (*release)(void*),/* Invoked priorly to data destruction. May be NULL */
+   struct sdis_data** data);
 
 SDIS_API res_T
-sdis_param_buffer_ref_get
-  (struct sdis_param_buffer* buf);
+sdis_data_ref_get
+  (struct sdis_data* data);
 
 SDIS_API res_T
-sdis_param_buffer_ref_put
-  (struct sdis_param_buffer* buf);
+sdis_data_ref_put
+  (struct sdis_data* data);
 
-SDIS_API res_T
-sdis_param_buffer_allocate
-  (struct sdis_param_buffer* buf,
-   const size_t size,
-   const size_t alignment, /* Power of 2 in [1, 64] */
-   /* Functor to invoke on the allocated memory priorly to its destruction.
-    * May be NULL. */
-   void (*release)(void*));
-
-/* Retrieve the address of the first allocated parameter */
 SDIS_API void*
-sdis_param_buffer_get
-  (struct sdis_param_buffer* buf);
+sdis_data_get
+  (struct sdis_data* data);
 
-SDIS_API res_T
-sdis_param_buffer_clear
-  (struct sdis_param_buffer* buf);
+SDIS_API const void*
+sdis_data_cget
+  (const struct sdis_data* data);
 
 /*******************************************************************************
- * A medium is either a fluid or a solid.
+ * A medium encapsulates the properties of either a fluid or a solid.
  ******************************************************************************/
 SDIS_API res_T
 sdis_medium_ref_get
@@ -206,9 +197,9 @@ sdis_medium_ref_put
   (struct sdis_medium* medium);
 
 SDIS_API res_T
-sdis_medium_set_param_buffer
+sdis_medium_set_data
   (struct sdis_medium* medium,
-   struct sdis_param_buffer* buf);
+   struct sdis_data* data);
 
 SDIS_API res_T
 sdis_fluid_create
@@ -247,9 +238,9 @@ sdis_interface_ref_put
   (struct sdis_interface* interface);
 
 SDIS_API res_T
-sdis_interface_set_param_buffer
+sdis_interface_set_data
   (struct sdis_interface* interface,
-   struct sdis_param_buffer* buf);
+   struct sdis_data* data);
 
 SDIS_API res_T
 sdis_interface_setup
