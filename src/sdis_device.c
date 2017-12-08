@@ -75,8 +75,8 @@ sdis_device_create
   if(!dev) {
     if(verbose) {
       /* Do not use helper log functions since dev is not initialised */
-      CHK(logger_print
-        (log, LOG_ERROR, "Cannot allocate the Stardis device.\n") == RES_OK);
+      CHK(logger_print(log, LOG_ERROR,
+        "%s: could not allocate the Stardis device.\n", FUNC_NAME) == RES_OK);
     }
     res = RES_MEM_ERR;
     goto error;
