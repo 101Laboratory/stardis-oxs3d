@@ -135,6 +135,9 @@ struct sdis_interface_shader {
   sdis_interface_getter_T radiative_temperature;
   sdis_interface_getter_T convection_coef; /* NULL <=> Solid/Solid interface */
 };
+#define SDIS_INTERFACE_SHADER_NULL__ {NULL}
+static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
+  SDIS_INTERFACE_SHADER_NULL__;
 
 BEGIN_DECLS
 
