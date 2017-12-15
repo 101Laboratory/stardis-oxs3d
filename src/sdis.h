@@ -133,8 +133,7 @@ static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
 struct sdis_interface_shader {
-  sdis_interface_getter_T temperature;
-  sdis_interface_getter_T radiative_temperature;
+  sdis_interface_getter_T temperature; /* NULL <=> Unknown temperature */
   sdis_interface_getter_T convection_coef; /* NULL <=> Solid/Solid interface */
 };
 #define SDIS_INTERFACE_SHADER_NULL__ {NULL}
@@ -197,7 +196,7 @@ SDIS_API res_T
 sdis_fluid_create
   (struct sdis_device* dev,
    const struct sdis_fluid_shader* shader,
-   struct sdis_data* data, /* Data send to the shader. May be NULL */
+   struct sdis_data* data, /* Data sent to the shader. May be NULL */
    struct sdis_medium** fluid);
 
 SDIS_API res_T
@@ -215,12 +214,20 @@ SDIS_API res_T
 sdis_medium_ref_put
   (struct sdis_medium* medium);
 
+SDIS_API enum sdis_medium_type
+sdis_medium_get_type
+  (const struct sdis_medium* medium);
+
 /*******************************************************************************
  * An interface is the boundary between 2 mediums.
  ******************************************************************************/
 SDIS_API res_T
 sdis_interface_create
   (struct sdis_device* dev,
+   struct sdis_medium* front,
+   struct sdis_medium* back,
+   const struct sdis_interface_shader* shader,
+   struct sdis_data* data, /* Data sent to the shader. May be NULL */
    struct sdis_interface** interface);
 
 SDIS_API res_T
@@ -230,18 +237,6 @@ sdis_interface_ref_get
 SDIS_API res_T
 sdis_interface_ref_put
   (struct sdis_interface* interface);
-
-SDIS_API res_T
-sdis_interface_set_data
-  (struct sdis_interface* interface,
-   struct sdis_data* data);
-
-SDIS_API res_T
-sdis_interface_setup
-  (struct sdis_interface* bound,
-   struct sdis_interface_shader* shader,
-   struct sdis_medium* front,
-   struct sdis_medium* back);
 
 /*******************************************************************************
  * A scene is a collection of triangles. Each triangle is the support of the
