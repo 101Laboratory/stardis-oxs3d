@@ -44,6 +44,7 @@ set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 set(SDIS_FILES_SRC
   sdis_data.c
   sdis_device.c
+  sdis_interface.c
   sdis_medium.c)
 
 set(SDIS_FILES_INC_API
