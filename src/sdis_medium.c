@@ -115,7 +115,7 @@ sdis_fluid_create
   struct sdis_medium* medium = NULL;
   res_T res = RES_OK;
 
-  if(!shader || !out_medium) {
+  if(!dev || !shader || !out_medium) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -160,7 +160,7 @@ sdis_solid_create
   struct sdis_medium* medium = NULL;
   res_T res = RES_OK;
 
-  if(!shader || !out_medium) {
+  if(!dev || !shader || !out_medium) {
     res = RES_BAD_ARG;
     goto error;
   }

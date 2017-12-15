@@ -101,6 +101,7 @@ if(NOT NO_TEST)
 
   new_test(test_sdis_data)
   new_test(test_sdis_device)
+  new_test(test_sdis_medium)
 endif()
 
 ################################################################################

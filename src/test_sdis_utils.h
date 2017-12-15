@@ -20,6 +20,33 @@
 #include <stdio.h>
 
 static INLINE void
+dummy_getter
+  (struct sdis_device* dev,
+   struct sdis_data* data,
+   const struct sdis_rwalk_vertex* vert,
+   double* val)
+{
+  (void)dev, (void)data;
+  CHK(val != NULL && vert != NULL);
+  *val = 1;
+}
+
+static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
+  dummy_getter,
+  dummy_getter,
+  dummy_getter,
+  dummy_getter,
+  dummy_getter,
+  dummy_getter
+};
+
+static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
+  dummy_getter,
+  dummy_getter,
+  dummy_getter
+};
+
+static INLINE void
 check_memory_allocator(struct mem_allocator* allocator)
 {
   if(MEM_ALLOCATED_SIZE(allocator)) {
