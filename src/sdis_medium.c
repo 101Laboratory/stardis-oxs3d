@@ -37,8 +37,8 @@ struct sdis_medium {
 static int
 check_fluid_shader(const struct sdis_fluid_shader* shader)
 {
-  return shader
-      && shader->calorific_capacity
+  ASSERT(shader);
+  return shader->calorific_capacity
       && shader->volumic_mass
       && shader->initial_temperature;
 }
@@ -46,8 +46,8 @@ check_fluid_shader(const struct sdis_fluid_shader* shader)
 static int
 check_solid_shader(const struct sdis_solid_shader* shader)
 {
-  return shader
-      && shader->calorific_capacity
+  ASSERT(shader);
+  return shader->calorific_capacity
       && shader->thermal_conductivity
       && shader->volumic_mass
       && shader->delta_solid
@@ -115,7 +115,7 @@ sdis_fluid_create
   struct sdis_medium* medium = NULL;
   res_T res = RES_OK;
 
-  if(!out_medium) {
+  if(!shader || !out_medium) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -160,7 +160,7 @@ sdis_solid_create
   struct sdis_medium* medium = NULL;
   res_T res = RES_OK;
 
-  if(!out_medium) {
+  if(!shader || !out_medium) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -211,3 +211,9 @@ sdis_medium_ref_put(struct sdis_medium* medium)
   return RES_OK;
 }
 
+enum sdis_medium_type
+sdis_medium_get_type(const struct sdis_medium* medium)
+{
+  ASSERT(medium != NULL);
+  return medium->type;
+}
