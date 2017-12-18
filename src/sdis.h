@@ -100,7 +100,7 @@ typedef void
 /* Functor type to retrieve the interface properties. */
 typedef void
 (*sdis_interface_getter_T)
-  (struct sdis_device dev,
+  (struct sdis_device* dev,
    struct sdis_data* data,
    const struct sdis_interface_fragment* frag,
    double* val);

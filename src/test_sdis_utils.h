@@ -20,7 +20,7 @@
 #include <stdio.h>
 
 static INLINE void
-dummy_getter
+dummy_medium_getter
   (struct sdis_device* dev,
    struct sdis_data* data,
    const struct sdis_rwalk_vertex* vert,
@@ -31,19 +31,36 @@ dummy_getter
   *val = 1;
 }
 
+static INLINE void
+dummy_interface_getter
+  (struct sdis_device* dev,
+   struct sdis_data* data,
+   const struct sdis_interface_fragment* frag,
+   double* val)
+{
+  (void)dev, (void)data;
+  CHK(val != NULL && frag != NULL);
+  *val = 1;
+}
+
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
-  dummy_getter,
-  dummy_getter,
-  dummy_getter,
-  dummy_getter,
-  dummy_getter,
-  dummy_getter
+  dummy_medium_getter,
+  dummy_medium_getter,
+  dummy_medium_getter,
+  dummy_medium_getter,
+  dummy_medium_getter,
+  dummy_medium_getter
 };
 
 static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
-  dummy_getter,
-  dummy_getter,
-  dummy_getter
+  dummy_medium_getter,
+  dummy_medium_getter,
+  dummy_medium_getter
+};
+
+static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
+  dummy_interface_getter,
+  dummy_interface_getter
 };
 
 static INLINE void

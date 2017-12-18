@@ -37,12 +37,25 @@ check_interface_shader
    const struct sdis_medium* front,
    const struct sdis_medium* back)
 {
+  enum sdis_medium_type type0;
+  enum sdis_medium_type type1;
   ASSERT(shader && front && back);
 
-  if(sdis_medium_get_type(front) != sdis_medium_get_type(back)
-  && shader->convection_coef == NULL) {  /* Fluid<->solid interface */
+  type0 = sdis_medium_get_type(front);
+  type1 = sdis_medium_get_type(back);
+
+ /* Fluid<->solid interface */
+  if(type0 != type1 && shader->convection_coef == NULL) {
     return 0;
   }
+
+  /* Solid<->solid interface */
+  if(type0 == SDIS_MEDIUM_SOLID
+  && type1 == SDIS_MEDIUM_SOLID
+  && shader->convection_coef) {
+    return 0;
+  }
+
   return 1;
 }
 
