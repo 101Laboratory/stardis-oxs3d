@@ -245,6 +245,12 @@ sdis_interface_ref_put
 SDIS_API res_T
 sdis_scene_create
   (struct sdis_device* dev,
+   const size_t ntris, /* #triangles */
+   void (*indices)(const size_t itri, size_t ids[3], void*),
+   void (*interface)(const size_t itri, struct sdis_interface** bound, void*),
+   const size_t nverts, /* #vertices */
+   void (*position)(const size_t ivert, double pos[3], void* ctx),
+   void* ctx,
    struct sdis_scene** scn);
 
 SDIS_API res_T
@@ -254,16 +260,6 @@ sdis_scene_ref_get
 SDIS_API res_T
 sdis_scene_ref_put
   (struct sdis_scene* scn);
-
-SDIS_API res_T
-sdis_scene_setup
-  (struct sdis_scene* scn,
-   const size_t ntris, /* #triangles */
-   void (*indices)(const size_t itri, size_t ids[3], void*),
-   void (*interface)(const size_t itri, struct sdis_interface* bound, void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[3], void* ctx),
-   void* ctx);
 
 END_DECLS
 
