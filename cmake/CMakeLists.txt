@@ -24,6 +24,7 @@ option(NO_TEST "Do not build tests" OFF)
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.3 REQUIRED)
+find_package(Star3D 0.4 REQUIRED)
 find_package(RSys 0.6 REQUIRED)
 find_package(OpenMP 1.2 REQUIRED)
 
@@ -45,7 +46,8 @@ set(SDIS_FILES_SRC
   sdis_data.c
   sdis_device.c
   sdis_interface.c
-  sdis_medium.c)
+  sdis_medium.c
+  sdis_scene.c)
 
 set(SDIS_FILES_INC_API
   sdis.h)
@@ -65,7 +67,7 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC} 
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys)
+target_link_libraries(sdis RSys Star3D)
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD

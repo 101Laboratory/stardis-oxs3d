@@ -16,13 +16,22 @@
 #ifndef SDIS_DEVICE_C_H
 #define SDIS_DEVICE_C_H
 
+#include <rsys/free_list.h>
 #include <rsys/ref_count.h>
+
+struct name { FITEM; };
+#define FITEM_TYPE name
+#include <rsys/free_list.h>
 
 struct sdis_device {
   struct logger* logger;
   struct mem_allocator* allocator;
   unsigned nthreads;
   int verbose;
+
+  struct flist_name names;
+
+  struct s3d_device* s3d;
 
   ref_T ref;
 };

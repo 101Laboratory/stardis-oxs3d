@@ -15,6 +15,7 @@
 
 #include "sdis.h"
 #include "sdis_device_c.h"
+#include "sdis_interface_c.h"
 
 #include <rsys/mem_allocator.h>
 
@@ -23,6 +24,7 @@ struct sdis_interface {
   struct sdis_medium* medium_back;
   struct sdis_interface_shader shader;
   struct sdis_data* data;
+  struct fid id; /* Unique identifier of the interface */
 
   ref_T ref;
   struct sdis_device* dev;
@@ -44,7 +46,7 @@ check_interface_shader
   type0 = sdis_medium_get_type(front);
   type1 = sdis_medium_get_type(back);
 
- /* Fluid<->solid interface */
+  /* Fluid<->solid interface */
   if(type0 != type1 && shader->convection_coef == NULL) {
     return 0;
   }
@@ -70,6 +72,7 @@ interface_release(ref_T* ref)
   if(interface->medium_front) SDIS(medium_ref_put(interface->medium_front));
   if(interface->medium_back) SDIS(medium_ref_put(interface->medium_back));
   if(interface->data) SDIS(data_ref_put(interface->data));
+  flist_name_del(&dev->names, interface->id);
   MEM_RM(dev->allocator, interface);
   SDIS(device_ref_put(dev));
 }
@@ -121,6 +124,7 @@ sdis_interface_create
   interface->medium_back = back;
   interface->dev = dev;
   interface->shader = *shader;
+  interface->id = flist_name_add(&dev->names);
 
   if(data) {
     SDIS(data_ref_get(data));
@@ -152,5 +156,15 @@ sdis_interface_ref_put(struct sdis_interface* interface)
   if(!interface) return RES_BAD_ARG;
   ref_put(&interface->ref, interface_release);
   return RES_OK;
+}
+
+/*******************************************************************************
+ * Local function
+ ******************************************************************************/
+unsigned
+interface_get_id(const struct sdis_interface* interface)
+{
+  ASSERT(interface);
+  return interface->id.index;
 }
 
