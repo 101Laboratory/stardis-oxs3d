@@ -15,6 +15,7 @@
 
 #include "sdis.h"
 #include "test_sdis_utils.h"
+#include <rsys/math.h>
 
 struct context {
   const double* positions;
@@ -66,6 +67,7 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
+  double lower[3], upper[3];
   struct context ctx;
   size_t ntris, npos;
   (void)argc, (void)argv;
@@ -97,16 +99,27 @@ main(int argc, char** argv)
   CHK(CREATE(dev, ntris, IDS, IFA, npos, NULL, &ctx, &scn) == RES_BAD_ARG);
   CHK(CREATE(dev, ntris, IDS, IFA, npos, POS, &ctx, &scn) == RES_OK);
 
+  #undef CREATE
+  #undef IDS
+  #undef POS
+  #undef IFA
+
+  CHK(sdis_scene_get_aabb(NULL, lower, upper) == RES_BAD_ARG);
+  CHK(sdis_scene_get_aabb(scn, NULL, upper) == RES_BAD_ARG);
+  CHK(sdis_scene_get_aabb(scn, lower, NULL) == RES_BAD_ARG);
+  CHK(sdis_scene_get_aabb(scn, lower, upper) == RES_OK);
+  CHK(eq_eps(lower[0], 0, 1.e-6));
+  CHK(eq_eps(lower[1], 0, 1.e-6));
+  CHK(eq_eps(lower[2], 0, 1.e-6));
+  CHK(eq_eps(upper[0], 1, 1.e-6));
+  CHK(eq_eps(upper[1], 1, 1.e-6));
+  CHK(eq_eps(upper[2], 1, 1.e-6));
+
   CHK(sdis_scene_ref_get(NULL) == RES_BAD_ARG);
   CHK(sdis_scene_ref_get(scn) == RES_OK);
   CHK(sdis_scene_ref_put(NULL) == RES_BAD_ARG);
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_scene_ref_put(scn) == RES_OK);
-
-  #undef CREATE
-  #undef IDS
-  #undef POS
-  #undef ITFACE
 
   CHK(sdis_device_ref_put(dev) == RES_OK);
   CHK(sdis_interface_ref_put(interface) == RES_OK);

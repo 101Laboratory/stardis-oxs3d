@@ -261,6 +261,12 @@ SDIS_API res_T
 sdis_scene_ref_put
   (struct sdis_scene* scn);
 
+SDIS_API res_T
+sdis_scene_get_aabb
+  (const struct sdis_scene* scn,
+   double lower[3],
+   double upper[3]);
+
 END_DECLS
 
 #endif /* SDIS_H */

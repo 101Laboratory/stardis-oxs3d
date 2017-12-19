@@ -17,6 +17,7 @@
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
 
+#include <rsys/double3.h>
 #include <rsys/dynamic_array.h>
 #include <rsys/mem_allocator.h>
 #include <star/s3d.h>
@@ -277,6 +278,20 @@ sdis_scene_ref_put(struct sdis_scene* scn)
 {
   if(!scn) return RES_BAD_ARG;
   ref_put(&scn->ref, scene_release);
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_aabb
+  (const struct sdis_scene* scn, double lower[3], double upper[3])
+{
+  float low[3], upp[3];
+  res_T res = RES_OK;
+  if(!scn || !lower || !upper) return RES_BAD_ARG;
+  res = s3d_scene_view_get_aabb(scn->s3d_view, low, upp);
+  if(res != RES_OK) return res;
+  d3_set_f3(lower, low);
+  d3_set_f3(upper, upp);
   return RES_OK;
 }
 
