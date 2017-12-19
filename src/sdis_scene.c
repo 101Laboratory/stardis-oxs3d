@@ -23,7 +23,7 @@
 
 #include <limits.h>
 
-/* Context used to wrap the user geometry to Star-3D */
+/* Context used to wrap the user geometry to Star-3D. */
 struct geometry_context {
   void (*indices)(const size_t itri, size_t ids[3], void*);
   void (*position)(const size_t ivert, double pos[3], void*);
@@ -87,8 +87,9 @@ clear_interfaces(struct sdis_scene* scn)
   size_t i;
   ASSERT(scn);
   FOR_EACH(i, 0, darray_interface_size_get(&scn->interfaces)) {
-    if(!darray_interface_cdata_get(&scn->interfaces)[i]) continue;
-    SDIS(interface_ref_put(darray_interface_data_get(&scn->interfaces)[i]));
+    if(darray_interface_cdata_get(&scn->interfaces)[i]) {
+      SDIS(interface_ref_put(darray_interface_data_get(&scn->interfaces)[i]));
+    }
   }
   darray_interface_clear(&scn->interfaces);
   darray_interface_clear(&scn->prim_interfaces);
@@ -200,6 +201,7 @@ scene_release(ref_T * ref)
   clear_interfaces(scn);
   darray_interface_release(&scn->interfaces);
   darray_interface_release(&scn->prim_interfaces);
+  if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }
@@ -221,7 +223,7 @@ sdis_scene_create
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_scn || !scn || !ntris || !indices || !interface || nverts
+  if(!dev || !out_scn || !ntris || !indices || !interface || !nverts 
   || !position || ntris > UINT_MAX || nverts > UINT_MAX) {
     res = RES_BAD_ARG;
     goto error;
@@ -265,7 +267,7 @@ error:
 res_T
 sdis_scene_ref_get(struct sdis_scene* scn)
 {
-  if(scn) return RES_BAD_ARG;
+  if(!scn) return RES_BAD_ARG;
   ref_get(&scn->ref);
   return RES_OK;
 }
@@ -273,7 +275,7 @@ sdis_scene_ref_get(struct sdis_scene* scn)
 res_T
 sdis_scene_ref_put(struct sdis_scene* scn)
 {
-  if(scn) return RES_BAD_ARG;
+  if(!scn) return RES_BAD_ARG;
   ref_put(&scn->ref, scene_release);
   return RES_OK;
 }
