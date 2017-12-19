@@ -1,0 +1,11 @@
+.gitignore
+CMakeCache.txt
+CMakeFiles
+Makefile
+tmp
+[Bb]uild*
+*.sw[po]
+*.[ao]
+*~
+tags
+
