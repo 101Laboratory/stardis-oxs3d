@@ -152,7 +152,8 @@ setup_geometry
   res = s3d_mesh_setup_indexed_vertices(s3d_msh, (unsigned)ntris, get_indices,
     (unsigned)nverts, &vdata, 1, &context);
   if(res != RES_OK) goto error;
-  res = s3d_scene_view_create(s3d_scn, S3D_SAMPLE|S3D_TRACE, &scn->s3d_view);
+  res = s3d_scene_view_create(s3d_scn, S3D_SAMPLE|S3D_TRACE|S3D_GET_PRIMITIVE,
+    &scn->s3d_view);
   if(res != RES_OK) goto error;
 
 exit:

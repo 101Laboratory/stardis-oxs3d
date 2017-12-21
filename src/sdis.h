@@ -96,13 +96,15 @@ struct sdis_mc {
   double V; /* Variance */
   double SE; /* Standard error */
 };
+#define SDIS_MC_NULL__ {0, 0, 0}
+static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
 
 /* Functor type to retrieve the medium properties. */
 typedef double
 (*sdis_medium_getter_T)
   (const struct sdis_rwalk_vertex* vert,
    struct sdis_data* data);
-  
+
 
 /* Functor type to retrieve the interface properties. */
 typedef double
@@ -304,7 +306,7 @@ sdis_estimator_get_temperature
  * Miscellaneous functions
  ******************************************************************************/
 SDIS_API res_T
-sdis_solve_probe_temperature
+sdis_solve_probe
   (struct sdis_scene* scn,
    const size_t nrealisations,
    const double position[3],

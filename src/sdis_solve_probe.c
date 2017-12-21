@@ -50,8 +50,9 @@ struct temperature {
      struct ssp_rng* rng,
      struct temperature* temp);
   double value; /* Current value of the temperature */
+  int done;
 };
-static const struct temperature TEMPERATURE_NULL = { NULL, -1 };
+static const struct temperature TEMPERATURE_NULL = { NULL, 0, 0 };
 
 static res_T
 boundary_temperature
@@ -103,9 +104,10 @@ check_rwalk_fragment_consistency
   d2_set_f2(uv, rwalk->hit.uv);
   return !S3D_HIT_NONE(&rwalk->hit)
       && d3_eq_eps(rwalk->vtx.P, frag->P, 1.e-6)
-      && eq_eps(rwalk->vtx.time, frag->time,  1.e-6)
       && d3_eq_eps(N, frag->Ng, 1.e-6)
-      && d2_eq_eps(uv, frag->uv, 1.e-6);
+      && d2_eq_eps(uv, frag->uv, 1.e-6)
+      && ( (IS_INF(rwalk->vtx.time) && IS_INF(frag->time))
+         || eq_eps(rwalk->vtx.time, frag->time,  1.e-6));
 }
 
 res_T
@@ -128,6 +130,7 @@ fluid_temperature
     return RES_BAD_OP;
   }
   T->value += tmp;
+  T->done = 1;
   return RES_OK;
 }
 
@@ -292,6 +295,7 @@ boundary_temperature
   tmp = interface_get_temperature(interface, &frag);
   if(tmp >= 0) {
     T->value += tmp;
+    T->done = 1;
     return RES_OK;
   }
 
@@ -346,6 +350,7 @@ solid_temperature
     tmp = solid_get_temperature(mdm, &rwalk->vtx);
     if(tmp >= 0) {
       T->value += tmp;
+      T->done = 1;
       return RES_OK;
     }
 
@@ -384,6 +389,7 @@ solid_temperature
     tmp = solid_get_temperature(mdm, &rwalk->vtx);
     if(tmp >= 0) {
       T->value += tmp;
+      T->done = 1;
       return RES_OK;
     }
 
@@ -433,13 +439,13 @@ compute_temperature
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter && rwalk && rng && T);
 
-  while(T->value) { /* Unknown temperature */
+  do {
     res = T->func(scn, fp_to_meter, rwalk, rng, T);
     if(res != RES_OK) goto error;
 
     sa_push(stack, *T);
     ++istack;
-  }
+  } while(!T->done);
 
 exit:
   sa_release(stack);
@@ -452,7 +458,7 @@ error:
  * Exported functions
  ******************************************************************************/
 res_T
-sdis_solve_probe_temperature
+sdis_solve_probe
   (struct sdis_scene* scn,
    const size_t nrealisations,
    const double position[3],
@@ -468,7 +474,8 @@ sdis_solve_probe_temperature
   size_t irealisation = 0;
   res_T res = RES_OK;
 
-  if(!scn || !position || time < 0 || fp_to_meter < 0 || !out_estimator) {
+  if(!scn || !nrealisations || !position || time < 0 || fp_to_meter <= 0
+  || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -486,8 +493,8 @@ sdis_solve_probe_temperature
     struct temperature T = TEMPERATURE_NULL;
 
     switch(medium->type) {
-      case SDIS_MEDIUM_FLUID: T.func = solid_temperature; break;
-      case SDIS_MEDIUM_SOLID: T.func = fluid_temperature; break;
+      case SDIS_MEDIUM_FLUID: T.func = fluid_temperature; break;
+      case SDIS_MEDIUM_SOLID: T.func = solid_temperature; break;
       default: FATAL("Unreachable code\n"); break;
     }
 

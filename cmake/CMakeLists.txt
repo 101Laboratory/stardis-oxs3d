@@ -113,6 +113,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_interface)
   new_test(test_sdis_medium)
   new_test(test_sdis_scene)
+  new_test(test_sdis_solve_probe)
 endif()
 
 ################################################################################

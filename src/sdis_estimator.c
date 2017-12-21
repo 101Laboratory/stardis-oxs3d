@@ -102,6 +102,7 @@ estimator_create(struct sdis_device* dev, struct sdis_estimator** out_estimator)
   estimator->dev = dev;
 
 exit:
+  if(out_estimator) *out_estimator = estimator;
   return res;
 error:
   if(estimator) {
