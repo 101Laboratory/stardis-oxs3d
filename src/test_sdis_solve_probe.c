@@ -18,6 +18,20 @@
 
 #include <rsys/math.h>
 
+/*
+ * The scene is composed of a solid cube with unknown temperature. The
+ * surrouding fluid has a fixed constant temperature.
+ *
+ *             (1,1,1)
+ *       +-------+
+ *      /'      /|    _\
+ *     +-------+ |   / /
+ *     | +.....|.+   \__/
+ *     |,      |/
+ *     +-------+
+ * (0,0,0)
+ */
+
 /*******************************************************************************
  * Geometry
  ******************************************************************************/

@@ -49,13 +49,13 @@ struct mem_allocator;
  * function, the caller implicitly owns the created data, i.e. its reference
  * counter is set to 1. The sdis_<TYPE>_ref_<get|put> functions get or release
  * a reference on the data, i.e. they increment or decrement the reference
- * counter, respectively. When this counter reach 0 the object is silently
+ * counter, respectively. When this counter reaches 0, the object is silently
  * destroyed and cannot be used anymore. */
+truct sdis_data;
 struct sdis_device;
 struct sdis_estimator;
 struct sdis_interface;
 struct sdis_medium;
-struct sdis_data;
 struct sdis_scene;
 
 enum sdis_side_flag {
@@ -311,7 +311,7 @@ sdis_solve_probe
    const size_t nrealisations,
    const double position[3],
    const double time,
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
+   const double fp_to_meter,/* Scale from floating point units to meters */
    struct sdis_estimator** estimator);
 
 END_DECLS
