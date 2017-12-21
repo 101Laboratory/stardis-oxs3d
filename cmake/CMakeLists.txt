@@ -25,6 +25,7 @@ option(NO_TEST "Do not build tests" OFF)
 ################################################################################
 find_package(RCMake 0.3 REQUIRED)
 find_package(Star3D 0.4 REQUIRED)
+find_package(StarSP 0.5 REQUIRED)
 find_package(RSys 0.6 REQUIRED)
 find_package(OpenMP 1.2 REQUIRED)
 
@@ -32,7 +33,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
 include(rcmake)
 include(rcmake_runtime)
 
-rcmake_append_runtime_dirs(_runtime_dirs RSys)
+rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP)
 
 ################################################################################
 # Configure and define targets
@@ -48,7 +49,8 @@ set(SDIS_FILES_SRC
   sdis_estimator.c
   sdis_interface.c
   sdis_medium.c
-  sdis_scene.c)
+  sdis_scene.c
+  sdis_solve_probe.c)
 
 set(SDIS_FILES_INC_API
   sdis.h)
@@ -72,7 +74,7 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star3D)
+target_link_libraries(sdis RSys Star3D StarSP)
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD

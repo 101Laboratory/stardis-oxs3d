@@ -309,6 +309,7 @@ sdis_estimator_get_temperature
 SDIS_API res_T
 sdis_solve_probe_temperature
   (struct sdis_scene* scn,
+   const size_t nrealisations,
    const double position[3],
    const double time,
    const double fp_to_meter,/* Scale factor from floating point unit to meter */

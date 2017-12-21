@@ -36,7 +36,7 @@ struct sdis_medium {
  ******************************************************************************/
 static INLINE double
 fluid_get_calorific_capacity
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double cp = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_FLUID);
@@ -46,7 +46,7 @@ fluid_get_calorific_capacity
 
 static INLINE double
 fluid_get_volumic_mass
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double rho = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_FLUID);
@@ -56,7 +56,7 @@ fluid_get_volumic_mass
 
 static INLINE double
 fluid_get_temperature
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double T = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_FLUID);
@@ -69,7 +69,7 @@ fluid_get_temperature
  ******************************************************************************/
 static INLINE double
 solid_get_calorific_capacity
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double cp = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
@@ -79,7 +79,7 @@ solid_get_calorific_capacity
 
 static INLINE double
 solid_get_thermal_conductivity
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double lambda = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
@@ -89,7 +89,7 @@ solid_get_thermal_conductivity
 
 static INLINE double
 solid_get_volumic_mass
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double rho = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
@@ -99,7 +99,7 @@ solid_get_volumic_mass
 
 static INLINE double
 solid_get_delta
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double delta = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
@@ -109,7 +109,7 @@ solid_get_delta
 
 static INLINE double
 solid_get_delta_boundary
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double delta_bound = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
@@ -119,7 +119,7 @@ solid_get_delta_boundary
 
 static INLINE double
 solid_get_temperature
-  (struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double T = -1;
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
