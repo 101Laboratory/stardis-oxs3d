@@ -45,6 +45,7 @@ set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 set(SDIS_FILES_SRC
   sdis_data.c
   sdis_device.c
+  sdis_estimator.c
   sdis_interface.c
   sdis_medium.c
   sdis_scene.c)
@@ -53,7 +54,11 @@ set(SDIS_FILES_INC_API
   sdis.h)
 
 set(SDIS_FILES_INC
-  sdis_device_c.h)
+  sdis_device_c.h
+  sdis_estimator_c.h
+  sdis_interface_c.h
+  sdis_medium_c.h
+  sdis_scene_c.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
 
@@ -63,8 +68,8 @@ rcmake_prepend_path(SDIS_FILES_INC ${SDIS_SOURCE_DIR})
 rcmake_prepend_path(SDIS_FILES_INC_API ${SDIS_SOURCE_DIR})
 rcmake_prepend_path(SDIS_FILES_DOC ${PROJECT_SOURCE_DIR}/../)
 
-add_library(sdis SHARED 
-  ${SDIS_FILES_SRC} 
+add_library(sdis SHARED
+  ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
 target_link_libraries(sdis RSys Star3D)
@@ -77,7 +82,7 @@ set_target_properties(sdis PROPERTIES
 rcmake_copy_runtime_libraries(sdis)
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  set_target_properties(sdis PROPERTIES LINK_FLAGS ${OpenMP_C_FLAGS})
+  set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS} -lm")
 endif()
 
 rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)

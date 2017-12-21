@@ -16,44 +16,15 @@
 #include "sdis.h"
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
+#include "sdis_scene_c.h"
 
+#include <rsys/float3.h>
 #include <rsys/double3.h>
-#include <rsys/dynamic_array.h>
 #include <rsys/mem_allocator.h>
+
 #include <star/s3d.h>
 
 #include <limits.h>
-
-/* Context used to wrap the user geometry to Star-3D. */
-struct geometry_context {
-  void (*indices)(const size_t itri, size_t ids[3], void*);
-  void (*position)(const size_t ivert, double pos[3], void*);
-  void* data;
-};
-
-static INLINE void
-interface_init
-  (struct mem_allocator* allocator,
-   struct sdis_interface** interface)
-{
-  (void)allocator;
-  *interface = NULL;
-}
-
-/* Declare the array of interfaces */
-#define DARRAY_NAME interface
-#define DARRAY_DATA struct sdis_interface*
-#define DARRAY_FUNCTOR_INIT interface_init
-#include <rsys/dynamic_array.h>
-
-struct sdis_scene {
-  struct darray_interface interfaces; /* List of interfaces own by the scene */
-  struct darray_interface prim_interfaces; /* Per primitive interface */
-  struct s3d_scene_view* s3d_view;
-
-  ref_T ref;
-  struct sdis_device* dev;
-};
 
 /*******************************************************************************
  * Helper function
@@ -174,6 +145,8 @@ setup_geometry
   if(res != RES_OK) goto error;
   res = s3d_shape_create_mesh(scn->dev->s3d, &s3d_msh);
   if(res != RES_OK) goto error;
+  res = s3d_mesh_set_hit_filter_function(s3d_msh, hit_filter_function, NULL);
+  if(res != RES_OK) goto error;
   res = s3d_scene_attach_shape(s3d_scn, s3d_msh);
   if(res != RES_OK) goto error;
   res = s3d_mesh_setup_indexed_vertices(s3d_msh, (unsigned)ntris, get_indices,
@@ -189,6 +162,24 @@ exit:
 error:
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   goto exit;
+}
+
+/* Check that `hit' roughly lies on an edge. For triangular primitives, a
+ * simple but approximative way is to test that its position have at least one
+ * barycentric coordinate roughly equal to 0 or 1. */
+static FINLINE int
+hit_on_edge(const struct s3d_hit* hit)
+{
+  const float on_edge_eps = 1.e-4f;
+  float w;
+  ASSERT(hit && !S3D_HIT_NONE(hit));
+    w = 1.f - hit->uv[0] - hit->uv[1];
+  return eq_epsf(hit->uv[0], 0.f, on_edge_eps)
+      || eq_epsf(hit->uv[0], 1.f, on_edge_eps)
+      || eq_epsf(hit->uv[1], 0.f, on_edge_eps)
+      || eq_epsf(hit->uv[1], 1.f, on_edge_eps)
+      || eq_epsf(w, 0.f, on_edge_eps)
+      || eq_epsf(w, 1.f, on_edge_eps);
 }
 
 static void
@@ -224,7 +215,7 @@ sdis_scene_create
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_scn || !ntris || !indices || !interface || !nverts 
+  if(!dev || !out_scn || !ntris || !indices || !interface || !nverts
   || !position || ntris > UINT_MAX || nverts > UINT_MAX) {
     res = RES_BAD_ARG;
     goto error;
@@ -293,5 +284,102 @@ sdis_scene_get_aabb
   d3_set_f3(lower, low);
   d3_set_f3(upper, upp);
   return RES_OK;
+}
+
+/*******************************************************************************
+ * Local miscellaneous function
+ ******************************************************************************/
+const struct sdis_interface*
+scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
+{
+  ASSERT(scn && iprim < darray_interface_size_get(&scn->prim_interfaces));
+  return darray_interface_cdata_get(&scn->prim_interfaces)[iprim];
+}
+
+res_T
+scene_get_medium
+  (const struct sdis_scene* scn,
+   const double pos[3],
+   const struct sdis_medium** out_medium)
+{
+  const struct sdis_medium* medium = NULL;
+  size_t iprim, nprims;
+  size_t nfailures = 0;
+  const size_t max_failures = 10;
+  res_T res = RES_OK;
+  ASSERT(scn && pos);
+
+  S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
+  FOR_EACH(iprim, 0, nprims) {
+    struct s3d_hit hit;
+    struct s3d_attrib attr;
+    struct s3d_primitive prim;
+    const float st[2] = { 1.f/3.f, 1.f/3.f };
+    const float range[2] = {0.f, FLT_MAX};
+    float N[3], P[3], dir[3], cos_N_dir;
+
+    /* Retrieve a position onto the primitive */
+    S3D(scene_view_get_primitive(scn->s3d_view, (unsigned)iprim, &prim));
+    S3D(primitive_get_attrib(&prim, S3D_POSITION, st, &attr));
+
+    /* Trace a ray from the randomw walk vertex  toward the retrieved primitive
+     * position */
+    f3_normalize(dir, f3_sub(dir, attr.value, f3_set_d3(P, pos)));
+    S3D(scene_view_trace_ray(scn->s3d_view, P, dir, range, NULL, &hit));
+
+    f3_normalize(N, hit.normal);
+    cos_N_dir = f3_dot(N, dir);
+
+    /* Unforeseen error. One has to intersect a primitive ! */
+    if(S3D_HIT_NONE(&hit)) {
+      ++nfailures;
+      if(nfailures < max_failures) {
+        continue;
+      } else {
+        res = RES_BAD_ARG;
+        goto error;
+      }
+    }
+
+    if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
+      const struct sdis_interface* interface;
+      interface = scene_get_interface(scn, hit.prim.prim_id);
+      medium = interface_get_medium
+        (interface, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+      break;
+    }
+  }
+
+exit:
+  *out_medium = medium;
+  return res;
+error:
+  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
+    FUNC_NAME, SPLIT3(pos));
+  goto exit;
+}
+
+int
+hit_filter_function
+  (const struct s3d_hit* hit,
+   const float org[3],
+   const float dir[3],
+   void* ray_data,
+   void* filter_data)
+{
+  const struct s3d_hit* hit_from = ray_data;
+  (void)org, (void)dir, (void)filter_data;
+
+  if(!hit_from || S3D_HIT_NONE(hit_from)) return 0; /* No filtering */
+
+  if(S3D_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
+
+  if(eq_epsf(hit->distance, 0, 1.e-6f)) {
+    /* If the targeted point is near of the origin, check that it lies on an
+     * edge shared by the 2 primitives. */
+    return hit_on_edge(hit_from) && hit_on_edge(hit);
+  }
+
+  return 0;
 }
 

@@ -15,21 +15,9 @@
 
 #include "sdis.h"
 #include "sdis_device_c.h"
+#include "sdis_medium_c.h"
 
 #include <rsys/mem_allocator.h>
-
-struct sdis_medium {
-  enum sdis_medium_type type;
-  union {
-    struct sdis_solid_shader solid;
-    struct sdis_fluid_shader fluid;
-  } shader;
-
-  struct sdis_data* data;
-
-  ref_T ref;
-  struct sdis_device* dev;
-};
 
 /*******************************************************************************
  * Helper functions
@@ -40,7 +28,7 @@ check_fluid_shader(const struct sdis_fluid_shader* shader)
   ASSERT(shader);
   return shader->calorific_capacity
       && shader->volumic_mass
-      && shader->initial_temperature;
+      && shader->temperature;
 }
 
 static int
@@ -52,7 +40,7 @@ check_solid_shader(const struct sdis_solid_shader* shader)
       && shader->volumic_mass
       && shader->delta_solid
       && shader->delta_boundary
-      && shader->initial_temperature;
+      && shader->temperature;
 }
 
 static res_T

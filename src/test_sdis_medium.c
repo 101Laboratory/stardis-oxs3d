@@ -54,9 +54,9 @@ main(int argc, char** argv)
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_BAD_ARG);
   fluid_shader.volumic_mass = DUMMY_FLUID_SHADER.volumic_mass;
 
-  fluid_shader.initial_temperature = NULL;
+  fluid_shader.temperature = NULL;
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_BAD_ARG);
-  fluid_shader.initial_temperature = DUMMY_FLUID_SHADER.initial_temperature;
+  fluid_shader.temperature = DUMMY_FLUID_SHADER.temperature;
 
   CHK(sdis_fluid_create
     (dev, &SDIS_FLUID_SHADER_NULL, NULL, &fluid) == RES_BAD_ARG);
@@ -91,9 +91,9 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
   solid_shader.delta_boundary = DUMMY_SOLID_SHADER.delta_boundary;
 
-  solid_shader.initial_temperature = NULL;
+  solid_shader.temperature = NULL;
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
-  solid_shader.initial_temperature = DUMMY_SOLID_SHADER.initial_temperature;
+  solid_shader.temperature = DUMMY_SOLID_SHADER.temperature;
 
   CHK(sdis_device_ref_put(dev) == RES_OK);
 

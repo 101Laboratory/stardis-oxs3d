@@ -16,13 +16,62 @@
 #ifndef SDIS_INTERFACE_C_H
 #define SDIS_INTERFACE_C_H
 
-#include <rsys/rsys.h>
+#include "sdis.h"
+#include <rsys/free_list.h>
+#include <rsys/ref_count.h>
+#include <float.h>
 
-struct sdis_interface;
+/* Forward declaration of external type */
+struct s3d_hit;
+
+struct sdis_interface {
+  struct sdis_medium* medium_front;
+  struct sdis_medium* medium_back;
+  struct sdis_interface_shader shader;
+  struct sdis_data* data;
+  struct fid id; /* Unique identifier of the interface */
+
+  ref_T ref;
+  struct sdis_device* dev;
+};
+
+extern LOCAL_SYM const struct sdis_medium*
+interface_get_medium
+  (const struct sdis_interface* interface,
+   const enum sdis_side_flag side);
 
 extern LOCAL_SYM unsigned
 interface_get_id
   (const struct sdis_interface* interface);
+
+extern LOCAL_SYM void
+setup_interface_fragment
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_rwalk_vertex* vertex,
+   const struct s3d_hit* hit);
+
+static INLINE double
+interface_get_temperature
+  (const struct sdis_interface* interface,
+   const struct sdis_interface_fragment* frag)
+{
+  double T = -1;
+  ASSERT(interface && frag);
+  if(!interface->shader.temperature) return -DBL_MAX;
+  interface->shader.temperature(interface->dev, interface->data, frag, &T);
+  return T;
+}
+
+static INLINE double
+interface_get_convection_coef
+  (const struct sdis_interface* interface,
+   const struct sdis_interface_fragment* frag)
+{
+  double hc = -1;
+  ASSERT(interface && frag);
+  interface->shader.convection_coef(interface->dev, interface->data, frag, &hc);
+  return hc;
+}
 
 #endif /* SDIS_INTERFACE_C_H */
 

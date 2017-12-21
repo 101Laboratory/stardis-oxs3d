@@ -116,3 +116,4 @@ check_memory_allocator(struct mem_allocator* allocator)
 }
 
 #endif /* TEST_SDIS_UTILS_H */
+

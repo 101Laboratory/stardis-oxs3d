@@ -131,3 +131,4 @@ main(int argc, char** argv)
   CHK(mem_allocated_size() == 0);
   return 0;
 }
+

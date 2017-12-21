@@ -52,6 +52,7 @@ struct mem_allocator;
  * counter, respectively. When this counter reach 0 the object is silently
  * destroyed and cannot be used anymore. */
 struct sdis_device;
+struct sdis_estimator;
 struct sdis_interface;
 struct sdis_medium;
 struct sdis_data;
@@ -89,6 +90,13 @@ struct sdis_interface_fragment {
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
+/* Monte-Carlo estimation */
+struct sdis_mc {
+  double E; /* Expected value */
+  double V; /* Variance */
+  double SE; /* Standard error */
+};
+
 /* Functor type to retrieve the medium properties. */
 typedef void
 (*sdis_medium_getter_T)
@@ -113,8 +121,9 @@ struct sdis_solid_shader {
   sdis_medium_getter_T delta_solid;
   sdis_medium_getter_T delta_boundary;
 
-  /* Initial condition */
-  sdis_medium_getter_T initial_temperature;
+  /* Initial/limit condition. A temperature < 0 means that the temperature is
+   * unknown for the submitted random walk vertex. */
+  sdis_medium_getter_T temperature;
 };
 #define SDIS_SOLID_SHADER_NULL__ {NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
@@ -125,15 +134,16 @@ struct sdis_fluid_shader {
   sdis_medium_getter_T calorific_capacity;
   sdis_medium_getter_T volumic_mass;
 
-  /* Initial condition */
-  sdis_medium_getter_T initial_temperature;
+  /* Initial/limit condition. A temperature < 0 means that the temperature is
+   * unknown for the submitted position and time. */
+  sdis_medium_getter_T temperature;
 };
 #define SDIS_FLUID_SHADER_NULL__ {NULL}
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
 struct sdis_interface_shader {
-  sdis_interface_getter_T temperature; /* NULL <=> Unknown temperature */
+  sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
   sdis_interface_getter_T convection_coef; /* NULL <=> Solid/Solid interface */
 };
 #define SDIS_INTERFACE_SHADER_NULL__ {NULL}
@@ -266,6 +276,43 @@ sdis_scene_get_aabb
   (const struct sdis_scene* scn,
    double lower[3],
    double upper[3]);
+
+/*******************************************************************************
+ * An estimator stores the state of a simulation
+ ******************************************************************************/
+SDIS_API res_T
+sdis_estimator_ref_get
+  (struct sdis_estimator* estimator);
+
+SDIS_API res_T
+sdis_estimator_ref_put
+  (struct sdis_estimator* estimator);
+
+SDIS_API res_T
+sdis_estimator_get_realisation_count
+  (const struct sdis_estimator* estimator,
+   size_t* nrealisations);
+
+SDIS_API res_T
+sdis_estimator_get_failure_count
+  (const struct sdis_estimator* estimator,
+   size_t* nfailures);
+
+SDIS_API res_T
+sdis_estimator_get_temperature
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* temperature);
+
+/*******************************************************************************
+ * Miscellaneous functions
+ ******************************************************************************/
+SDIS_API res_T
+sdis_solve_probe_temperature
+  (struct sdis_scene* scn,
+   const double position[3],
+   const double time,
+   const double fp_to_meter,/* Scale factor from floating point unit to meter */
+   struct sdis_estimator** estimator);
 
 END_DECLS
 

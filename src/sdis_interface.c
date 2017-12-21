@@ -17,18 +17,11 @@
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
 
+#include <rsys/double2.h>
+#include <rsys/double3.h>
 #include <rsys/mem_allocator.h>
 
-struct sdis_interface {
-  struct sdis_medium* medium_front;
-  struct sdis_medium* medium_back;
-  struct sdis_interface_shader shader;
-  struct sdis_data* data;
-  struct fid id; /* Unique identifier of the interface */
-
-  ref_T ref;
-  struct sdis_device* dev;
-};
+#include <star/s3d.h>
 
 /*******************************************************************************
  * Helper functions
@@ -161,10 +154,37 @@ sdis_interface_ref_put(struct sdis_interface* interface)
 /*******************************************************************************
  * Local function
  ******************************************************************************/
+const struct sdis_medium*
+interface_get_medium
+  (const struct sdis_interface* interface, const enum sdis_side_flag side)
+{
+  struct sdis_medium* mdm = NULL;
+  ASSERT(interface);
+  switch(side) {
+    case SDIS_FRONT: mdm = interface->medium_front; break;
+    case SDIS_BACK:  mdm = interface->medium_back; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return mdm;
+}
+
 unsigned
 interface_get_id(const struct sdis_interface* interface)
 {
   ASSERT(interface);
   return interface->id.index;
+}
+
+void
+setup_interface_fragment
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_rwalk_vertex* vertex,
+   const struct s3d_hit* hit)
+{
+  ASSERT(frag && vertex && hit && !S3D_HIT_NONE(hit));
+  d3_set(frag->P, vertex->P);
+  d3_normalize(frag->Ng, d3_set_f3(frag->Ng, hit->normal));
+  d2_set_f2(frag->uv, hit->uv);
+  frag->time = vertex->time;
 }
 
