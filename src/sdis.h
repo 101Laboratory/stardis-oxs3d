@@ -98,20 +98,17 @@ struct sdis_mc {
 };
 
 /* Functor type to retrieve the medium properties. */
-typedef void
+typedef double
 (*sdis_medium_getter_T)
-  (struct sdis_device* dev,
-   struct sdis_data* data,
-   const struct sdis_rwalk_vertex* vert,
-   double* val);
+  (const struct sdis_rwalk_vertex* vert,
+   struct sdis_data* data);
+  
 
 /* Functor type to retrieve the interface properties. */
-typedef void
+typedef double
 (*sdis_interface_getter_T)
-  (struct sdis_device* dev,
-   struct sdis_data* data,
-   const struct sdis_interface_fragment* frag,
-   double* val);
+  (const struct sdis_interface_fragment* frag,
+   struct sdis_data* data);
 
 struct sdis_solid_shader {
   /* Properties */

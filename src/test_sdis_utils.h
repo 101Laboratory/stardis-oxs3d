@@ -57,28 +57,22 @@ static const size_t box_ntriangles = sizeof(box_indices) / sizeof(size_t[3]);
 /*******************************************************************************
  * Medium & interface
  ******************************************************************************/
-static INLINE void
+static INLINE double
 dummy_medium_getter
-  (struct sdis_device* dev,
-   struct sdis_data* data,
-   const struct sdis_rwalk_vertex* vert,
-   double* val)
+  (const struct sdis_rwalk_vertex* vert, struct sdis_data* data)
 {
-  (void)dev, (void)data;
-  CHK(val != NULL && vert != NULL);
-  *val = 1;
+  (void)data;
+  CHK(vert != NULL);
+  return 1;
 }
 
-static INLINE void
+static INLINE double
 dummy_interface_getter
-  (struct sdis_device* dev,
-   struct sdis_data* data,
-   const struct sdis_interface_fragment* frag,
-   double* val)
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
-  (void)dev, (void)data;
-  CHK(val != NULL && frag != NULL);
-  *val = 1;
+  (void)data;
+  CHK(frag != NULL);
+  return 1;
 }
 
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {

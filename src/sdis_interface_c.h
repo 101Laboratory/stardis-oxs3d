@@ -55,11 +55,9 @@ interface_get_temperature
   (const struct sdis_interface* interface,
    const struct sdis_interface_fragment* frag)
 {
-  double T = -1;
   ASSERT(interface && frag);
   if(!interface->shader.temperature) return -DBL_MAX;
-  interface->shader.temperature(interface->dev, interface->data, frag, &T);
-  return T;
+  return interface->shader.temperature(frag, interface->data);
 }
 
 static INLINE double
@@ -67,10 +65,8 @@ interface_get_convection_coef
   (const struct sdis_interface* interface,
    const struct sdis_interface_fragment* frag)
 {
-  double hc = -1;
   ASSERT(interface && frag);
-  interface->shader.convection_coef(interface->dev, interface->data, frag, &hc);
-  return hc;
+  return interface->shader.convection_coef(frag, interface->data);
 }
 
 #endif /* SDIS_INTERFACE_C_H */

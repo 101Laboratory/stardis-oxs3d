@@ -400,7 +400,7 @@ solid_temperature
       const struct sdis_interface* interface;
       interface = scene_get_interface(scn, rwalk->hit.prim.prim_id);
       mdm = interface_get_medium
-        (interface, 
+        (interface,
          f3_dot(rwalk->hit.normal, dir0) < 0 ? SDIS_FRONT : SDIS_BACK);
     }
 
@@ -473,7 +473,7 @@ sdis_solve_probe_temperature
     goto error;
   }
 
-  res = scene_get_medium(scn, position, &medium); 
+  res = scene_get_medium(scn, position, &medium);
   if(res != RES_OK) goto error;
 
   res = ssp_rng_create(scn->dev->allocator, &ssp_rng_mt19937_64, &rng);
@@ -513,10 +513,10 @@ sdis_solve_probe_temperature
   }
 
   estimator->temperature.E = weight / (double)estimator->nrealisations;
-  estimator->temperature.V = 
+  estimator->temperature.V =
     sqr_weight / (double)estimator->nrealisations
   - estimator->temperature.E * estimator->temperature.E;
-  estimator->temperature.SE = 
+  estimator->temperature.SE =
     sqrt(estimator->temperature.V / (double)estimator->nrealisations);
 
 exit:
