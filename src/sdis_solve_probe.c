@@ -434,8 +434,10 @@ compute_temperature
    struct ssp_rng* rng,
    struct temperature* T)
 {
+#ifndef NDEBUG
   struct temperature* stack = NULL;
   size_t istack;
+#endif
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter && rwalk && rng && T);
 
@@ -443,12 +445,16 @@ compute_temperature
     res = T->func(scn, fp_to_meter, rwalk, rng, T);
     if(res != RES_OK) goto error;
 
+#ifndef NDEBUG
     sa_push(stack, *T);
     ++istack;
+#endif
   } while(!T->done);
 
 exit:
+#ifndef NDEBUG
   sa_release(stack);
+#endif
   return res;
 error:
   goto exit;
