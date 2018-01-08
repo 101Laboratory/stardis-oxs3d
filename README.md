@@ -22,7 +22,7 @@ variable the install directories of its dependencies.
 
 ## License
 
-Stardis is Copyright (C) |Meso|Star> 2016-2017 (<contact@meso-star.com>). It is
+Stardis is Copyright (C) |Meso|Star> 2016-2018 (<contact@meso-star.com>). It is
 free software released under the GPLv3+ license. You are welcome to
 redistribute it under certain conditions; refer to the COPYING files for
 details.
