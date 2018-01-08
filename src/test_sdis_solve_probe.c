@@ -20,7 +20,7 @@
 
 /*
  * The scene is composed of a solid cube with unknown temperature. The
- * surrouding fluid has a fixed constant temperature.
+ * surrounding fluid has a fixed constant temperature.
  *
  *             (1,1,1)
  *       +-------+
@@ -180,6 +180,7 @@ main(int argc, char** argv)
   struct interface* interface_param;
   double pos[3];
   double time;
+  double ref;
   const size_t N = 1000;
   size_t nreals;
   size_t nfails;
@@ -266,7 +267,10 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_temperature(NULL, &T) == RES_BAD_ARG);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
 
-  CHK(eq_eps(T.E, 300, T.SE));
+  ref = 300;
+  printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
+    SPLIT3(pos), ref, T.E, T.SE);
+  CHK(eq_eps(T.E, ref, T.SE));
 
   CHK(sdis_estimator_ref_get(NULL) ==  RES_BAD_ARG);
   CHK(sdis_estimator_ref_get(estimator) == RES_OK);
