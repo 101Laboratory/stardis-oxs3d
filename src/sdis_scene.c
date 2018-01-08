@@ -92,7 +92,7 @@ setup_interfaces
     /* Check that the interface is already registered against the scene */
     ninterfaces = darray_interface_size_get(&scn->interfaces);
     if(id >= ninterfaces) {
-      res = darray_interface_resize(&scn->interfaces, ninterfaces + 1);
+      res = darray_interface_resize(&scn->interfaces, id + 1);
       if(res != RES_OK) goto error;
     }
     if(darray_interface_cdata_get(&scn->interfaces)[id]) {
