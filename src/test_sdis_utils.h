@@ -99,6 +99,28 @@ static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
  * Miscellaneous
  ******************************************************************************/
 static INLINE void
+dump_mesh
+  (FILE* stream,
+   const double* pos,
+   const size_t npos,
+   const size_t* ids,
+   const size_t nids)
+{
+  size_t i;
+  CHK(pos != NULL && npos != 0);
+  CHK(ids != NULL && nids != 0);
+  FOR_EACH(i, 0, npos) {
+    fprintf(stream, "v %g %g %g\n", SPLIT3(pos+i*3));
+  }
+  FOR_EACH(i, 0, nids) {
+    fprintf(stream, "f %lu %lu %lu\n",
+      (unsigned long)(ids[i*3+0] + 1),
+      (unsigned long)(ids[i*3+1] + 1),
+      (unsigned long)(ids[i*3+2] + 1));
+  }
+}
+
+static INLINE void
 check_memory_allocator(struct mem_allocator* allocator)
 {
   if(MEM_ALLOCATED_SIZE(allocator)) {

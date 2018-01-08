@@ -16,31 +16,43 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <rsys/stretchy_array.h>
 #include <rsys/math.h>
+
+#include <star/s3dut.h>
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
  * convection coefficient with the surrounding fluid is null. The temperature
- * is fixed at the front and back face.
+ * is fixed at the front and back face. At the center of the cube there is a
+ * solid sphere whose physical properties are the same of the solid cube; i.e.
+ * the sphere influences the random walks but not the result.
  *
- *             (1,1,1)
- *       +-------+
- *      /'      /|350K
- *     +-------+ |
- *     | +.....|.+
- * 300K|,      |/
- *     +-------+
- * (0,0,0)
+ *                      (1,1,1)
+ *       +----------------+
+ *      /'     #  #      /|
+ *     +----*--------*--+ |
+ *     | ' #          # | |350K
+ *     | ' #          # | |
+ * 300K| '  #        #  | |
+ *     | +.....#..#.....|.+
+ *     |/               |/
+ *     +----------------+
+ *   (0,0,0)
  */
 
 /*******************************************************************************
  * Geometry
  ******************************************************************************/
 struct context {
-  const double* positions;
-  const size_t* indices;
-  struct sdis_interface** interfaces; /* Per primitive interfaces */
+  double* positions;
+  size_t* indices;
+  struct sdis_interface* solid_fluid_Tnone;
+  struct sdis_interface* solid_fluid_T300;
+  struct sdis_interface* solid_fluid_T350;
+  struct sdis_interface* solid_solid;
 };
+static const struct context CONTEXT_NULL = { NULL };
 
 static void
 get_indices(const size_t itri, size_t ids[3], void* context)
@@ -64,7 +76,17 @@ static void
 get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 {
   struct context* ctx = context;
-  *bound = ctx->interfaces[itri];
+  CHK(bound != NULL && context != NULL);
+
+  if(itri == 0 || itri == 1) { /* Box front face */
+    *bound = ctx->solid_fluid_T300;
+  } else if(itri == 4 || itri == 5) { /* Box back face */
+    *bound = ctx->solid_fluid_T350;
+  } else if(itri < box_ntriangles) { /* Box remaining faces */
+    *bound = ctx->solid_fluid_Tnone;
+  } else { /* Faces of the internal geometry */
+    *bound = ctx->solid_solid;
+  }
 }
 
 /*******************************************************************************
@@ -163,19 +185,24 @@ main(int argc, char** argv)
   struct sdis_interface* Tnone = NULL;
   struct sdis_interface* T300 = NULL;
   struct sdis_interface* T350 = NULL;
+  struct sdis_interface* solid_solid = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
-  struct sdis_interface* interfaces[12];
-  struct context ctx;
+  struct s3dut_mesh* msh = NULL;
+  struct s3dut_mesh_data msh_data;
+  struct context ctx = CONTEXT_NULL;
   struct interface* interface_param = NULL;
   double pos[3];
   double time;
   double ref;
   const size_t N = 10000;
+  size_t ntris;
+  size_t nverts;
   size_t nreals;
   size_t nfails;
+  size_t i;
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
@@ -223,30 +250,60 @@ main(int argc, char** argv)
     (dev, solid, fluid, &interface_shader, data, &T350) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
+  /* Create the solid/solid interface */
+  interface_shader.convection_coef = NULL;
+  interface_shader.temperature = NULL;
+  CHK(sdis_interface_create
+    (dev, solid, solid, &interface_shader, NULL, &solid_solid) == RES_OK);
+
   /* Release the media */
   CHK(sdis_medium_ref_put(solid) == RES_OK);
   CHK(sdis_medium_ref_put(fluid) == RES_OK);
 
-  /* Setup the per primitive scene interfaces */
-  CHK(sizeof(interfaces)/sizeof(struct sdis_interface*) == box_ntriangles);
-  interfaces[0] = interfaces[1] = T300; /* Front face */
-  interfaces[2] = interfaces[3] = Tnone; /* Left face */
-  interfaces[4] = interfaces[5] = T350; /* Back face */
-  interfaces[6] = interfaces[7] = Tnone; /* Right face */
-  interfaces[8] = interfaces[9] = Tnone; /* Top face */
-  interfaces[10] = interfaces[11] = Tnone; /* Bottom face */
+  /* Register the box geometry */
+  FOR_EACH(i, 0, box_nvertices) {
+    sa_push(ctx.positions, box_vertices[i*3+0]);
+    sa_push(ctx.positions, box_vertices[i*3+1]);
+    sa_push(ctx.positions, box_vertices[i*3+2]);
+  }
+  FOR_EACH(i, 0, box_ntriangles) {
+    sa_push(ctx.indices, box_indices[i*3+0]);
+    sa_push(ctx.indices, box_indices[i*3+1]);
+    sa_push(ctx.indices, box_indices[i*3+2]);
+  }
+
+  /* Setup a sphere at the center of the box */
+  CHK(s3dut_create_sphere(&allocator, 0.25, 64, 32, &msh) == RES_OK);
+  CHK(s3dut_mesh_get_data(msh, &msh_data) == RES_OK);
+  FOR_EACH(i, 0, msh_data.nvertices) {
+    sa_push(ctx.positions, msh_data.positions[i*3+0] + 0.5);
+    sa_push(ctx.positions, msh_data.positions[i*3+1] + 0.5);
+    sa_push(ctx.positions, msh_data.positions[i*3+2] + 0.5);
+  }
+  FOR_EACH(i, 0, msh_data.nprimitives) {
+    sa_push(ctx.indices, msh_data.indices[i*3+0] + box_nvertices);
+    sa_push(ctx.indices, msh_data.indices[i*3+1] + box_nvertices);
+    sa_push(ctx.indices, msh_data.indices[i*3+2] + box_nvertices);
+  }
+  CHK(s3dut_mesh_ref_put(msh) == RES_OK);
 
   /* Create the scene */
-  ctx.positions = box_vertices;
-  ctx.indices = box_indices;
-  ctx.interfaces = interfaces;
-  CHK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, &ctx, &scn) == RES_OK);
+  ctx.solid_fluid_Tnone = Tnone;
+  ctx.solid_fluid_T300 = T300;
+  ctx.solid_fluid_T350 = T350;
+  ctx.solid_solid = solid_solid;
+  nverts = sa_size(ctx.positions) / 3;
+  ntris = sa_size(ctx.indices) / 3;
+  CHK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
+    get_position, &ctx, &scn) == RES_OK);
 
-  /* Release the interfaces */
+  /* Release the scene data */
   CHK(sdis_interface_ref_put(Tnone) == RES_OK);
   CHK(sdis_interface_ref_put(T300) == RES_OK);
   CHK(sdis_interface_ref_put(T350) == RES_OK);
+  CHK(sdis_interface_ref_put(solid_solid) == RES_OK);
+  sa_release(ctx.positions);
+  sa_release(ctx.indices);
 
   /* Launch the solver */
   pos[0] = 0.5;
@@ -278,4 +335,5 @@ main(int argc, char** argv)
   mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
+
 }

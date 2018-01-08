@@ -93,6 +93,8 @@ rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
 # Add tests
 ################################################################################
 if(NOT NO_TEST)
+  find_package(Star3DUT REQUIRED 0.2.0)
+
   function(build_test _name)
     add_executable(${_name} ${SDIS_SOURCE_DIR}/${_name}.c)
     target_link_libraries(${_name} RSys sdis)
@@ -115,6 +117,9 @@ if(NOT NO_TEST)
   new_test(test_sdis_scene)
   new_test(test_sdis_solve_probe)
   new_test(test_sdis_solve_probe2)
+  new_test(test_sdis_solve_probe3)
+
+  target_link_libraries(test_sdis_solve_probe3 Star3DUT)
 endif()
 
 ################################################################################
