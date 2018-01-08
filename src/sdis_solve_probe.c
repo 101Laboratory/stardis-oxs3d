@@ -259,6 +259,7 @@ solid_fluid_boundary_temperature
     if(solid == mdm_back) f3_minus(dir, dir);
 
     /* "Reinject" the random walk into the solid */
+    f3_set_d3(pos, rwalk->vtx.P);
     range[0] = 0, range[1] = (float)delta_boundary*RAY_RANGE_MAX_SCALE;
     S3D(scene_view_trace_ray
       (scn->s3d_view, pos, dir, range, &rwalk->hit, &rwalk->hit));
