@@ -51,7 +51,7 @@ struct mem_allocator;
  * a reference on the data, i.e. they increment or decrement the reference
  * counter, respectively. When this counter reaches 0, the object is silently
  * destroyed and cannot be used anymore. */
-truct sdis_data;
+struct sdis_data;
 struct sdis_device;
 struct sdis_estimator;
 struct sdis_interface;
