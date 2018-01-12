@@ -437,7 +437,7 @@ compute_temperature
 {
 #ifndef NDEBUG
   struct temperature* stack = NULL;
-  size_t istack;
+  size_t istack = 0;
 #endif
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter && rwalk && rng && T);
