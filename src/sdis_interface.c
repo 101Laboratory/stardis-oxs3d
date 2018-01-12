@@ -57,16 +57,16 @@ check_interface_shader
 static void
 interface_release(ref_T* ref)
 {
-  struct sdis_interface* interface = NULL;
+  struct sdis_interface* interf = NULL;
   struct sdis_device* dev = NULL;
   ASSERT(ref);
-  interface = CONTAINER_OF(ref, struct sdis_interface, ref);
-  dev = interface->dev;
-  if(interface->medium_front) SDIS(medium_ref_put(interface->medium_front));
-  if(interface->medium_back) SDIS(medium_ref_put(interface->medium_back));
-  if(interface->data) SDIS(data_ref_put(interface->data));
-  flist_name_del(&dev->names, interface->id);
-  MEM_RM(dev->allocator, interface);
+  interf = CONTAINER_OF(ref, struct sdis_interface, ref);
+  dev = interf->dev;
+  if(interf->medium_front) SDIS(medium_ref_put(interf->medium_front));
+  if(interf->medium_back) SDIS(medium_ref_put(interf->medium_back));
+  if(interf->data) SDIS(data_ref_put(interf->data));
+  flist_name_del(&dev->names, interf->id);
+  MEM_RM(dev->allocator, interf);
   SDIS(device_ref_put(dev));
 }
 
@@ -82,7 +82,7 @@ sdis_interface_create
    struct sdis_data* data,
    struct sdis_interface** out_interface)
 {
-  struct sdis_interface* interface = NULL;
+  struct sdis_interface* interf = NULL;
   res_T res = RES_OK;
 
   if(!dev || !front || !back || !shader || !out_interface) {
@@ -103,51 +103,51 @@ sdis_interface_create
     goto error;
   }
 
-  interface = MEM_CALLOC(dev->allocator, 1, sizeof(struct sdis_interface));
-  if(!interface) {
+  interf = MEM_CALLOC(dev->allocator, 1, sizeof(struct sdis_interface));
+  if(!interf) {
     log_err(dev, "%s: could not create the interface.\n", FUNC_NAME);
     res = RES_MEM_ERR;
     goto error;
   }
-  ref_init(&interface->ref);
+  ref_init(&interf->ref);
   SDIS(medium_ref_get(front));
   SDIS(medium_ref_get(back));
   SDIS(device_ref_get(dev));
-  interface->medium_front = front;
-  interface->medium_back = back;
-  interface->dev = dev;
-  interface->shader = *shader;
-  interface->id = flist_name_add(&dev->names);
+  interf->medium_front = front;
+  interf->medium_back = back;
+  interf->dev = dev;
+  interf->shader = *shader;
+  interf->id = flist_name_add(&dev->names);
 
   if(data) {
     SDIS(data_ref_get(data));
-    interface->data = data;
+    interf->data = data;
   }
 
 exit:
-  if(out_interface) *out_interface = interface;
+  if(out_interface) *out_interface = interf;
   return res;
 error:
-  if(interface) {
-    SDIS(interface_ref_put(interface));
-    interface = NULL;
+  if(interf) {
+    SDIS(interface_ref_put(interf));
+    interf = NULL;
   }
   goto exit;
 }
 
 res_T
-sdis_interface_ref_get(struct sdis_interface* interface)
+sdis_interface_ref_get(struct sdis_interface* interf)
 {
-  if(!interface) return RES_BAD_ARG;
-  ref_get(&interface->ref);
+  if(!interf) return RES_BAD_ARG;
+  ref_get(&interf->ref);
   return RES_OK;
 }
 
 res_T
-sdis_interface_ref_put(struct sdis_interface* interface)
+sdis_interface_ref_put(struct sdis_interface* interf)
 {
-  if(!interface) return RES_BAD_ARG;
-  ref_put(&interface->ref, interface_release);
+  if(!interf) return RES_BAD_ARG;
+  ref_put(&interf->ref, interface_release);
   return RES_OK;
 }
 
@@ -156,23 +156,23 @@ sdis_interface_ref_put(struct sdis_interface* interface)
  ******************************************************************************/
 const struct sdis_medium*
 interface_get_medium
-  (const struct sdis_interface* interface, const enum sdis_side_flag side)
+  (const struct sdis_interface* interf, const enum sdis_side_flag side)
 {
   struct sdis_medium* mdm = NULL;
-  ASSERT(interface);
+  ASSERT(interf);
   switch(side) {
-    case SDIS_FRONT: mdm = interface->medium_front; break;
-    case SDIS_BACK:  mdm = interface->medium_back; break;
+    case SDIS_FRONT: mdm = interf->medium_front; break;
+    case SDIS_BACK:  mdm = interf->medium_back; break;
     default: FATAL("Unreachable code.\n"); break;
   }
   return mdm;
 }
 
 unsigned
-interface_get_id(const struct sdis_interface* interface)
+interface_get_id(const struct sdis_interface* interf)
 {
-  ASSERT(interface);
-  return interface->id.index;
+  ASSERT(interf);
+  return interf->id.index;
 }
 
 void

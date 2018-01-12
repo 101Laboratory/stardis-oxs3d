@@ -38,7 +38,7 @@
 struct context {
   const double* positions;
   const size_t* indices;
-  struct sdis_interface* interface;
+  struct sdis_interface* interf;
 };
 
 static void
@@ -64,7 +64,7 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 {
   struct context* ctx = context;
   (void)itri;
-  *bound = ctx->interface;
+  *bound = ctx->interf;
 }
 
 /*******************************************************************************
@@ -144,7 +144,7 @@ solid_get_temperature
 /*******************************************************************************
  * Interface
  ******************************************************************************/
-struct interface {
+struct interf {
   double hc;
 };
 
@@ -153,7 +153,7 @@ interface_get_convection_coef
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->hc;
+  return ((const struct interf*)sdis_data_cget(data))->hc;
 }
 
 /*******************************************************************************
@@ -167,7 +167,7 @@ main(int argc, char** argv)
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
-  struct sdis_interface* interface = NULL;
+  struct sdis_interface* interf = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
@@ -177,7 +177,7 @@ main(int argc, char** argv)
   struct context ctx;
   struct fluid* fluid_param;
   struct solid* solid_param;
-  struct interface* interface_param;
+  struct interf* interface_param;
   double pos[3];
   double time;
   double ref;
@@ -218,14 +218,14 @@ main(int argc, char** argv)
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the solid/fluid interface */
-  CHK(sdis_data_create(dev, sizeof(struct interface),
-    ALIGNOF(struct interface), NULL, &data) == RES_OK);
+  CHK(sdis_data_create(dev, sizeof(struct interf),
+    ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->hc = 0.5;
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.temperature = NULL;
   CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, data, &interface) == RES_OK);
+    (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Release the media */
@@ -235,11 +235,11 @@ main(int argc, char** argv)
   /* Create the scene */
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
-  ctx.interface = interface;
+  ctx.interf = interf;
   CHK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
     box_nvertices, get_position, &ctx, &scn) == RES_OK);
 
-  CHK(sdis_interface_ref_put(interface) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
 
   /* Test the solver */
   pos[0] = 0.5;

@@ -148,7 +148,7 @@ solid_get_delta_boundary
 /*******************************************************************************
  * Interface
  ******************************************************************************/
-struct interface {
+struct interf {
   double temperature;
 };
 
@@ -166,7 +166,7 @@ interface_get_temperature
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->temperature;
+  return ((const struct interf*)sdis_data_cget(data))->temperature;
 }
 
 /*******************************************************************************
@@ -193,7 +193,7 @@ main(int argc, char** argv)
   struct s3dut_mesh* msh = NULL;
   struct s3dut_mesh_data msh_data;
   struct context ctx = CONTEXT_NULL;
-  struct interface* interface_param = NULL;
+  struct interf* interface_param = NULL;
   double pos[3];
   double time;
   double ref;
@@ -229,8 +229,8 @@ main(int argc, char** argv)
     (dev, solid, fluid, &interface_shader, NULL, &Tnone) == RES_OK);
 
   /* Create the fluid/solid interface with a fixed temperature of 300K */
-  CHK(sdis_data_create(dev, sizeof(struct interface),
-    ALIGNOF(struct interface), NULL, &data) == RES_OK);
+  CHK(sdis_data_create(dev, sizeof(struct interf),
+    ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->temperature = 300;
   interface_shader.convection_coef = null_convection_coef;
@@ -240,8 +240,8 @@ main(int argc, char** argv)
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the fluid/solid interface with a fixed temperature of 350K */
-  CHK(sdis_data_create(dev, sizeof(struct interface),
-    ALIGNOF(struct interface), NULL, &data) == RES_OK);
+  CHK(sdis_data_create(dev, sizeof(struct interf),
+    ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->temperature = 350;
   interface_shader.convection_coef = null_convection_coef;

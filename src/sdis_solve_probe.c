@@ -143,7 +143,7 @@ solid_solid_boundary_temperature
    struct ssp_rng* rng,
    struct temperature* T)
 {
-  const struct sdis_interface* interface = NULL;
+  const struct sdis_interface* interf = NULL;
   const struct sdis_medium* solid_front = NULL;
   const struct sdis_medium* solid_back = NULL;
   double lambda_front, lambda_back;
@@ -159,9 +159,9 @@ solid_solid_boundary_temperature
   (void)frag;
 
   /* Retrieve the current boundary media */
-  interface = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-  solid_front = interface_get_medium(interface, SDIS_FRONT);
-  solid_back = interface_get_medium(interface, SDIS_BACK);
+  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  solid_front = interface_get_medium(interf, SDIS_FRONT);
+  solid_back = interface_get_medium(interf, SDIS_BACK);
   ASSERT(solid_front->type == SDIS_MEDIUM_SOLID);
   ASSERT(solid_back->type == SDIS_MEDIUM_SOLID);
 
@@ -211,7 +211,7 @@ solid_fluid_boundary_temperature
    struct ssp_rng* rng,
    struct temperature* T)
 {
-  const struct sdis_interface* interface = NULL;
+  const struct sdis_interface* interf = NULL;
   const struct sdis_medium* mdm_front = NULL;
   const struct sdis_medium* mdm_back = NULL;
   const struct sdis_medium* solid = NULL;
@@ -228,9 +228,9 @@ solid_fluid_boundary_temperature
   ASSERT(check_rwalk_fragment_consistency(rwalk, frag));
 
   /* Retrieve the solid and the fluid split by the boundary */
-  interface = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-  mdm_front = interface_get_medium(interface, SDIS_FRONT);
-  mdm_back = interface_get_medium(interface, SDIS_BACK);
+  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  mdm_front = interface_get_medium(interf, SDIS_FRONT);
+  mdm_back = interface_get_medium(interf, SDIS_BACK);
   ASSERT(mdm_front->type != mdm_back->type);
   if(mdm_front->type == SDIS_MEDIUM_SOLID) {
     solid = mdm_front;
@@ -243,7 +243,7 @@ solid_fluid_boundary_temperature
   /* Fetch the solid properties */
   lambda = solid_get_thermal_conductivity(solid, &rwalk->vtx);
   delta_boundary = solid_get_delta_boundary(solid, &rwalk->vtx);
-  hc = interface_get_convection_coef(interface, frag);
+  hc = interface_get_convection_coef(interf, frag);
 
   /* Compute the probas to switch in solid or fluid random walk */
   tmp = lambda / (delta_boundary*fp_to_meter);
@@ -280,7 +280,7 @@ boundary_temperature
    struct temperature* T)
 {
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-  const struct sdis_interface* interface = NULL;
+  const struct sdis_interface* interf = NULL;
   const struct sdis_medium* mdm_front = NULL;
   const struct sdis_medium* mdm_back = NULL;
   double tmp;
@@ -290,18 +290,18 @@ boundary_temperature
   setup_interface_fragment(&frag, &rwalk->vtx, &rwalk->hit);
 
   /* Retrieve the current interface */
-  interface = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
 
   /* Check if the boundary condition is known */
-  tmp = interface_get_temperature(interface, &frag);
+  tmp = interface_get_temperature(interf, &frag);
   if(tmp >= 0) {
     T->value += tmp;
     T->done = 1;
     return RES_OK;
   }
 
-  mdm_front = interface_get_medium(interface, SDIS_FRONT);
-  mdm_back = interface_get_medium(interface, SDIS_BACK);
+  mdm_front = interface_get_medium(interf, SDIS_FRONT);
+  mdm_back = interface_get_medium(interf, SDIS_BACK);
 
   if(mdm_front->type == mdm_back->type) {
     solid_solid_boundary_temperature(scn, fp_to_meter, &frag, rwalk, rng, T);
@@ -404,10 +404,10 @@ solid_temperature
     if(S3D_HIT_NONE(&rwalk->hit)) {
       CHK(scene_get_medium(scn, rwalk->vtx.P, &mdm) == RES_OK);
     } else {
-      const struct sdis_interface* interface;
-      interface = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+      const struct sdis_interface* interf;
+      interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
       mdm = interface_get_medium
-        (interface,
+        (interf,
          f3_dot(rwalk->hit.normal, dir0) < 0 ? SDIS_FRONT : SDIS_BACK);
     }
 

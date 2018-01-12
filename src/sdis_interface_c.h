@@ -37,12 +37,12 @@ struct sdis_interface {
 
 extern LOCAL_SYM const struct sdis_medium*
 interface_get_medium
-  (const struct sdis_interface* interface,
+  (const struct sdis_interface* interf,
    const enum sdis_side_flag side);
 
 extern LOCAL_SYM unsigned
 interface_get_id
-  (const struct sdis_interface* interface);
+  (const struct sdis_interface* interf);
 
 extern LOCAL_SYM void
 setup_interface_fragment
@@ -52,21 +52,21 @@ setup_interface_fragment
 
 static INLINE double
 interface_get_temperature
-  (const struct sdis_interface* interface,
+  (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
 {
-  ASSERT(interface && frag);
-  if(!interface->shader.temperature) return -DBL_MAX;
-  return interface->shader.temperature(frag, interface->data);
+  ASSERT(interf && frag);
+  if(!interf->shader.temperature) return -DBL_MAX;
+  return interf->shader.temperature(frag, interf->data);
 }
 
 static INLINE double
 interface_get_convection_coef
-  (const struct sdis_interface* interface,
+  (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
 {
-  ASSERT(interface && frag);
-  return interface->shader.convection_coef(frag, interface->data);
+  ASSERT(interf && frag);
+  return interf->shader.convection_coef(frag, interf->data);
 }
 
 #endif /* SDIS_INTERFACE_C_H */

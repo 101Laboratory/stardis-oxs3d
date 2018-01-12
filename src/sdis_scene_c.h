@@ -32,21 +32,21 @@ struct geometry_context {
 static INLINE void
 interface_init
   (struct mem_allocator* allocator,
-   struct sdis_interface** interface)
+   struct sdis_interface** interf)
 {
   (void)allocator;
-  *interface = NULL;
+  *interf = NULL;
 }
 
 /* Declare the array of interfaces */
-#define DARRAY_NAME interface
+#define DARRAY_NAME interf
 #define DARRAY_DATA struct sdis_interface*
 #define DARRAY_FUNCTOR_INIT interface_init
 #include <rsys/dynamic_array.h>
 
 struct sdis_scene {
-  struct darray_interface interfaces; /* List of interfaces own by the scene */
-  struct darray_interface prim_interfaces; /* Per primitive interface */
+  struct darray_interf interfaces; /* List of interfaces own by the scene */
+  struct darray_interf prim_interfaces; /* Per primitive interface */
   struct s3d_scene_view* s3d_view;
 
   ref_T ref;

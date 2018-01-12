@@ -237,15 +237,15 @@ sdis_interface_create
    struct sdis_medium* back,
    const struct sdis_interface_shader* shader,
    struct sdis_data* data, /* Data sent to the shader. May be NULL */
-   struct sdis_interface** interface);
+   struct sdis_interface** interf);
 
 SDIS_API res_T
 sdis_interface_ref_get
-  (struct sdis_interface* interface);
+  (struct sdis_interface* interf);
 
 SDIS_API res_T
 sdis_interface_ref_put
-  (struct sdis_interface* interface);
+  (struct sdis_interface* interf);
 
 /*******************************************************************************
  * A scene is a collection of triangles. Each triangle is the support of the
@@ -256,7 +256,7 @@ sdis_scene_create
   (struct sdis_device* dev,
    const size_t ntris, /* #triangles */
    void (*indices)(const size_t itri, size_t ids[3], void*),
-   void (*interface)(const size_t itri, struct sdis_interface** bound, void*),
+   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[3], void* ctx),
    void* ctx,

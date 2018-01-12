@@ -58,25 +58,25 @@ clear_interfaces(struct sdis_scene* scn)
 {
   size_t i;
   ASSERT(scn);
-  FOR_EACH(i, 0, darray_interface_size_get(&scn->interfaces)) {
-    if(darray_interface_cdata_get(&scn->interfaces)[i]) {
-      SDIS(interface_ref_put(darray_interface_data_get(&scn->interfaces)[i]));
+  FOR_EACH(i, 0, darray_interf_size_get(&scn->interfaces)) {
+    if(darray_interf_cdata_get(&scn->interfaces)[i]) {
+      SDIS(interface_ref_put(darray_interf_data_get(&scn->interfaces)[i]));
     }
   }
-  darray_interface_clear(&scn->interfaces);
-  darray_interface_clear(&scn->prim_interfaces);
+  darray_interf_clear(&scn->interfaces);
+  darray_interf_clear(&scn->prim_interfaces);
 }
 
 static res_T
 setup_interfaces
   (struct sdis_scene* scn,
    const size_t ntris, /* #triangles */
-   void (*interface)(const size_t itri, struct sdis_interface**, void*),
+   void (*interf)(const size_t itri, struct sdis_interface**, void*),
    void* ctx)
 {
   size_t itri;
   res_T res = RES_OK;
-  ASSERT(ntris && interface);
+  ASSERT(ntris && interf);
 
   clear_interfaces(scn);
 
@@ -86,24 +86,24 @@ setup_interfaces
     unsigned id;
 
     /* Retrieve the interface of the primitive */
-    interface(itri, &itface, ctx);
+    interf(itri, &itface, ctx);
     id = interface_get_id(itface);
 
     /* Check that the interface is already registered against the scene */
-    ninterfaces = darray_interface_size_get(&scn->interfaces);
+    ninterfaces = darray_interf_size_get(&scn->interfaces);
     if(id >= ninterfaces) {
-      res = darray_interface_resize(&scn->interfaces, id + 1);
+      res = darray_interf_resize(&scn->interfaces, id + 1);
       if(res != RES_OK) goto error;
     }
-    if(darray_interface_cdata_get(&scn->interfaces)[id]) {
-      ASSERT(darray_interface_cdata_get(&scn->interfaces)[id] == itface);
+    if(darray_interf_cdata_get(&scn->interfaces)[id]) {
+      ASSERT(darray_interf_cdata_get(&scn->interfaces)[id] == itface);
     } else {
       SDIS(interface_ref_get(itface));
-      darray_interface_data_get(&scn->interfaces)[id] = itface;
+      darray_interf_data_get(&scn->interfaces)[id] = itface;
     }
 
     /* Register the primitive interface */
-    res = darray_interface_push_back(&scn->prim_interfaces, &itface);
+    res = darray_interf_push_back(&scn->prim_interfaces, &itface);
     if(res != RES_OK) goto error;
   }
 
@@ -192,8 +192,8 @@ scene_release(ref_T * ref)
   scn = CONTAINER_OF(ref, struct sdis_scene, ref);
   dev = scn->dev;
   clear_interfaces(scn);
-  darray_interface_release(&scn->interfaces);
-  darray_interface_release(&scn->prim_interfaces);
+  darray_interf_release(&scn->interfaces);
+  darray_interf_release(&scn->prim_interfaces);
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
@@ -207,7 +207,7 @@ sdis_scene_create
   (struct sdis_device* dev,
    const size_t ntris, /* #triangles */
    void (*indices)(const size_t itri, size_t ids[3], void*),
-   void (*interface)(const size_t itri, struct sdis_interface** bound, void*),
+   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[3], void* ctx),
    void* ctx,
@@ -216,7 +216,7 @@ sdis_scene_create
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_scn || !ntris || !indices || !interface || !nverts
+  if(!dev || !out_scn || !ntris || !indices || !interf || !nverts
   || !position || ntris > UINT_MAX || nverts > UINT_MAX) {
     res = RES_BAD_ARG;
     goto error;
@@ -231,10 +231,10 @@ sdis_scene_create
   ref_init(&scn->ref);
   SDIS(device_ref_get(dev));
   scn->dev = dev;
-  darray_interface_init(dev->allocator, &scn->interfaces);
-  darray_interface_init(dev->allocator, &scn->prim_interfaces);
+  darray_interf_init(dev->allocator, &scn->interfaces);
+  darray_interf_init(dev->allocator, &scn->prim_interfaces);
 
-  res = setup_interfaces(scn, ntris, interface, ctx);
+  res = setup_interfaces(scn, ntris, interf, ctx);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene interfaces.\n", FUNC_NAME);
     goto error;
@@ -293,8 +293,8 @@ sdis_scene_get_aabb
 const struct sdis_interface*
 scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 {
-  ASSERT(scn && iprim < darray_interface_size_get(&scn->prim_interfaces));
-  return darray_interface_cdata_get(&scn->prim_interfaces)[iprim];
+  ASSERT(scn && iprim < darray_interf_size_get(&scn->prim_interfaces));
+  return darray_interf_cdata_get(&scn->prim_interfaces)[iprim];
 }
 
 res_T
@@ -343,10 +343,10 @@ scene_get_medium
     }
 
     if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
-      const struct sdis_interface* interface;
-      interface = scene_get_interface(scn, hit.prim.prim_id);
+      const struct sdis_interface* interf;
+      interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
-        (interface, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+        (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
       break;
     }
   }

@@ -23,7 +23,7 @@ main(int argc, char** argv)
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
-  struct sdis_interface* interface = NULL;
+  struct sdis_interface* interf = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader shader = DUMMY_INTERFACE_SHADER;
@@ -53,42 +53,42 @@ main(int argc, char** argv)
   CHK(CREATE(dev, NULL, fluid, &shader, NULL, NULL) == RES_BAD_ARG);
   CHK(CREATE(NULL, solid, fluid, &shader, NULL, NULL) == RES_BAD_ARG);
   CHK(CREATE(dev, solid, fluid, &shader, NULL, NULL) == RES_BAD_ARG);
-  CHK(CREATE(NULL, NULL, NULL, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, NULL, NULL, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(NULL, solid, NULL, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, solid, NULL, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(NULL, NULL, fluid, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, NULL, fluid, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(NULL, solid, fluid, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, solid, fluid, NULL, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(NULL, NULL, NULL, &shader, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, NULL, NULL, &shader, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(NULL, solid, NULL, &shader, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, solid, NULL, &shader, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(NULL, NULL, fluid, &shader, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, NULL, fluid, &shader, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(NULL, solid, fluid, &shader, NULL, &interface) == RES_BAD_ARG);
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interface) == RES_OK);
+  CHK(CREATE(NULL, NULL, NULL, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, NULL, NULL, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(NULL, solid, NULL, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, NULL, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(NULL, NULL, fluid, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, NULL, fluid, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(NULL, solid, fluid, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, fluid, NULL, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(NULL, NULL, NULL, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, NULL, NULL, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(NULL, solid, NULL, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, NULL, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(NULL, NULL, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, NULL, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(NULL, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK);
 
   CHK(sdis_interface_ref_get(NULL) == RES_BAD_ARG);
-  CHK(sdis_interface_ref_get(interface) == RES_OK);
+  CHK(sdis_interface_ref_get(interf) == RES_OK);
   CHK(sdis_interface_ref_put(NULL) == RES_BAD_ARG);
-  CHK(sdis_interface_ref_put(interface) == RES_OK);
-  CHK(sdis_interface_ref_put(interface) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
 
-  CHK(CREATE(dev, solid, solid, &shader, NULL, &interface) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_BAD_ARG);
   shader.convection_coef = NULL;
-  CHK(CREATE(dev, solid, solid, &shader, NULL, &interface) == RES_OK);
-  CHK(sdis_interface_ref_put(interface) == RES_OK);
+  CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
 
   shader.temperature = NULL;
-  CHK(CREATE(dev, solid, solid, &shader, NULL, &interface) == RES_OK);
-  CHK(sdis_interface_ref_put(interface) == RES_OK);
+  CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
 
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interface) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
   shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interface) == RES_OK);
-  CHK(sdis_interface_ref_put(interface) == RES_OK);
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
   #undef CREATE
 
   CHK(sdis_device_ref_put(dev) == RES_OK);
