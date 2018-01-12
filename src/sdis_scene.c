@@ -315,9 +315,10 @@ scene_get_medium
     struct s3d_hit hit;
     struct s3d_attrib attr;
     struct s3d_primitive prim;
-    const float st[2] = { 1.f/3.f, 1.f/3.f };
+    float st[2];
     const float range[2] = {0.f, FLT_MAX};
     float N[3], P[3], dir[3], cos_N_dir;
+    st[0] = st[1] = 1.f / 3.f; /* Or MSVC will issue a warning */
 
     /* Retrieve a position onto the primitive */
     S3D(scene_view_get_primitive(scn->s3d_view, (unsigned)iprim, &prim));
