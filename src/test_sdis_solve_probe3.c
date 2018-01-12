@@ -324,7 +324,7 @@ main(int argc, char** argv)
 
   /* Check the results */
   CHK(nfails + nreals == N);
-  CHK(eq_eps(T.E, ref, T.SE));
+  CHK(eq_eps(T.E, ref, 2*T.SE));
 
   /* Release data */
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
