@@ -18,17 +18,109 @@
 #include "sdis_interface_c.h"
 #include "sdis_scene_c.h"
 
+#include <rsys/float2.h>
 #include <rsys/float3.h>
+#include <rsys/double2.h>
 #include <rsys/double3.h>
 #include <rsys/mem_allocator.h>
 
+#include <star/s2d.h>
 #include <star/s3d.h>
 
 #include <limits.h>
 
+/* Context used to wrap the user geometry to Star-XD. */
+struct geometry_context {
+  void (*indices)(const size_t iprim, size_t ids[], void*);
+  void (*position)(const size_t ivert, double pos[], void*);
+  void* data;
+};
+
 /*******************************************************************************
  * Helper function
  ******************************************************************************/
+/* Check that `hit' roughly lies on an edge. For triangular primitives, a
+ * simple but approximative way is to test that its position have at least one
+ * barycentric coordinate roughly equal to 0 or 1. */
+static FINLINE int
+hit_on_edge(const struct s3d_hit* hit)
+{
+  const float on_edge_eps = 1.e-4f;
+  float w;
+  ASSERT(hit && !S3D_HIT_NONE(hit));
+  w = 1.f - hit->uv[0] - hit->uv[1];
+  return eq_epsf(hit->uv[0], 0.f, on_edge_eps)
+      || eq_epsf(hit->uv[0], 1.f, on_edge_eps)
+      || eq_epsf(hit->uv[1], 0.f, on_edge_eps)
+      || eq_epsf(hit->uv[1], 1.f, on_edge_eps)
+      || eq_epsf(w, 0.f, on_edge_eps)
+      || eq_epsf(w, 1.f, on_edge_eps);
+}
+
+static int
+hit_filter_function
+  (const struct s3d_hit* hit,
+   const float org[3],
+   const float dir[3],
+   void* ray_data,
+   void* filter_data)
+{
+  const struct s3d_hit* hit_from = ray_data;
+  (void)org, (void)dir, (void)filter_data;
+
+  if(!hit_from || S3D_HIT_NONE(hit_from)) return 0; /* No filtering */
+
+  if(S3D_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
+
+  if(eq_epsf(hit->distance, 0, 1.e-6f)) {
+    /* If the targeted point is near of the origin, check that it lies on an
+     * edge shared by the 2 primitives. */
+    return hit_on_edge(hit_from) && hit_on_edge(hit);
+  }
+
+  return 0;
+}
+
+/* Check that `hit' roughly lies on a vertex. For segments, a simple but
+ * approximative way is to test that its position have at least one barycentric
+ * coordinate roughly equal to 0 or 1. */
+static FINLINE int
+hit_on_vertex(const struct s2d_hit* hit)
+{
+  const float on_vertex_eps = 1.e-4f;
+  float v;
+  ASSERT(hit && !S2D_HIT_NONE(hit));
+  v = 1.f - hit->u;
+  return eq_epsf(hit->u, 0.f, on_vertex_eps)
+      || eq_epsf(hit->u, 1.f, on_vertex_eps)
+      || eq_epsf(v, 0.f, on_vertex_eps)
+      || eq_epsf(v, 1.f, on_vertex_eps);
+}
+
+static int
+hit_filter_function_2d
+  (const struct s2d_hit* hit,
+   const float org[2],
+   const float dir[2],
+   void* ray_data,
+   void* filter_data)
+{
+  const struct s2d_hit* hit_from = ray_data;
+  (void)org, (void)dir, (void)filter_data;
+
+  if(!hit_from || S2D_HIT_NONE(hit_from)) return 0; /* No filtering */
+
+  if(S2D_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
+
+  if(eq_epsf(hit->distance, 0, 1.e-6f)) {
+    /* If the targeted point is near of the origin, check that it lies on a
+     * vertex shared by the 2 segments. */
+    return hit_on_vertex(hit_from) && hit_on_vertex(hit);
+  }
+
+  return 0;
+}
+
 static void
 get_indices(const unsigned itri, unsigned out_ids[3], void* data)
 {
@@ -42,6 +134,17 @@ get_indices(const unsigned itri, unsigned out_ids[3], void* data)
 }
 
 static void
+get_indices_2d(const unsigned iseg, unsigned out_ids[2], void* data)
+{
+  struct geometry_context* ctx = data;
+  size_t ids[2];
+  ASSERT(ctx);
+  ctx->indices(iseg, ids, ctx->data);
+  out_ids[0] = (unsigned)ids[0];
+  out_ids[1] = (unsigned)ids[1];
+}
+
+static void
 get_position(const unsigned ivert, float out_pos[3], void* data)
 {
   struct geometry_context* ctx = data;
@@ -51,6 +154,17 @@ get_position(const unsigned ivert, float out_pos[3], void* data)
   out_pos[0] = (float)pos[0];
   out_pos[1] = (float)pos[1];
   out_pos[2] = (float)pos[2];
+}
+
+static void
+get_position_2d(const unsigned ivert, float out_pos[2], void* data)
+{
+  struct geometry_context* ctx = data;
+  double pos[2];
+  ASSERT(ctx);
+  ctx->position(ivert, pos, ctx->data);
+  out_pos[0] = (float)pos[0];
+  out_pos[1] = (float)pos[1];
 }
 
 static void
@@ -165,59 +279,75 @@ error:
   goto exit;
 }
 
-/* Check that `hit' roughly lies on an edge. For triangular primitives, a
- * simple but approximative way is to test that its position have at least one
- * barycentric coordinate roughly equal to 0 or 1. */
-static FINLINE int
-hit_on_edge(const struct s3d_hit* hit)
-{
-  const float on_edge_eps = 1.e-4f;
-  float w;
-  ASSERT(hit && !S3D_HIT_NONE(hit));
-    w = 1.f - hit->uv[0] - hit->uv[1];
-  return eq_epsf(hit->uv[0], 0.f, on_edge_eps)
-      || eq_epsf(hit->uv[0], 1.f, on_edge_eps)
-      || eq_epsf(hit->uv[1], 0.f, on_edge_eps)
-      || eq_epsf(hit->uv[1], 1.f, on_edge_eps)
-      || eq_epsf(w, 0.f, on_edge_eps)
-      || eq_epsf(w, 1.f, on_edge_eps);
-}
-
-static void
-scene_release(ref_T * ref)
-{
-  struct sdis_device* dev = NULL;
-  struct sdis_scene* scn = NULL;
-  ASSERT(ref);
-  scn = CONTAINER_OF(ref, struct sdis_scene, ref);
-  dev = scn->dev;
-  clear_interfaces(scn);
-  darray_interf_release(&scn->interfaces);
-  darray_interf_release(&scn->prim_interfaces);
-  if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
-  MEM_RM(dev->allocator, scn);
-  SDIS(device_ref_put(dev));
-}
-
-/*******************************************************************************
- * Exported functions
- ******************************************************************************/
-res_T
-sdis_scene_create
-  (struct sdis_device* dev,
-   const size_t ntris, /* #triangles */
-   void (*indices)(const size_t itri, size_t ids[3], void*),
-   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
+static res_T
+setup_geometry_2d
+  (struct sdis_scene* scn,
+   const size_t nsegs, /* #segments */
+   void (*indices)(const size_t itri, size_t ids[2], void*),
    const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[3], void* ctx),
+   void (*position)(const size_t ivert, double pos[2], void* ctx),
+   void* ctx)
+{
+  struct geometry_context context;
+  struct s2d_shape* s2d_msh = NULL;
+  struct s2d_scene* s2d_scn = NULL;
+  struct s2d_vertex_data vdata = S2D_VERTEX_DATA_NULL;
+  res_T res = RES_OK;
+  ASSERT(scn && ntris && indices && nverts && position);
+
+  /* Setup the intermediary geometry context */
+  context.indices = indices;
+  context.position = position;
+  context.data = ctx;
+
+  /* Setup the vertex data */
+  vdata.usage = S2D_POSITION;
+  vdata.type = S2D_FLOAT2;
+  vdata.get = get_position_2d;
+
+  /* Create the Star-2D geometry */
+  res = s2d_scene_create(scn->dev->s2d, &s2d_scn);
+  if(res != RES_OK) goto error;
+  res = s2d_shape_create_line_segments(scn->dev->s2d, &s2d_msh);
+  if(res != RES_OK) goto error;
+  res = s2d_line_segments_set_hit_filter_function
+    (s2d_msh, hit_filter_function_2d, NULL);
+  if(res != RES_OK) goto error;
+  res = s2d_scene_attach_shape(s2d_scn, s2d_msh);
+  if(res != RES_OK) goto error;
+  res = s2d_line_segments_setup_indexed_vertices(s2d_msh, (unsigned)nsegs,
+    get_indices_2d, (unsigned)nverts, &vdata, 1, &context);
+  if(res != RES_OK) goto error;
+  res = s2d_scene_view_create(s2d_scn, S2D_SAMPLE|S2D_TRACE|S2D_GET_PRIMITIVE,
+    &scn->s2d_view);
+  if(res != RES_OK) goto error;
+
+exit:
+  if(s2d_msh) S2D(shape_ref_put(s2d_msh));
+  if(s2d_scn) S2D(scene_ref_put(s2d_scn));
+  return res;
+error:
+  if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
+  goto exit;
+}
+
+static res_T
+scene_create
+  (struct sdis_device* dev,
+   const int is_2d,
+   const size_t nprims, /* #primitives */
+   void (*indices)(const size_t iprim, size_t ids[], void*),
+   void (*interf)(const size_t iprim, struct sdis_interface** bound, void*),
+   const size_t nverts, /* #vertices */
+   void (*position)(const size_t ivert, double pos[], void* ctx),
    void* ctx,
    struct sdis_scene** out_scn)
 {
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_scn || !ntris || !indices || !interf || !nverts
-  || !position || ntris > UINT_MAX || nverts > UINT_MAX) {
+  if(!dev || !out_scn || !nprims || !indices || !interf || !nverts
+  || !position || nprims > UINT_MAX || nverts > UINT_MAX) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -234,13 +364,17 @@ sdis_scene_create
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_interf_init(dev->allocator, &scn->prim_interfaces);
 
-  res = setup_interfaces(scn, ntris, interf, ctx);
+  res = setup_interfaces(scn, nprims, interf, ctx);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene interfaces.\n", FUNC_NAME);
     goto error;
   }
 
-  res = setup_geometry(scn, ntris, indices, nverts, position, ctx);
+  if(is_2d) {
+    res = setup_geometry_2d(scn, nprims, indices, nverts, position, ctx);
+  } else {
+    res = setup_geometry(scn, nprims, indices, nverts, position, ctx);
+  }
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene geometry.\n", FUNC_NAME);
     goto error;
@@ -257,48 +391,72 @@ error:
   goto exit;
 }
 
-res_T
-sdis_scene_ref_get(struct sdis_scene* scn)
+static INLINE res_T
+scene_get_medium_2d
+  (const struct sdis_scene* scn,
+   const double pos[2],
+   const struct sdis_medium** out_medium)
 {
-  if(!scn) return RES_BAD_ARG;
-  ref_get(&scn->ref);
-  return RES_OK;
-}
-
-res_T
-sdis_scene_ref_put(struct sdis_scene* scn)
-{
-  if(!scn) return RES_BAD_ARG;
-  ref_put(&scn->ref, scene_release);
-  return RES_OK;
-}
-
-res_T
-sdis_scene_get_aabb
-  (const struct sdis_scene* scn, double lower[3], double upper[3])
-{
-  float low[3], upp[3];
+  const struct sdis_medium* medium = NULL;
+  size_t iprim, nprims;
+  size_t nfailures = 0;
+  const size_t max_failures = 10;
   res_T res = RES_OK;
-  if(!scn || !lower || !upper) return RES_BAD_ARG;
-  res = s3d_scene_view_get_aabb(scn->s3d_view, low, upp);
-  if(res != RES_OK) return res;
-  d3_set_f3(lower, low);
-  d3_set_f3(upper, upp);
-  return RES_OK;
+  ASSERT(scn && pos);
+
+  S2D(scene_view_primitives_count(scn->s2d_view, &nprims));
+  FOR_EACH(iprim, 0, nprims) {
+    struct s2d_hit hit;
+    struct s2d_attrib attr;
+    struct s2d_primitive prim;
+    float s;
+    const float range[2] = {0.f, FLT_MAX};
+    float N[2], P[2], dir[2], cos_N_dir;
+    s = 1.f / 3.f;
+
+    /* Retrieve a position onto the primitive */
+    S2D(scene_view_get_primitive(scn->s2d_view, (unsigned)iprim, &prim));
+    S2D(primitive_get_attrib(&prim, S2D_POSITION, s, &attr));
+
+    /* Trace a ray from the randomw walk vertex  toward the retrieved primitive
+     * position */
+    f2_normalize(dir, f2_sub(dir, attr.value, f2_set_d2(P, pos)));
+    S2D(scene_view_trace_ray(scn->s2d_view, P, dir, range, NULL, &hit));
+
+    f2_normalize(N, hit.normal);
+    cos_N_dir = f2_dot(N, dir);
+
+    /* Unforeseen error. One has to intersect a primitive ! */
+    if(S2D_HIT_NONE(&hit)) {
+      ++nfailures;
+      if(nfailures < max_failures) {
+        continue;
+      } else {
+        res = RES_BAD_ARG;
+        goto error;
+      }
+    }
+
+    if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
+      const struct sdis_interface* interf;
+      interf = scene_get_interface(scn, hit.prim.prim_id);
+      medium = interface_get_medium
+        (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+      break;
+    }
+  }
+
+exit:
+  *out_medium = medium;
+  return res;
+error:
+  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
+    FUNC_NAME, SPLIT2(pos));
+  goto exit;
 }
 
-/*******************************************************************************
- * Local miscellaneous function
- ******************************************************************************/
-const struct sdis_interface*
-scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
-{
-  ASSERT(scn && iprim < darray_interf_size_get(&scn->prim_interfaces));
-  return darray_interf_cdata_get(&scn->prim_interfaces)[iprim];
-}
-
-res_T
-scene_get_medium
+static INLINE res_T
+scene_get_medium_3d
   (const struct sdis_scene* scn,
    const double pos[3],
    const struct sdis_medium** out_medium)
@@ -361,27 +519,113 @@ error:
   goto exit;
 }
 
-int
-hit_filter_function
-  (const struct s3d_hit* hit,
-   const float org[3],
-   const float dir[3],
-   void* ray_data,
-   void* filter_data)
+static void
+scene_release(ref_T * ref)
 {
-  const struct s3d_hit* hit_from = ray_data;
-  (void)org, (void)dir, (void)filter_data;
+  struct sdis_device* dev = NULL;
+  struct sdis_scene* scn = NULL;
+  ASSERT(ref);
+  scn = CONTAINER_OF(ref, struct sdis_scene, ref);
+  dev = scn->dev;
+  clear_interfaces(scn);
+  darray_interf_release(&scn->interfaces);
+  darray_interf_release(&scn->prim_interfaces);
+  if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
+  if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
+  MEM_RM(dev->allocator, scn);
+  SDIS(device_ref_put(dev));
+}
 
-  if(!hit_from || S3D_HIT_NONE(hit_from)) return 0; /* No filtering */
+/*******************************************************************************
+ * Exported functions
+ ******************************************************************************/
+res_T
+sdis_scene_create
+  (struct sdis_device* dev,
+   const size_t ntris, /* #triangles */
+   void (*indices)(const size_t itri, size_t ids[3], void*),
+   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
+   const size_t nverts, /* #vertices */
+   void (*position)(const size_t ivert, double pos[3], void* ctx),
+   void* ctx,
+   struct sdis_scene** out_scn)
+{
+  return scene_create
+    (dev, 0/*is_2D*/, ntris, indices, interf, nverts, position, ctx, out_scn);
+}
 
-  if(S3D_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
+res_T
+sdis_scene_2d_create
+  (struct sdis_device* dev,
+   const size_t nsegs, /* #segments */
+   void (*indices)(const size_t itri, size_t ids[2], void*),
+   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
+   const size_t nverts, /* #vertices */
+   void (*position)(const size_t ivert, double pos[2], void* ctx),
+   void* ctx,
+   struct sdis_scene** out_scn)
+{
+  return scene_create
+    (dev, 1/*is_2D*/, nsegs, indices, interf, nverts, position, ctx, out_scn);
+}
 
-  if(eq_epsf(hit->distance, 0, 1.e-6f)) {
-    /* If the targeted point is near of the origin, check that it lies on an
-     * edge shared by the 2 primitives. */
-    return hit_on_edge(hit_from) && hit_on_edge(hit);
+res_T
+sdis_scene_ref_get(struct sdis_scene* scn)
+{
+  if(!scn) return RES_BAD_ARG;
+  ref_get(&scn->ref);
+  return RES_OK;
+}
+
+res_T
+sdis_scene_ref_put(struct sdis_scene* scn)
+{
+  if(!scn) return RES_BAD_ARG;
+  ref_put(&scn->ref, scene_release);
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_aabb
+  (const struct sdis_scene* scn, double lower[], double upper[])
+{
+  float low[3], upp[3];
+  res_T res = RES_OK;
+  if(!scn || !lower || !upper) return RES_BAD_ARG;
+
+  if(scene_is_2d(scn)) {
+    res = s2d_scene_view_get_aabb(scn->s2d_view, low, upp);
+    if(res != RES_OK) return res;
+    d2_set_f2(lower, low);
+    d2_set_f2(upper, upp);
+  } else {
+    res = s3d_scene_view_get_aabb(scn->s3d_view, low, upp);
+    if(res != RES_OK) return res;
+    d3_set_f3(lower, low);
+    d3_set_f3(upper, upp);
   }
+  return RES_OK;
+}
 
-  return 0;
+/*******************************************************************************
+ * Local miscellaneous function
+ ******************************************************************************/
+const struct sdis_interface*
+scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
+{
+  ASSERT(scn && iprim < darray_interf_size_get(&scn->prim_interfaces));
+  return darray_interf_cdata_get(&scn->prim_interfaces)[iprim];
+}
+
+res_T
+scene_get_medium
+  (const struct sdis_scene* scn,
+   const double pos[],
+   const struct sdis_medium** out_medium)
+{
+
+  return scene_is_2d(scn)
+    ? scene_get_medium_2d(scn, pos, out_medium)
+    : scene_get_medium_3d(scn, pos, out_medium);
 }
 

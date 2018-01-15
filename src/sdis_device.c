@@ -19,6 +19,7 @@
 #include <rsys/logger.h>
 #include <rsys/mem_allocator.h>
 
+#include <star/s2d.h>
 #include <star/s3d.h>
 
 #include <omp.h>
@@ -47,6 +48,7 @@ device_release(ref_T* ref)
   struct sdis_device* dev;
   ASSERT(ref);
   dev = CONTAINER_OF(ref, struct sdis_device, ref);
+  if(dev->s2d) S2D(device_ref_put(dev->s2d));
   if(dev->s3d) S3D(device_ref_put(dev->s3d));
   ASSERT(flist_name_is_empty(&dev->names));
   flist_name_release(&dev->names);
@@ -93,9 +95,15 @@ sdis_device_create
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->names);
 
+  res = s2d_device_create(log, allocator, 0, &dev->s2d);
+  if(res != RES_OK) {
+    log_err(dev,
+      "%s, could not create the Star-2D device on Stardis.\n", FUNC_NAME);
+  }
+
   res = s3d_device_create(log, allocator, 0, &dev->s3d);
   if(res != RES_OK) {
-    log_err(dev, 
+    log_err(dev,
       "%s: could not create the Star-3D device on Stardis.\n", FUNC_NAME);
     goto error;
   }

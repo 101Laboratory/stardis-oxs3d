@@ -24,6 +24,7 @@ option(NO_TEST "Do not build tests" OFF)
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.3 REQUIRED)
+find_package(Star2D 0.1 REQUIRED)
 find_package(Star3D 0.4 REQUIRED)
 find_package(StarSP 0.5 REQUIRED)
 find_package(RSys 0.6 REQUIRED)
@@ -74,7 +75,7 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star3D StarSP)
+target_link_libraries(sdis RSys Star2D Star3D StarSP)
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD

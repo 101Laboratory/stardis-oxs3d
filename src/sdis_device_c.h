@@ -31,6 +31,7 @@ struct sdis_device {
 
   struct flist_name names;
 
+  struct s2d_device* s2d;
   struct s3d_device* s3d;
 
   ref_T ref;

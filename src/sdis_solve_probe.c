@@ -487,6 +487,12 @@ sdis_solve_probe
     goto error;
   }
 
+  if(scene_is_2d(scn)) {
+    log_err(scn->dev, "%s: 2D scene are not supported yet.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
   res = scene_get_medium(scn, position, &medium);
   if(res != RES_OK) goto error;
 
