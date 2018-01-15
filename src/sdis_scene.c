@@ -293,7 +293,7 @@ setup_geometry_2d
   struct s2d_scene* s2d_scn = NULL;
   struct s2d_vertex_data vdata = S2D_VERTEX_DATA_NULL;
   res_T res = RES_OK;
-  ASSERT(scn && ntris && indices && nverts && position);
+  ASSERT(scn && nsegs && indices && nverts && position);
 
   /* Setup the intermediary geometry context */
   context.indices = indices;
