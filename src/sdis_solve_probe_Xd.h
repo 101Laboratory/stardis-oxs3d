@@ -43,7 +43,7 @@
   #include <rsys/float3.h>
   #include <star/s3d.h>
 #else
-  #error "Invalid dimension "STR(SDIS_SOLVE_PROBE_DIMENSION)
+  #error "Invalid SDIS_SOLVE_PROBE_DIMENSION value."
 #endif
 
 /* Syntactic sugar */
