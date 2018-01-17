@@ -119,6 +119,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe)
   new_test(test_sdis_solve_probe2)
   new_test(test_sdis_solve_probe3)
+  new_test(test_sdis_solve_probe_2d)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
 endif()
