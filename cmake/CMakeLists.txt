@@ -120,8 +120,13 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe2)
   new_test(test_sdis_solve_probe3)
   new_test(test_sdis_solve_probe_2d)
+  new_test(test_sdis_solve_probe2_2d)
+  new_test(test_sdis_solve_probe3_2d)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
+  if(CMAKE_COMPILER_IS_GNUCC)
+    target_link_libraries(test_sdis_solve_probe3_2d m)
+  endif()
 endif()
 
 ################################################################################

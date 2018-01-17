@@ -140,6 +140,27 @@ dump_mesh
 }
 
 static INLINE void
+dump_segments
+  (FILE* stream,
+   const double* pos,
+   const size_t npos,
+   const size_t* ids,
+   const size_t nids)
+{
+  size_t i;
+  CHK(pos != NULL && npos != 0);
+  CHK(ids != NULL && nids != 0);
+  FOR_EACH(i, 0, npos) {
+    fprintf(stream, "v %g %g 0\n", SPLIT2(pos+i*2));
+  }
+  FOR_EACH(i, 0, nids) {
+    fprintf(stream, "l %lu %lu\n",
+      (unsigned long)(ids[i*2+0] + 1),
+      (unsigned long)(ids[i*2+1] + 1));
+  }
+}
+
+static INLINE void
 check_memory_allocator(struct mem_allocator* allocator)
 {
   if(MEM_ALLOCATED_SIZE(allocator)) {
