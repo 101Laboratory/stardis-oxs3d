@@ -26,7 +26,7 @@ option(NO_TEST "Do not build tests" OFF)
 find_package(RCMake 0.3 REQUIRED)
 find_package(Star2D 0.1 REQUIRED)
 find_package(Star3D 0.4 REQUIRED)
-find_package(StarSP 0.5 REQUIRED)
+find_package(StarSP 0.7 REQUIRED)
 find_package(RSys 0.6 REQUIRED)
 find_package(OpenMP 1.2 REQUIRED)
 

@@ -18,6 +18,10 @@
 #include "sdis_estimator_c.h"
 #include "sdis_solve_probe_Xd.h"
 
+/* Generate the 2D solver */
+#define SDIS_SOLVE_PROBE_DIMENSION 2
+#include "sdis_solve_probe_Xd.h"
+
 /* Generate the 3D solver */
 #define SDIS_SOLVE_PROBE_DIMENSION 3
 #include "sdis_solve_probe_Xd.h"
@@ -47,12 +51,6 @@ sdis_solve_probe
     goto error;
   }
 
-  if(scene_is_2d(scn)) {
-    log_err(scn->dev, "%s: 2D scene are not supported yet.\n", FUNC_NAME);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
   res = scene_get_medium(scn, position, &medium);
   if(res != RES_OK) goto error;
 
@@ -62,23 +60,15 @@ sdis_solve_probe
   if(res != RES_OK) goto error;
 
   FOR_EACH(irealisation, 0, nrealisations) {
-    struct rwalk_3d rwalk = RWALK_NULL_3d;
-    struct temperature_3d T = TEMPERATURE_NULL_3d;
+    double w;
 
-    switch(medium->type) {
-      case SDIS_MEDIUM_FLUID: T.func = fluid_temperature_3d; break;
-      case SDIS_MEDIUM_SOLID: T.func = solid_temperature_3d; break;
-      default: FATAL("Unreachable code\n"); break;
+    if(scene_is_2d(scn)) {
+      res = probe_realisation_2d
+        (scn, rng, medium, position, time, fp_to_meter, &w);
+    } else {
+      res = probe_realisation_3d
+        (scn, rng, medium, position, time, fp_to_meter, &w);
     }
-
-    rwalk.vtx.P[0] = position[0];
-    rwalk.vtx.P[1] = position[1];
-    rwalk.vtx.P[2] = position[2];
-    rwalk.vtx.time = time;
-    rwalk.hit = S3D_HIT_NULL;
-    rwalk.mdm = medium;
-
-    res = compute_temperature_3d(scn, fp_to_meter, &rwalk, rng, &T);
     if(res != RES_OK) {
       if(res == RES_BAD_OP) {
         ++estimator->nfailures;
@@ -86,8 +76,8 @@ sdis_solve_probe
         goto error;
       }
     } else {
-      weight += T.value;
-      sqr_weight += T.value*T.value;
+      weight += w;
+      sqr_weight += w*w;
       ++estimator->nrealisations;
     }
   }

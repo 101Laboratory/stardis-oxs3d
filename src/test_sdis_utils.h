@@ -20,7 +20,7 @@
 #include <stdio.h>
 
 /*******************************************************************************
- * Geometry
+ * Box geometry
  ******************************************************************************/
 static const double box_vertices[8/*#vertices*/*3/*#coords per vertex*/] = {
   0.0, 0.0, 0.0,
@@ -53,6 +53,25 @@ static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
   0, 1, 4, 4, 1, 5  /* Bottom face */
 };
 static const size_t box_ntriangles = sizeof(box_indices) / sizeof(size_t[3]);
+
+/*******************************************************************************
+ * Square geometry
+ ******************************************************************************/
+static const double square_vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
+  1.0, 0.0,
+  0.0, 0.0,
+  0.0, 1.0,
+  1.0, 1.0
+};
+static const size_t square_nvertices = sizeof(square_vertices)/sizeof(double[2]);
+
+static const size_t square_indices[4/*#triangles*/*2/*#indices per segment*/]= {
+  0, 1, /* Bottom */
+  1, 2, /* Left */
+  2, 3, /* Top */
+  3, 0 /* Right */
+};
+static const size_t square_nsegments = sizeof(square_indices)/sizeof(size_t[2]);
 
 /*******************************************************************************
  * Medium & interface

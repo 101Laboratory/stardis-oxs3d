@@ -22,6 +22,7 @@
 #include <float.h>
 
 /* Forward declaration of external type */
+struct s2d_hit;
 struct s3d_hit;
 
 struct sdis_interface {
@@ -45,7 +46,13 @@ interface_get_id
   (const struct sdis_interface* interf);
 
 extern LOCAL_SYM void
-setup_interface_fragment
+setup_interface_fragment_2d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_rwalk_vertex* vertex,
+   const struct s2d_hit* hit);
+
+extern LOCAL_SYM void
+setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
    const struct s3d_hit* hit);

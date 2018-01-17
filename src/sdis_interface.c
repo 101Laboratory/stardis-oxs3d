@@ -21,6 +21,7 @@
 #include <rsys/double3.h>
 #include <rsys/mem_allocator.h>
 
+#include <star/s2d.h>
 #include <star/s3d.h>
 
 /*******************************************************************************
@@ -176,7 +177,22 @@ interface_get_id(const struct sdis_interface* interf)
 }
 
 void
-setup_interface_fragment
+setup_interface_fragment_2d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_rwalk_vertex* vertex,
+   const struct s2d_hit* hit)
+{
+  ASSERT(frag && vertex && hit && !S2D_HIT_NONE(hit));
+  d2_set(frag->P, vertex->P);
+  frag->P[2] = 0;
+  d2_normalize(frag->Ng, d2_set_f2(frag->Ng, hit->normal));
+  frag->Ng[2] = 0;
+  frag->uv[0] = hit->u;
+  frag->time = vertex->time;
+}
+
+void
+setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
    const struct s3d_hit* hit)

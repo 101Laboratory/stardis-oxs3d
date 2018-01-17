@@ -39,6 +39,22 @@ struct geometry_context {
 /*******************************************************************************
  * Helper function
  ******************************************************************************/
+/* Check that `hit' roughly lies on a vertex. For segments, a simple but
+ * approximative way is to test that its position have at least one barycentric
+ * coordinate roughly equal to 0 or 1. */
+static FINLINE int
+hit_on_vertex(const struct s2d_hit* hit)
+{
+  const float on_vertex_eps = 1.e-4f;
+  float v;
+  ASSERT(hit && !S2D_HIT_NONE(hit));
+  v = 1.f - hit->u;
+  return eq_epsf(hit->u, 0.f, on_vertex_eps)
+      || eq_epsf(hit->u, 1.f, on_vertex_eps)
+      || eq_epsf(v, 0.f, on_vertex_eps)
+      || eq_epsf(v, 1.f, on_vertex_eps);
+}
+
 /* Check that `hit' roughly lies on an edge. For triangular primitives, a
  * simple but approximative way is to test that its position have at least one
  * barycentric coordinate roughly equal to 0 or 1. */
@@ -58,7 +74,7 @@ hit_on_edge(const struct s3d_hit* hit)
 }
 
 static int
-hit_filter_function
+hit_filter_function_3d
   (const struct s3d_hit* hit,
    const float org[3],
    const float dir[3],
@@ -79,22 +95,6 @@ hit_filter_function
   }
 
   return 0;
-}
-
-/* Check that `hit' roughly lies on a vertex. For segments, a simple but
- * approximative way is to test that its position have at least one barycentric
- * coordinate roughly equal to 0 or 1. */
-static FINLINE int
-hit_on_vertex(const struct s2d_hit* hit)
-{
-  const float on_vertex_eps = 1.e-4f;
-  float v;
-  ASSERT(hit && !S2D_HIT_NONE(hit));
-  v = 1.f - hit->u;
-  return eq_epsf(hit->u, 0.f, on_vertex_eps)
-      || eq_epsf(hit->u, 1.f, on_vertex_eps)
-      || eq_epsf(v, 0.f, on_vertex_eps)
-      || eq_epsf(v, 1.f, on_vertex_eps);
 }
 
 static int
@@ -122,18 +122,6 @@ hit_filter_function_2d
 }
 
 static void
-get_indices(const unsigned itri, unsigned out_ids[3], void* data)
-{
-  struct geometry_context* ctx = data;
-  size_t ids[3];
-  ASSERT(ctx);
-  ctx->indices(itri, ids, ctx->data);
-  out_ids[0] = (unsigned)ids[0];
-  out_ids[1] = (unsigned)ids[1];
-  out_ids[2] = (unsigned)ids[2];
-}
-
-static void
 get_indices_2d(const unsigned iseg, unsigned out_ids[2], void* data)
 {
   struct geometry_context* ctx = data;
@@ -145,15 +133,15 @@ get_indices_2d(const unsigned iseg, unsigned out_ids[2], void* data)
 }
 
 static void
-get_position(const unsigned ivert, float out_pos[3], void* data)
+get_indices_3d(const unsigned itri, unsigned out_ids[3], void* data)
 {
   struct geometry_context* ctx = data;
-  double pos[3];
+  size_t ids[3];
   ASSERT(ctx);
-  ctx->position(ivert, pos, ctx->data);
-  out_pos[0] = (float)pos[0];
-  out_pos[1] = (float)pos[1];
-  out_pos[2] = (float)pos[2];
+  ctx->indices(itri, ids, ctx->data);
+  out_ids[0] = (unsigned)ids[0];
+  out_ids[1] = (unsigned)ids[1];
+  out_ids[2] = (unsigned)ids[2];
 }
 
 static void
@@ -165,6 +153,18 @@ get_position_2d(const unsigned ivert, float out_pos[2], void* data)
   ctx->position(ivert, pos, ctx->data);
   out_pos[0] = (float)pos[0];
   out_pos[1] = (float)pos[1];
+}
+
+static void
+get_position_3d(const unsigned ivert, float out_pos[3], void* data)
+{
+  struct geometry_context* ctx = data;
+  double pos[3];
+  ASSERT(ctx);
+  ctx->position(ivert, pos, ctx->data);
+  out_pos[0] = (float)pos[0];
+  out_pos[1] = (float)pos[1];
+  out_pos[2] = (float)pos[2];
 }
 
 static void
@@ -229,57 +229,6 @@ error:
 }
 
 static res_T
-setup_geometry
-  (struct sdis_scene* scn,
-   const size_t ntris, /* #triangles */
-   void (*indices)(const size_t itri, size_t ids[3], void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[3], void* ctx),
-   void* ctx)
-{
-  struct geometry_context context;
-  struct s3d_shape* s3d_msh = NULL;
-  struct s3d_scene* s3d_scn = NULL;
-  struct s3d_vertex_data vdata = S3D_VERTEX_DATA_NULL;
-  res_T res = RES_OK;
-  ASSERT(scn && ntris && indices && nverts && position);
-
-  /* Setup the intermediary geometry context */
-  context.indices = indices;
-  context.position = position;
-  context.data = ctx;
-
-  /* Setup the vertex data */
-  vdata.usage = S3D_POSITION;
-  vdata.type = S3D_FLOAT3;
-  vdata.get = get_position;
-
-  /* Create the Star-3D geometry */
-  res = s3d_scene_create(scn->dev->s3d, &s3d_scn);
-  if(res != RES_OK) goto error;
-  res = s3d_shape_create_mesh(scn->dev->s3d, &s3d_msh);
-  if(res != RES_OK) goto error;
-  res = s3d_mesh_set_hit_filter_function(s3d_msh, hit_filter_function, NULL);
-  if(res != RES_OK) goto error;
-  res = s3d_scene_attach_shape(s3d_scn, s3d_msh);
-  if(res != RES_OK) goto error;
-  res = s3d_mesh_setup_indexed_vertices(s3d_msh, (unsigned)ntris, get_indices,
-    (unsigned)nverts, &vdata, 1, &context);
-  if(res != RES_OK) goto error;
-  res = s3d_scene_view_create(s3d_scn, S3D_SAMPLE|S3D_TRACE|S3D_GET_PRIMITIVE,
-    &scn->s3d_view);
-  if(res != RES_OK) goto error;
-
-exit:
-  if(s3d_msh) S3D(shape_ref_put(s3d_msh));
-  if(s3d_scn) S3D(scene_ref_put(s3d_scn));
-  return res;
-error:
-  if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
-  goto exit;
-}
-
-static res_T
 setup_geometry_2d
   (struct sdis_scene* scn,
    const size_t nsegs, /* #segments */
@@ -332,6 +281,57 @@ error:
 }
 
 static res_T
+setup_geometry_3d
+  (struct sdis_scene* scn,
+   const size_t ntris, /* #triangles */
+   void (*indices)(const size_t itri, size_t ids[3], void*),
+   const size_t nverts, /* #vertices */
+   void (*position)(const size_t ivert, double pos[3], void* ctx),
+   void* ctx)
+{
+  struct geometry_context context;
+  struct s3d_shape* s3d_msh = NULL;
+  struct s3d_scene* s3d_scn = NULL;
+  struct s3d_vertex_data vdata = S3D_VERTEX_DATA_NULL;
+  res_T res = RES_OK;
+  ASSERT(scn && ntris && indices && nverts && position);
+
+  /* Setup the intermediary geometry context */
+  context.indices = indices;
+  context.position = position;
+  context.data = ctx;
+
+  /* Setup the vertex data */
+  vdata.usage = S3D_POSITION;
+  vdata.type = S3D_FLOAT3;
+  vdata.get = get_position_3d;
+
+  /* Create the Star-3D geometry */
+  res = s3d_scene_create(scn->dev->s3d, &s3d_scn);
+  if(res != RES_OK) goto error;
+  res = s3d_shape_create_mesh(scn->dev->s3d, &s3d_msh);
+  if(res != RES_OK) goto error;
+  res = s3d_mesh_set_hit_filter_function(s3d_msh, hit_filter_function_3d, NULL);
+  if(res != RES_OK) goto error;
+  res = s3d_scene_attach_shape(s3d_scn, s3d_msh);
+  if(res != RES_OK) goto error;
+  res = s3d_mesh_setup_indexed_vertices(s3d_msh, (unsigned)ntris,
+    get_indices_3d, (unsigned)nverts, &vdata, 1, &context);
+  if(res != RES_OK) goto error;
+  res = s3d_scene_view_create(s3d_scn, S3D_SAMPLE|S3D_TRACE|S3D_GET_PRIMITIVE,
+    &scn->s3d_view);
+  if(res != RES_OK) goto error;
+
+exit:
+  if(s3d_msh) S3D(shape_ref_put(s3d_msh));
+  if(s3d_scn) S3D(scene_ref_put(s3d_scn));
+  return res;
+error:
+  if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
+  goto exit;
+}
+
+static res_T
 scene_create
   (struct sdis_device* dev,
    const int is_2d,
@@ -373,7 +373,7 @@ scene_create
   if(is_2d) {
     res = setup_geometry_2d(scn, nprims, indices, nverts, position, ctx);
   } else {
-    res = setup_geometry(scn, nprims, indices, nverts, position, ctx);
+    res = setup_geometry_3d(scn, nprims, indices, nverts, position, ctx);
   }
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene geometry.\n", FUNC_NAME);
@@ -623,7 +623,6 @@ scene_get_medium
    const double pos[],
    const struct sdis_medium** out_medium)
 {
-
   return scene_is_2d(scn)
     ? scene_get_medium_2d(scn, pos, out_medium)
     : scene_get_medium_3d(scn, pos, out_medium);

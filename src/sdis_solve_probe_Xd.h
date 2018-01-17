@@ -46,16 +46,23 @@
   #error "Invalid dimension "STR(SDIS_SOLVE_PROBE_DIMENSION)
 #endif
 
+/* Syntactic sugar */
 #define DIM SDIS_SOLVE_PROBE_DIMENSION
+
+/* Star-XD macros generic to SDIS_SOLVE_PROBE_DIMENSION */
 #define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
 #define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
 #define SXD_HIT_NULL CONCAT(CONCAT(S,DIM), D_HIT_NULL)
 #define SXD_HIT_NULL__ CONCAT(CONCAT(S, DIM), D_HIT_NULL__)
 #define SXD CONCAT(CONCAT(S, DIM), D)
+
+/* Vector macros generic to SDIS_SOLVE_PROBE_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
 #define dX_set_fX CONCAT(CONCAT(CONCAT(d, DIM), _set_f), DIM)
+
+/* Macro making generic its subimitted name to SDIS_SOLVE_PROBE_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
 /* Current state of the random walk */
@@ -322,7 +329,7 @@ XD(boundary_temperature)
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
 
-  setup_interface_fragment(&frag, &rwalk->vtx, &rwalk->hit);
+  XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit);
 
   /* Retrieve the current interface */
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
@@ -396,14 +403,19 @@ XD(solid_temperature)
     rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
     cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
 
+#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+    /* Sample a direction around 2PI */
+    ssp_ran_circle_uniform_float(rng, dir0, NULL);
+#else
     /* Sample a direction around 4PI */
     ssp_ran_sphere_uniform_float(rng, dir0, NULL);
+#endif
 
     /* Trace a ray along the sampled direction and its opposite to check if a
      * surface is hit in [0, delta_solid]. */
     fX_set_dX(org, rwalk->vtx.P);
     fX(minus)(dir1, dir0);
-    hit0 = hit1 = S3D_HIT_NULL;
+    hit0 = hit1 = SXD_HIT_NULL;
     range[0] = 0.f, range[1] = delta_solid*RAY_RANGE_MAX_SCALE;
     SXD(scene_view_trace_ray(scn->sXd(view), org, dir0, range, NULL, &hit0));
     SXD(scene_view_trace_ray(scn->sXd(view), org, dir1, range, NULL, &hit1));
@@ -417,7 +429,7 @@ XD(solid_temperature)
     }
 
     /* Sample the time */
-    mu = (2 * DIM * lambda) / (rho * cp * delta * fp_to_meter * delta * fp_to_meter);
+    mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
     tau = ssp_ran_exp(rng, mu);
     rwalk->vtx.time -= tau;
 
@@ -502,6 +514,40 @@ exit:
 error:
   goto exit;
 }
+
+static res_T
+XD(probe_realisation)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const struct sdis_medium* medium,
+   const double position[],
+   const double time,
+   const double fp_to_meter,/* Scale factor from floating point unit to meter */
+   double* weight)
+{
+   struct XD(rwalk) rwalk = XD(RWALK_NULL);
+   struct XD(temperature) T = XD(TEMPERATURE_NULL);
+   res_T res = RES_OK;
+   ASSERT(medium && position && fp_to_meter > 0 && weight && time >= 0);
+
+   switch(medium->type) {
+     case SDIS_MEDIUM_FLUID: T.func = XD(fluid_temperature); break;
+     case SDIS_MEDIUM_SOLID: T.func = XD(solid_temperature); break;
+     default: FATAL("Unreachable code\n"); break;
+   }
+
+   dX(set)(rwalk.vtx.P, position);
+   rwalk.vtx.time = time;
+   rwalk.hit = SXD_HIT_NULL;
+   rwalk.mdm = medium;
+
+   res = XD(compute_temperature)(scn, fp_to_meter, &rwalk, rng, &T);
+   if(res != RES_OK) return res;
+
+   *weight = T.value;
+   return RES_OK;
+}
+
 
 #undef SDIS_SOLVE_PROBE_DIMENSION
 #undef DIM
