@@ -248,8 +248,8 @@ sdis_interface_ref_put
   (struct sdis_interface* interf);
 
 /*******************************************************************************
- * A scene is a collection of triangles. Each triangle is the support of the
- * interface between 2 mediums.
+ * A scene is a collection of primitives. Each primitive is the geometric
+ * support of the interface between 2 mediums.
  ******************************************************************************/
 SDIS_API res_T
 sdis_scene_create
@@ -259,6 +259,17 @@ sdis_scene_create
    void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[3], void* ctx),
+   void* ctx,
+   struct sdis_scene** scn);
+
+SDIS_API res_T
+sdis_scene_2d_create
+  (struct sdis_device* dev,
+   const size_t nsegs, /* #segments */
+   void (*indices)(const size_t itri, size_t ids[2], void*),
+   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
+   const size_t nverts, /* #vertices */
+   void (*position)(const size_t ivert, double pos[2], void* ctx),
    void* ctx,
    struct sdis_scene** scn);
 
