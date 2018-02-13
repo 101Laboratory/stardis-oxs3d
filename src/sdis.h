@@ -70,20 +70,21 @@ enum sdis_medium_type {
   SDIS_MEDIUM_TYPES_COUNT__
 };
 
-/* Random walk vertex */
+/* Random walk vertex, i.e. a spatiotemporal position at a given step of the
+ * random walk. */
 struct sdis_rwalk_vertex {
   double P[3]; /* World space position */
-  double time; /* Time of the vertex */
+  double time; /* "Time" of the vertex */
 };
 #define SDIS_RWALK_VERTEX_NULL__ {{0}, -1}
 static const struct sdis_rwalk_vertex SDIS_RWALK_VERTEX_NULL =
   SDIS_RWALK_VERTEX_NULL__;
 
-/* Point onto an interface */
+/* Spatiotemporal position onto an interface */
 struct sdis_interface_fragment {
   double P[3]; /* World space position */
-  double Ng[3]; /* Normalized world space geometry normal */
-  double uv[2]; /* Texture coordinates */
+  double Ng[3]; /* Normalized world space geometry normal at the interface */
+  double uv[2]; /* Parametric coordinates of the interface */
   double time; /* Current time */
 };
 #define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1}
@@ -104,7 +105,6 @@ typedef double
 (*sdis_medium_getter_T)
   (const struct sdis_rwalk_vertex* vert,
    struct sdis_data* data);
-
 
 /* Functor type to retrieve the interface properties. */
 typedef double
@@ -160,7 +160,7 @@ sdis_device_create
   (struct logger* logger, /* May be NULL <=> use default logger */
    struct mem_allocator* allocator, /* May be NULL <=> use default allocator */
    const unsigned nthreads_hint, /* Hint on the number of threads to use */
-   const int verbose,
+   const int verbose, /* Verbosity level */
    struct sdis_device** dev);
 
 SDIS_API res_T
@@ -172,12 +172,13 @@ sdis_device_ref_put
   (struct sdis_device* dev);
 
 /*******************************************************************************
- * A data stores in the Stardis memory space a set of user defined data.
+ * A data stores in the Stardis memory space a set of user defined data. It can
+ * be seen as a ref counted memory space allocated by Stardis.
  ******************************************************************************/
 SDIS_API res_T
 sdis_data_create
   (struct sdis_device* dev,
-   const size_t size, /* Size in bytes */
+   const size_t size, /* Size in bytes of user defined data */
    const size_t align, /* Data alignment. Must be a power of 2 */
    void (*release)(void*),/* Invoked priorly to data destruction. May be NULL */
    struct sdis_data** data);
@@ -237,29 +238,46 @@ sdis_interface_create
    struct sdis_medium* back,
    const struct sdis_interface_shader* shader,
    struct sdis_data* data, /* Data sent to the shader. May be NULL */
-   struct sdis_interface** interface);
+   struct sdis_interface** interf);
 
 SDIS_API res_T
 sdis_interface_ref_get
-  (struct sdis_interface* interface);
+  (struct sdis_interface* interf);
 
 SDIS_API res_T
 sdis_interface_ref_put
-  (struct sdis_interface* interface);
+  (struct sdis_interface* interf);
 
 /*******************************************************************************
- * A scene is a collection of triangles. Each triangle is the support of the
- * interface between 2 mediums.
+ * A scene is a collection of primitives. Each primitive is the geometric
+ * support of the interface between 2 mediums.
  ******************************************************************************/
 SDIS_API res_T
 sdis_scene_create
   (struct sdis_device* dev,
    const size_t ntris, /* #triangles */
-   void (*indices)(const size_t itri, size_t ids[3], void*),
-   void (*interface)(const size_t itri, struct sdis_interface** bound, void*),
+   void (*indices) /* Retrieve the indices toward the vertices of `itri' */
+    (const size_t itri, size_t ids[3], void*),
+   void (*interf) /* Get the interface of the triangle `itri' */
+    (const size_t itri, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[3], void* ctx),
-   void* ctx,
+   void (*position) /* Retrieve the position of the vertex `ivert' */
+    (const size_t ivert, double pos[3], void* ctx),
+   void* ctx, /* Client side data sent as input of the previous callbacks */
+   struct sdis_scene** scn);
+
+SDIS_API res_T
+sdis_scene_2d_create
+  (struct sdis_device* dev,
+   const size_t nsegs, /* #segments */
+   void (*indices) /* Retrieve the indices toward the vertices of `iseg' */
+    (const size_t iseg, size_t ids[2], void*),
+   void (*interf) /* Get the interface of the segment `iseg' */
+    (const size_t iseg, struct sdis_interface** bound, void*),
+   const size_t nverts, /* #vertices */
+   void (*position) /* Retrieve the position of the vertex `ivert' */
+    (const size_t ivert, double pos[2], void* ctx),
+   void* ctx, /* Client side data sent as input of the previous callbacks */
    struct sdis_scene** scn);
 
 SDIS_API res_T
@@ -270,6 +288,7 @@ SDIS_API res_T
 sdis_scene_ref_put
   (struct sdis_scene* scn);
 
+/* Retrieve the Axis Aligned Bounding Box of the scene */
 SDIS_API res_T
 sdis_scene_get_aabb
   (const struct sdis_scene* scn,

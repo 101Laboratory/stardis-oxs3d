@@ -19,18 +19,17 @@
 #include <rsys/math.h>
 
 /*
- * The scene is composed of a solid cube whose temperature is unknown. The
+ * The scene is composed of a solid square whose temperature is unknown. The
  * convection coefficient with the surrounding fluid is null. The temperature
- * is fixed at the front and back face.
+ * is fixed at the left and right segment.
  *
- *             (1,1,1)
- *       +-------+
- *      /'      /|350K
- *     +-------+ |
- *     | +.....|.+
- * 300K|,      |/
+ *            (1,1)
  *     +-------+
- * (0,0,0)
+ *     |       |350K
+ *     |       |
+ * 300K|       |
+ *     +-------+
+ *  (0,0)
  */
 
 /*******************************************************************************
@@ -43,28 +42,26 @@ struct context {
 };
 
 static void
-get_indices(const size_t itri, size_t ids[3], void* context)
+get_indices(const size_t iseg, size_t ids[2], void* context)
 {
   struct context* ctx = context;
-  ids[0] = ctx->indices[itri*3+0];
-  ids[1] = ctx->indices[itri*3+1];
-  ids[2] = ctx->indices[itri*3+2];
+  ids[0] = ctx->indices[iseg*2+0];
+  ids[1] = ctx->indices[iseg*2+1];
 }
 
 static void
-get_position(const size_t ivert, double pos[3], void* context)
+get_position(const size_t ivert, double pos[2], void* context)
 {
   struct context* ctx = context;
-  pos[0] = ctx->positions[ivert*3+0];
-  pos[1] = ctx->positions[ivert*3+1];
-  pos[2] = ctx->positions[ivert*3+2];
+  pos[0] = ctx->positions[ivert*2+0];
+  pos[1] = ctx->positions[ivert*2+1];
 }
 
 static void
-get_interface(const size_t itri, struct sdis_interface** bound, void* context)
+get_interface(const size_t iseg, struct sdis_interface** bound, void* context)
 {
   struct context* ctx = context;
-  *bound = ctx->interfaces[itri];
+  *bound = ctx->interfaces[iseg];
 }
 
 /*******************************************************************************
@@ -167,10 +164,10 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
-  struct sdis_interface* interfaces[12];
+  struct sdis_interface* interfaces[4];
   struct context ctx;
   struct interf* interface_param = NULL;
-  double pos[3];
+  double pos[2];
   double time;
   double ref;
   const size_t N = 10000;
@@ -228,20 +225,18 @@ main(int argc, char** argv)
   CHK(sdis_medium_ref_put(fluid) == RES_OK);
 
   /* Setup the per primitive scene interfaces */
-  CHK(sizeof(interfaces)/sizeof(struct sdis_interface*) == box_ntriangles);
-  interfaces[0] = interfaces[1] = T300; /* Front face */
-  interfaces[2] = interfaces[3] = Tnone; /* Left face */
-  interfaces[4] = interfaces[5] = T350; /* Back face */
-  interfaces[6] = interfaces[7] = Tnone; /* Right face */
-  interfaces[8] = interfaces[9] = Tnone; /* Top face */
-  interfaces[10] = interfaces[11] = Tnone; /* Bottom face */
+  CHK(sizeof(interfaces)/sizeof(struct sdis_interface*) == square_nsegments);
+  interfaces[0] = Tnone; /* Bottom segment */
+  interfaces[1] = T300; /* Left segment */
+  interfaces[2] = Tnone; /* Top segment */
+  interfaces[3] = T350; /* Right segment */
 
   /* Create the scene */
-  ctx.positions = box_vertices;
-  ctx.indices = box_indices;
+  ctx.positions = square_vertices;
+  ctx.indices = square_indices;
   ctx.interfaces = interfaces;
-  CHK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, &ctx, &scn) == RES_OK);
+  CHK(sdis_scene_2d_create(dev, square_nsegments, get_indices, get_interface,
+    square_nvertices, get_position, &ctx, &scn) == RES_OK);
 
   /* Release the interfaces */
   CHK(sdis_interface_ref_put(Tnone) == RES_OK);
@@ -251,7 +246,6 @@ main(int argc, char** argv)
   /* Launch the solver */
   pos[0] = 0.5;
   pos[1] = 0.5;
-  pos[2] = 0.5;
   time = INF;
   CHK(sdis_solve_probe( scn, N, pos, time, 1.0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
@@ -259,9 +253,9 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
 
   /* Print the estimation results */
-  ref = 350 * pos[2] + (1-pos[2]) * 300;
-  printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(pos), ref, T.E, T.SE);
+  ref = 350 * pos[0] + (1-pos[0]) * 300;
+  printf("Temperature at (%g, %g) = %g ~ %g +/- %g\n",
+    SPLIT2(pos), ref, T.E, T.SE);
   printf("#realisations: %lu; #failures: %lu\n",
     (unsigned long)nreals, (unsigned long)nfails);
 

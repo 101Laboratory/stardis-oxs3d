@@ -20,7 +20,7 @@
 struct context {
   const double* positions;
   const size_t* indices;
-  struct sdis_interface* interface;
+  struct sdis_interface* interf;
 };
 
 static INLINE void
@@ -52,7 +52,7 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
   CHK(ctx != NULL);
   CHK(itri < box_ntriangles);
   CHK(bound != NULL);
-  *bound = ctx->interface;
+  *bound = ctx->interf;
 }
 
 int
@@ -62,7 +62,7 @@ main(int argc, char** argv)
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
-  struct sdis_interface* interface = NULL;
+  struct sdis_interface* interf = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
@@ -78,11 +78,11 @@ main(int argc, char** argv)
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
   CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, NULL, &interface) == RES_OK);
+    (dev, solid, fluid, &interface_shader, NULL, &interf) == RES_OK);
 
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
-  ctx.interface = interface;
+  ctx.interf = interf;
   ntris = box_ntriangles;
   npos = box_nvertices;
 
@@ -122,7 +122,7 @@ main(int argc, char** argv)
   CHK(sdis_scene_ref_put(scn) == RES_OK);
 
   CHK(sdis_device_ref_put(dev) == RES_OK);
-  CHK(sdis_interface_ref_put(interface) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
   CHK(sdis_medium_ref_put(solid) == RES_OK);
   CHK(sdis_medium_ref_put(fluid) == RES_OK);
 

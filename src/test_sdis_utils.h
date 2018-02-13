@@ -20,7 +20,7 @@
 #include <stdio.h>
 
 /*******************************************************************************
- * Geometry
+ * Box geometry
  ******************************************************************************/
 static const double box_vertices[8/*#vertices*/*3/*#coords per vertex*/] = {
   0.0, 0.0, 0.0,
@@ -53,6 +53,25 @@ static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
   0, 1, 4, 4, 1, 5  /* Bottom face */
 };
 static const size_t box_ntriangles = sizeof(box_indices) / sizeof(size_t[3]);
+
+/*******************************************************************************
+ * Square geometry
+ ******************************************************************************/
+static const double square_vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
+  1.0, 0.0,
+  0.0, 0.0,
+  0.0, 1.0,
+  1.0, 1.0
+};
+static const size_t square_nvertices = sizeof(square_vertices)/sizeof(double[2]);
+
+static const size_t square_indices[4/*#triangles*/*2/*#indices per segment*/]= {
+  0, 1, /* Bottom */
+  1, 2, /* Left */
+  2, 3, /* Top */
+  3, 0 /* Right */
+};
+static const size_t square_nsegments = sizeof(square_indices)/sizeof(size_t[2]);
 
 /*******************************************************************************
  * Medium & interface
@@ -117,6 +136,27 @@ dump_mesh
       (unsigned long)(ids[i*3+0] + 1),
       (unsigned long)(ids[i*3+1] + 1),
       (unsigned long)(ids[i*3+2] + 1));
+  }
+}
+
+static INLINE void
+dump_segments
+  (FILE* stream,
+   const double* pos,
+   const size_t npos,
+   const size_t* ids,
+   const size_t nids)
+{
+  size_t i;
+  CHK(pos != NULL && npos != 0);
+  CHK(ids != NULL && nids != 0);
+  FOR_EACH(i, 0, npos) {
+    fprintf(stream, "v %g %g 0\n", SPLIT2(pos+i*2));
+  }
+  FOR_EACH(i, 0, nids) {
+    fprintf(stream, "l %lu %lu\n",
+      (unsigned long)(ids[i*2+0] + 1),
+      (unsigned long)(ids[i*2+1] + 1));
   }
 }
 

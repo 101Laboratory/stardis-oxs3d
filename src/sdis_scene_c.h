@@ -19,34 +19,25 @@
 #include <rsys/dynamic_array.h>
 #include <rsys/ref_count.h>
 
-/* Forward declaration of external types */
-struct s3d_hit;
-
-/* Context used to wrap the user geometry to Star-3D. */
-struct geometry_context {
-  void (*indices)(const size_t itri, size_t ids[3], void*);
-  void (*position)(const size_t ivert, double pos[3], void*);
-  void* data;
-};
-
 static INLINE void
 interface_init
   (struct mem_allocator* allocator,
-   struct sdis_interface** interface)
+   struct sdis_interface** interf)
 {
   (void)allocator;
-  *interface = NULL;
+  *interf = NULL;
 }
 
 /* Declare the array of interfaces */
-#define DARRAY_NAME interface
+#define DARRAY_NAME interf
 #define DARRAY_DATA struct sdis_interface*
 #define DARRAY_FUNCTOR_INIT interface_init
 #include <rsys/dynamic_array.h>
 
 struct sdis_scene {
-  struct darray_interface interfaces; /* List of interfaces own by the scene */
-  struct darray_interface prim_interfaces; /* Per primitive interface */
+  struct darray_interf interfaces; /* List of interfaces own by the scene */
+  struct darray_interf prim_interfaces; /* Per primitive interface */
+  struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
 
   ref_T ref;
@@ -61,16 +52,15 @@ scene_get_interface
 extern LOCAL_SYM res_T
 scene_get_medium
   (const struct sdis_scene* scene,
-   const double position[3],
+   const double position[],
    const struct sdis_medium** medium);
 
-extern LOCAL_SYM int
-hit_filter_function
-  (const struct s3d_hit* hit,
-   const float ray_org[3],
-   const float ray_dir[3],
-   void* ray_data, /* struct s3d_hit* */
-   void* filter_data); /* NULL */
+static FINLINE int
+scene_is_2d(const struct sdis_scene* scn)
+{
+  ASSERT(scn && (scn->s2d_view || scn->s3d_view));
+  return scn->s2d_view != NULL;
+}
 
 #endif /* SDIS_SCENE_C_H */
 
