@@ -40,6 +40,8 @@ struct sdis_scene {
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
 
+  double ambient_radiative_temperature; /* In Kelvin */
+
   ref_T ref;
   struct sdis_device* dev;
 };

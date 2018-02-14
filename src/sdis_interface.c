@@ -41,15 +41,21 @@ check_interface_shader
   type1 = sdis_medium_get_type(back);
 
   /* Fluid<->solid interface */
-  if(type0 != type1 && shader->convection_coef == NULL) {
-    return 0;
+  if(type0 != type1) {
+    if(shader->convection_coef == NULL
+    || shader->reflectivity_spec == NULL
+    || shader->reflectivity_diff == NULL) {
+      return 0;
+    }
   }
 
   /* Solid<->solid interface */
-  if(type0 == SDIS_MEDIUM_SOLID
-  && type1 == SDIS_MEDIUM_SOLID
-  && shader->convection_coef) {
-    return 0;
+  if(type0 == SDIS_MEDIUM_SOLID && type1 == SDIS_MEDIUM_SOLID) {
+    if(shader->convection_coef != NULL
+    || shader->reflectivity_spec != NULL
+    || shader->reflectivity_diff != NULL) {
+      return 0;
+    }
   }
 
   return 1;

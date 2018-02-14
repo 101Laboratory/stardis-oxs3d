@@ -144,6 +144,10 @@ static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
 struct sdis_interface_shader {
   sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
   sdis_interface_getter_T convection_coef; /* NULL <=> Solid/Solid interface */
+
+  /* BRDF parameter. NULL <=> Solid/solid interface */
+  sdis_interface_getter_T reflectivity_spec; /* Specular reflectivity */
+  sdis_interface_getter_T reflectivity_diff; /* Diffuse reflectivity */
 };
 #define SDIS_INTERFACE_SHADER_NULL__ {NULL}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
@@ -327,10 +331,12 @@ sdis_estimator_get_temperature
 SDIS_API res_T
 sdis_solve_probe
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   const double position[3],
-   const double time,
+   const size_t nrealisations, /* #realisations */
+   const double position[3], /* Probe position */
+   const double time, /* Observation time */
    const double fp_to_meter,/* Scale from floating point units to meters */
+   const double ambient_radiative_temperature,
+   const double reference_temperature,
    struct sdis_estimator** estimator);
 
 END_DECLS

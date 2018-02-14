@@ -153,7 +153,7 @@ struct interf {
 };
 
 static double
-null_convection_coef
+null_interface_value
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(frag != NULL);
@@ -223,8 +223,10 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
 
   /* Create the fluid/solid interface with no limit conidition */
-  interface_shader.convection_coef = null_convection_coef;
+  interface_shader.convection_coef = null_interface_value;
   interface_shader.temperature = NULL;
+  interface_shader.reflectivity_spec = null_interface_value;
+  interface_shader.reflectivity_diff = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &Tnone) == RES_OK);
 
@@ -233,8 +235,10 @@ main(int argc, char** argv)
     ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->temperature = 300;
-  interface_shader.convection_coef = null_convection_coef;
+  interface_shader.convection_coef = null_interface_value;
   interface_shader.temperature = interface_get_temperature;
+  interface_shader.reflectivity_spec = null_interface_value;
+  interface_shader.reflectivity_diff = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &T300) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -244,8 +248,10 @@ main(int argc, char** argv)
     ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->temperature = 350;
-  interface_shader.convection_coef = null_convection_coef;
+  interface_shader.convection_coef = null_interface_value;
   interface_shader.temperature = interface_get_temperature;
+  interface_shader.reflectivity_spec = null_interface_value;
+  interface_shader.reflectivity_diff = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &T350) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -253,6 +259,8 @@ main(int argc, char** argv)
   /* Create the solid/solid interface */
   interface_shader.convection_coef = NULL;
   interface_shader.temperature = NULL;
+  interface_shader.reflectivity_diff = NULL;
+  interface_shader.reflectivity_spec = NULL;
   CHK(sdis_interface_create
     (dev, solid, solid, &interface_shader, NULL, &solid_solid) == RES_OK);
 
@@ -310,7 +318,7 @@ main(int argc, char** argv)
   pos[1] = 0.5;
   pos[2] = 0.5;
   time = INF;
-  CHK(sdis_solve_probe( scn, N, pos, time, 1.0, &estimator) == RES_OK);
+  CHK(sdis_solve_probe( scn, N, pos, time, 1.0, -1, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);

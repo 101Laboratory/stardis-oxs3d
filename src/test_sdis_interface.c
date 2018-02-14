@@ -78,6 +78,8 @@ main(int argc, char** argv)
 
   CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_BAD_ARG);
   shader.convection_coef = NULL;
+  shader.reflectivity_diff = NULL;
+  shader.reflectivity_spec = NULL;
   CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
 
@@ -87,6 +89,8 @@ main(int argc, char** argv)
 
   CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
   shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
+  shader.reflectivity_spec = DUMMY_INTERFACE_SHADER.reflectivity_spec;
+  shader.reflectivity_diff = DUMMY_INTERFACE_SHADER.reflectivity_diff;
   CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
   #undef CREATE

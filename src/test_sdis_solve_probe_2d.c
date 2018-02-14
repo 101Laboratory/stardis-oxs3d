@@ -131,6 +131,14 @@ interface_get_convection_coef
   return 0.5;
 }
 
+static double
+interface_null_reflectivity
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  (void)frag, (void)data;
+  return 0;
+}
+
 /*******************************************************************************
  * Main test
  ******************************************************************************/
@@ -177,6 +185,8 @@ main(int argc, char** argv)
   /* Create the solid/fluid interface */
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.temperature = NULL;
+  interface_shader.reflectivity_spec = interface_null_reflectivity;
+  interface_shader.reflectivity_diff = interface_null_reflectivity;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &interf) == RES_OK);
 
@@ -197,7 +207,7 @@ main(int argc, char** argv)
   pos[0] = 0.5;
   pos[1] = 0.5;
   time = INF;
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, &estimator) == RES_OK);
+  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
 
