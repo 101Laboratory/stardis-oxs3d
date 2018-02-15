@@ -242,7 +242,7 @@ XD(radiative_temperature)
     SXD(scene_view_trace_ray
       (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
 #endif
-    if(!SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
+    if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
       if(ctx->Tarad >= 0) {
         T->value += ctx->Tarad;
         T->done = 1;
@@ -305,7 +305,7 @@ XD(radiative_temperature)
     alpha =  interface_get_specular_fraction(interf, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
-      XD(reflect)(dir, dir, N);
+      XD(reflect)(dir, f3_minus(dir, dir), N);
     } else { /* Sample diffuse part */
       ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
     }

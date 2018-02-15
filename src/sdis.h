@@ -143,9 +143,9 @@ static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
 
 struct sdis_interface_shader {
   sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
-  sdis_interface_getter_T convection_coef; /* NULL <=> Solid/Solid interface */
+  sdis_interface_getter_T convection_coef; /* May be NULL for solid/solid */
 
-  /* Interface emssivity */
+  /* Interface emssivity. May be NULL for solid/solid interface  */
   sdis_interface_getter_T emissivity; /* Overall emissivity */
   sdis_interface_getter_T specular_fraction; /* Specular fraction in [0, 1] */
 };

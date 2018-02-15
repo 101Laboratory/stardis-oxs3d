@@ -122,6 +122,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
+  new_test(test_sdis_conducto_radiative)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   if(CMAKE_COMPILER_IS_GNUCC)

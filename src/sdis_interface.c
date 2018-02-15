@@ -49,15 +49,6 @@ check_interface_shader
     }
   }
 
-  /* Solid<->solid interface */
-  if(type0 == SDIS_MEDIUM_SOLID && type1 == SDIS_MEDIUM_SOLID) {
-    if(shader->convection_coef != NULL
-    || shader->emissivity != NULL
-    || shader->specular_fraction != NULL) {
-      return 0;
-    }
-  }
-
   return 1;
 }
 
