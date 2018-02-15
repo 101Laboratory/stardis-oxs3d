@@ -159,7 +159,7 @@ interface_get_convection_coef
 }
 
 static double
-interface_get_reflectivity_spec
+interface_get_emissivity
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
@@ -167,7 +167,7 @@ interface_get_reflectivity_spec
 }
 
 static double
-interface_get_reflectivity_diff
+interface_get_specular_fraction
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
@@ -244,8 +244,8 @@ main(int argc, char** argv)
   interface_param->rho_d = 0;
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.temperature = NULL;
-  interface_shader.reflectivity_spec = interface_get_reflectivity_spec;
-  interface_shader.reflectivity_diff = interface_get_reflectivity_diff;
+  interface_shader.emissivity = interface_get_emissivity;
+  interface_shader.specular_fraction = interface_get_specular_fraction;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);

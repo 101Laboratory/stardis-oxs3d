@@ -226,7 +226,8 @@ XD(radiative_temperature)
   for(;;) {
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
     const struct sdis_medium* chk_mdm = NULL;
-    double rho_s, rho_d, rho;
+    double alpha;
+    double epsilon;
     double r;
     float pos[DIM];
     const float range[2] = { 0, FLT_MAX };
@@ -268,21 +269,19 @@ XD(radiative_temperature)
     interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
     XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit);
 
-    /* Fetch the interface reflectivity */
-    rho_s = interface_get_reflectivity_spec(interf, &frag);
-    rho_d = interface_get_reflectivity_diff(interf, &frag);
-    rho = rho_s + rho_d;
-    if(rho > 1) {
+    /* Fetch the interface emissivity */
+    epsilon = interface_get_emissivity(interf, &frag);
+    if(epsilon > 1 && epsilon >= 0) {
       log_err(scn->dev,
-        "%s: invalid overall reflectivity `%g' at position `%g %g %g'.\n",
-        FUNC_NAME, rho, SPLIT3(rwalk->vtx.P));
+        "%s: invalid overall emissivity `%g' at position `%g %g %g'.\n",
+        FUNC_NAME, epsilon, SPLIT3(rwalk->vtx.P));
       res = RES_BAD_ARG;
       goto error;
     }
 
     /* Switch in boundary temperature ? */
     r = ssp_rng_canonical(rng);
-    if(r < rho) {
+    if(r < epsilon) {
       T->func = XD(boundary_temperature);
       break;
     }
@@ -303,9 +302,9 @@ XD(radiative_temperature)
       res = RES_BAD_ARG;
       goto error;
     }
-
+    alpha =  interface_get_specular_fraction(interf, &frag);
     r = ssp_rng_canonical(rng);
-    if(r < rho_s / rho) { /* Sample specular part */
+    if(r < alpha) { /* Sample specular part */
       XD(reflect)(dir, dir, N);
     } else { /* Sample diffuse part */
       ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
@@ -429,7 +428,7 @@ XD(solid_fluid_boundary_temperature)
   const struct sdis_medium* fluid = NULL;
   double hc;
   double hr;
-  double rho; /* Interface reflectivity */
+  double epsilon; /* Interface emissivity */
   double lambda;
   double fluid_proba;
   double radia_proba;
@@ -459,12 +458,11 @@ XD(solid_fluid_boundary_temperature)
   delta_boundary = solid_get_delta_boundary(solid, &rwalk->vtx);
 
   /* Fetch the boundary properties */
-  rho = interface_get_reflectivity_diff(interf, frag)
-      + interface_get_reflectivity_spec(interf, frag);
+  epsilon = interface_get_emissivity(interf, frag);
   hc = interface_get_convection_coef(interf, frag);
 
   /* Compute the radiative coefficient */
-  hr = 4.0 * BOLTZMANN_CONSTANT * ctx->Tref3 * rho;
+  hr = 4.0 * BOLTZMANN_CONSTANT * ctx->Tref3 * epsilon;
 
   /* Compute the probas to switch in solid or fluid random walk */
   tmp = lambda / (delta_boundary*fp_to_meter);

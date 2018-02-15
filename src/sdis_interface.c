@@ -43,8 +43,8 @@ check_interface_shader
   /* Fluid<->solid interface */
   if(type0 != type1) {
     if(shader->convection_coef == NULL
-    || shader->reflectivity_spec == NULL
-    || shader->reflectivity_diff == NULL) {
+    || shader->emissivity == NULL
+    || shader->specular_fraction == NULL) {
       return 0;
     }
   }
@@ -52,8 +52,8 @@ check_interface_shader
   /* Solid<->solid interface */
   if(type0 == SDIS_MEDIUM_SOLID && type1 == SDIS_MEDIUM_SOLID) {
     if(shader->convection_coef != NULL
-    || shader->reflectivity_spec != NULL
-    || shader->reflectivity_diff != NULL) {
+    || shader->emissivity != NULL
+    || shader->specular_fraction != NULL) {
       return 0;
     }
   }

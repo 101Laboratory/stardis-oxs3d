@@ -77,21 +77,21 @@ interface_get_convection_coef
 }
 
 static INLINE double
-interface_get_reflectivity_spec
+interface_get_emissivity
   (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
 {
   ASSERT(interf && frag);
-  return interf->shader.reflectivity_spec(frag, interf->data);
+  return interf->shader.emissivity(frag, interf->data);
 }
 
 static INLINE double
-interface_get_reflectivity_diff
+interface_get_specular_fraction
   (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
 {
   ASSERT(interf && frag);
-  return interf->shader.reflectivity_diff(frag, interf->data);
+  return interf->shader.specular_fraction(frag, interf->data);
 }
 
 #endif /* SDIS_INTERFACE_C_H */

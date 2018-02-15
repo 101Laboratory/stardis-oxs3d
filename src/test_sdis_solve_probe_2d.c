@@ -185,8 +185,8 @@ main(int argc, char** argv)
   /* Create the solid/fluid interface */
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.temperature = NULL;
-  interface_shader.reflectivity_spec = interface_null_reflectivity;
-  interface_shader.reflectivity_diff = interface_null_reflectivity;
+  interface_shader.emissivity = interface_null_reflectivity;
+  interface_shader.specular_fraction = interface_null_reflectivity;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &interf) == RES_OK);
 

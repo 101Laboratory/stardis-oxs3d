@@ -145,9 +145,9 @@ struct sdis_interface_shader {
   sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
   sdis_interface_getter_T convection_coef; /* NULL <=> Solid/Solid interface */
 
-  /* BRDF parameter. NULL <=> Solid/solid interface */
-  sdis_interface_getter_T reflectivity_spec; /* Specular reflectivity */
-  sdis_interface_getter_T reflectivity_diff; /* Diffuse reflectivity */
+  /* Interface emssivity */
+  sdis_interface_getter_T emissivity; /* Overall emissivity */
+  sdis_interface_getter_T specular_fraction; /* Specular fraction in [0, 1] */
 };
 #define SDIS_INTERFACE_SHADER_NULL__ {NULL}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =

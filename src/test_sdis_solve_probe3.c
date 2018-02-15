@@ -225,8 +225,8 @@ main(int argc, char** argv)
   /* Create the fluid/solid interface with no limit conidition */
   interface_shader.convection_coef = null_interface_value;
   interface_shader.temperature = NULL;
-  interface_shader.reflectivity_spec = null_interface_value;
-  interface_shader.reflectivity_diff = null_interface_value;
+  interface_shader.emissivity = null_interface_value;
+  interface_shader.specular_fraction = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &Tnone) == RES_OK);
 
@@ -237,8 +237,8 @@ main(int argc, char** argv)
   interface_param->temperature = 300;
   interface_shader.convection_coef = null_interface_value;
   interface_shader.temperature = interface_get_temperature;
-  interface_shader.reflectivity_spec = null_interface_value;
-  interface_shader.reflectivity_diff = null_interface_value;
+  interface_shader.emissivity = null_interface_value;
+  interface_shader.specular_fraction = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &T300) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -250,8 +250,8 @@ main(int argc, char** argv)
   interface_param->temperature = 350;
   interface_shader.convection_coef = null_interface_value;
   interface_shader.temperature = interface_get_temperature;
-  interface_shader.reflectivity_spec = null_interface_value;
-  interface_shader.reflectivity_diff = null_interface_value;
+  interface_shader.emissivity = null_interface_value;
+  interface_shader.specular_fraction = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &T350) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -259,8 +259,8 @@ main(int argc, char** argv)
   /* Create the solid/solid interface */
   interface_shader.convection_coef = NULL;
   interface_shader.temperature = NULL;
-  interface_shader.reflectivity_diff = NULL;
-  interface_shader.reflectivity_spec = NULL;
+  interface_shader.specular_fraction = NULL;
+  interface_shader.emissivity = NULL;
   CHK(sdis_interface_create
     (dev, solid, solid, &interface_shader, NULL, &solid_solid) == RES_OK);
 
