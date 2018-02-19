@@ -22,11 +22,11 @@
 #define UNKNOWN_TEMPERATURE -1
 
 /* The scene is composed of a solid cube whose temperature is unknown. The cube
- * face on +/-X are in contact with a fluid and their convection coefficient is
- * null while their emissivity is 1. The left and right fluids are enclosed by
- * surfaces whose emissivity are null excepted for the faces orthogonal to the
- * X axis that are fully emissive and whose temperature is known. The medium
- * that surrounds the solid cube and the 2 fluids is a solid with a null
+ * faces on +/-X are in contact with a fluid and their convection coefficient
+ * is null while their emissivity is 1. The left and right fluids are enclosed
+ * by surfaces whose emissivity are null excepted for the faces orthogonal to
+ * the X axis that are fully emissive and whose temperature is known. The
+ * medium that surrounds the solid cube and the 2 fluids is a solid with a null
  * conductivity.
  *
  *    Y                          (1, 1, 1)

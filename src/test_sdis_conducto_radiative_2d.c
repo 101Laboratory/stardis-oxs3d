@@ -20,6 +20,25 @@
 
 #define UNKNOWN_TEMPERATURE -1
 
+/* The scene is composed of a solid square whose temperature is unknown. The
+ * square segments on +/-X are in contact with a fluid and their convection
+ * coefficient is null while their emissivity is 1. The left and right fluids
+ * are enclosed by segments whose emissivity are null excepted for the segments
+ * orthogonal to the X axis that are fully emissive and whose temperature is
+ * known. The medium that surrounds the solid square and the 2 fluids is a
+ * solid with a null conductivity.
+ *
+ *                            (1, 1)
+ *            +-----+----------+-----+ (1.5,1,1)
+ *            |     |##########|     |
+ *            |     |##########|     |
+ *       300K | E=1 |##########| E=1 | 310K
+ *            |     |##########|     |
+ *            |     |##########|     |
+ *  (-1.5,-1) +-----+----------+-----+
+ *               (-1,-1)
+ */
+
 /*******************************************************************************
  * Geometry
  ******************************************************************************/
