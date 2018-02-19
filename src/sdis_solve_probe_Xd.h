@@ -37,6 +37,21 @@ struct rwalk_context {
   double Tref3; /* Reference temperature ^ 3 */
 };
 
+/* Reflect the vector V wrt the normal N. By convention V points outward the
+ * surface. */
+static INLINE float*
+reflect(float res[3], const float V[3], const float N[3])
+{
+  float tmp[3];
+  float cos_V_N;
+  ASSERT(res && V && N);
+  ASSERT(f3_is_normalized(V) && f3_is_normalized(N));
+  cos_V_N = f3_dot(V, N);
+  f3_mulf(tmp, N, 2*cos_V_N);
+  f3_sub(res, tmp, V);
+  return res;
+}
+
 #endif /* SDIS_SOLVE_PROBE_XD_H */
 #else
 
@@ -134,21 +149,6 @@ XD(radiative_temperature)
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-/* Reflect the vector V wrt the normal N. By convention V points outward the
- * surface. */
-static INLINE float*
-XD(reflect)(float res[DIM], const float V[DIM], const float N[DIM])
-{
-  float tmp[DIM];
-  float cos_V_N;
-  ASSERT(res && V && N);
-  ASSERT(fX(is_normalized)(V) && fX(is_normalized)(N));
-  cos_V_N = fX(dot)(V, N);
-  fX(mulf)(tmp, N, 2*cos_V_N);
-  fX(sub)(res, tmp, V);
-  return res;
-}
-
 
 static FINLINE void
 XD(move_pos)(double pos[DIM], const float dir[DIM], const float delta)
@@ -305,7 +305,7 @@ XD(radiative_temperature)
     alpha =  interface_get_specular_fraction(interf, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
-      XD(reflect)(dir, f3_minus(dir, dir), N);
+      reflect(dir, f3_minus(dir, dir), N);
     } else { /* Sample diffuse part */
       ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
     }
