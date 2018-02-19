@@ -16,6 +16,8 @@
 #ifndef TEST_SDIS_UTILS_H
 #define TEST_SDIS_UTILS_H
 
+#include "sdis.h"
+
 #include <rsys/mem_allocator.h>
 #include <stdio.h>
 

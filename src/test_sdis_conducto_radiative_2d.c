@@ -16,31 +16,9 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
-#include <rsys/math.h>
 #include <star/ssp.h>
 
 #define UNKNOWN_TEMPERATURE -1
-
-/* The scene is composed of a solid cube whose temperature is unknown. The cube
- * face on +/-X are in contact with a fluid and their convection coefficient is
- * null while their emissivity is 1. The left and right fluids are enclosed by
- * surfaces whose emissivity are null excepted for the faces orthogonal to the
- * X axis that are fully emissive and whose temperature is known. The medium
- * that surrounds the solid cube and the 2 fluids is a solid with a null
- * conductivity.
- *
- *    Y                          (1, 1, 1)
- *    |            +------+----------+------+ (1.5,1,1)
- *    o--- X      /'     /##########/'     /|
- *   /           +------+----------+------+ |
- *  Z            | '    |##########|*'    | | 310K
- *               | '    |##########|*'    | |
- *          300K | ' E=1|##########|*'E=1 | |
- *               | +....|##########|*+....|.+
- *               |/     |##########|/     |/
- *  (-1.5,-1,-1) +------+----------+------+
- *                  (-1,-1,-1)
- */
 
 /*******************************************************************************
  * Geometry
@@ -51,74 +29,58 @@ struct geometry {
   struct sdis_interface** interfaces;
 };
 
-static const double vertices[16/*#vertices*/*3/*#coords per vertex*/] = {
-  -1.0,-1.0,-1.0,
-   1.0,-1.0,-1.0,
-  -1.0, 1.0,-1.0,
-   1.0, 1.0,-1.0,
-  -1.0,-1.0, 1.0,
-   1.0,-1.0, 1.0,
-  -1.0, 1.0, 1.0,
-   1.0, 1.0, 1.0,
-  -1.5,-1.0,-1.0,
-   1.5,-1.0,-1.0,
-  -1.5, 1.0,-1.0,
-   1.5, 1.0,-1.0,
-  -1.5,-1.0, 1.0,
-   1.5,-1.0, 1.0,
-  -1.5, 1.0, 1.0,
-   1.5, 1.0, 1.0,
+static const double vertices[8/*#vertices*/*2/*#coords par vertex*/] = {
+   1.0, -1.0,
+  -1.0, -1.0,
+  -1.0,  1.0,
+   1.0,  1.0,
+   1.5, -1.0,
+  -1.5, -1.0,
+  -1.5,  1.0,
+   1.5,  1.0
 };
-static const size_t nvertices = sizeof(vertices) / sizeof(double[3]);
+static const size_t nvertices = sizeof(vertices) / sizeof(double[2]);
 
-static const size_t indices[32/*#triangles*/*3/*#indices per triangle*/] = {
-  0, 2, 1, 1, 2, 3, /* Solid back face */
-  0, 4, 2, 2, 4, 6, /* Solid left face*/
-  4, 5, 6, 6, 5, 7, /* Solid front face */
-  3, 7, 1, 1, 7, 5, /* Solid right face */
-  2, 6, 3, 3, 6, 7, /* Solid top face */
-  0, 1, 4, 4, 1, 5,  /* Solid bottom face */
+static const size_t indices[10/*#segments*/*2/*#indices per segment*/] = {
+  0, 1, /* Solid bottom segment */
+  1, 2, /* Solid left segment */
+  2, 3, /* Solid top segment */
+  3, 0, /* Solid right segment */
 
-  8, 10, 0, 0, 10, 2, /* Left fluid back face */
-  8, 12, 10, 10, 12, 14, /* Left fluid left face */
-  12, 4, 14, 14, 4, 6, /* Left fluid front face */
-  10, 14, 2, 2, 14, 6, /* Left fluid top face */
-  8, 0, 12, 12, 0, 4, /* Left fluid bottom face */
+  1, 5, /* Left fluid bottom segment */
+  5, 6, /* Left fluid left segment */
+  6, 2, /* Left fluid top segment */
 
-  1, 3, 9, 9, 3, 11, /* Right fluid back face */
-  5, 13, 7, 7, 13, 15, /* Right fluid front face */
-  11, 15, 9, 9, 15, 13, /* Right fluid right face */
-  3, 7, 11, 11, 7, 15, /* Right fluid top face */
-  1, 9, 5, 5, 9, 13 /* Right fluid bottom face */
+  4, 0, /* Right fluid bottom segment */
+  3, 7, /* Right fluid top segment */
+  7, 4 /* Right fluid right segment */
 };
-static const size_t ntriangles = sizeof(indices) / sizeof(size_t[3]);
+static const size_t nsegments = sizeof(indices) / sizeof(size_t[2]);
 
 static void
-get_indices(const size_t itri, size_t ids[3], void* ctx)
+get_indices(const size_t iseg, size_t ids[2], void* ctx)
 {
   struct geometry* geom = ctx;
   CHK(ctx != NULL);
-  ids[0] = geom->indices[itri*3+0];
-  ids[1] = geom->indices[itri*3+1];
-  ids[2] = geom->indices[itri*3+2];
+  ids[0] = geom->indices[iseg*2+0];
+  ids[1] = geom->indices[iseg*2+1];
 }
 
 static void
-get_position(const size_t ivert, double pos[3], void* ctx)
+get_position(const size_t ivert, double pos[2], void* ctx)
 {
   struct geometry* geom = ctx;
   CHK(ctx != NULL);
-  pos[0] = geom->positions[ivert*3+0];
-  pos[1] = geom->positions[ivert*3+1];
-  pos[2] = geom->positions[ivert*3+2];
+  pos[0] = geom->positions[ivert*2+0];
+  pos[1] = geom->positions[ivert*2+1];
 }
 
 static void
-get_interface(const size_t itri, struct sdis_interface** bound, void* ctx)
+get_interface(const size_t iseg, struct sdis_interface** bound, void* ctx)
 {
   struct geometry* geom = ctx;
   CHK(ctx != NULL);
-  *bound = geom->interfaces[itri];
+  *bound = geom->interfaces[iseg];
 }
 
 /*******************************************************************************
@@ -247,6 +209,7 @@ create_interface
   CHK(sdis_data_ref_put(data) == RES_OK);
 }
 
+
 /*******************************************************************************
  * Test
  ******************************************************************************/
@@ -256,17 +219,17 @@ main(int argc, char** argv)
   struct mem_allocator allocator;
   struct interface interf;
   struct geometry geom;
+  struct ssp_rng* rng = NULL;
+  struct sdis_scene* scn = NULL;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* solid2 = NULL;
-  struct sdis_interface* interfaces[5] = {NULL};
-  struct sdis_interface* prim_interfaces[32/*#triangles*/];
+  struct sdis_interface* interfaces[5]  = {NULL};
+  struct sdis_interface* prim_interfaces[10/*#segment*/];
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_scene* scn = NULL;
-  struct ssp_rng* rng = NULL;
   const size_t nsimuls = 4;
   size_t isimul;
   const double emissivity = 1;/* Emissivity of the side +/-X of the solid */
@@ -279,16 +242,15 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  CHK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
 
   /* Create the solid medium */
-  CHK(sdis_data_create(dev, sizeof(struct solid), ALIGNOF(struct solid),
-    NULL, &data) == RES_OK);
+  CHK(sdis_data_create
+    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data) == RES_OK);
   ((struct solid*)sdis_data_get(data))->lambda = lambda;
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
@@ -303,12 +265,11 @@ main(int argc, char** argv)
   CHK(sdis_data_create(dev, sizeof(struct solid), ALIGNOF(struct solid),
     NULL, &data) == RES_OK);
   ((struct solid*)sdis_data_get(data))->lambda = 0;
-  solid_shader.calorific_capacity = solid_get_calorific_capacity;
+  solid_shader.calorific_capacity = solid_get_thermal_conductivity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.delta_boundary = solid_get_delta_boundary;
-  solid_shader.temperature = temperature_unknown;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
@@ -323,7 +284,7 @@ main(int argc, char** argv)
   interf.temperature = UNKNOWN_TEMPERATURE;
   interf.convection_coef = 0;
   interf.emissivity = emissivity;
-  interf.specular_fraction = 1;
+  interf.specular_fraction = -1;
   create_interface(dev, solid, fluid, &interf, interfaces+1);
 
   /* Create the interface that forces the radiative heat to bounce */
@@ -340,7 +301,7 @@ main(int argc, char** argv)
   interf.specular_fraction = 1;
   create_interface(dev, fluid, solid2, &interf, interfaces+3);
 
-  /* Create the interface with a limit condition of T1 Kelvin */
+  /* Create the interface with a limit condition of T1 Kelvin  */
   interf.temperature = T1;
   interf.convection_coef = 0;
   interf.emissivity = 1;
@@ -348,35 +309,29 @@ main(int argc, char** argv)
   create_interface(dev, fluid, solid2, &interf, interfaces+4);
 
   /* Setup the per primitive interface of the solid medium */
-  prim_interfaces[0] = prim_interfaces[1] = interfaces[0];
-  prim_interfaces[2] = prim_interfaces[3] = interfaces[1];
-  prim_interfaces[4] = prim_interfaces[5] = interfaces[0];
-  prim_interfaces[6] = prim_interfaces[7] = interfaces[1];
-  prim_interfaces[8] = prim_interfaces[9] = interfaces[0];
-  prim_interfaces[10] = prim_interfaces[11] = interfaces[0];
+  prim_interfaces[0] = interfaces[0];
+  prim_interfaces[1] = interfaces[1];
+  prim_interfaces[2] = interfaces[0];
+  prim_interfaces[3] = interfaces[1];
 
   /* Setup the per primitive interface of the fluid on the left of the medium */
-  prim_interfaces[12] = prim_interfaces[13] = interfaces[2];
-  prim_interfaces[14] = prim_interfaces[15] = interfaces[3];
-  prim_interfaces[16] = prim_interfaces[17] = interfaces[2];
-  prim_interfaces[18] = prim_interfaces[19] = interfaces[2];
-  prim_interfaces[20] = prim_interfaces[21] = interfaces[2];
+  prim_interfaces[4] = interfaces[2];
+  prim_interfaces[5] = interfaces[3];
+  prim_interfaces[6] = interfaces[2];
 
   /* Setup the per primitive interface of the fluid on the right of the medium */
-  prim_interfaces[22] = prim_interfaces[23] = interfaces[2];
-  prim_interfaces[24] = prim_interfaces[25] = interfaces[2];
-  prim_interfaces[26] = prim_interfaces[27] = interfaces[4];
-  prim_interfaces[28] = prim_interfaces[29] = interfaces[2];
-  prim_interfaces[30] = prim_interfaces[31] = interfaces[2];
+  prim_interfaces[7] = interfaces[2];
+  prim_interfaces[8] = interfaces[2];
+  prim_interfaces[9] = interfaces[4];
 
   /* Create the scene */
   geom.positions = vertices;
   geom.indices = indices;
   geom.interfaces = prim_interfaces;
-  CHK(sdis_scene_create(dev, ntriangles, get_indices, get_interface, nvertices,
+  CHK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface, nvertices,
     get_position, &geom, &scn) == RES_OK);
 
-  hr = 4.0 * BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;
+  hr = 4*BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;
   tmp = lambda/(2*lambda + thickness*hr) * (T1 - T0);
   Ts0 = T0 + tmp;
   Ts1 = T1 - tmp;
@@ -386,14 +341,13 @@ main(int argc, char** argv)
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
     struct sdis_estimator* estimator;
-    double pos[3];
+    double pos[2];
     double ref, u;
     size_t nreals = 0;
     size_t nfails = 0;
 
     pos[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
-    pos[2] = ssp_rng_uniform_double(rng, -0.9, 0.9);
 
     CHK(sdis_solve_probe(scn, 10000, pos, INF, 1, -1, Tref, &estimator) == RES_OK);
     CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
@@ -402,8 +356,8 @@ main(int argc, char** argv)
 
     u = (pos[0] + 1) / thickness;
     ref = u * Ts1 + (1-u) * Ts0;
-    printf("Temperature at (%g, %g, %g)  = %g ~ %g +/- %g\n",
-      SPLIT3(pos), ref, T.E, T.SE);
+    printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
+      SPLIT2(pos), ref, T.E, T.SE);
 
     CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
 
@@ -420,11 +374,13 @@ main(int argc, char** argv)
   CHK(sdis_medium_ref_put(fluid) == RES_OK);
   CHK(sdis_medium_ref_put(solid) == RES_OK);
   CHK(sdis_medium_ref_put(solid2) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
   CHK(ssp_rng_ref_put(rng) == RES_OK);
+  CHK(sdis_device_ref_put(dev) == RES_OK);
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
+
   return 0;
 }
+
