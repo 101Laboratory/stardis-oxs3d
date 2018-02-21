@@ -45,6 +45,7 @@ set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
+  sdis_camera.c
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
@@ -57,6 +58,7 @@ set(SDIS_FILES_INC_API
   sdis.h)
 
 set(SDIS_FILES_INC
+  sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
   sdis_interface_c.h
@@ -75,7 +77,10 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star2D Star3D StarSP)
+target_link_libraries(sdis RSys Star2D Star3D StarSP m)
+if(CMAKE_COMPILER_IS_GNUCC)
+  target_link_libraries(sdis m)
+endif()
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD
@@ -111,6 +116,7 @@ if(NOT NO_TEST)
     register_test(${_name} ${_name})
   endfunction()
 
+  new_test(test_sdis_camera)
   new_test(test_sdis_data)
   new_test(test_sdis_device)
   new_test(test_sdis_interface)

@@ -51,6 +51,7 @@ struct mem_allocator;
  * a reference on the data, i.e. they increment or decrement the reference
  * counter, respectively. When this counter reaches 0, the object is silently
  * destroyed and cannot be used anymore. */
+struct sdis_camera;
 struct sdis_data;
 struct sdis_device;
 struct sdis_estimator;
@@ -124,7 +125,7 @@ struct sdis_solid_shader {
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
@@ -137,7 +138,7 @@ struct sdis_fluid_shader {
    * unknown for the submitted position and time. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_FLUID_SHADER_NULL__ {NULL}
+#define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL}
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
@@ -149,7 +150,7 @@ struct sdis_interface_shader {
   sdis_interface_getter_T emissivity; /* Overall emissivity */
   sdis_interface_getter_T specular_fraction; /* Specular fraction in [0, 1] */
 };
-#define SDIS_INTERFACE_SHADER_NULL__ {NULL}
+#define SDIS_INTERFACE_SHADER_NULL__ {NULL, NULL, NULL, NULL}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
@@ -202,6 +203,40 @@ sdis_data_get
 SDIS_API const void*
 sdis_data_cget
   (const struct sdis_data* data);
+
+/*******************************************************************************
+ * A camera describes a point of view
+ ******************************************************************************/
+SDIS_API res_T
+sdis_camera_create
+  (struct sdis_device* dev,
+   struct sdis_camera** cam);
+
+SDIS_API res_T
+sdis_camera_ref_get
+  (struct sdis_camera* cam);
+
+SDIS_API res_T
+sdis_camera_ref_put
+  (struct sdis_camera* cam);
+
+/* Width/height projection ratio */
+SDIS_API res_T
+sdis_camera_set_proj_ratio
+  (struct sdis_camera* cam,
+   const double proj_ratio);
+
+SDIS_API res_T
+sdis_camera_set_fov /* Horizontal field of view */
+  (struct sdis_camera* cam,
+   const double fov); /* In radian */
+
+SDIS_API res_T
+sdis_camera_look_at
+  (struct sdis_camera* cam,
+   const double position[3],
+   const double target[3],
+   const double up[3]);
 
 /*******************************************************************************
  * A medium encapsulates the properties of either a fluid or a solid.
