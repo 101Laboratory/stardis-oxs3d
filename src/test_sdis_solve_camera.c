@@ -18,54 +18,7 @@
 
 #include <rsys/math.h>
 
-/*
- * The scene is composed of a solid cube with unknown temperature. The
- * surrounding fluid has a fixed constant temperature.
- *
- *             (1,1,1)
- *       +-------+
- *      /'      /|    _\
- *     +-------+ |   / /
- *     | +.....|.+   \__/
- *     |,      |/
- *     +-------+
- * (0,0,0)
- */
-
-/*******************************************************************************
- * Geometry
- ******************************************************************************/
-struct context {
-  const double* positions;
-  const size_t* indices;
-  struct sdis_interface* interf;
-};
-
-static void
-get_indices(const size_t itri, size_t ids[3], void* context)
-{
-  struct context* ctx = context;
-  ids[0] = ctx->indices[itri*3+0];
-  ids[1] = ctx->indices[itri*3+1];
-  ids[2] = ctx->indices[itri*3+2];
-}
-
-static void
-get_position(const size_t ivert, double pos[3], void* context)
-{
-  struct context* ctx = context;
-  pos[0] = ctx->positions[ivert*3+0];
-  pos[1] = ctx->positions[ivert*3+1];
-  pos[2] = ctx->positions[ivert*3+2];
-}
-
-static void
-get_interface(const size_t itri, struct sdis_interface** bound, void* context)
-{
-  struct context* ctx = context;
-  (void)itri;
-  *bound = ctx->interf;
-}
+#define UNKOWN_TEMPERATURE -1
 
 /*******************************************************************************
  * Fluid medium
@@ -148,6 +101,7 @@ struct interf {
   double hc;
   double epsilon;
   double specular_fraction;
+  double temperature;
 };
 
 static double
@@ -174,6 +128,14 @@ interface_get_specular_fraction
   return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
 }
 
+static double
+interface_get_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interf*)sdis_data_cget(data))->temperature;
+}
+
 /*******************************************************************************
  * Test
  ******************************************************************************/
@@ -181,40 +143,41 @@ int
 main(int argc, char** argv)
 {
   struct mem_allocator allocator;
-  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
-  struct sdis_medium* fluid = NULL;
-  struct sdis_interface* interf = NULL;
-  struct sdis_scene* scn = NULL;
-  struct sdis_data* data = NULL;
-  struct sdis_estimator* estimator = NULL;
-  struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
+  struct sdis_medium* fluid0 = NULL;
+  struct sdis_medium* fluid1 = NULL;
+  struct sdis_interface* interf0 = NULL;
+  struct sdis_interface* interf1 = NULL;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
+  struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
-  struct context ctx;
   struct fluid* fluid_param;
   struct solid* solid_param;
   struct interf* interface_param;
-  double pos[3];
-  double time;
-  double ref;
-  const size_t N = 1000;
-  size_t nreals;
-  size_t nfails;
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
-  /* Create the fluid medium */
+  /* Create the fluid0 */
   CHK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
   fluid_param = sdis_data_get(data);
   fluid_param->temperature = 300;
   fluid_shader.temperature = fluid_get_temperature;
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
+  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid0) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* Create the fluid1 */
+  CHK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  fluid_param = sdis_data_get(data);
+  fluid_param->temperature = UNKOWN_TEMPERATURE;
+  fluid_shader.temperature = fluid_get_temperature;
+  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid1) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the solid medium */
@@ -225,7 +188,8 @@ main(int argc, char** argv)
   solid_param->lambda = 0.1;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = UNKOWN_TEMPERATURE;
+  solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
@@ -235,73 +199,48 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
-  /* Create the solid/fluid interface */
+  /* Create the fluid0/solid interface */
   CHK(sdis_data_create(dev, sizeof(struct interf),
     ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
-  interface_param->hc = 0.5;
+  interface_param->hc = 1;
   interface_param->epsilon = 0;
   interface_param->specular_fraction = 0;
+  interface_param->temperature = UNKOWN_TEMPERATURE;
   interface_shader.convection_coef = interface_get_convection_coef;
-  interface_shader.temperature = NULL;
+  interface_shader.temperature = interface_get_temperature;
   interface_shader.emissivity = interface_get_emissivity;
   interface_shader.specular_fraction = interface_get_specular_fraction;
   CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
+    (dev, solid, fluid0, &interface_shader, data, &interf0) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* Create the fluid1/solid interface */
+  CHK(sdis_data_create(dev, sizeof(struct interf),
+    ALIGNOF(struct interf), NULL, &data) == RES_OK);
+  interface_param = sdis_data_get(data);
+  interface_param->hc = 0;
+  interface_param->epsilon = 1;
+  interface_param->specular_fraction = 1;
+  interface_param->temperature = UNKOWN_TEMPERATURE;
+  interface_shader.convection_coef = interface_get_convection_coef;
+  interface_shader.temperature = interface_get_temperature;
+  interface_shader.emissivity = interface_get_emissivity;
+  interface_shader.specular_fraction = interface_get_specular_fraction;
+  CHK(sdis_interface_create
+    (dev, fluid1, solid, &interface_shader, data, &interf1) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* TODO setup the geometry */
 
   /* Release the media */
   CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  CHK(sdis_medium_ref_put(fluid0) == RES_OK);
+  CHK(sdis_medium_ref_put(fluid1) == RES_OK);
 
-  /* Create the scene */
-  ctx.positions = box_vertices;
-  ctx.indices = box_indices;
-  ctx.interf = interf;
-  CHK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, &ctx, &scn) == RES_OK);
-
-  CHK(sdis_interface_ref_put(interf) == RES_OK);
-
-  /* Test the solver */
-  pos[0] = 0.5;
-  pos[1] = 0.5;
-  pos[2] = 0.5;
-  time = INF;
-  CHK(sdis_solve_probe(NULL, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, 0, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, NULL, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 0, 0, -1, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, NULL) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
-
-  CHK(sdis_estimator_get_realisation_count(estimator, NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_realisation_count(NULL, &nreals) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-
-  CHK(sdis_estimator_get_failure_count(estimator, NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_failure_count(NULL, &nfails) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-
-  CHK(nfails + nreals == N);
-
-  CHK(sdis_estimator_get_temperature(estimator, NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_temperature(NULL, &T) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-
-  ref = 300;
-  printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(pos), ref, T.E, T.SE);
-  CHK(eq_eps(T.E, ref, T.SE));
-
-  CHK(sdis_estimator_ref_get(NULL) ==  RES_BAD_ARG);
-  CHK(sdis_estimator_ref_get(estimator) == RES_OK);
-  CHK(sdis_estimator_ref_put(NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
+  /* Release memory */
+  CHK(sdis_interface_ref_put(interf0) == RES_OK);
+  CHK(sdis_interface_ref_put(interf1) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);
 
   check_memory_allocator(&allocator);
@@ -309,4 +248,3 @@ main(int argc, char** argv)
   CHK(mem_allocated_size() == 0);
   return 0;
 }
-
