@@ -745,6 +745,71 @@ XD(probe_realisation)
   return RES_OK;
 }
 
+#if SDIS_SOLVE_PROBE_DIMENSION == 3
+static res_T
+XD(ray_realisation)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const struct sdis_medium* medium,
+   const double position[],
+   const double direction[],
+   const double time,
+   const double fp_to_meter,
+   const double Tarad,
+   const double Tref,
+   double* weight)
+{
+  struct sXd(hit) hit = SXD_HIT_NULL;
+  const float range[2] = {0, FLT_MAX};
+  float org[3] = {0, 0, 0};
+  float dir[3] = {0, 0, 0};
+  res_T res = RES_OK;
+  ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight);
+  ASSERT(medium && medium->type == SDIS_MEDIUM_FLUID);
+
+  fX_set_dX(org, position);
+  fX_set_dX(dir, direction);
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, &hit, &hit));
+
+  if(SXD_HIT_NONE(&hit)) {
+    if(Tarad >= 0) {
+      *weight = Tarad;
+    } else {
+      log_err(scn->dev, 
+"%s: the ray starting from `%g %g %g' and traced along the `%g %g %g' direction\n"
+"reaches an invalid ambient temperature of `%gK'. One has to provide a valid\n"
+"ambient radiative temperature, i.e. it must be greater or equal to 0.\n",
+        FUNC_NAME, SPLIT3(org), SPLIT3(dir), Tarad);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  } else {
+    struct rwalk_context ctx;
+    struct XD(rwalk) rwalk = XD(RWALK_NULL);
+    struct XD(temperature) T = XD(TEMPERATURE_NULL);
+
+    dX(set)(rwalk.vtx.P, position);
+    XD(move_pos)(rwalk.vtx.P, dir, hit.distance);
+    rwalk.vtx.time = time;
+    rwalk.hit = hit;
+    rwalk.mdm = medium;
+
+    ctx.Tarad = Tarad;
+    ctx.Tref3 = Tref*Tref*Tref;
+
+    T.func = XD(boundary_temperature);
+    res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+    if(res != RES_OK) return res;
+
+    *weight = T.value;
+  }
+exit:
+  return res;
+error:
+  goto exit;
+}
+#endif /* SDIS_SOLVE_PROBE_DIMENSION == 3 */
+
 #undef SDIS_SOLVE_PROBE_DIMENSION
 #undef DIM
 #undef sXd

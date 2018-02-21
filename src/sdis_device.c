@@ -52,6 +52,7 @@ device_release(ref_T* ref)
   if(dev->s3d) S3D(device_ref_put(dev->s3d));
   ASSERT(flist_name_is_empty(&dev->names));
   flist_name_release(&dev->names);
+  darray_tile_release(&dev->tiles);
   MEM_RM(dev->allocator, dev);
 }
 
@@ -94,11 +95,19 @@ sdis_device_create
   dev->nthreads = MMIN(nthreads_hint, (unsigned)omp_get_num_procs());
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->names);
+  darray_tile_init(allocator, &dev->tiles);
+
+  res = darray_tile_resize(&dev->tiles, dev->nthreads);
+  if(res != RES_OK) {
+    log_err(dev,
+      "%s: could not allocate the per thread buffer of estimations.\n", FUNC_NAME);
+    goto error;
+  }
 
   res = s2d_device_create(log, allocator, 0, &dev->s2d);
   if(res != RES_OK) {
     log_err(dev,
-      "%s, could not create the Star-2D device on Stardis.\n", FUNC_NAME);
+      "%s: could not create the Star-2D device on Stardis.\n", FUNC_NAME);
   }
 
   res = s3d_device_create(log, allocator, 0, &dev->s3d);

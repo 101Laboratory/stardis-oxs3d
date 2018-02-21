@@ -154,6 +154,14 @@ struct sdis_interface_shader {
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
+/* Functor use to write estimations performed by sdis_solve_camera */
+typedef res_T
+(*sdis_write_estimations_T)
+  (void* context, /* User data */
+   const size_t origin[2], /* Coordinates of the 1st estimation in image plane */
+   const size_t nestimations[2], /* #estimations in X and Y */
+   const struct sdis_mc* estimations); /* List of row ordered estimations */
+
 BEGIN_DECLS
 
 /*******************************************************************************
@@ -369,10 +377,24 @@ sdis_solve_probe
    const size_t nrealisations, /* #realisations */
    const double position[3], /* Probe position */
    const double time, /* Observation time */
-   const double fp_to_meter,/* Scale from floating point units to meters */
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
    struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_solve_camera
+  (struct sdis_scene* scn,
+   const struct sdis_camera* cam, /* Point of view */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   const size_t width, /* Image definition in in X */
+   const size_t height, /* Image definition in Y */
+   const size_t spp, /* #samples per pixel */
+   sdis_write_estimations_T writer,
+   void* writer_data);
 
 END_DECLS
 
