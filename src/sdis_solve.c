@@ -17,15 +17,15 @@
 #include "sdis_camera.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
-#include "sdis_solve_probe_Xd.h"
+#include "sdis_solve_Xd.h"
 
 /* Generate the 2D solver */
-#define SDIS_SOLVE_PROBE_DIMENSION 2
-#include "sdis_solve_probe_Xd.h"
+#define SDIS_SOLVE_DIMENSION 2
+#include "sdis_solve_Xd.h"
 
 /* Generate the 3D solver */
-#define SDIS_SOLVE_PROBE_DIMENSION 3
-#include "sdis_solve_probe_Xd.h"
+#define SDIS_SOLVE_DIMENSION 3
+#include "sdis_solve_Xd.h"
 
 #include <star/ssp.h>
 #include <omp.h>

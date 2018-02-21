@@ -52,7 +52,7 @@ set(SDIS_FILES_SRC
   sdis_interface.c
   sdis_medium.c
   sdis_scene.c
-  sdis_solve_probe.c)
+  sdis_solve.c)
 
 set(SDIS_FILES_INC_API
   sdis.h)
@@ -63,7 +63,8 @@ set(SDIS_FILES_INC
   sdis_estimator_c.h
   sdis_interface_c.h
   sdis_medium_c.h
-  sdis_scene_c.h)
+  sdis_scene_c.h
+  sdis_solve_Xd.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
 

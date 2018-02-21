@@ -13,9 +13,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef SDIS_SOLVE_PROBE_DIMENSION
-#ifndef SDIS_SOLVE_PROBE_XD_H
-#define SDIS_SOLVE_PROBE_XD_H
+#ifndef SDIS_SOLVE_DIMENSION
+#ifndef SDIS_SOLVE_XD_H
+#define SDIS_SOLVE_XD_H
 
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
@@ -52,39 +52,39 @@ reflect(float res[3], const float V[3], const float N[3])
   return res;
 }
 
-#endif /* SDIS_SOLVE_PROBE_XD_H */
+#endif /* SDIS_SOLVE_XD_H */
 #else
 
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
   #include <rsys/double2.h>
   #include <rsys/float2.h>
   #include <star/s2d.h>
-#elif (SDIS_SOLVE_PROBE_DIMENSION == 3)
+#elif (SDIS_SOLVE_DIMENSION == 3)
   #include <rsys/double2.h>
   #include <rsys/double3.h>
   #include <rsys/float3.h>
   #include <star/s3d.h>
 #else
-  #error "Invalid SDIS_SOLVE_PROBE_DIMENSION value."
+  #error "Invalid SDIS_SOLVE_DIMENSION value."
 #endif
 
 /* Syntactic sugar */
-#define DIM SDIS_SOLVE_PROBE_DIMENSION
+#define DIM SDIS_SOLVE_DIMENSION
 
-/* Star-XD macros generic to SDIS_SOLVE_PROBE_DIMENSION */
+/* Star-XD macros generic to SDIS_SOLVE_DIMENSION */
 #define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
 #define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
 #define SXD_HIT_NULL CONCAT(CONCAT(S,DIM), D_HIT_NULL)
 #define SXD_HIT_NULL__ CONCAT(CONCAT(S, DIM), D_HIT_NULL__)
 #define SXD CONCAT(CONCAT(S, DIM), D)
 
-/* Vector macros generic to SDIS_SOLVE_PROBE_DIMENSION */
+/* Vector macros generic to SDIS_SOLVE_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
 #define dX_set_fX CONCAT(CONCAT(CONCAT(d, DIM), _set_f), DIM)
 
-/* Macro making generic its subimitted name to SDIS_SOLVE_PROBE_DIMENSION */
+/* Macro making generic its subimitted name to SDIS_SOLVE_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
 /* Current state of the random walk */
@@ -156,7 +156,7 @@ XD(move_pos)(double pos[DIM], const float dir[DIM], const float delta)
   ASSERT(pos && dir);
   pos[0] += dir[0] * delta;
   pos[1] += dir[1] * delta;
-#if(SDIS_SOLVE_PROBE_DIMENSION == 3)
+#if(SDIS_SOLVE_DIMENSION == 3)
   pos[2] += dir[2] * delta;
 #endif
 }
@@ -179,7 +179,7 @@ XD(check_rwalk_fragment_consistency)
       || eq_eps(rwalk->vtx.time, frag->time,  1.e-6))) {
     return 0;
   }
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
   uv[0] = rwalk->hit.u;
 #else
   d2_set_f2(uv, rwalk->hit.uv);
@@ -235,7 +235,7 @@ XD(radiative_temperature)
     fX_set_dX(pos, rwalk->vtx.P);
 
     /* Trace the radiative ray */
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
     SXD(scene_view_trace_ray_3d
       (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
 #else
@@ -590,7 +590,7 @@ XD(solid_temperature)
     rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
     cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
 
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
     /* Sample a direction around 2PI */
     ssp_ran_circle_uniform_float(rng, dir0, NULL);
 #else
@@ -745,7 +745,7 @@ XD(probe_realisation)
   return RES_OK;
 }
 
-#if SDIS_SOLVE_PROBE_DIMENSION == 3
+#if SDIS_SOLVE_DIMENSION == 3
 static res_T
 XD(ray_realisation)
   (struct sdis_scene* scn,
@@ -808,9 +808,9 @@ exit:
 error:
   goto exit;
 }
-#endif /* SDIS_SOLVE_PROBE_DIMENSION == 3 */
+#endif /* SDIS_SOLVE_DIMENSION == 3 */
 
-#undef SDIS_SOLVE_PROBE_DIMENSION
+#undef SDIS_SOLVE_DIMENSION
 #undef DIM
 #undef sXd
 #undef SXD_HIT_NONE
@@ -822,5 +822,5 @@ error:
 #undef fX_set_dX
 #undef XD
 
-#endif /* !SDIS_SOLVE_PROBE_DIMENSION */
+#endif /* !SDIS_SOLVE_DIMENSION */
 
