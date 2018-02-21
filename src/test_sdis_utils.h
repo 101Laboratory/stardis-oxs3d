@@ -16,8 +16,12 @@
 #ifndef TEST_SDIS_UTILS_H
 #define TEST_SDIS_UTILS_H
 
+#include "sdis.h"
+
 #include <rsys/mem_allocator.h>
 #include <stdio.h>
+
+#define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
 
 /*******************************************************************************
  * Box geometry
@@ -82,7 +86,7 @@ dummy_medium_getter
 {
   (void)data;
   CHK(vert != NULL);
-  return 1;
+  return 0;
 }
 
 static INLINE double
@@ -91,7 +95,7 @@ dummy_interface_getter
 {
   (void)data;
   CHK(frag != NULL);
-  return 1;
+  return 0;
 }
 
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
@@ -110,6 +114,8 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
 };
 
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
+  dummy_interface_getter,
+  dummy_interface_getter,
   dummy_interface_getter,
   dummy_interface_getter
 };

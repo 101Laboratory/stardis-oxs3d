@@ -36,6 +36,8 @@ sdis_solve_probe
    const double position[3],
    const double time,
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
+   const double Tarad, /* Ambient radiative temperature */
+   const double Tref, /* Reference temperature */
    struct sdis_estimator** out_estimator)
 {
   const struct sdis_medium* medium = NULL;
@@ -50,7 +52,7 @@ sdis_solve_probe
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || !position || time < 0 || fp_to_meter <= 0
-  || !out_estimator) {
+  || Tref < 0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -92,10 +94,10 @@ sdis_solve_probe
 
     if(scene_is_2d(scn)) {
       res_local = probe_realisation_2d
-        (scn, rng, medium, position, time, fp_to_meter, &w);
+        (scn, rng, medium, position, time, fp_to_meter, Tarad, Tref, &w);
     } else {
       res_local = probe_realisation_3d
-        (scn, rng, medium, position, time, fp_to_meter, &w);
+        (scn, rng, medium, position, time, fp_to_meter, Tarad, Tref, &w);
     }
     if(res_local != RES_OK) {
       if(res_local == RES_BAD_OP) {
