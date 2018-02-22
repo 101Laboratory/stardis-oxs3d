@@ -134,6 +134,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_camera)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
+  target_link_libraries(test_sdis_solve_camera Star3DUT)
+
   if(CMAKE_COMPILER_IS_GNUCC)
     target_link_libraries(test_sdis_solve_probe3_2d m)
   endif()
