@@ -36,6 +36,16 @@ struct map_interf {
   struct sdis_interface* interf;
 };
 
+static int
+cmp_map_inter(const void* key, const void* elmt)
+{
+  const size_t* iprim = key;
+  const struct map_interf* interf = elmt;
+  if(*iprim < interf->key) return -1;
+  else if(*iprim > interf->key) return 1;
+  else return 0;
+}
+
 struct geometry {
   double* positions;
   size_t* indices;
@@ -91,20 +101,17 @@ geometry_get_interface
 {
   struct geometry* geom = ctx;
   struct map_interf* interf = NULL;
-  size_t ninterfs;
-  size_t i;
 
   CHK(bound != NULL);
   CHK(geom != NULL);
   CHK(itri < sa_size(geom->indices)/3/*#indices per triangle*/);
 
   /* Find the interface of the triangle */
-  ninterfs = sa_size(geom->interfaces);
-  FOR_EACH(i, 0, ninterfs-1) {
-    if(geom->interfaces[i].key <= itri && itri < geom->interfaces[i+1].key)
-      break;
-  }
-  interf = geom->interfaces + i;
+  interf = search_lower_bound(&itri, geom->interfaces,
+    sa_size(geom->interfaces), sizeof(struct map_interf), cmp_map_inter);
+
+  CHK(interf != NULL);
+  CHK(interf->key >= itri);
   *bound = interf->interf;
 }
 
@@ -366,7 +373,6 @@ geometry_add_shape
 {
   struct map_interf* geom_interf = NULL;
   size_t nverts_prev = 0;
-  size_t nprims_prev = 0;
   size_t i;
 
   CHK(geom != NULL);
@@ -378,7 +384,6 @@ geometry_add_shape
 
   /* Save the previous number of vertices/primitives of the geometry */
   nverts_prev = sa_size(geom->positions) / 3;
-  nprims_prev = sa_size(geom->indices) / 3;
 
   /* Add the vertices */
   FOR_EACH(i, 0, nverts) {
@@ -398,7 +403,7 @@ geometry_add_shape
   }
 
   geom_interf = sa_add(geom->interfaces, 1);
-  geom_interf->key = nprims_prev;
+  geom_interf->key = sa_size(geom->indices) / 3 - 1;
   geom_interf->interf = interf;
 }
 
