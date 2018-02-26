@@ -57,10 +57,10 @@ solve_pixel
    const size_t ipix[2], /* Pixel coordinate in the image plane */
    const size_t nrealisations,
    const double pix_sz[2], /* Pixel size in the normalized image plane */
-   struct sdis_mc* estimation)
+   struct sdis_accum* accum)
 {
-  double weight = 0;
-  double sqr_weight = 0;
+  double sum_weights = 0;
+  double sum_weights_sqr = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t irealisation;
   res_T res = RES_OK;
@@ -74,8 +74,8 @@ solve_pixel
     double w = 0;
 
     /* Generate a sample into the pixel to estimate */
-    samp[0] = (double)ipix[0] + ssp_rng_uniform_double(rng, 0, pix_sz[0]);
-    samp[1] = (double)ipix[1] + ssp_rng_uniform_double(rng, 0, pix_sz[1]);
+    samp[0] = ((double)ipix[0] + ssp_rng_canonical(rng)) * pix_sz[0];
+    samp[1] = ((double)ipix[1] + ssp_rng_canonical(rng)) * pix_sz[1];
 
     /* Generate a ray starting from the camera position and passing through
      * pixel sample */
@@ -84,26 +84,18 @@ solve_pixel
     /* Launch the realisation */
     res = ray_realisation_3d(scn, rng, mdm, ray_pos, ray_dir,
       time, fp_to_meter, Tarad, Tref, &w);
-    if(res != RES_OK) goto error;
-
     if(res == RES_OK) {
-      weight += w;
-      sqr_weight += w*w;
+      sum_weights += w;
+      sum_weights_sqr += w*w;
       ++N;
     } else if(res != RES_BAD_OP) {
       goto error;
     }
   }
 
-  if(N == 0) {
-    estimation->E = NaN;
-    estimation->SE = NaN;
-    estimation->V = NaN;
-  } else {
-    estimation->E = weight/(double)N;
-    estimation->V = sqr_weight/(double)N - estimation->E*estimation->E;
-    estimation->SE = sqrt(estimation->V/(double)N);
-  }
+  accum->sum_weights = sum_weights;
+  accum->sum_weights_sqr = sum_weights_sqr;
+  accum->nweights = N;
 
 exit:
   return res;
@@ -125,12 +117,12 @@ solve_tile
    const size_t size[2], /* #pixels in X and Y */
    const size_t spp, /* #samples per pixel */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
-   struct sdis_mc* estimations)
+   struct sdis_accum* accums)
 {
   size_t mcode; /* Morton code of the tile pixel */
   size_t npixels;
   res_T res = RES_OK;
-  ASSERT(scn && rng && mdm && cam && spp && origin && estimations);
+  ASSERT(scn && rng && mdm && cam && spp && origin && accums);
   ASSERT(size &&size[0] && size[1]);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
 
@@ -140,19 +132,19 @@ solve_tile
 
   FOR_EACH(mcode, 0, npixels) {
     size_t ipix[2];
-    struct sdis_mc* estimation;
+    struct sdis_accum* accum;
 
     ipix[0] = morton2D_decode((uint32_t)(mcode>>0));
     if(ipix[0] >= size[0]) continue;
     ipix[1] = morton2D_decode((uint32_t)(mcode>>1));
     if(ipix[1] >= size[1]) continue;
 
-    estimation = estimations + ipix[1]*size[0] + ipix[0];
+    accum = accums + ipix[1]*size[0] + ipix[0];
     ipix[0] = ipix[0] + origin[0];
     ipix[1] = ipix[1] + origin[1];
 
-    res = solve_pixel(scn, rng, mdm, cam, time, fp_to_meter, Tarad, Tref, size,
-      spp, pix_sz, estimation);
+    res = solve_pixel(scn, rng, mdm, cam, time, fp_to_meter, Tarad, Tref, ipix,
+      spp, pix_sz, accum);
     if(res != RES_OK) goto error;
   }
 
@@ -284,14 +276,14 @@ sdis_solve_camera
    const size_t width, /* #pixels in X */
    const size_t height, /* #pixels in Y */
    const size_t spp, /* #samples per pixel */
-   sdis_write_estimations_T writer,
+   sdis_write_accums_T writer,
    void* writer_data)
 {
   #define TILE_SIZE 32 /* definition in X & Y of a tile */
   STATIC_ASSERT(IS_POW2(TILE_SIZE), TILE_SIZE_must_be_a_power_of_2);
 
   const struct sdis_medium* medium = NULL;
-  struct darray_mc* tiles = NULL;
+  struct darray_accum* tiles = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   size_t ntiles_x, ntiles_y, ntiles;
@@ -315,7 +307,7 @@ sdis_solve_camera
   res = scene_get_medium(scn, cam->position, &medium);
   if(res != RES_OK) goto error;
 
-  if(medium != SDIS_MEDIUM_FLUID) {
+  if(medium->type != SDIS_MEDIUM_FLUID) {
     log_err(scn->dev, "%s: the camera position `%g %g %g' is not in a fluid.\n",
       FUNC_NAME, SPLIT3(cam->position));
     res = RES_BAD_ARG;
@@ -339,12 +331,12 @@ sdis_solve_camera
     if(res != RES_OK) goto error;
   }
 
-  /* Allocate per thread buffer of estimations */
+  /* Allocate per thread buffer of accumulations */
   tiles = darray_tile_data_get(&scn->dev->tiles);
   ASSERT(darray_tile_size_get(&scn->dev->tiles) == scn->dev->nthreads);
   FOR_EACH(i, 0, scn->dev->nthreads) {
-    const size_t nestimations = TILE_SIZE * TILE_SIZE;
-    res = darray_mc_resize(tiles+i, nestimations);
+    const size_t naccums = TILE_SIZE * TILE_SIZE;
+    res = darray_accum_resize(tiles+i, naccums);
     if(res != RES_OK) goto error;
   }
 
@@ -357,12 +349,12 @@ sdis_solve_camera
   pix_sz[1] = 1.0 / (double)height;
 
   omp_set_num_threads((int)scn->dev->nthreads);
-  /*#pragma omp parallel for schedule(static)*/
+  #pragma omp parallel for schedule(static, 1/*chunki size*/)
   for(mcode = 0; mcode < (int64_t)ntiles; ++mcode) {
     size_t tile_org[2] = {0, 0};
     size_t tile_sz[2] = {0, 0};
     const int ithread = omp_get_thread_num();
-    struct sdis_mc* estimations = NULL;
+    struct sdis_accum* accums = NULL;
     struct ssp_rng* rng = rngs[ithread];
     res_T res_local = RES_OK;
 
@@ -377,21 +369,21 @@ sdis_solve_camera
     tile_org[0] *= TILE_SIZE;
     tile_org[1] *= TILE_SIZE;
     tile_sz[0] = MMIN(TILE_SIZE, width - tile_org[0]);
-    tile_sz[0] = MMIN(TILE_SIZE, width - tile_org[1]);
+    tile_sz[1] = MMIN(TILE_SIZE, width - tile_org[1]);
 
-    /* Fetch the estimation buffer */
-    estimations = darray_mc_data_get(tiles+ithread);
+    /* Fetch the accumulations buffer */
+    accums = darray_accum_data_get(tiles+ithread);
 
     /* Draw the tile */
     res_local = solve_tile(scn, rng, medium, cam, time, fp_to_meter, Tarad,
-      Tref, tile_org, tile_sz, spp, pix_sz, estimations);
+      Tref, tile_org, tile_sz, spp, pix_sz, accums);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;
     }
 
-    /* Write the estimations */
-    res_local = writer(writer_data, tile_org, tile_sz, estimations);
+    /* Write the accumulations */
+    res_local = writer(writer_data, tile_org, tile_sz, accums);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;

@@ -24,16 +24,16 @@ struct name { FITEM; };
 #define FITEM_TYPE name
 #include <rsys/free_list.h>
 
-#define DARRAY_NAME mc
-#define DARRAY_DATA struct sdis_mc
+#define DARRAY_NAME accum
+#define DARRAY_DATA struct sdis_accum
 #include <rsys/dynamic_array.h>
 
 #define DARRAY_NAME tile
-#define DARRAY_DATA struct darray_mc
-#define DARRAY_FUNCTOR_INIT darray_mc_init
-#define DARRAY_FUNCTOR_RELEASE darray_mc_release
-#define DARRAY_FUNCTOR_COPY darray_mc_copy
-#define DARRAY_FUNCTOR_COPY_AND_RELEASE darray_mc_copy_and_release
+#define DARRAY_DATA struct darray_accum
+#define DARRAY_FUNCTOR_INIT darray_accum_init
+#define DARRAY_FUNCTOR_RELEASE darray_accum_release
+#define DARRAY_FUNCTOR_COPY darray_accum_copy
+#define DARRAY_FUNCTOR_COPY_AND_RELEASE darray_accum_copy_and_release
 #include <rsys/dynamic_array.h>
 
 struct sdis_device {
