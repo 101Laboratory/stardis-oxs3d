@@ -187,43 +187,30 @@ XD(check_rwalk_fragment_consistency)
   return d2_eq_eps(uv, frag->uv, 1.e-6);
 }
 
-res_T
-XD(radiative_temperature)
+static res_T
+XD(trace_radiative_path)
   (const struct sdis_scene* scn,
+   const float ray_dir[3],
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  const struct sdis_interface* interf;
-
   /* The radiative random walk is always perform in 3D. In 2D, the geometry are
    * assumed to be extruded to the infinty along the Z dimension. */
   float N[3] = {0, 0, 0};
   float dir[3] = {0, 0, 0};
-
   res_T res = RES_OK;
 
-  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(scn && ray_dir && fp_to_meter > 0 && ctx && rwalk && rng && T);
   (void)fp_to_meter;
 
-  /* Fetch the current interface */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-
-  /* Normalize the normal of the interface and ensure that it points toward the
-   * current medium */
-  fX(normalize(N, rwalk->hit.normal));
-  if(interf->medium_back == rwalk->mdm) {
-    fX(minus(N, N));
-  }
-
-  /* Cosine weighted sampling of a direction around the surface normal */
-  ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
+  f3_set(dir, ray_dir);
 
   /* Launch the radiative random walk */
   for(;;) {
+    const struct sdis_interface* interf = NULL;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
     const struct sdis_medium* chk_mdm = NULL;
     double alpha;
@@ -310,6 +297,50 @@ XD(radiative_temperature)
       ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
     }
   }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+XD(radiative_temperature)
+  (const struct sdis_scene* scn,
+   const double fp_to_meter,
+   const struct rwalk_context* ctx,
+   struct XD(rwalk)* rwalk,
+   struct ssp_rng* rng,
+   struct XD(temperature)* T)
+{
+  const struct sdis_interface* interf;
+
+  /* The radiative random walk is always perform in 3D. In 2D, the geometry are
+   * assumed to be extruded to the infinty along the Z dimension. */
+  float N[3] = {0, 0, 0};
+  float dir[3] = {0, 0, 0};
+  res_T res = RES_OK;
+
+  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  (void)fp_to_meter;
+
+  /* Fetch the current interface */
+  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+
+  /* Normalize the normal of the interface and ensure that it points toward the
+   * current medium */
+  fX(normalize(N, rwalk->hit.normal));
+  if(interf->medium_back == rwalk->mdm) {
+    fX(minus(N, N));
+  }
+
+  /* Cosine weighted sampling of a direction around the surface normal */
+  ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
+
+  /* Launch the radiative random walk */
+  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, ctx, rwalk, rng, T);
+  if(res != RES_OK) goto error;
 
 exit:
   return res;
@@ -559,7 +590,7 @@ XD(solid_temperature)
     log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(rwalk->vtx.P));
-    return RES_BAD_ARG;
+    return RES_BAD_OP;
   }
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
@@ -759,50 +790,34 @@ XD(ray_realisation)
    const double Tref,
    double* weight)
 {
-  struct sXd(hit) hit = SXD_HIT_NULL;
-  const float range[2] = {0, FLT_MAX};
-  float org[3] = {0, 0, 0};
-  float dir[3] = {0, 0, 0};
+  struct rwalk_context ctx;
+  struct XD(rwalk) rwalk = XD(RWALK_NULL);
+  struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  float dir[3];
   res_T res = RES_OK;
   ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight);
   ASSERT(medium && medium->type == SDIS_MEDIUM_FLUID);
 
-  fX_set_dX(org, position);
-  fX_set_dX(dir, direction);
-  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, &hit, &hit));
+  dX(set)(rwalk.vtx.P, position);
+  rwalk.vtx.time = time;
+  rwalk.hit = SXD_HIT_NULL;
+  rwalk.mdm = medium;
 
-  if(SXD_HIT_NONE(&hit)) {
-    if(Tarad >= 0) {
-      *weight = Tarad;
-    } else {
-      log_err(scn->dev, 
-"%s: the ray starting from `%g %g %g' and traced along the `%g %g %g' direction\n"
-"reaches an invalid ambient temperature of `%gK'. One has to provide a valid\n"
-"ambient radiative temperature, i.e. it must be greater or equal to 0.\n",
-        FUNC_NAME, SPLIT3(org), SPLIT3(dir), Tarad);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-  } else {
-    struct rwalk_context ctx;
-    struct XD(rwalk) rwalk = XD(RWALK_NULL);
-    struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  ctx.Tarad = Tarad;
+  ctx.Tref3 = Tref*Tref*Tref;
 
-    dX(set)(rwalk.vtx.P, position);
-    XD(move_pos)(rwalk.vtx.P, dir, hit.distance);
-    rwalk.vtx.time = time;
-    rwalk.hit = hit;
-    rwalk.mdm = medium;
+  f3_set_d3(dir, direction);
 
-    ctx.Tarad = Tarad;
-    ctx.Tref3 = Tref*Tref*Tref;
+  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, &ctx, &rwalk, rng, &T);
+  if(res != RES_OK) goto error;
 
-    T.func = XD(boundary_temperature);
+  if(!T.done) {
     res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
-    if(res != RES_OK) return res;
-
-    *weight = T.value;
+    if(res != RES_OK) goto error;
   }
+
+  *weight = T.value;
+
 exit:
   return res;
 error:
