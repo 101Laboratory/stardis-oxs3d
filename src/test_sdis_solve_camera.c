@@ -19,6 +19,7 @@
 #include <star/s3dut.h>
 
 #include <rsys/algorithm.h>
+#include <rsys/image.h>
 #include <rsys/double3.h>
 #include <rsys/double33.h>
 #include <rsys/math.h>
@@ -27,6 +28,8 @@
 #include <string.h>
 
 #define UNKOWN_TEMPERATURE -1
+#define IMG_WIDTH 640
+#define IMG_HEIGHT 480
 
 /*******************************************************************************
  * Geometry
@@ -407,6 +410,65 @@ geometry_add_shape
   geom_interf->interf = interf;
 }
 
+static void
+dump_image(const struct sdis_accum_buffer* buf)
+{
+  struct sdis_accum_buffer_layout layout = SDIS_ACCUM_BUFFER_LAYOUT_NULL;
+  struct image img;
+  double* temps = NULL;
+  const struct sdis_accum* accums = NULL;
+  double Tmax = -DBL_MAX;
+  double Tmin =  DBL_MAX;
+  double norm;
+  size_t ix, iy;
+
+  CHK(buf != NULL);
+  CHK(sdis_accum_buffer_get_layout(buf, &layout) == RES_OK);
+
+  temps = mem_alloc(layout.width*layout.height*sizeof(double));
+  CHK(temps != NULL);
+
+  /* Compute the per pixel temperature */
+  CHK(sdis_accum_buffer_map(buf, &accums) == RES_OK);
+  FOR_EACH(iy, 0, layout.height) {
+    const struct sdis_accum* row_accums = accums + iy * layout.width;
+    double* row = temps + iy * layout.width;
+    FOR_EACH(ix, 0, layout.width) {
+      row[ix] = row_accums[ix].sum_weights / (double)row_accums[ix].nweights;
+      Tmax = MMAX(row[ix], Tmax);
+      Tmin = MMIN(row[ix], Tmin);
+    }
+  }
+  if(Tmax != Tmin) {
+    norm = Tmax - Tmin;
+  } else {
+    Tmin = 0;
+    norm = 1;
+  }
+
+  /* Allocate the image memory space */
+  CHK(image_init(NULL, &img) == RES_OK);
+  CHK(image_setup(&img, IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*3, IMAGE_RGB8, NULL)
+    == RES_OK);
+
+  FOR_EACH(iy, 0, layout.height) {
+    const double* src_row = temps + iy*layout.width;
+    char* dst_row = img.pixels + iy*img.pitch;
+    FOR_EACH(ix, 0, layout.width) {
+      unsigned char* pixels = (unsigned char*)
+        (dst_row + ix * sizeof_image_format(img.format));
+      const unsigned char T = (unsigned char)
+        ((src_row[ix] - Tmin)/ norm * 255.0);
+      pixels[0] = T;
+      pixels[1] = T;
+      pixels[2] = T;
+    }
+  }
+  CHK(image_write_ppm_stream(&img, 0/*binary?*/, stdout) == RES_OK);
+  image_release(&img);
+  mem_rm(temps);
+}
+
 /*******************************************************************************
  * Test
  ******************************************************************************/
@@ -417,6 +479,8 @@ main(int argc, char** argv)
   struct geometry geom = GEOMETRY_NULL;
   struct s3dut_mesh* msh = NULL;
   struct s3dut_mesh_data msh_data;
+  struct sdis_accum_buffer* buf = NULL;
+  struct sdis_camera* cam = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid0 = NULL;
@@ -428,6 +492,9 @@ main(int argc, char** argv)
   struct solid solid_param = SOLID_NULL;
   struct interf interface_param = INTERF_NULL;
   size_t ntris, npos;
+  double pos[3];
+  double tgt[3];
+  double up[3];
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
@@ -435,7 +502,7 @@ main(int argc, char** argv)
     (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid0 */
-  fluid_param.temperature = 300;
+  fluid_param.temperature = 350;
   fluid_param.rho = 0;
   fluid_param.cp = 0;
   create_fluid(dev, &fluid_param, &fluid0);
@@ -481,24 +548,46 @@ main(int argc, char** argv)
   CHK(s3dut_mesh_ref_put(msh) == RES_OK);
 
   /* Setup the sphere geometry */
-  CHK(s3dut_create_sphere(&allocator, 1, 32, 16, &msh) == RES_OK);
+  CHK(s3dut_create_sphere(&allocator, 0.5, 32, 16, &msh) == RES_OK);
   CHK(s3dut_mesh_get_data(msh, &msh_data) == RES_OK);
   geometry_add_shape(&geom, msh_data.positions, msh_data.nvertices,
-    msh_data.indices, msh_data.nprimitives, NULL, interf1);
+    msh_data.indices, msh_data.nprimitives, NULL, interf0);
   CHK(s3dut_mesh_ref_put(msh) == RES_OK);
 
-  /* Setup the sphere geometry */
+  /* Setup the scene */
   ntris = sa_size(geom.indices) / 3; /* #primitives */
   npos = sa_size(geom.positions) / 3; /* #positions */
   CHK(sdis_scene_create(dev, ntris, geometry_get_indices,
     geometry_get_interface, npos, geometry_get_position,
     &geom, &scn) == RES_OK);
 
+  /* Setup the camera */
+  d3(pos, 3, 3, 3);
+  d3(tgt, 0, 0, 0);
+  d3(up,  0, 0, 1);
+  CHK(sdis_camera_create(dev, &cam) == RES_OK);
+  CHK(sdis_camera_set_proj_ratio
+    (cam, (double)IMG_WIDTH/(double)IMG_HEIGHT) == RES_OK);
+  CHK(sdis_camera_set_fov(cam, MDEG2RAD(70)) == RES_OK);
+  CHK(sdis_camera_look_at(cam, pos, tgt, up) == RES_OK);
+
+  /* Create the accum buffer */
+  CHK(sdis_accum_buffer_create(dev, IMG_WIDTH, IMG_HEIGHT, &buf) == RES_OK);
+
+  /* Launch the simulation */
+  CHK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, 4,
+    sdis_accum_buffer_write, buf) == RES_OK);
+
+  /* Write the image */
+  dump_image(buf);
+
   /* Release memory */
   CHK(sdis_scene_ref_put(scn) == RES_OK);
+  CHK(sdis_camera_ref_put(cam) == RES_OK);
   CHK(sdis_interface_ref_put(interf0) == RES_OK);
   CHK(sdis_interface_ref_put(interf1) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);
+  CHK(sdis_accum_buffer_ref_put(buf) == RES_OK);
   geometry_release(&geom);
 
   check_memory_allocator(&allocator);
