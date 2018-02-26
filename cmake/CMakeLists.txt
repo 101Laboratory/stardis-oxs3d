@@ -45,6 +45,7 @@ set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
+  sdis_accum_buffer.c
   sdis_camera.c
   sdis_data.c
   sdis_device.c
