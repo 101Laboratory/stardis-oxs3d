@@ -146,8 +146,8 @@ solid_get_temperature
  ******************************************************************************/
 struct interf {
   double hc;
-  double rho_s;
-  double rho_d;
+  double epsilon;
+  double specular_fraction;
 };
 
 static double
@@ -163,7 +163,7 @@ interface_get_emissivity
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interf*)sdis_data_cget(data))->rho_s;
+  return ((const struct interf*)sdis_data_cget(data))->epsilon;
 }
 
 static double
@@ -171,7 +171,7 @@ interface_get_specular_fraction
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interf*)sdis_data_cget(data))->rho_d;
+  return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
 }
 
 /*******************************************************************************
@@ -240,8 +240,8 @@ main(int argc, char** argv)
     ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->hc = 0.5;
-  interface_param->rho_s = 0;
-  interface_param->rho_d = 0;
+  interface_param->epsilon = 0;
+  interface_param->specular_fraction = 0;
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.temperature = NULL;
   interface_shader.emissivity = interface_get_emissivity;

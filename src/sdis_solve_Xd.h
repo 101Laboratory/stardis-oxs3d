@@ -13,9 +13,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef SDIS_SOLVE_PROBE_DIMENSION
-#ifndef SDIS_SOLVE_PROBE_XD_H
-#define SDIS_SOLVE_PROBE_XD_H
+#ifndef SDIS_SOLVE_DIMENSION
+#ifndef SDIS_SOLVE_XD_H
+#define SDIS_SOLVE_XD_H
 
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
@@ -52,39 +52,39 @@ reflect(float res[3], const float V[3], const float N[3])
   return res;
 }
 
-#endif /* SDIS_SOLVE_PROBE_XD_H */
+#endif /* SDIS_SOLVE_XD_H */
 #else
 
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
   #include <rsys/double2.h>
   #include <rsys/float2.h>
   #include <star/s2d.h>
-#elif (SDIS_SOLVE_PROBE_DIMENSION == 3)
+#elif (SDIS_SOLVE_DIMENSION == 3)
   #include <rsys/double2.h>
   #include <rsys/double3.h>
   #include <rsys/float3.h>
   #include <star/s3d.h>
 #else
-  #error "Invalid SDIS_SOLVE_PROBE_DIMENSION value."
+  #error "Invalid SDIS_SOLVE_DIMENSION value."
 #endif
 
 /* Syntactic sugar */
-#define DIM SDIS_SOLVE_PROBE_DIMENSION
+#define DIM SDIS_SOLVE_DIMENSION
 
-/* Star-XD macros generic to SDIS_SOLVE_PROBE_DIMENSION */
+/* Star-XD macros generic to SDIS_SOLVE_DIMENSION */
 #define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
 #define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
 #define SXD_HIT_NULL CONCAT(CONCAT(S,DIM), D_HIT_NULL)
 #define SXD_HIT_NULL__ CONCAT(CONCAT(S, DIM), D_HIT_NULL__)
 #define SXD CONCAT(CONCAT(S, DIM), D)
 
-/* Vector macros generic to SDIS_SOLVE_PROBE_DIMENSION */
+/* Vector macros generic to SDIS_SOLVE_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
 #define dX_set_fX CONCAT(CONCAT(CONCAT(d, DIM), _set_f), DIM)
 
-/* Macro making generic its subimitted name to SDIS_SOLVE_PROBE_DIMENSION */
+/* Macro making generic its subimitted name to SDIS_SOLVE_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
 /* Current state of the random walk */
@@ -156,7 +156,7 @@ XD(move_pos)(double pos[DIM], const float dir[DIM], const float delta)
   ASSERT(pos && dir);
   pos[0] += dir[0] * delta;
   pos[1] += dir[1] * delta;
-#if(SDIS_SOLVE_PROBE_DIMENSION == 3)
+#if(SDIS_SOLVE_DIMENSION == 3)
   pos[2] += dir[2] * delta;
 #endif
 }
@@ -179,7 +179,7 @@ XD(check_rwalk_fragment_consistency)
       || eq_eps(rwalk->vtx.time, frag->time,  1.e-6))) {
     return 0;
   }
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
   uv[0] = rwalk->hit.u;
 #else
   d2_set_f2(uv, rwalk->hit.uv);
@@ -187,43 +187,30 @@ XD(check_rwalk_fragment_consistency)
   return d2_eq_eps(uv, frag->uv, 1.e-6);
 }
 
-res_T
-XD(radiative_temperature)
+static res_T
+XD(trace_radiative_path)
   (const struct sdis_scene* scn,
+   const float ray_dir[3],
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  const struct sdis_interface* interf;
-
   /* The radiative random walk is always perform in 3D. In 2D, the geometry are
    * assumed to be extruded to the infinty along the Z dimension. */
   float N[3] = {0, 0, 0};
   float dir[3] = {0, 0, 0};
-
   res_T res = RES_OK;
 
-  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(scn && ray_dir && fp_to_meter > 0 && ctx && rwalk && rng && T);
   (void)fp_to_meter;
 
-  /* Fetch the current interface */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-
-  /* Normalize the normal of the interface and ensure that it points toward the
-   * current medium */
-  fX(normalize(N, rwalk->hit.normal));
-  if(interf->medium_back == rwalk->mdm) {
-    fX(minus(N, N));
-  }
-
-  /* Cosine weighted sampling of a direction around the surface normal */
-  ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
+  f3_set(dir, ray_dir);
 
   /* Launch the radiative random walk */
   for(;;) {
+    const struct sdis_interface* interf = NULL;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
     const struct sdis_medium* chk_mdm = NULL;
     double alpha;
@@ -235,7 +222,7 @@ XD(radiative_temperature)
     fX_set_dX(pos, rwalk->vtx.P);
 
     /* Trace the radiative ray */
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
     SXD(scene_view_trace_ray_3d
       (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
 #else
@@ -310,6 +297,50 @@ XD(radiative_temperature)
       ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
     }
   }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+XD(radiative_temperature)
+  (const struct sdis_scene* scn,
+   const double fp_to_meter,
+   const struct rwalk_context* ctx,
+   struct XD(rwalk)* rwalk,
+   struct ssp_rng* rng,
+   struct XD(temperature)* T)
+{
+  const struct sdis_interface* interf;
+
+  /* The radiative random walk is always perform in 3D. In 2D, the geometry are
+   * assumed to be extruded to the infinty along the Z dimension. */
+  float N[3] = {0, 0, 0};
+  float dir[3] = {0, 0, 0};
+  res_T res = RES_OK;
+
+  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  (void)fp_to_meter;
+
+  /* Fetch the current interface */
+  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+
+  /* Normalize the normal of the interface and ensure that it points toward the
+   * current medium */
+  fX(normalize(N, rwalk->hit.normal));
+  if(interf->medium_back == rwalk->mdm) {
+    fX(minus(N, N));
+  }
+
+  /* Cosine weighted sampling of a direction around the surface normal */
+  ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
+
+  /* Launch the radiative random walk */
+  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, ctx, rwalk, rng, T);
+  if(res != RES_OK) goto error;
 
 exit:
   return res;
@@ -559,7 +590,7 @@ XD(solid_temperature)
     log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(rwalk->vtx.P));
-    return RES_BAD_ARG;
+    return RES_BAD_OP;
   }
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
@@ -590,7 +621,7 @@ XD(solid_temperature)
     rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
     cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
 
-#if (SDIS_SOLVE_PROBE_DIMENSION == 2)
+#if (SDIS_SOLVE_DIMENSION == 2)
     /* Sample a direction around 2PI */
     ssp_ran_circle_uniform_float(rng, dir0, NULL);
 #else
@@ -745,7 +776,56 @@ XD(probe_realisation)
   return RES_OK;
 }
 
-#undef SDIS_SOLVE_PROBE_DIMENSION
+#if SDIS_SOLVE_DIMENSION == 3
+static res_T
+XD(ray_realisation)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const struct sdis_medium* medium,
+   const double position[],
+   const double direction[],
+   const double time,
+   const double fp_to_meter,
+   const double Tarad,
+   const double Tref,
+   double* weight)
+{
+  struct rwalk_context ctx;
+  struct XD(rwalk) rwalk = XD(RWALK_NULL);
+  struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  float dir[3];
+  res_T res = RES_OK;
+  ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight);
+  ASSERT(medium && medium->type == SDIS_MEDIUM_FLUID);
+
+  dX(set)(rwalk.vtx.P, position);
+  rwalk.vtx.time = time;
+  rwalk.hit = SXD_HIT_NULL;
+  rwalk.mdm = medium;
+
+  ctx.Tarad = Tarad;
+  ctx.Tref3 = Tref*Tref*Tref;
+
+  f3_set_d3(dir, direction);
+
+  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, &ctx, &rwalk, rng, &T);
+  if(res != RES_OK) goto error;
+
+  if(!T.done) {
+    res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+    if(res != RES_OK) goto error;
+  }
+
+  *weight = T.value;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+#endif /* SDIS_SOLVE_DIMENSION == 3 */
+
+#undef SDIS_SOLVE_DIMENSION
 #undef DIM
 #undef sXd
 #undef SXD_HIT_NONE
@@ -757,5 +837,5 @@ XD(probe_realisation)
 #undef fX_set_dX
 #undef XD
 
-#endif /* !SDIS_SOLVE_PROBE_DIMENSION */
+#endif /* !SDIS_SOLVE_DIMENSION */
 

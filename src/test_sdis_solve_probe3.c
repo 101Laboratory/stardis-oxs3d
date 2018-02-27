@@ -52,7 +52,7 @@ struct context {
   struct sdis_interface* solid_fluid_T350;
   struct sdis_interface* solid_solid;
 };
-static const struct context CONTEXT_NULL = { NULL };
+static const struct context CONTEXT_NULL = {NULL, NULL, NULL, NULL, NULL, NULL};
 
 static void
 get_indices(const size_t itri, size_t ids[3], void* context)
