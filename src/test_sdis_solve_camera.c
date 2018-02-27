@@ -30,6 +30,31 @@
 #define UNKOWN_TEMPERATURE -1
 #define IMG_WIDTH 640
 #define IMG_HEIGHT 480
+#define SPP 4   /* #Samples per pixel, i.e. #realisations per pixel */
+
+/*
+ * The scene is composed of a solid cube whose temperature is unknown. The
+ * emissivity of the cube is 1 and its convection coefficient with the
+ * surrounding fluid is null. At the center of the cube there is a spherical
+ * fluid cavity whose temperature is 350K. The convection coefficient between
+ * the solid and the cavity is 1 and the emissivity of this interface is null.
+ * The ambient radiative temperature of the system is 300K.
+ *
+ * In this test, we compute the radiative temperature that reaches a camera
+ * that looks the cube and we `dump' a normalized image of the result.
+ *
+ *                      (1,1,1)
+ *       +----------------+
+ *      /'     #  #      /|
+ *     +----*--------*--+ |
+ *     | ' #          # | |
+ *     | ' #   350K   # | |
+ *     | '  #        #  | |
+ *     | +.....#..#.....|.+
+ *     |/               |/
+ *     +----------------+
+ * (-1,-1,-1)
+ */
 
 /*******************************************************************************
  * Geometry
@@ -575,7 +600,7 @@ main(int argc, char** argv)
   CHK(sdis_accum_buffer_create(dev, IMG_WIDTH, IMG_HEIGHT, &buf) == RES_OK);
 
   /* Launch the simulation */
-  CHK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, 4,
+  CHK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
     sdis_accum_buffer_write, buf) == RES_OK);
 
   /* Write the image */
