@@ -1,7 +1,7 @@
 # Stardis
 
 The purpose of this library is to solve coupled convecto - conducto - radiative
-thermal problems.
+thermal problems in 2D and 3D environments.
 
 ## How to build
 
@@ -22,6 +22,18 @@ the `cmake/CMakeLists.txt` file by appending to the `CMAKE_PREFIX_PATH`
 variable the install directories of its dependencies.
 
 ## Release notes
+
+### Version 0.1
+
+- Add the support of radiative temperature.
+- Add the `sdis_camera` API : it defines a pinhole camera into the scene.
+- Add the `sdis_accum_buffer` API : it is a pool of MC accumulators, i.e. a sum
+  of MC weights and square weights.
+- Add the `sdis_solve_camera` function : it relies on a `sdis_camera` and a
+  `sdis_accum_buffer` to compute the radiative temperature that reaches each
+  pixel of an image whose definition is defined by the caller. Note that
+  actually this function uses the same underlying MC algorithm behind the
+  `sdis_solve_probe` function.
 
 ### Version 0.0
 
