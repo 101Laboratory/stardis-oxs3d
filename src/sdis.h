@@ -51,6 +51,8 @@ struct mem_allocator;
  * a reference on the data, i.e. they increment or decrement the reference
  * counter, respectively. When this counter reaches 0, the object is silently
  * destroyed and cannot be used anymore. */
+struct sdis_accum_buffer;
+struct sdis_camera;
 struct sdis_data;
 struct sdis_device;
 struct sdis_estimator;
@@ -91,6 +93,13 @@ struct sdis_interface_fragment {
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
+/* Monte-Carlo accumulator */
+struct sdis_accum {
+  double sum_weights; /* Sum of Monte-Carlo weight */
+  double sum_weights_sqr; /* Sum of Monte-Carlo square weights */
+  size_t nweights; /* #accumulated weights */
+};
+
 /* Monte-Carlo estimation */
 struct sdis_mc {
   double E; /* Expected value */
@@ -124,7 +133,7 @@ struct sdis_solid_shader {
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
@@ -137,17 +146,37 @@ struct sdis_fluid_shader {
    * unknown for the submitted position and time. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_FLUID_SHADER_NULL__ {NULL}
+#define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL}
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
 struct sdis_interface_shader {
   sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
-  sdis_interface_getter_T convection_coef; /* NULL <=> Solid/Solid interface */
+  sdis_interface_getter_T convection_coef; /* May be NULL for solid/solid */
+
+  /* Interface emssivity. May be NULL for solid/solid interface  */
+  sdis_interface_getter_T emissivity; /* Overall emissivity */
+  sdis_interface_getter_T specular_fraction; /* Specular fraction in [0, 1] */
 };
-#define SDIS_INTERFACE_SHADER_NULL__ {NULL}
+#define SDIS_INTERFACE_SHADER_NULL__ {NULL, NULL, NULL, NULL}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
+
+struct sdis_accum_buffer_layout {
+  size_t width;
+  size_t height;
+};
+#define SDIS_ACCUM_BUFFER_LAYOUT_NULL__ {0, 0}
+static const struct sdis_accum_buffer_layout SDIS_ACCUM_BUFFER_LAYOUT_NULL =
+  SDIS_ACCUM_BUFFER_LAYOUT_NULL__;
+
+/* Functor use to write accumulations performed by sdis_solve_camera */
+typedef res_T
+(*sdis_write_accums_T)
+  (void* context, /* User data */
+   const size_t origin[2], /* Coordinates of the 1st accumulation in image plane */
+   const size_t naccums[2], /* #accumulations in X and Y */
+   const struct sdis_accum* accums); /* List of row ordered accumulations */
 
 BEGIN_DECLS
 
@@ -198,6 +227,80 @@ sdis_data_get
 SDIS_API const void*
 sdis_data_cget
   (const struct sdis_data* data);
+
+/*******************************************************************************
+ * A camera describes a point of view
+ ******************************************************************************/
+SDIS_API res_T
+sdis_camera_create
+  (struct sdis_device* dev,
+   struct sdis_camera** cam);
+
+SDIS_API res_T
+sdis_camera_ref_get
+  (struct sdis_camera* cam);
+
+SDIS_API res_T
+sdis_camera_ref_put
+  (struct sdis_camera* cam);
+
+/* Width/height projection ratio */
+SDIS_API res_T
+sdis_camera_set_proj_ratio
+  (struct sdis_camera* cam,
+   const double proj_ratio);
+
+SDIS_API res_T
+sdis_camera_set_fov /* Horizontal field of view */
+  (struct sdis_camera* cam,
+   const double fov); /* In radian */
+
+SDIS_API res_T
+sdis_camera_look_at
+  (struct sdis_camera* cam,
+   const double position[3],
+   const double target[3],
+   const double up[3]);
+
+/*******************************************************************************
+ * A buffer of accumulations
+ ******************************************************************************/
+SDIS_API res_T
+sdis_accum_buffer_create
+  (struct sdis_device* dev,
+   const size_t width,
+   const size_t height,
+   struct sdis_accum_buffer** buf);
+
+SDIS_API res_T
+sdis_accum_buffer_ref_get
+  (struct sdis_accum_buffer* buf);
+
+SDIS_API res_T
+sdis_accum_buffer_ref_put
+  (struct sdis_accum_buffer* buf);
+
+SDIS_API res_T
+sdis_accum_buffer_get_layout
+  (const struct sdis_accum_buffer* buf,
+   struct sdis_accum_buffer_layout* layout);
+
+SDIS_API res_T
+sdis_accum_buffer_map
+  (const struct sdis_accum_buffer* buf,
+   const struct sdis_accum** accums);
+
+SDIS_API res_T
+sdis_accum_buffer_unmap
+  (const struct sdis_accum_buffer* buf);
+
+/* Helper function that matches the `sdis_write_accums_T' functor type */
+SDIS_API res_T
+sdis_accum_buffer_write
+  (void* buf, /* User data */
+   const size_t origin[2], /* Coordinates of the 1st accum in image plane */
+   const size_t naccum[2], /* #accum in X and Y */
+   const struct sdis_accum* accums); /* List of row ordered accum */
 
 /*******************************************************************************
  * A medium encapsulates the properties of either a fluid or a solid.
@@ -327,11 +430,27 @@ sdis_estimator_get_temperature
 SDIS_API res_T
 sdis_solve_probe
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   const double position[3],
-   const double time,
-   const double fp_to_meter,/* Scale from floating point units to meters */
+   const size_t nrealisations, /* #realisations */
+   const double position[3], /* Probe position */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
    struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_solve_camera
+  (struct sdis_scene* scn,
+   const struct sdis_camera* cam, /* Point of view */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   const size_t width, /* Image definition in in X */
+   const size_t height, /* Image definition in Y */
+   const size_t spp, /* #samples per pixel */
+   sdis_write_accums_T writer,
+   void* writer_data);
 
 END_DECLS
 

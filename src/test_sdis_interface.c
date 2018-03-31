@@ -76,8 +76,11 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
 
-  CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
   shader.convection_coef = NULL;
+  shader.specular_fraction = NULL;
+  shader.emissivity = NULL;
   CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
 
@@ -87,6 +90,10 @@ main(int argc, char** argv)
 
   CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
   shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  shader.emissivity = DUMMY_INTERFACE_SHADER.emissivity;
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  shader.specular_fraction = DUMMY_INTERFACE_SHADER.specular_fraction;
   CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
   #undef CREATE

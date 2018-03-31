@@ -146,6 +146,8 @@ solid_get_temperature
  ******************************************************************************/
 struct interf {
   double hc;
+  double epsilon;
+  double specular_fraction;
 };
 
 static double
@@ -154,6 +156,22 @@ interface_get_convection_coef
 {
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->hc;
+}
+
+static double
+interface_get_emissivity
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interf*)sdis_data_cget(data))->epsilon;
+}
+
+static double
+interface_get_specular_fraction
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
 }
 
 /*******************************************************************************
@@ -222,8 +240,12 @@ main(int argc, char** argv)
     ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->hc = 0.5;
+  interface_param->epsilon = 0;
+  interface_param->specular_fraction = 0;
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.temperature = NULL;
+  interface_shader.emissivity = interface_get_emissivity;
+  interface_shader.specular_fraction = interface_get_specular_fraction;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -246,12 +268,13 @@ main(int argc, char** argv)
   pos[1] = 0.5;
   pos[2] = 0.5;
   time = INF;
-  CHK(sdis_solve_probe(NULL, N, pos, time, 1.0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, 0, pos, time, 1.0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, NULL, time, 1.0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, NULL) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, &estimator) == RES_OK);
+  CHK(sdis_solve_probe(NULL, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(sdis_solve_probe(scn, 0, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(sdis_solve_probe(scn, N, NULL, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(sdis_solve_probe(scn, N, pos, time, 0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(sdis_solve_probe(scn, N, pos, time, 0, 0, -1, &estimator) == RES_BAD_ARG);
+  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, NULL) == RES_BAD_ARG);
+  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
 
   CHK(sdis_estimator_get_realisation_count(estimator, NULL) == RES_BAD_ARG);
   CHK(sdis_estimator_get_realisation_count(NULL, &nreals) == RES_BAD_ARG);

@@ -40,28 +40,32 @@ rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP)
 # Configure and define targets
 ################################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 0)
+set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
+  sdis_accum_buffer.c
+  sdis_camera.c
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
   sdis_interface.c
   sdis_medium.c
   sdis_scene.c
-  sdis_solve_probe.c)
+  sdis_solve.c)
 
 set(SDIS_FILES_INC_API
   sdis.h)
 
 set(SDIS_FILES_INC
+  sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
   sdis_interface_c.h
   sdis_medium_c.h
-  sdis_scene_c.h)
+  sdis_scene_c.h
+  sdis_solve_Xd.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
 
@@ -75,7 +79,10 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star2D Star3D StarSP)
+target_link_libraries(sdis RSys Star2D Star3D StarSP m)
+if(CMAKE_COMPILER_IS_GNUCC)
+  target_link_libraries(sdis m)
+endif()
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD
@@ -111,11 +118,16 @@ if(NOT NO_TEST)
     register_test(${_name} ${_name})
   endfunction()
 
+  new_test(test_sdis_accum_buffer)
+  new_test(test_sdis_camera)
+  new_test(test_sdis_conducto_radiative)
+  new_test(test_sdis_conducto_radiative_2d)
   new_test(test_sdis_data)
   new_test(test_sdis_device)
   new_test(test_sdis_interface)
   new_test(test_sdis_medium)
   new_test(test_sdis_scene)
+  new_test(test_sdis_solve_camera)
   new_test(test_sdis_solve_probe)
   new_test(test_sdis_solve_probe2)
   new_test(test_sdis_solve_probe3)
@@ -124,6 +136,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe3_2d)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
+  target_link_libraries(test_sdis_solve_camera Star3DUT)
+
   if(CMAKE_COMPILER_IS_GNUCC)
     target_link_libraries(test_sdis_solve_probe3_2d m)
   endif()

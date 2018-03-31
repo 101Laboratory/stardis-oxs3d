@@ -361,6 +361,7 @@ scene_create
   ref_init(&scn->ref);
   SDIS(device_ref_get(dev));
   scn->dev = dev;
+  scn->ambient_radiative_temperature = -1;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_interf_init(dev->allocator, &scn->prim_interfaces);
 
