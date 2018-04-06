@@ -129,11 +129,13 @@ struct sdis_solid_shader {
   sdis_medium_getter_T delta_solid;
   sdis_medium_getter_T delta_boundary;
 
+  sdis_medium_getter_T volumic_power; /* May be NULL <=> no volumic power */
+
   /* Initial/limit condition. A temperature < 0 means that the temperature is
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 

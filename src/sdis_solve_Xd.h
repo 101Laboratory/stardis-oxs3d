@@ -602,6 +602,7 @@ XD(solid_temperature)
     double cp; /* Calorific capacity */
     double tau, mu;
     double tmp;
+    double power;
     float delta, delta_solid; /* Random walk numerical parameter */
     float range[2];
     float dir0[DIM], dir1[DIM];
@@ -657,6 +658,14 @@ XD(solid_temperature)
       T->value += tmp;
       T->done = 1;
       return RES_OK;
+    }
+
+    /* Add the volumic power density to the measured temperature */
+    power = solid_get_volumic_power(mdm, &rwalk->vtx);
+    if(power > 0) {
+      const double delta_in_meter = delta * fp_to_meter;
+      tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+      T->value += tmp;
     }
 
     /* Define if the random walk hits something along dir0 */
