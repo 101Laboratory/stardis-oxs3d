@@ -134,6 +134,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
+  new_test(test_sdis_solve_probe_boundary)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_camera Star3DUT)
