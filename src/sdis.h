@@ -400,6 +400,13 @@ sdis_scene_get_aabb
    double lower[3],
    double upper[3]);
 
+SDIS_API res_T
+sdis_scene_get_boundary_position
+  (const struct sdis_scene* scn,
+   const size_t iprim, /* Primitive index */
+   const double uv[2], /* Parametric coordinate onto the pimitive */
+   double pos[3]); /* World space position */
+
 /*******************************************************************************
  * An estimator stores the state of a simulation
  ******************************************************************************/
