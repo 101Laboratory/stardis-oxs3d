@@ -295,7 +295,7 @@ sdis_solve_probe_boundary
   }
 
   /* Check the primitive identifier */
-  if(iprim > scene_get_primitives_count(scn)) {
+  if(iprim >= scene_get_primitives_count(scn)) {
     log_err(scn->dev,
 "%s: invalid primitive identifier `%lu'. It must be less than %lu.\n",
       FUNC_NAME,
