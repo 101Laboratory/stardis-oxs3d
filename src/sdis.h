@@ -441,6 +441,18 @@ sdis_solve_probe
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
+sdis_solve_probe_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
+
+SDIS_API res_T
 sdis_solve_camera
   (struct sdis_scene* scn,
    const struct sdis_camera* cam, /* Point of view */

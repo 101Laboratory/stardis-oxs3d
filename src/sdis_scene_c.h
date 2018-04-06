@@ -46,6 +46,13 @@ struct sdis_scene {
   struct sdis_device* dev;
 };
 
+static FINLINE size_t
+scene_get_primitives_count(const struct sdis_scene* scn)
+{
+  ASSERT(scn);
+  return darray_interf_size_get(&scn->prim_interfaces);
+}
+
 extern LOCAL_SYM const struct sdis_interface*
 scene_get_interface
   (const struct sdis_scene* scene,
