@@ -211,6 +211,7 @@ sdis_solve_probe
   if(res != RES_OK) goto error;
 
   /* Here we go! Launch the Monte Carlo estimation */
+  omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
   for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
     res_T res_local;
