@@ -1,4 +1,4 @@
-/* Copyright (C) |Meso|Star> 2016-2018 (contact@meso-star.com)
+/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -211,6 +211,7 @@ sdis_solve_probe
   if(res != RES_OK) goto error;
 
   /* Here we go! Launch the Monte Carlo estimation */
+  omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
   for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
     res_T res_local;
@@ -257,6 +258,146 @@ exit:
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;
+error:
+  if(estimator) {
+    SDIS(estimator_ref_put(estimator));
+    estimator = NULL;
+  }
+  goto exit;
+}
+
+res_T
+sdis_solve_probe_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  struct sdis_estimator* estimator = NULL;
+  struct ssp_rng_proxy* rng_proxy = NULL;
+  struct ssp_rng** rngs = NULL;
+  double weight = 0;
+  double sqr_weight = 0;
+  size_t irealisation = 0;
+  size_t N = 0; /* #realisations that do not fail */
+  size_t i;
+  res_T res = RES_OK;
+
+  if(!scn || !nrealisations || !uv || time < 0 || fp_to_meter <= 0
+  || Tref < 0 || !out_estimator) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Check the primitive identifier */
+  if(iprim >= scene_get_primitives_count(scn)) {
+    log_err(scn->dev,
+"%s: invalid primitive identifier `%lu'. It must be less than %lu.\n",
+      FUNC_NAME,
+      (unsigned long)iprim,
+      (unsigned long)scene_get_primitives_count(scn));
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Check parametric coordinates */
+  if(scene_is_2d(scn)) {
+    const double v = CLAMP(1.0 - uv[0], 0, 1);
+    if(uv[0] < 0 || uv[0] > 1 || !eq_eps(uv[0] + v, 1, 1.e-6)) {
+      log_err(scn->dev,
+"%s: invalid parametric coordinates %g.\n"
+"u + (1-u) must be equal to 1 with u [0, 1].\n",
+        FUNC_NAME, uv[0]);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  } else {
+    const double w = CLAMP(1 - uv[0] - uv[1], 0, 1);
+    if(uv[0] < 0 || uv[1] < 0 || uv[0] > 1 || uv[1] > 1
+    || !eq_eps(w + uv[0] + uv[1], 1, 1.e-6)) {
+      log_err(scn->dev,
+"%s: invalid parametric coordinates [%g, %g].\n"
+"u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
+        FUNC_NAME, uv[0], uv[1]);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  }
+
+  /* Create the proxy RNG */
+  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+    scn->dev->nthreads, &rng_proxy);
+  if(res != RES_OK) goto error;
+
+  /* Create the per thread RNG */
+  rngs = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(struct ssp_rng*));
+  if(!rngs) {
+    res = RES_MEM_ERR;
+    goto error;
+  }
+  FOR_EACH(i, 0, scn->dev->nthreads) {
+    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Create the estimator */
+  res = estimator_create(scn->dev, &estimator);
+  if(res != RES_OK) goto error;
+
+  /* Here we go! Launch the Monte Carlo estimation */
+  omp_set_num_threads((int)scn->dev->nthreads);
+  #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
+  for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
+    res_T res_local;
+    double w;
+    const int ithread = omp_get_thread_num();
+    struct ssp_rng* rng = rngs[ithread];
+
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
+
+    if(scene_is_2d(scn)) {
+      res_local = boundary_realisation_2d
+        (scn, rng, iprim, uv, time, fp_to_meter, Tarad, Tref, &w);
+    } else {
+      res_local = boundary_realisation_3d
+        (scn, rng, iprim, uv, time, fp_to_meter, Tarad, Tref, &w);
+    }
+    if(res_local != RES_OK) {
+      if(res_local != RES_BAD_OP) {
+        ATOMIC_SET(&res, res_local);
+        continue;
+      }
+    } else {
+      weight += w;
+      sqr_weight += w*w;
+      ++N;
+    }
+  }
+
+  estimator->nrealisations = N;
+  estimator->nfailures = nrealisations - N;
+  estimator->temperature.E = weight / (double)N;
+  estimator->temperature.V =
+    sqr_weight / (double)N
+  - estimator->temperature.E * estimator->temperature.E;
+  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)N);
+
+exit:
+  if(rngs) {
+    FOR_EACH(i, 0, scn->dev->nthreads) {
+      if(rngs[i]) SSP(rng_ref_put(rngs[i]));
+    }
+    MEM_RM(scn->dev->allocator, rngs);
+  }
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_estimator) *out_estimator = estimator;
+  return res;
 error:
   if(estimator) {
     SDIS(estimator_ref_put(estimator));

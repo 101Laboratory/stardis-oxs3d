@@ -1,4 +1,4 @@
-/* Copyright (C) |Meso|Star> 2016-2018 (contact@meso-star.com)
+/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -604,6 +604,37 @@ sdis_scene_get_aabb
     if(res != RES_OK) return res;
     d3_set_f3(lower, low);
     d3_set_f3(upper, upp);
+  }
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_boundary_position
+  (const struct sdis_scene* scn,
+   const size_t iprim,
+   const double uv[],
+   double pos[])
+{
+  if(!scn || !uv || !pos) return RES_BAD_ARG;
+  if(iprim >= scene_get_primitives_count(scn)) return RES_BAD_ARG;
+
+  if(scene_is_2d(scn)) {
+    struct s2d_primitive prim;
+    struct s2d_attrib attr;
+    float s = (float)uv[0];
+
+    S2D(scene_view_get_primitive(scn->s2d_view, (unsigned int)iprim, &prim));
+    S2D(primitive_get_attrib(&prim, S2D_POSITION, s, &attr));
+    d2_set_f2(pos, attr.value);
+  } else {
+    struct s3d_primitive prim;
+    struct s3d_attrib attr;
+    float st[2];
+
+    f2_set_d2(st, uv);
+    S3D(scene_view_get_primitive(scn->s3d_view, (unsigned int)iprim, &prim));
+    S3D(primitive_get_attrib(&prim, S3D_POSITION, st, &attr));
+    d3_set_f3(pos, attr.value);
   }
   return RES_OK;
 }

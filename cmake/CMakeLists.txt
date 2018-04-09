@@ -1,4 +1,4 @@
-# Copyright (C) |Meso|Star> 2016-2018
+# Copyright (C) 2016-2018 |Meso|Star>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -134,6 +134,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
+  new_test(test_sdis_solve_probe_boundary)
+  new_test(test_sdis_volumic_power)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_camera Star3DUT)
