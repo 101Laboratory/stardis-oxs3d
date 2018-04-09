@@ -151,7 +151,6 @@ XD(radiative_temperature)
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-
 static FINLINE void
 XD(move_pos)(double pos[DIM], const float dir[DIM], const float delta)
 {
@@ -300,7 +299,6 @@ XD(trace_radiative_path)
       ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
     }
   }
-
 
 exit:
   return res;
@@ -854,7 +852,6 @@ XD(boundary_realisation)
   *weight = T.value;
   return RES_OK;
 }
-
 
 #if SDIS_SOLVE_DIMENSION == 3
 static res_T

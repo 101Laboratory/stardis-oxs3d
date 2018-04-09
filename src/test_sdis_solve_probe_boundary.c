@@ -19,23 +19,26 @@
 #include <rsys/math.h>
 
 /*
- * The scene is composed of a solid cube whose temperature is unknown. The
- * convection coefficient with the surrounding fluid is null exepted for the +X
- * face whose value is 'H'. The Temperature of the -X face is fixed to Tb. This
- * test computes the temperature on the +X face and check that it is equal to
+ * The scene is composed of a solid cube/square whose temperature is unknown.
+ * The convection coefficient with the surrounding fluid is null exepted for
+ * the +X face whose value is 'H'. The Temperature of the -X face is fixed to
+ * Tb. This test computes the temperature on the +X face and check that it is
+ * equal to:
  *
  *    T = (H*Tf + LAMBDA/A * Tb) / (H+LAMBDA/A)
  *
  * with Tf the temperature of the surrounding fluid, lambda the conductivity of
- * the cube and A the size of the cube, i.e. 1.
+ * the cube and A the size of the cube/square, i.e. 1.
  *
- *             (1,1,1)
- *       +-------+
- *      /'      /|    _\
- *     +-------+ |   / /  Tf
- *    Tb +.....|.+   \__/
- *     |,      |/
- *     +-------+
+ *          3D                        2D
+ *
+ *             (1,1,1)                   (1,1)
+ *       +-------+                 +-------+
+ *      /'      /|    _\           |       |    _\
+ *     +-------+ |   / /  Tf      Tb       |   / /   Tf
+ *    Tb +.....|.+   \__/          |       |   \__/
+ *     |,      |/                  +-------+
+ *     +-------+                 (0,0)
  * (0,0,0)
  */
 
@@ -48,10 +51,10 @@
 #define LAMBDA 0.1
 
 /*******************************************************************************
- * Geometry
+ * Geometry 3D
  ******************************************************************************/
 static void
-get_indices(const size_t itri, size_t ids[3], void* context)
+box_get_indices(const size_t itri, size_t ids[3], void* context)
 {
   (void)context;
   CHK(ids);
@@ -61,7 +64,7 @@ get_indices(const size_t itri, size_t ids[3], void* context)
 }
 
 static void
-get_position(const size_t ivert, double pos[3], void* context)
+box_get_position(const size_t ivert, double pos[3], void* context)
 {
   (void)context;
   CHK(pos);
@@ -71,12 +74,43 @@ get_position(const size_t ivert, double pos[3], void* context)
 }
 
 static void
-get_interface(const size_t itri, struct sdis_interface** bound, void* context)
+box_get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 {
   struct sdis_interface** interfaces = context;
   CHK(context && bound);
   *bound = interfaces[itri];
 }
+
+/*******************************************************************************
+ * Geometry 2D
+ ******************************************************************************/
+static void
+square_get_indices(const size_t iseg, size_t ids[2], void* context)
+{
+  (void)context;
+  CHK(ids);
+  ids[0] = square_indices[iseg*2+0];
+  ids[1] = square_indices[iseg*2+1];
+}
+
+static void
+square_get_position(const size_t ivert, double pos[2], void* context)
+{
+  (void)context;
+  CHK(pos);
+  pos[0] = square_vertices[ivert*2+0];
+  pos[1] = square_vertices[ivert*2+1];
+}
+
+static void
+square_get_interface
+  (const size_t iseg, struct sdis_interface** bound, void* context)
+{
+  struct sdis_interface** interfaces = context;
+  CHK(context && bound);
+  *bound = interfaces[iseg];
+}
+
 
 /*******************************************************************************
  * Media
@@ -201,12 +235,14 @@ main(int argc, char** argv)
   struct sdis_interface* interf_adiabatic = NULL;
   struct sdis_interface* interf_Tb = NULL;
   struct sdis_interface* interf_H = NULL;
-  struct sdis_scene* scn = NULL;
+  struct sdis_scene* box_scn = NULL;
+  struct sdis_scene* square_scn = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = DUMMY_INTERFACE_SHADER;
-  struct sdis_interface* interfaces[12 /*#triangles*/];
+  struct sdis_interface* box_interfaces[12 /*#triangles*/];
+  struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
   double uv[2];
   double pos[3];
@@ -270,16 +306,29 @@ main(int argc, char** argv)
   CHK(sdis_medium_ref_put(solid) == RES_OK);
   CHK(sdis_medium_ref_put(fluid) == RES_OK);
 
-  /* Map the interfaces to their geometric primitive */
-  interfaces[0] = interfaces[1] = interf_adiabatic; /* Front */
-  interfaces[2] = interfaces[3] = interf_Tb;        /* Left */
-  interfaces[4] = interfaces[5] = interf_adiabatic; /* Back */
-  interfaces[6] = interfaces[7] = interf_H;         /* Right */
-  interfaces[8] = interfaces[9] = interf_adiabatic; /* Top */
-  interfaces[10]= interfaces[11]= interf_adiabatic; /* Bottom */
+  /* Map the interfaces to their box triangles */
+  box_interfaces[0] = box_interfaces[1] = interf_adiabatic; /* Front */
+  box_interfaces[2] = box_interfaces[3] = interf_Tb;        /* Left */
+  box_interfaces[4] = box_interfaces[5] = interf_adiabatic; /* Back */
+  box_interfaces[6] = box_interfaces[7] = interf_H;         /* Right */
+  box_interfaces[8] = box_interfaces[9] = interf_adiabatic; /* Top */
+  box_interfaces[10]= box_interfaces[11]= interf_adiabatic; /* Bottom */
 
-  CHK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, interfaces, &scn) == RES_OK);
+  /* Map the interfaces to their square segments */
+  square_interfaces[0] = interf_adiabatic; /* Bottom */
+  square_interfaces[1] = interf_Tb; /* Lef */
+  square_interfaces[2] = interf_adiabatic; /* Top */
+  square_interfaces[3] = interf_H; /* Right */
+
+  /* Create the box scene */
+  CHK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
+    box_get_interface, box_nvertices, box_get_position, box_interfaces,
+    &box_scn) == RES_OK);
+
+  /* Create the square scene */
+  CHK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
+    square_get_interface, square_nvertices, square_get_position,
+    square_interfaces, &square_scn) == RES_OK);
 
   /* Release the interfaces */
   CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
@@ -292,33 +341,51 @@ main(int argc, char** argv)
 
   #define SOLVE sdis_solve_probe_boundary
   CHK(SOLVE(NULL, N, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(scn, 0, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(scn, N, 12, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(scn, N, iprim, NULL, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(scn, N, iprim, uv, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(scn, N, iprim, uv, INF, 1.0, 0, 0, NULL) == RES_BAD_ARG);
-  CHK(SOLVE(scn, N, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  #undef SOLVE
+  CHK(SOLVE(box_scn, 0, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, 12, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, NULL, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, 0, 0, NULL) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_OK);
 
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
   CHK(nfails + nreals == N);
 
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
   CHK(sdis_scene_get_boundary_position(NULL, iprim, uv, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 12, uv, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, iprim, NULL, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, iprim, uv, NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, iprim, uv, pos) == RES_OK);
+  CHK(sdis_scene_get_boundary_position(box_scn, 12, uv, pos) == RES_BAD_ARG);
+  CHK(sdis_scene_get_boundary_position(box_scn, iprim, NULL, pos) == RES_BAD_ARG);
+  CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, NULL) == RES_BAD_ARG);
+  CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
 
   ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
-  printf("Boundary temperature at (%g %g %g) = %g ~ %g +/- %g\n",
+
+  printf("Boundary temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   CHK(eq_eps(T.E, ref, T.SE));
 
+  uv[0] = 0.5;
+  iprim = 3;
+  CHK(SOLVE(square_scn, N, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_OK);
+  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  CHK(nfails + nreals == N);
+
+  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
+
+  CHK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos) == RES_OK);
+
+  printf("Boundary temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
+    SPLIT2(pos), ref, T.E, T.SE);
+  CHK(eq_eps(T.E, ref, T.SE));
+  #undef SOLVE
+
+  CHK(sdis_scene_ref_put(box_scn) == RES_OK);
+  CHK(sdis_scene_ref_put(square_scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);
 
   check_memory_allocator(&allocator);
