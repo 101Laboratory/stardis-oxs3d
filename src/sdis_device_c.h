@@ -42,7 +42,7 @@ struct sdis_device {
   unsigned nthreads;
   int verbose;
 
-  struct flist_name names;
+  struct flist_name interfaces_names;
   struct darray_tile tiles;
 
   struct s2d_device* s2d;

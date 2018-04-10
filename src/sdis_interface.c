@@ -63,7 +63,7 @@ interface_release(ref_T* ref)
   if(interf->medium_front) SDIS(medium_ref_put(interf->medium_front));
   if(interf->medium_back) SDIS(medium_ref_put(interf->medium_back));
   if(interf->data) SDIS(data_ref_put(interf->data));
-  flist_name_del(&dev->names, interf->id);
+  flist_name_del(&dev->interfaces_names, interf->id);
   MEM_RM(dev->allocator, interf);
   SDIS(device_ref_put(dev));
 }
@@ -115,7 +115,7 @@ sdis_interface_create
   interf->medium_back = back;
   interf->dev = dev;
   interf->shader = *shader;
-  interf->id = flist_name_add(&dev->names);
+  interf->id = flist_name_add(&dev->interfaces_names);
 
   if(data) {
     SDIS(data_ref_get(data));
