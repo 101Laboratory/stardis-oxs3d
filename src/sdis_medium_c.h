@@ -26,6 +26,7 @@ struct sdis_medium {
   } shader;
 
   struct sdis_data* data;
+  struct fid id; /* Unique identifier of the medium */
 
   ref_T ref;
   struct sdis_device* dev;

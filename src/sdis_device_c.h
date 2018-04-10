@@ -43,6 +43,7 @@ struct sdis_device {
   int verbose;
 
   struct flist_name interfaces_names;
+  struct flist_name media_names;
   struct darray_tile tiles;
 
   struct s2d_device* s2d;

@@ -51,7 +51,9 @@ device_release(ref_T* ref)
   if(dev->s2d) S2D(device_ref_put(dev->s2d));
   if(dev->s3d) S3D(device_ref_put(dev->s3d));
   ASSERT(flist_name_is_empty(&dev->interfaces_names));
+  ASSERT(flist_name_is_empty(&dev->media_names));
   flist_name_release(&dev->interfaces_names);
+  flist_name_release(&dev->media_names);
   darray_tile_release(&dev->tiles);
   MEM_RM(dev->allocator, dev);
 }
@@ -95,6 +97,7 @@ sdis_device_create
   dev->nthreads = MMIN(nthreads_hint, (unsigned)omp_get_num_procs());
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
+  flist_name_init(allocator, &dev->media_names);
   darray_tile_init(allocator, &dev->tiles);
 
   res = darray_tile_resize(&dev->tiles, dev->nthreads);
