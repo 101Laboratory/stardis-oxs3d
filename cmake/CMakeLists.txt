@@ -28,6 +28,7 @@ find_package(Star2D 0.1 REQUIRED)
 find_package(Star3D 0.4 REQUIRED)
 find_package(StarSP 0.7 REQUIRED)
 find_package(StarEnc 0.1 REQUIRED)
+find_package(StarEnc2D 0.1 REQUIRED)
 find_package(RSys 0.6 REQUIRED)
 find_package(OpenMP 1.2 REQUIRED)
 
@@ -35,7 +36,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
 include(rcmake)
 include(rcmake_runtime)
 
-rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc)
+rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 
 ################################################################################
 # Configure and define targets
@@ -66,6 +67,7 @@ set(SDIS_FILES_INC
   sdis_interface_c.h
   sdis_medium_c.h
   sdis_scene_c.h
+  sdis_scene_Xd.h
   sdis_solve_Xd.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
@@ -80,7 +82,7 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star2D Star3D StarEnc StarSP m)
+target_link_libraries(sdis RSys Star2D Star3D StarEnc StarEnc2D StarSP m)
 if(CMAKE_COMPILER_IS_GNUCC)
   target_link_libraries(sdis m)
 endif()

@@ -16,6 +16,8 @@
 #ifndef SDIS_DEVICE_C_H
 #define SDIS_DEVICE_C_H
 
+#include "sdis.h"
+
 #include <rsys/dynamic_array.h>
 #include <rsys/free_list.h>
 #include <rsys/ref_count.h>

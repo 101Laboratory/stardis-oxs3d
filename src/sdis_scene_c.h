@@ -16,6 +16,7 @@
 #ifndef SDIS_SCENE_C_H
 #define SDIS_SCENE_C_H
 
+#include <star/s2d.h>
 #include <star/s3d.h>
 
 #include <rsys/dynamic_array_uint.h>
@@ -54,6 +55,7 @@ medium_init(struct mem_allocator* allocator, struct sdis_medium** medium)
 }
 
 struct enclosure {
+  struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
   /* Map the id of the enclosure primitives to their primitive id into the
    * whole scene */
@@ -64,6 +66,7 @@ static INLINE void
 enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
 {
   ASSERT(allocator && enc);
+  enc->s2d_view = NULL;
   enc->s3d_view = NULL;
   darray_uint_init(allocator, &enc->local2global);
 }
@@ -71,6 +74,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
 static INLINE void
 enclosure_release(struct enclosure* enc)
 {
+  if(enc->s2d_view) S2D(scene_view_ref_put(enc->s2d_view));
   if(enc->s3d_view) S3D(scene_view_ref_put(enc->s3d_view));
   darray_uint_release(&enc->local2global);
 }
@@ -81,6 +85,10 @@ enclosure_copy(struct enclosure* dst, const struct enclosure* src)
   if(src->s3d_view) {
     S3D(scene_view_ref_get(src->s3d_view));
     dst->s3d_view = src->s3d_view;
+  }
+  if(src->s2d_view) {
+    S2D(scene_view_ref_get(src->s2d_view));
+    dst->s2d_view = src->s2d_view;
   }
   return darray_uint_copy(&dst->local2global, &src->local2global);
 }
@@ -95,6 +103,11 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
     /* Only transfer ownership */
     dst->s3d_view = src->s3d_view;
     src->s3d_view = NULL;
+  }
+  if(src->s2d_view) {
+    /* Only transfer ownership */
+    dst->s2d_view = src->s2d_view;
+    src->s2d_view = NULL;
   }
   return RES_OK;
 }
