@@ -32,6 +32,13 @@ struct sdis_medium {
   struct sdis_device* dev;
 };
 
+static FINLINE unsigned
+medium_get_id(const struct sdis_medium* mdm)
+{
+  ASSERT(mdm);
+  return mdm->id.index;
+}
+
 /*******************************************************************************
  * Fluid local functions
  ******************************************************************************/

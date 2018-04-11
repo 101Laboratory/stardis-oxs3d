@@ -16,16 +16,87 @@
 #ifndef SDIS_SCENE_C_H
 #define SDIS_SCENE_C_H
 
-#include <rsys/dynamic_array.h>
+#include <star/s3d.h>
+
+#include <rsys/dynamic_array_uint.h>
+#include <rsys/hash_table.h>
 #include <rsys/ref_count.h>
 
+#include <limits.h>
+
+struct prim_prop {
+  struct sdis_interface* interf;
+  unsigned front_enclosure; /* Id of the front facing enclosure  */
+  unsigned back_enclosure; /* Id of the back facing enclosure */
+};
+
 static INLINE void
-interface_init
-  (struct mem_allocator* allocator,
-   struct sdis_interface** interf)
+prim_prop_init(struct mem_allocator* allocator, struct prim_prop* prim)
+{
+  (void)allocator;
+  prim->interf = NULL;
+  prim->front_enclosure = UINT_MAX;
+  prim->back_enclosure = UINT_MAX;
+}
+
+static INLINE void
+interface_init(struct mem_allocator* allocator, struct sdis_interface** interf)
 {
   (void)allocator;
   *interf = NULL;
+}
+
+static INLINE void
+medium_init(struct mem_allocator* allocator, struct sdis_medium** medium)
+{
+  (void)allocator;
+  *medium = NULL;
+}
+
+struct enclosure {
+  struct s3d_scene_view* s3d_view;
+  /* Map the id of the enclosure primitives to their primitive id into the
+   * whole scene */
+  struct darray_uint local2global;
+};
+
+static INLINE void
+enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
+{
+  ASSERT(allocator && enc);
+  enc->s3d_view = NULL;
+  darray_uint_init(allocator, &enc->local2global);
+}
+
+static INLINE void
+enclosure_release(struct enclosure* enc)
+{
+  if(enc->s3d_view) S3D(scene_view_ref_put(enc->s3d_view));
+  darray_uint_release(&enc->local2global);
+}
+
+static INLINE res_T
+enclosure_copy(struct enclosure* dst, const struct enclosure* src)
+{
+  if(src->s3d_view) {
+    S3D(scene_view_ref_get(src->s3d_view));
+    dst->s3d_view = src->s3d_view;
+  }
+  return darray_uint_copy(&dst->local2global, &src->local2global);
+}
+
+static INLINE res_T
+enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
+{
+  res_T res = RES_OK;
+  res = darray_uint_copy_and_release(&dst->local2global, &src->local2global);
+  if(res != RES_OK) return res;
+  if(src->s3d_view) {
+    /* Only transfer ownership */
+    dst->s3d_view = src->s3d_view;
+    src->s3d_view = NULL;
+  }
+  return RES_OK;
 }
 
 /* Declare the array of interfaces */
@@ -34,11 +105,36 @@ interface_init
 #define DARRAY_FUNCTOR_INIT interface_init
 #include <rsys/dynamic_array.h>
 
+/* Declare the array of medium */
+#define DARRAY_NAME medium
+#define DARRAY_DATA struct sdis_medium*
+#define DARRAY_FUNCTOR_INIT medium_init
+#include <rsys/dynamic_array.h>
+
+/* Declare the array of primitive */
+#define DARRAY_NAME prim_prop
+#define DARRAY_DATA struct prim_prop
+#define DARRAY_FUNCTOR_INIT prim_prop_init
+#include <rsys/dynamic_array.h>
+
+/* Declare the hash table that maps an enclosure id to its data */
+#define HTABLE_NAME enclosure
+#define HTABLE_KEY unsigned
+#define HTABLE_DATA struct enclosure
+#define HTABLE_DATA_FUNCTOR_INIT enclosure_init
+#define HTABLE_DATA_FUNCTOR_RELEASE enclosure_release
+#define HTABLE_DATA_FUNCTOR_COPY enclosure_copy
+#define HTABLE_DATA_FUNCTOR_COPY_AND_RELEASE enclosure_copy_and_release
+#include <rsys/hash_table.h>
+
 struct sdis_scene {
   struct darray_interf interfaces; /* List of interfaces own by the scene */
-  struct darray_interf prim_interfaces; /* Per primitive interface */
+  struct darray_medium media; /* List of media own by the scene */
+  struct darray_prim_prop prim_props; /* Per primitive properties */
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
+
+  struct htable_enclosure enclosures; /* Map an enclosure id to its data */
 
   double ambient_radiative_temperature; /* In Kelvin */
 
@@ -50,7 +146,7 @@ static FINLINE size_t
 scene_get_primitives_count(const struct sdis_scene* scn)
 {
   ASSERT(scn);
-  return darray_interf_size_get(&scn->prim_interfaces);
+  return darray_prim_prop_size_get(&scn->prim_props);
 }
 
 extern LOCAL_SYM const struct sdis_interface*

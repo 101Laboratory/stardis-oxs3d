@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
+#include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
 
 #include <rsys/float2.h>
@@ -24,14 +25,16 @@
 #include <rsys/double3.h>
 #include <rsys/mem_allocator.h>
 
+#include <senc.h>
 #include <star/s2d.h>
 #include <star/s3d.h>
 
 #include <limits.h>
 
-/* Context used to wrap the user geometry to Star-XD. */
-struct geometry_context {
+/* Context used to wrap the user geometry and interfaces to Star-Enc */
+struct geometry {
   void (*indices)(const size_t iprim, size_t ids[], void*);
+  void (*interf)(const size_t iprim, struct sdis_interface**, void*);
   void (*position)(const size_t ivert, double pos[], void*);
   void* data;
 };
@@ -122,6 +125,81 @@ hit_filter_function_2d
 }
 
 static void
+geometry_indices_3d(const unsigned itri, unsigned out_ids[3], void* data)
+{
+  struct geometry* ctx = data;
+  size_t ids[3];
+  ASSERT(ctx && out_ids);
+  ctx->indices(itri, ids, ctx->data);
+  out_ids[0] = (unsigned)ids[0];
+  out_ids[1] = (unsigned)ids[1];
+  out_ids[2] = (unsigned)ids[2];
+}
+
+static void
+geometry_media(const unsigned itri, unsigned media[2], void* data)
+{
+  struct geometry* ctx = data;
+  struct sdis_interface* interf;
+  ASSERT(ctx && media);
+  ctx->interf(itri, &interf, ctx->data);
+  /* FIXME check that the order in which media are returned is right  */
+  media[0] = medium_get_id(interf->medium_back);
+  media[1] = medium_get_id(interf->medium_front);
+}
+
+static void
+geometry_position_3d(const unsigned ivert, double out_pos[3], void* data)
+{
+  struct geometry* ctx = data;
+  double pos[3];
+  ASSERT(ctx && out_pos);
+  ctx->position(ivert, pos, ctx->data);
+  out_pos[0] = pos[0];
+  out_pos[1] = pos[1];
+  out_pos[2] = pos[2];
+}
+
+static void
+descriptor_indices_3d(const unsigned itri, unsigned ids[3], void* data)
+{
+  struct senc_descriptor* desc = data;
+  SENC(descriptor_get_global_triangle(desc, itri, ids));
+}
+
+
+static void
+descriptor_position_3d(const unsigned ivert, float out_pos[3], void* data)
+{
+  struct senc_descriptor* desc = data;
+  double pos[3];
+  SENC(descriptor_get_global_vertex(desc, ivert, pos));
+  out_pos[0] = (float)pos[0];
+  out_pos[1] = (float)pos[1];
+  out_pos[2] = (float)pos[2];
+}
+
+static void
+enclosure_indices_3d(const unsigned itri, unsigned ids[3], void* data)
+{
+  struct senc_enclosure* enc = data;
+  SENC(enclosure_get_triangle(enc, itri, ids));
+}
+
+static void
+enclosure_position_3d(const unsigned ivert, float out_pos[3], void* data)
+{
+  struct senc_enclosure* enc = data;
+  double pos[3];
+  ASSERT(out_pos);
+  SENC(enclosure_get_vertex(enc, ivert, pos));
+  out_pos[0] = (float)pos[0];
+  out_pos[1] = (float)pos[1];
+  out_pos[2] = (float)pos[2];
+}
+
+#if 0
+static void
 get_indices_2d(const unsigned iseg, unsigned out_ids[2], void* data)
 {
   struct geometry_context* ctx = data;
@@ -130,18 +208,6 @@ get_indices_2d(const unsigned iseg, unsigned out_ids[2], void* data)
   ctx->indices(iseg, ids, ctx->data);
   out_ids[0] = (unsigned)ids[0];
   out_ids[1] = (unsigned)ids[1];
-}
-
-static void
-get_indices_3d(const unsigned itri, unsigned out_ids[3], void* data)
-{
-  struct geometry_context* ctx = data;
-  size_t ids[3];
-  ASSERT(ctx);
-  ctx->indices(itri, ids, ctx->data);
-  out_ids[0] = (unsigned)ids[0];
-  out_ids[1] = (unsigned)ids[1];
-  out_ids[2] = (unsigned)ids[2];
 }
 
 static void
@@ -155,20 +221,10 @@ get_position_2d(const unsigned ivert, float out_pos[2], void* data)
   out_pos[1] = (float)pos[1];
 }
 
-static void
-get_position_3d(const unsigned ivert, float out_pos[3], void* data)
-{
-  struct geometry_context* ctx = data;
-  double pos[3];
-  ASSERT(ctx);
-  ctx->position(ivert, pos, ctx->data);
-  out_pos[0] = (float)pos[0];
-  out_pos[1] = (float)pos[1];
-  out_pos[2] = (float)pos[2];
-}
+#endif
 
 static void
-clear_interfaces(struct sdis_scene* scn)
+clear_properties(struct sdis_scene* scn)
 {
   size_t i;
   ASSERT(scn);
@@ -178,32 +234,136 @@ clear_interfaces(struct sdis_scene* scn)
     }
   }
   darray_interf_clear(&scn->interfaces);
-  darray_interf_clear(&scn->prim_interfaces);
+  darray_medium_clear(&scn->media);
+  darray_prim_prop_clear(&scn->prim_props);
 }
 
 static res_T
-setup_interfaces
+run_analyze_3d
   (struct sdis_scene* scn,
    const size_t ntris, /* #triangles */
+   void (*indices)(const size_t itri, size_t ids[3], void*),
+   void (*interf)(const size_t itri, struct sdis_interface**, void*),
+   const size_t nverts, /* #vertices */
+   void (*position)(const size_t ivert, double pos[3], void* ctx),
+   void* ctx,
+   struct senc_descriptor** out_desc)
+{
+  struct geometry geom;
+  struct senc_device* senc = NULL;
+  struct senc_scene* senc_scn = NULL;
+  struct senc_descriptor* desc = NULL;
+  size_t nmedia;
+  size_t itri;
+  res_T res = RES_OK;
+  ASSERT(scn && ntris && indices && interf && nverts && position && out_desc);
+
+  res = senc_device_create(scn->dev->logger, scn->dev->allocator,
+    scn->dev->nthreads, scn->dev->verbose, &senc);
+  if(res != RES_OK) goto error;
+
+  /* Conservatively define the number of media.
+   *
+   * FIXME The number of media is going to be remove from senc_scene_create
+   * profile and thus the following code should be unecessary soon. */
+  nmedia = 0;
+  FOR_EACH(itri, 0, ntris) {
+    struct sdis_interface* itface;
+    interf(itri, &itface, ctx);
+    nmedia = MMAX(nmedia, medium_get_id(itface->medium_front));
+    nmedia = MMAX(nmedia, medium_get_id(itface->medium_back));
+  }
+  nmedia += 1; /* +1 to define the "number of" media and not the max id */
+
+  res = senc_scene_create(senc, (unsigned)nmedia, &senc_scn);
+  if(res != RES_OK) goto error;
+
+  /* Setup the geometry data */
+  geom.indices = indices;
+  geom.interf = interf;
+  geom.position = position;
+  geom.data = ctx;
+  res = senc_scene_add_geometry
+    (senc_scn, (unsigned)ntris, geometry_indices_3d, geometry_media, NULL,
+     (unsigned)nverts, geometry_position_3d, &geom);
+  if(res != RES_OK) goto error;
+
+  /* Launch the scene analyze */
+  res = senc_scene_analyze(senc_scn, &desc);
+  if(res != RES_OK) goto error;
+
+exit:
+  if(senc) SENC(device_ref_put(senc));
+  if(senc_scn) SENC(scene_ref_put(senc_scn));
+  if(out_desc) *out_desc = desc;
+  return res;
+error:
+  if(desc) {
+    SENC(descriptor_ref_put(desc));
+    desc = NULL;
+  }
+  goto exit;
+}
+
+static res_T
+register_medium(struct sdis_scene* scn, struct sdis_medium* mdm)
+{
+  unsigned id;
+  size_t nmedia;
+  res_T res = RES_OK;
+  ASSERT(scn && mdm);
+
+  /* Check that the front medium is already registered against the scene */
+  id = medium_get_id(mdm);
+  nmedia = darray_medium_size_get(&scn->media);
+  if(id >= nmedia) {
+    res = darray_medium_resize(&scn->media, id + 1);
+    if(res != RES_OK) return res;
+  }
+  if(darray_medium_cdata_get(&scn->media)[id]) {
+    ASSERT(darray_medium_cdata_get(&scn->media)[id] == mdm);
+  } else {
+    /* Do not take a reference onto the medium since we already take a
+     * reference onto at least one interface that uses it, and thus that has a
+     * reference onto it */
+    darray_medium_data_get(&scn->media)[id] = mdm;
+  }
+  return RES_OK;
+}
+
+static res_T
+setup_properties
+  (struct sdis_scene* scn,
+   struct senc_descriptor* desc,
    void (*interf)(const size_t itri, struct sdis_interface**, void*),
    void* ctx)
 {
-  size_t itri;
+  unsigned itri, ntris;
   res_T res = RES_OK;
-  ASSERT(ntris && interf);
+  ASSERT(scn && interf);
 
-  clear_interfaces(scn);
+  clear_properties(scn);
 
+  SENC(descriptor_get_global_triangles_count(desc, &ntris));
   FOR_EACH(itri, 0, ntris) {
+    struct prim_prop* prim_prop;
     struct sdis_interface* itface;
-    size_t ninterfaces;
+    unsigned enclosures[2];
+    unsigned itri_adjusted; /* Triangle id in user space */
     unsigned id;
+    size_t ninterfaces;
 
-    /* Retrieve the interface of the primitive */
+    /* Retrieve the triangle id in user space */
+    SENC(descriptor_get_global_triangle_global_id(desc, itri, &itri_adjusted));
+
+    /* Fetch the enclosures that the triangle splits */
+    SENC(descriptor_get_global_triangle_enclosures(desc, itri, enclosures));
+
+    /* Fetch the interface of the primitive */
     interf(itri, &itface, ctx);
-    id = interface_get_id(itface);
 
     /* Check that the interface is already registered against the scene */
+    id = interface_get_id(itface);
     ninterfaces = darray_interf_size_get(&scn->interfaces);
     if(id >= ninterfaces) {
       res = darray_interf_resize(&scn->interfaces, id + 1);
@@ -216,18 +376,35 @@ setup_interfaces
       darray_interf_data_get(&scn->interfaces)[id] = itface;
     }
 
-    /* Register the primitive interface */
-    res = darray_interf_push_back(&scn->prim_interfaces, &itface);
+    /* Register the interface media against the scene */
+    res = register_medium(scn, itface->medium_front);
     if(res != RES_OK) goto error;
+    res = register_medium(scn, itface->medium_back);
+    if(res != RES_OK) goto error;
+
+    /* Allocate primitive properties */
+    res = darray_prim_prop_resize(&scn->prim_props, itri+1);
+    if(res != RES_OK) goto error;
+
+
+    /* Setup primitive properties */
+    prim_prop = darray_prim_prop_data_get(&scn->prim_props) + itri;
+    prim_prop->interf = itface;
+    /* FIXME Ensure that the enclosure order is right one. Actually, it seems
+     * that Star-Enc front facing convention is reversed wrt Stardis. Faces are
+     * front facing when their vertex are CCW ordered */
+    prim_prop->back_enclosure = enclosures[0];
+    prim_prop->front_enclosure = enclosures[1];
   }
 
 exit:
   return res;
 error:
-  clear_interfaces(scn);
+  clear_properties(scn);
   goto exit;
 }
 
+#if 0
 static res_T
 setup_geometry_2d
   (struct sdis_scene* scn,
@@ -279,48 +456,37 @@ error:
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   goto exit;
 }
+#endif
 
 static res_T
-setup_geometry_3d
-  (struct sdis_scene* scn,
-   const size_t ntris, /* #triangles */
-   void (*indices)(const size_t itri, size_t ids[3], void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[3], void* ctx),
-   void* ctx)
+setup_scene_geometry_3d(struct sdis_scene* scn, struct senc_descriptor* desc)
 {
-  struct geometry_context context;
   struct s3d_shape* s3d_msh = NULL;
   struct s3d_scene* s3d_scn = NULL;
   struct s3d_vertex_data vdata = S3D_VERTEX_DATA_NULL;
+  unsigned ntris, nverts;
   res_T res = RES_OK;
-  ASSERT(scn && ntris && indices && nverts && position);
+  ASSERT(scn && desc);
 
-  /* Setup the intermediary geometry context */
-  context.indices = indices;
-  context.position = position;
-  context.data = ctx;
+  SENC(descriptor_get_global_triangles_count(desc, &ntris));
+  SENC(descriptor_get_global_vertices_count(desc, &nverts));
 
   /* Setup the vertex data */
   vdata.usage = S3D_POSITION;
   vdata.type = S3D_FLOAT3;
-  vdata.get = get_position_3d;
+  vdata.get = descriptor_position_3d;
 
-  /* Create the Star-3D geometry */
-  res = s3d_scene_create(scn->dev->s3d, &s3d_scn);
-  if(res != RES_OK) goto error;
-  res = s3d_shape_create_mesh(scn->dev->s3d, &s3d_msh);
-  if(res != RES_OK) goto error;
-  res = s3d_mesh_set_hit_filter_function(s3d_msh, hit_filter_function_3d, NULL);
-  if(res != RES_OK) goto error;
-  res = s3d_scene_attach_shape(s3d_scn, s3d_msh);
-  if(res != RES_OK) goto error;
-  res = s3d_mesh_setup_indexed_vertices(s3d_msh, (unsigned)ntris,
-    get_indices_3d, (unsigned)nverts, &vdata, 1, &context);
-  if(res != RES_OK) goto error;
-  res = s3d_scene_view_create(s3d_scn, S3D_SAMPLE|S3D_TRACE|S3D_GET_PRIMITIVE,
-    &scn->s3d_view);
-  if(res != RES_OK) goto error;
+  /* Create the Star-3D geometry of the whole scene */
+  #define CALL(Func)  { if(RES_OK != (res = Func)) goto error; } (void)0
+  CALL(s3d_scene_create(scn->dev->s3d, &s3d_scn));
+  CALL(s3d_shape_create_mesh(scn->dev->s3d, &s3d_msh));
+  CALL(s3d_mesh_set_hit_filter_function(s3d_msh, hit_filter_function_3d, NULL));
+  CALL(s3d_scene_attach_shape(s3d_scn, s3d_msh));
+  CALL(s3d_mesh_setup_indexed_vertices(s3d_msh, ntris, descriptor_indices_3d,
+    nverts, &vdata, 1, desc));
+  CALL(s3d_scene_view_create(s3d_scn, S3D_TRACE|S3D_GET_PRIMITIVE,
+    &scn->s3d_view));
+  #undef CALL
 
 exit:
   if(s3d_msh) S3D(shape_ref_put(s3d_msh));
@@ -328,6 +494,106 @@ exit:
   return res;
 error:
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
+  goto exit;
+}
+
+static res_T
+setup_enclosure_geometry_3d(struct sdis_scene* scn, struct senc_enclosure* enc)
+{
+  struct s3d_scene* s3d_scn = NULL;
+  struct s3d_shape* s3d_msh = NULL;
+  struct s3d_vertex_data vdata = S3D_VERTEX_DATA_NULL;
+  const struct enclosure_header* header;
+  struct enclosure enc_dummy;
+  struct enclosure* enc_data;
+  unsigned itri, ntris, nverts;
+  res_T res = RES_OK;
+  ASSERT(scn && enc);
+
+  enclosure_init(scn->dev->allocator, &enc_dummy);
+
+  SENC(enclosure_get_header(enc, &header));
+  ntris = header->triangle_count;
+  nverts = header->vertices_count;
+
+  /* Register the enclosure into the scene. Use a dummy data on their
+   * registration. We are going to setup the data after their registration into
+   * the hash table in order to avoid a costly copy. In other words, the
+   * following hash table registration can be seen as an allocation of the
+   * enclosure data that are then setup. */
+  res = htable_enclosure_set(&scn->enclosures, &header->enclosure_id, &enc_dummy);
+  if(res != RES_OK) goto error;
+
+  /* Fetch the data of the registered enclosure */
+  enc_data = htable_enclosure_find(&scn->enclosures, &header->enclosure_id);
+  ASSERT(enc_data != NULL);
+
+  /* Setup the vertex data */
+  vdata.usage = S3D_POSITION;
+  vdata.type = S3D_FLOAT3;
+  vdata.get = enclosure_position_3d;
+
+  /* Create the Star-3D geometry */
+  #define CALL(Func)  { if(RES_OK != (res = Func)) goto error; } (void)0
+  CALL(s3d_scene_create(scn->dev->s3d, &s3d_scn));
+  CALL(s3d_shape_create_mesh(scn->dev->s3d, &s3d_msh));
+  CALL(s3d_scene_attach_shape(s3d_scn, s3d_msh));
+  CALL(s3d_mesh_setup_indexed_vertices(s3d_msh, ntris, enclosure_indices_3d,
+    nverts, &vdata, 1, enc));
+  CALL(s3d_scene_view_create(s3d_scn, S3D_SAMPLE, &enc_data->s3d_view));
+  #undef CALL
+
+  /* Define the identifier of the enclosure primitives in the whole scene */
+  res = darray_uint_resize(&enc_data->local2global, ntris);
+  if(res != RES_OK) goto error;
+  FOR_EACH(itri, 0, ntris) {
+    SENC(enclosure_get_triangle_global_id
+      (enc, itri, darray_uint_data_get(&enc_data->local2global)+itri));
+  }
+
+exit:
+  enclosure_release(&enc_dummy);
+  if(s3d_msh) S3D(shape_ref_put(s3d_msh));
+  if(s3d_scn) S3D(scene_ref_put(s3d_scn));
+  return res;
+error:
+  htable_enclosure_erase(&scn->enclosures, &header->enclosure_id);
+  goto exit;
+}
+
+static res_T
+setup_enclosures_3d(struct sdis_scene* scn, struct senc_descriptor* desc)
+{
+  struct senc_enclosure* enc = NULL;
+  unsigned ienc, nencs;
+  res_T res = RES_OK;
+  ASSERT(scn && desc);
+
+  SENC(descriptor_get_enclosure_count(desc, &nencs));
+  FOR_EACH(ienc, 0, nencs) {
+    const struct enclosure_header* header;
+    const struct sdis_medium* mdm;
+
+    SENC(descriptor_get_enclosure(desc, ienc, &enc));
+    SENC(enclosure_get_header(enc, &header));
+
+    ASSERT(header->enclosed_medium < darray_medium_size_get(&scn->media));
+    mdm = darray_medium_cdata_get(&scn->media)[header->enclosed_medium];
+    ASSERT(mdm);
+
+    /* Silently discard the solid enclosures */
+    if(mdm->type == SDIS_MEDIUM_FLUID) {
+      res = setup_enclosure_geometry_3d(scn, enc);
+      if(res != RES_OK) goto error;
+    }
+    SENC(enclosure_ref_put(enc));
+    enc = NULL;
+  }
+
+exit:
+  if(enc) SENC(enclosure_ref_put(enc));
+  return res;
+error:
   goto exit;
 }
 
@@ -343,6 +609,7 @@ scene_create
    void* ctx,
    struct sdis_scene** out_scn)
 {
+  struct senc_descriptor* desc = NULL;
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
@@ -363,26 +630,37 @@ scene_create
   scn->dev = dev;
   scn->ambient_radiative_temperature = -1;
   darray_interf_init(dev->allocator, &scn->interfaces);
-  darray_interf_init(dev->allocator, &scn->prim_interfaces);
+  darray_medium_init(dev->allocator, &scn->media);
+  darray_prim_prop_init(dev->allocator, &scn->prim_props);
+  htable_enclosure_init(dev->allocator, &scn->enclosures);
 
-  res = setup_interfaces(scn, nprims, interf, ctx);
+  if(is_2d) FATAL("2D is not supported yet.\n");
+
+  res = run_analyze_3d(scn, nprims, indices, interf, nverts, position, ctx, &desc);
   if(res != RES_OK) {
-    log_err(dev, "%s: could not setup the scene interfaces.\n", FUNC_NAME);
+    log_err(dev, "%s: error during the scene analysis.\n", FUNC_NAME);
     goto error;
   }
-
-  if(is_2d) {
-    res = setup_geometry_2d(scn, nprims, indices, nverts, position, ctx);
-  } else {
-    res = setup_geometry_3d(scn, nprims, indices, nverts, position, ctx);
+  res = setup_properties(scn, desc, interf, ctx);
+  if(res != RES_OK) {
+    log_err(dev, "%s: could not setup the scene interfaces and their media.\n",
+      FUNC_NAME);
+    goto error;
   }
+  res = setup_scene_geometry_3d(scn, desc);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene geometry.\n", FUNC_NAME);
+    goto error;
+  }
+  res = setup_enclosures_3d(scn, desc);
+  if(res != RES_OK) {
+    log_err(dev, "%s: could not setup the enclosures.\n", FUNC_NAME);
     goto error;
   }
 
 exit:
   if(out_scn) *out_scn = scn;
+  if(desc) SENC(descriptor_ref_put(desc));
   return res;
 error:
   if(scn) {
@@ -528,9 +806,11 @@ scene_release(ref_T * ref)
   ASSERT(ref);
   scn = CONTAINER_OF(ref, struct sdis_scene, ref);
   dev = scn->dev;
-  clear_interfaces(scn);
+  clear_properties(scn);
   darray_interf_release(&scn->interfaces);
-  darray_interf_release(&scn->prim_interfaces);
+  darray_medium_release(&scn->media);
+  darray_prim_prop_release(&scn->prim_props);
+  htable_enclosure_release(&scn->enclosures);
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   MEM_RM(dev->allocator, scn);
@@ -645,8 +925,8 @@ sdis_scene_get_boundary_position
 const struct sdis_interface*
 scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 {
-  ASSERT(scn && iprim < darray_interf_size_get(&scn->prim_interfaces));
-  return darray_interf_cdata_get(&scn->prim_interfaces)[iprim];
+  ASSERT(scn && iprim < darray_prim_prop_size_get(&scn->prim_props));
+  return darray_prim_prop_cdata_get(&scn->prim_props)[iprim].interf;
 }
 
 res_T
