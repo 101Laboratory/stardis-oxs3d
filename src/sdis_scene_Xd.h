@@ -14,6 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #ifndef SDIS_SCENE_DIMENSION
+
 #ifndef SDIS_SCENE_XD_H
 #define SDIS_SCENE_XD_H
 
@@ -23,6 +24,11 @@
 
 #include <rsys/rsys.h>
 
+/*******************************************************************************
+ * Define the helper functions and the data types used by the scene
+ * independently of its dimension, i.e. 2D or 3D.
+ ******************************************************************************/
+
 /* Context used to wrap the user geometry and interfaces to Star-Enc */
 struct geometry {
   void (*indices)(const size_t iprim, size_t ids[], void*);
@@ -31,6 +37,9 @@ struct geometry {
   void* data;
 };
 
+/* Fetch the media split by the primitive `iprim'. This first and second media
+ * are the media from the front face side and back face side of the primitive,
+ * respectively. */
 static void
 geometry_media(const unsigned iprim, unsigned media[2], void* data)
 {
@@ -43,6 +52,10 @@ geometry_media(const unsigned iprim, unsigned media[2], void* data)
   media[1] = medium_get_id(interf->medium_front);
 }
 
+/* Register the submitted medium against the scene if it is not already
+ * registered. On registration, no reference is taken onto the medium; the
+ * scene references its media through its interfaces and it is thus useless to
+ * take another reference onto them. */
 static res_T
 register_medium(struct sdis_scene* scn, struct sdis_medium* mdm)
 {
@@ -69,6 +82,9 @@ register_medium(struct sdis_scene* scn, struct sdis_medium* mdm)
   return RES_OK;
 }
 
+/* Release the reference toward the interfaces and thus clear the list of scene
+ * interfaces, the list of scene media, and the list of per-primitive
+ * interface. */
 static void
 clear_properties(struct sdis_scene* scn)
 {
@@ -85,7 +101,7 @@ clear_properties(struct sdis_scene* scn)
 }
 
 #endif /* SDIS_SCENE_XD_H */
-#else
+#else /* !SDIS_SCENE_DIMENSION */
 
 #include "sdis_device_c.h"
 
@@ -97,25 +113,28 @@ clear_properties(struct sdis_scene* scn)
 
 #include <limits.h>
 
+/* Check the submitted dimension and include its specific headers */
 #if (SDIS_SCENE_DIMENSION == 2)
   #include <senc2d.h>
   #include <star/s2d.h>
-
-  #define sencXd(Name) CONCAT(senc2d_, Name)
-  #define SENCXD SENC2D
-
 #elif (SDIS_SCENE_DIMENSION == 3)
   #include <senc.h>
   #include <star/s3d.h>
-
-  #define sencXd(Name) CONCAT(senc_, Name)
-  #define SENCXD SENC
 #else
   #error "Invalid SDIS_SCENE_DIMENSION value."
 #endif
 
 /* Syntactic sugar */
 #define DIM SDIS_SCENE_DIMENSION
+
+/* Star-Enc macros generic to the SDIS_SCENE_DIMENSION */
+#if DIM == 2
+  #define sencXd(Name) CONCAT(senc2d_, Name)
+  #define SENCXD SENC2D
+#else
+  #define sencXd(Name) CONCAT(senc_, Name)
+  #define SENCXD SENC
+#endif
 
 /* Star-XD macros generic to SDIS_SCENE_DIMENSION */
 #define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
@@ -135,6 +154,9 @@ clear_properties(struct sdis_scene* scn)
 /* Macro making generic its subimitted name to SDIS_SCENE_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
 #if DIM == 2
 /* Check that `hit' roughly lies on a vertex. For segments, a simple but
  * approximative way is to test that its position have at least one barycentric
@@ -153,7 +175,6 @@ hit_on_vertex(const struct s2d_hit* hit)
 }
 
 #else  /* DIM == 3 */
-
 /* Check that `hit' roughly lies on an edge. For triangular primitives, a
  * simple but approximative way is to test that its position have at least one
  * barycentric coordinate roughly equal to 0 or 1. */
@@ -171,8 +192,10 @@ hit_on_edge(const struct s3d_hit* hit)
       || eq_epsf(w, 0.f, on_edge_eps)
       || eq_epsf(w, 1.f, on_edge_eps);
 }
-#endif
+#endif /* DIM == 2 */
 
+/* Avoid self-intersection for a ray starting from a planar primitive, i.e. a
+ * triangle or a line segment */
 static int
 XD(hit_filter_function)
   (const struct sXd(hit)* hit,
@@ -197,10 +220,10 @@ XD(hit_filter_function)
     return hit_on_edge(hit_from) && hit_on_edge(hit);
 #endif
   }
-
   return 0;
 }
 
+/* Retrieve the indices of `struct geometry' primitive */
 static void
 XD(geometry_indices)(const unsigned iprim, unsigned out_ids[DIM], void* data)
 {
@@ -212,6 +235,7 @@ XD(geometry_indices)(const unsigned iprim, unsigned out_ids[DIM], void* data)
   FOR_EACH(i, 0, DIM) out_ids[i] = (unsigned)ids[i];
 }
 
+/* Retrieve the coordinates of `struct geometry' vertex */
 static void
 XD(geometry_position)(const unsigned ivert, double out_pos[DIM], void* data)
 {
@@ -223,6 +247,7 @@ XD(geometry_position)(const unsigned ivert, double out_pos[DIM], void* data)
   FOR_EACH(i, 0, DIM) out_pos[i] = pos[i];
 }
 
+/* Retrieve the indices of a primitive of a Star-EncXD descriptor */
 static void
 XD(descriptor_indices)(const unsigned iprim, unsigned ids[DIM], void* data)
 {
@@ -234,6 +259,7 @@ XD(descriptor_indices)(const unsigned iprim, unsigned ids[DIM], void* data)
 #endif
 }
 
+/* Retrieve the coordinates of a vertex of a Star-EncXD descriptor */
 static void
 XD(descriptor_position)(const unsigned ivert, float out_pos[DIM], void* data)
 {
@@ -244,6 +270,7 @@ XD(descriptor_position)(const unsigned ivert, float out_pos[DIM], void* data)
   FOR_EACH(i, 0, DIM) out_pos[i] = (float)pos[i];
 }
 
+/* Retrieve the indices of a primitive of a Star-EncXD enclosure */
 static void
 XD(enclosure_indices)(const unsigned iprim, unsigned ids[DIM], void* data)
 {
@@ -255,6 +282,7 @@ XD(enclosure_indices)(const unsigned iprim, unsigned ids[DIM], void* data)
 #endif
 }
 
+/* Retrieve the coordinates of a vertex of a Star-EncXD encolsure */
 static void
 XD(enclosure_position)(const unsigned ivert, float out_pos[DIM], void* data)
 {
@@ -266,6 +294,10 @@ XD(enclosure_position)(const unsigned ivert, float out_pos[DIM], void* data)
   FOR_EACH(i, 0, DIM) out_pos[i] = (float)pos[i];
 }
 
+/* Use Star-EncXD to analyze the user defined data. It essentially cleans-up
+ * the geometry and extracts the enclosures wrt to the submitted media. Note
+ * that data inconsistencies are also detected by this function. In this case
+ * an error is returned. */
 static res_T
 XD(run_analyze)
   (struct sdis_scene* scn,
@@ -334,6 +366,9 @@ error:
 
 }
 
+/* Register the media and the interfaces, map each primitive to its interface
+ * and associated to each primitive the identifier of the enclosures that it
+ * splits. */
 static res_T
 XD(setup_properties)
   (struct sdis_scene* scn,
@@ -416,6 +451,7 @@ error:
   goto exit;
 }
 
+/* Build the Star-XD scene view of the whole scene */
 static res_T
 XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 {
@@ -471,6 +507,8 @@ error:
   goto exit;
 }
 
+/* Build the Star-XD scene view of a specific enclosure and map their local
+ * primitive id to their primitive id in the whole scene */
 static res_T
 XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* enc)
 {
@@ -502,10 +540,10 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   nverts = header->vertices_count;
 
   /* Register the enclosure into the scene. Use a dummy data on their
-   * registration. We are going to setup the data after their registration into
-   * the hash table in order to avoid a costly copy. In other words, the
-   * following hash table registration can be seen as an allocation of the
-   * enclosure data that are then setup. */
+   * registration; in order to avoid a costly copy, we are going to setup the
+   * registered data rather than a local data that would be then registered. In
+   * other words, the following hash table registration can be seen as an
+   * allocation of the enclosure data to setup. */
   res = htable_enclosure_set(&scn->enclosures, &header->enclosure_id, &enc_dummy);
   if(res != RES_OK) goto error;
 
@@ -562,6 +600,8 @@ error:
   goto exit;
 }
 
+/* Build the Star-XD scene view and define its associated data of the fluid
+ * enclosures */
 static res_T
 XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 {
@@ -602,6 +642,7 @@ error:
   goto exit;
 }
 
+/* Create a Stardis scene */
 static res_T
 XD(scene_create)
   (struct sdis_device* dev,
@@ -672,6 +713,9 @@ error:
   goto exit;
 }
 
+/*******************************************************************************
+ * Local functions
+ ******************************************************************************/
 static INLINE res_T
 XD(scene_get_medium)
   (const struct sdis_scene* scn,
