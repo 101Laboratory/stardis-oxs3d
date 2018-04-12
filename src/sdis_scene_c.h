@@ -60,6 +60,8 @@ struct enclosure {
   /* Map the id of the enclosure primitives to their primitive id into the
    * whole scene */
   struct darray_uint local2global;
+
+  double S_over_V; /* in 3D = surface/volume; in 2D = perimeter/area */
 };
 
 static INLINE void
@@ -69,6 +71,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->s2d_view = NULL;
   enc->s3d_view = NULL;
   darray_uint_init(allocator, &enc->local2global);
+  enc->S_over_V = 0;
 }
 
 static INLINE void
@@ -90,6 +93,7 @@ enclosure_copy(struct enclosure* dst, const struct enclosure* src)
     S2D(scene_view_ref_get(src->s2d_view));
     dst->s2d_view = src->s2d_view;
   }
+  dst->S_over_V = src->S_over_V;
   return darray_uint_copy(&dst->local2global, &src->local2global);
 }
 
@@ -109,6 +113,7 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
     dst->s2d_view = src->s2d_view;
     src->s2d_view = NULL;
   }
+  dst->S_over_V = src->S_over_V;
   return RES_OK;
 }
 
@@ -172,6 +177,27 @@ scene_get_medium
   (const struct sdis_scene* scene,
    const double position[],
    const struct sdis_medium** medium);
+
+static INLINE void
+scene_get_enclosure_ids
+  (const struct sdis_scene* scn,
+   const unsigned iprim,
+   unsigned encs[2]) /* Front and Back enclosure identifiers */
+{
+  ASSERT(scn && iprim < darray_prim_prop_size_get(&scn->prim_props));
+  ASSERT(encs);
+  encs[0] = darray_prim_prop_cdata_get(&scn->prim_props)[iprim].front_enclosure;
+  encs[1] = darray_prim_prop_cdata_get(&scn->prim_props)[iprim].back_enclosure;
+}
+
+static INLINE const struct enclosure*
+scene_get_enclosure(struct sdis_scene* scn, const unsigned ienc)
+{
+  const struct enclosure* enc = NULL;
+  ASSERT(scn);
+  enc = htable_enclosure_find(&scn->enclosures, &ienc);
+  return enc;
+}
 
 static FINLINE int
 scene_is_2d(const struct sdis_scene* scn)

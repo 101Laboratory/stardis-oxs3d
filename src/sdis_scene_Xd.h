@@ -518,6 +518,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   struct sXd(vertex_data) vdata = SXD_VERTEX_DATA_NULL;
   struct enclosure enc_dummy;
   struct enclosure* enc_data;
+  float S, V;
   unsigned iprim, nprims, nverts;
 #if DIM == 2
   const struct enclosure2d_header* header;
@@ -571,10 +572,22 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   CALL(sXd(mesh_setup_indexed_vertices)(sXd_shape, nprims, XD(enclosure_indices),
     nverts, &vdata, 1, enc));
 #endif
-
   CALL(sXd(scene_create)(sXd_dev, &sXd_scn));
   CALL(sXd(scene_attach_shape)(sXd_scn, sXd_shape));
   CALL(sXd(scene_view_create)(sXd_scn, SXD_SAMPLE, &enc_data->sXd(view)));
+
+  /* Compute the S/V ratio */
+#if DIM == 2
+  CALL(sXd(scene_view_compute_contour_length)(enc_data->sXd(view), &S));
+  CALL(sXd(scene_view_compute_area)(enc_data->sXd(view), &V));
+#else
+  CALL(sXd(scene_view_compute_area)(enc_data->sXd(view), &S));
+  CALL(sXd(scene_view_compute_volume)(enc_data->sXd(view), &V));
+#endif
+  /* The volume of the enclosure is actually negative since Star-Enc ensures
+   * that the normal of its primitives point outward the enclosure. Take its
+   * absolute value in order to ensure a postive value. */
+  enc_data->S_over_V = S/absf(V);
   #undef CALL
 
   /* Define the identifier of the enclosure primitives in the whole scene */
@@ -600,8 +613,8 @@ error:
   goto exit;
 }
 
-/* Build the Star-XD scene view and define its associated data of the fluid
- * enclosures */
+/* Build the Star-XD scene view and define its associated data of the finite
+ * fluid enclosures */
 static res_T
 XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 {
@@ -626,8 +639,8 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     mdm = darray_medium_cdata_get(&scn->media)[header->enclosed_medium];
     ASSERT(mdm);
 
-    /* Silently discard the solid enclosures */
-    if(mdm->type == SDIS_MEDIUM_FLUID) {
+    /* Silently discard the solid and infinite enclosures */
+    if(mdm->type == SDIS_MEDIUM_FLUID && !header->is_infinite) {
       res = XD(setup_enclosure_geometry)(scn, enc);
       if(res != RES_OK) goto error;
     }
