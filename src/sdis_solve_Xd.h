@@ -769,7 +769,7 @@ XD(solid_temperature)
     /* Sample the time */
     mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
     tau = ssp_ran_exp(rng, mu);
-    rwalk->vtx.time -= tau;
+    rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
 
     /* Check the initial condition */
     tmp = solid_get_temperature(mdm, &rwalk->vtx);
@@ -777,6 +777,15 @@ XD(solid_temperature)
       T->value += tmp;
       T->done = 1;
       return RES_OK;
+    }
+
+    /* The initial condition should be reached */
+    if(rwalk->vtx.time <=0) {
+      log_err(scn->dev,
+        "%s: undefined initial condition. "
+        "The time is null but the temperature remains unknown.\n",
+        FUNC_NAME);
+      return RES_BAD_OP;
     }
 
     /* Add the volumic power density to the measured temperature */
