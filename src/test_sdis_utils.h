@@ -1,4 +1,4 @@
-/* Copyright (C) |Meso|Star> 2016-2018 (contact@meso-star.com)
+/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,13 +40,13 @@ static const size_t box_nvertices = sizeof(box_vertices) / sizeof(double[3]);
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
- *        ,6---,7           ,6----7
- *      ,' | ,'/|         ,' | \  |
- *    2----3' / |       2',  |  \ |
- *    |',  | / ,5       |  ',4---,5
- *    |  ',|/,'         | ,' | ,'
- *    0----1'           0----1'
- *  Front, right      Back, left and
+ *        ,2---,3           ,2----3
+ *      ,' | ,'/|         ,'/| \  |
+ *    6----7' / |       6' / |  \ |        Y
+ *    |',  | / ,1       | / ,0---,1        |
+ *    |  ',|/,'         |/,' | ,'          o--X
+ *    4----5'           4----5'           /
+ *  Front, right      Back, left and     Z
  * and Top faces       bottom faces */
 static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
   0, 2, 1, 1, 2, 3, /* Front face */
@@ -99,6 +99,7 @@ dummy_interface_getter
 }
 
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
+  dummy_medium_getter,
   dummy_medium_getter,
   dummy_medium_getter,
   dummy_medium_getter,

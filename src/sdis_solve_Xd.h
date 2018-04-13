@@ -1,4 +1,4 @@
-/* Copyright (C) |Meso|Star> 2016-2018 (contact@meso-star.com)
+/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,6 +76,8 @@ reflect(float res[3], const float V[3], const float N[3])
 #define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
 #define SXD_HIT_NULL CONCAT(CONCAT(S,DIM), D_HIT_NULL)
 #define SXD_HIT_NULL__ CONCAT(CONCAT(S, DIM), D_HIT_NULL__)
+#define SXD_POSITION CONCAT(CONCAT(S, DIM), D_POSITION)
+#define SXD_GEOMETRY_NORMAL CONCAT(CONCAT(S, DIM), D_GEOMETRY_NORMAL)
 #define SXD CONCAT(CONCAT(S, DIM), D)
 
 /* Vector macros generic to SDIS_SOLVE_DIMENSION */
@@ -149,7 +151,6 @@ XD(radiative_temperature)
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-
 static FINLINE void
 XD(move_pos)(double pos[DIM], const float dir[DIM], const float delta)
 {
@@ -270,6 +271,7 @@ XD(trace_radiative_path)
     r = ssp_rng_canonical(rng);
     if(r < epsilon) {
       T->func = XD(boundary_temperature);
+      rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
       break;
     }
 
@@ -541,6 +543,7 @@ XD(boundary_temperature)
   const struct sdis_medium* mdm_back = NULL;
   double tmp;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+  ASSERT(rwalk->mdm == NULL);
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
 
   XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit);
@@ -602,6 +605,7 @@ XD(solid_temperature)
     double cp; /* Calorific capacity */
     double tau, mu;
     double tmp;
+    double power;
     float delta, delta_solid; /* Random walk numerical parameter */
     float range[2];
     float dir0[DIM], dir1[DIM];
@@ -659,6 +663,14 @@ XD(solid_temperature)
       return RES_OK;
     }
 
+    /* Add the volumic power density to the measured temperature */
+    power = solid_get_volumic_power(mdm, &rwalk->vtx);
+    if(power > 0) {
+      const double delta_in_meter = delta * fp_to_meter;
+      tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+      T->value += tmp;
+    }
+
     /* Define if the random walk hits something along dir0 */
     rwalk->hit = hit0.distance > delta ? SXD_HIT_NULL : hit0;
 
@@ -696,6 +708,7 @@ XD(solid_temperature)
   } while(SXD_HIT_NONE(&rwalk->hit));
 
   T->func = XD(boundary_temperature);
+  rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
   return RES_OK;
 }
 
@@ -776,6 +789,70 @@ XD(probe_realisation)
   return RES_OK;
 }
 
+static res_T
+XD(boundary_realisation)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const size_t iprim,
+   const double uv[DIM],
+   const double time,
+   const double fp_to_meter,
+   const double Tarad,
+   const double Tref,
+   double* weight)
+{
+  struct rwalk_context ctx;
+  struct XD(rwalk) rwalk = XD(RWALK_NULL);
+  struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  struct sXd(attrib) attr;
+#if SDIS_SOLVE_DIMENSION == 2
+  float st;
+#else
+  float st[2];
+#endif
+  res_T res = RES_OK;
+  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0);
+
+  T.func = XD(boundary_temperature);
+
+  rwalk.hit.distance = 0;
+  rwalk.vtx.time = time;
+  rwalk.mdm = NULL; /* The random walk is at an interface between 2 media */
+
+#if SDIS_SOLVE_DIMENSION == 2
+  st = (float)uv[0];
+#else
+  f2_set_d2(st, uv);
+#endif
+
+  /* Fetch the primitive */
+  SXD(scene_view_get_primitive
+    (scn->sXd(view), (unsigned int)iprim, &rwalk.hit.prim));
+
+  /* Retrieve the world space position of the probe onto the primitive */
+  SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_POSITION, st, &attr));
+  dX_set_fX(rwalk.vtx.P, attr.value);
+
+  /* Retrieve the primitive normal */
+  SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_GEOMETRY_NORMAL, st, &attr));
+  fX(set)(rwalk.hit.normal, attr.value);
+
+#if SDIS_SOLVE_DIMENSION==2
+  rwalk.hit.u = st;
+#else
+  f2_set(rwalk.hit.uv, st);
+#endif
+
+  ctx.Tarad = Tarad;
+  ctx.Tref3 = Tref*Tref*Tref;
+
+  res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+  if(res != RES_OK) return res;
+
+  *weight = T.value;
+  return RES_OK;
+}
+
 #if SDIS_SOLVE_DIMENSION == 3
 static res_T
 XD(ray_realisation)
@@ -831,6 +908,8 @@ error:
 #undef SXD_HIT_NONE
 #undef SXD_HIT_NULL
 #undef SXD_HIT_NULL__
+#undef SXD_POSITION
+#undef SXD_GEOMETRY_NORMAL
 #undef SXD
 #undef dX
 #undef fX

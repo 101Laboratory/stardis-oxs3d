@@ -1,4 +1,4 @@
-/* Copyright (C) |Meso|Star> 2016-2018 (contact@meso-star.com)
+/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -129,11 +129,13 @@ struct sdis_solid_shader {
   sdis_medium_getter_T delta_solid;
   sdis_medium_getter_T delta_boundary;
 
+  sdis_medium_getter_T volumic_power; /* May be NULL <=> no volumic power */
+
   /* Initial/limit condition. A temperature < 0 means that the temperature is
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
@@ -398,6 +400,13 @@ sdis_scene_get_aabb
    double lower[3],
    double upper[3]);
 
+SDIS_API res_T
+sdis_scene_get_boundary_position
+  (const struct sdis_scene* scn,
+   const size_t iprim, /* Primitive index */
+   const double uv[2], /* Parametric coordinate onto the pimitive */
+   double pos[3]); /* World space position */
+
 /*******************************************************************************
  * An estimator stores the state of a simulation
  ******************************************************************************/
@@ -432,6 +441,18 @@ sdis_solve_probe
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
    const double position[3], /* Probe position */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_solve_probe_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
    const double time, /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */

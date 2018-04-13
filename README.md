@@ -23,13 +23,29 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.2
+
+- Add the support of volumic power to solid media: add the `volumic_power`
+  functor to the `sdis_solid_shader` data structure that, once defined, should
+  return the volumic power of the solid at a specific position and time. On
+  solve invocation, the conductive random walks take into account this
+  spatio-temporal volumic power in the computation of the solid temperature.
+- Add the `sdis_solve_probe_boundary` function: it computes the temperature at
+  a given position and time onto a geometric primitive. The probe position is
+  defined by the index of the primitive and a parametric coordinates onto it.
+- Add  the `sdis_scene_get_boundary_position` function: it computes a world
+  space position from the index of a geometric primitive and a parametric
+  coordinate onto it.
+- Fix how the `sdis_solve_probe` was parallelised. The submitted `threads_hint`
+  parameter was not correctly handled.
+
 ### Version 0.1
 
 - Add the support of radiative temperature.
-- Add the `sdis_camera` API : it defines a pinhole camera into the scene.
-- Add the `sdis_accum_buffer` API : it is a pool of MC accumulators, i.e. a sum
+- Add the `sdis_camera` API: it defines a pinhole camera into the scene.
+- Add the `sdis_accum_buffer` API: it is a pool of MC accumulators, i.e. a sum
   of MC weights and square weights.
-- Add the `sdis_solve_camera` function : it relies on a `sdis_camera` and a
+- Add the `sdis_solve_camera` function: it relies on a `sdis_camera` and a
   `sdis_accum_buffer` to compute the radiative temperature that reaches each
   pixel of an image whose definition is defined by the caller. Note that
   actually this function uses the same underlying MC algorithm behind the
@@ -46,7 +62,7 @@ First version and implementation of the Stardis solver API.
 
 ## License
 
-Stardis is Copyright (C) |Meso|Star> 2016-2018 (<contact@meso-star.com>). It is
+Stardis is Copyright (C) 2016-2018 |Meso|Star> (<contact@meso-star.com>). It is
 free software released under the GPLv3+ license. You are welcome to
 redistribute it under certain conditions; refer to the COPYING files for
 details.
