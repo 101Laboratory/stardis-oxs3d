@@ -442,7 +442,7 @@ XD(fluid_temperature)
    * FIXME we assume that hc is constant for the whole enclosure */
   mu = hc / (rho * cp) * enc->S_over_V;
   tau = ssp_ran_exp(rng, mu);
-  rwalk->vtx.time = MMIN(rwalk->vtx.time - tau, 0);
+  rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
 
   /* Check the initial condition */
   tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
