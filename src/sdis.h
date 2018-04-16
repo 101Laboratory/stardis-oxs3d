@@ -82,7 +82,10 @@ struct sdis_rwalk_vertex {
 static const struct sdis_rwalk_vertex SDIS_RWALK_VERTEX_NULL =
   SDIS_RWALK_VERTEX_NULL__;
 
-/* Spatiotemporal position onto an interface */
+/* Spatiotemporal position onto an interface. As a random walk vertex, it
+ * stores the position and time of the random walk, but since it lies onto an
+ * interface, it has additionnal parameters as the normal of the interface and
+ * the parametric coordinate of the position onto the interface */
 struct sdis_interface_fragment {
   double P[3]; /* World space position */
   double Ng[3]; /* Normalized world space geometry normal at the interface */
@@ -95,7 +98,7 @@ static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
 
 /* Monte-Carlo accumulator */
 struct sdis_accum {
-  double sum_weights; /* Sum of Monte-Carlo weight */
+  double sum_weights; /* Sum of Monte-Carlo weights */
   double sum_weights_sqr; /* Sum of Monte-Carlo square weights */
   size_t nweights; /* #accumulated weights */
 };
@@ -109,18 +112,21 @@ struct sdis_mc {
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
 
-/* Functor type to retrieve the medium properties. */
+/* Functor type used to retrieve the spatio temporal physical properties of a
+ * medium. */
 typedef double
 (*sdis_medium_getter_T)
   (const struct sdis_rwalk_vertex* vert,
    struct sdis_data* data);
 
-/* Functor type to retrieve the interface properties. */
+/* Functor type used to retrieve the spatio temporal physical properties of an
+ * interface. */
 typedef double
 (*sdis_interface_getter_T)
   (const struct sdis_interface_fragment* frag,
    struct sdis_data* data);
 
+/* Define the physical properties of a solid */
 struct sdis_solid_shader {
   /* Properties */
   sdis_medium_getter_T calorific_capacity;
@@ -139,6 +145,7 @@ struct sdis_solid_shader {
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
+/* Define the physical properties of a fluid */
 struct sdis_fluid_shader {
   /* Properties */
   sdis_medium_getter_T calorific_capacity;
@@ -152,6 +159,7 @@ struct sdis_fluid_shader {
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
+/* Define the physical properties of an interface between 2 media .*/
 struct sdis_interface_shader {
   sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
   sdis_interface_getter_T convection_coef; /* May be NULL for solid/solid */
@@ -204,7 +212,8 @@ sdis_device_ref_put
 
 /*******************************************************************************
  * A data stores in the Stardis memory space a set of user defined data. It can
- * be seen as a ref counted memory space allocated by Stardis.
+ * be seen as a ref counted memory space allocated by Stardis. It is used to
+ * attach user data to the media and to the interfaces.
  ******************************************************************************/
 SDIS_API res_T
 sdis_data_create
@@ -265,13 +274,15 @@ sdis_camera_look_at
    const double up[3]);
 
 /*******************************************************************************
- * A buffer of accumulations
+ * A buffer of accumulations is a 2D array whose each cell stores an
+ * Monte-Carlo accumulation, i.e. a sum of MC weights, the sum of their square
+ * and the overall number of summed weights (see struct sdis_accum)
  ******************************************************************************/
 SDIS_API res_T
 sdis_accum_buffer_create
   (struct sdis_device* dev,
-   const size_t width,
-   const size_t height,
+   const size_t width,  /* #cells in X */
+   const size_t height, /* #cells in Y */
    struct sdis_accum_buffer** buf);
 
 SDIS_API res_T
@@ -287,6 +298,7 @@ sdis_accum_buffer_get_layout
   (const struct sdis_accum_buffer* buf,
    struct sdis_accum_buffer_layout* layout);
 
+/* Get a read only pointer toward the memory space of the accum buffer */
 SDIS_API res_T
 sdis_accum_buffer_map
   (const struct sdis_accum_buffer* buf,
@@ -296,7 +308,11 @@ SDIS_API res_T
 sdis_accum_buffer_unmap
   (const struct sdis_accum_buffer* buf);
 
-/* Helper function that matches the `sdis_write_accums_T' functor type */
+/* Helper function that matches the `sdis_write_accums_T' functor type. On can
+ * send this function directly to the sdis_solve_camera function, to fill the
+ * accum buffer with the estimation of the radiative temperature that reaches
+ * each pixel of an image whose definition matches the definition of the accum
+ * buffer. */
 SDIS_API res_T
 sdis_accum_buffer_write
   (void* buf, /* User data */
@@ -334,13 +350,13 @@ sdis_medium_get_type
   (const struct sdis_medium* medium);
 
 /*******************************************************************************
- * An interface is the boundary between 2 mediums.
+ * An interface is the boundary between 2 media.
  ******************************************************************************/
 SDIS_API res_T
 sdis_interface_create
   (struct sdis_device* dev,
-   struct sdis_medium* front,
-   struct sdis_medium* back,
+   struct sdis_medium* front, /* Medium on the front side of the geometry */
+   struct sdis_medium* back, /* Medium on the back side of the geometry */
    const struct sdis_interface_shader* shader,
    struct sdis_data* data, /* Data sent to the shader. May be NULL */
    struct sdis_interface** interf);
@@ -357,6 +373,18 @@ sdis_interface_ref_put
  * A scene is a collection of primitives. Each primitive is the geometric
  * support of the interface between 2 mediums.
  ******************************************************************************/
+/* Create a 3D scene. The geometry of the scene is defined by an indexed
+ * triangular mesh: each triangle is composed of 3 indices where each index
+ * references an absolute 3D position. The physical properties of an interface
+ * is defined by the interface of the triangle.
+ *
+ * Note that each triangle has 2 sides: a front and a back side. By convention,
+ * the front side of a triangle is the side where its vertices are clock wise
+ * ordered.  The back side of a triangle is the exact opposite: it is the side
+ * where the triangle vertices are counter-clock wise ordered. The front and
+ * back media of a triangle interface directly refer to this convention and
+ * thus one has to take care of how the triangle vertices are defined to ensure
+ * that the front and the back media are correctly defined wrt the geometry. */
 SDIS_API res_T
 sdis_scene_create
   (struct sdis_device* dev,
@@ -371,6 +399,18 @@ sdis_scene_create
    void* ctx, /* Client side data sent as input of the previous callbacks */
    struct sdis_scene** scn);
 
+/* Create a 2D scene. The geometry of the 2D scene is defined by an indexed
+ * line segments: each segment is composed of 2 indices where each index
+ * references an absolute 2D position. The physical properties of an interface
+ * is defined by the interface of the segment.
+ *
+ * Note that each segment has 2 sides: a front and a back side. By convention,
+ * the front side of a segment is the side where its vertices are clock wise
+ * ordered. The back side of a segment is the exact opposite: it is the side
+ * where the segment vertices are counter-clock wise ordered. The front and
+ * back media of a segment interface directly refer to this convention and
+ * thus one has to take care of how the segment vertices are defined to ensure
+ * that the front and the back media are correctly defined wrt the geometry. */
 SDIS_API res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
@@ -400,6 +440,8 @@ sdis_scene_get_aabb
    double lower[3],
    double upper[3]);
 
+/* Define the world space position of a point onto the primitive `iprim' whose
+ * parametric coordinate is uv. */
 SDIS_API res_T
 sdis_scene_get_boundary_position
   (const struct sdis_scene* scn,
