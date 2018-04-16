@@ -355,10 +355,6 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
-  CHK(sdis_scene_get_boundary_position(NULL, iprim, uv, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(box_scn, 12, uv, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(box_scn, iprim, NULL, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, NULL) == RES_BAD_ARG);
   CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
 
   ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);

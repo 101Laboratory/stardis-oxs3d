@@ -404,8 +404,42 @@ SDIS_API res_T
 sdis_scene_get_boundary_position
   (const struct sdis_scene* scn,
    const size_t iprim, /* Primitive index */
-   const double uv[2], /* Parametric coordinate onto the pimitive */
+   const double uv[2], /* Parametric coordinate onto the primitive */
    double pos[3]); /* World space position */
+
+/* Project a world space position onto a primitive wrt its normal and compute
+ * the parametric coordinates of the projected point onto the primitive. This
+ * function may help to define the probe position onto a boundary as expected
+ * by the sdis_solve_probe_boundary function.
+ *
+ * Note that the projected point can lie outside the submitted primitive. In
+ * this case, the parametric coordinates are clamped against the primitive
+ * boundaries in order to ensure that the returned parametric coordinates are
+ * valid according to the primitive. To ensure this, in 2D, the parametric
+ * coordinate is simply clamped to [0, 1]. In 3D, the `uv' coordinates are
+ * clamped against the triangle edges. For instance, let the
+ * following triangle whose vertices are `a', `b' and `c':
+ *            ,     ,
+ *             , B ,
+ *              , ,
+ *               b         E1
+ *      E0      / \    ,P
+ *             /   \,*^
+ *            /     \
+ *       ....a-------c......
+ *          '         '
+ *       A '    E2     '  C
+ *        '             '
+ * The projected point `P' is orthogonally wrapped to the edge `ab', `bc' or
+ * `ca' if it lies in the `E0', `E1' or `E2' region, respectively. If `P' is in
+ * the `A', `B' or `C' region, then it is taken back to the `a', `b' or `c'
+ * vertex, respectively. */
+SDIS_API res_T
+sdis_scene_boundary_project_position
+  (const struct sdis_scene* scn,
+   const size_t iprim,
+   const double pos[3],
+   double uv[]);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
