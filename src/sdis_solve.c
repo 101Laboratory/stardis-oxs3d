@@ -273,7 +273,7 @@ sdis_solve_probe_boundary
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
    const double time, /* Observation time */
-   const enum sdis_side_flag side, /* Side of iprim on which the probe lies */
+   const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */

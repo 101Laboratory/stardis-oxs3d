@@ -180,7 +180,7 @@ sdis_interface_ref_put(struct sdis_interface* interf)
  ******************************************************************************/
 const struct sdis_medium*
 interface_get_medium
-  (const struct sdis_interface* interf, const enum sdis_side_flag side)
+  (const struct sdis_interface* interf, const enum sdis_side side)
 {
   struct sdis_medium* mdm = NULL;
   ASSERT(interf);
@@ -204,7 +204,7 @@ setup_interface_fragment_2d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
    const struct s2d_hit* hit,
-   const enum sdis_side_flag side)
+   const enum sdis_side side)
 {
   ASSERT(frag && vertex && hit && !S2D_HIT_NONE(hit));
   ASSERT(side == SDIS_FRONT || side == SDIS_BACK);
@@ -222,7 +222,7 @@ setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
    const struct s3d_hit* hit,
-   const enum sdis_side_flag side)
+   const enum sdis_side side)
 {
   ASSERT(frag && vertex && hit && !S3D_HIT_NONE(hit));
   ASSERT(side == SDIS_FRONT || side == SDIS_BACK);

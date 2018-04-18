@@ -39,7 +39,7 @@ struct sdis_interface {
 extern LOCAL_SYM const struct sdis_medium*
 interface_get_medium
   (const struct sdis_interface* interf,
-   const enum sdis_side_flag side);
+   const enum sdis_side side);
 
 extern LOCAL_SYM unsigned
 interface_get_id
@@ -50,14 +50,14 @@ setup_interface_fragment_2d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
    const struct s2d_hit* hit,
-   const enum sdis_side_flag side);
+   const enum sdis_side side);
 
 extern LOCAL_SYM void
 setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
    const struct s3d_hit* hit,
-   const enum sdis_side_flag side);
+   const enum sdis_side side);
 
 static INLINE double
 interface_get_convection_coef

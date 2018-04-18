@@ -63,10 +63,10 @@ struct sdis_interface;
 struct sdis_medium;
 struct sdis_scene;
 
-enum sdis_side_flag {
-  SDIS_FRONT = BIT(0),
-  SDIS_BACK = BIT(1),
-  SDIS_SIDE_NULL__ = BIT(2)
+enum sdis_side {
+  SDIS_FRONT,
+  SDIS_BACK,
+  SDIS_SIDE_NULL__
 };
 
 enum sdis_medium_type {
@@ -94,7 +94,7 @@ struct sdis_interface_fragment {
   double Ng[3]; /* Normalized world space geometry normal at the interface */
   double uv[2]; /* Parametric coordinates of the interface */
   double time; /* Current time */
-  enum sdis_side_flag side;
+  enum sdis_side side;
 };
 #define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1, SDIS_SIDE_NULL__}
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
@@ -554,7 +554,7 @@ sdis_solve_probe_boundary
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
    const double time, /* Observation time */
-   const enum sdis_side_flag side, /* Side of iprim on which the probe lies */
+   const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */

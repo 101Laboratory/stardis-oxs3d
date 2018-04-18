@@ -94,7 +94,7 @@ struct XD(rwalk) {
   struct sdis_rwalk_vertex vtx; /* Position and time of the Random walk */
   const struct sdis_medium* mdm; /* Medium in which the random walk lies */
   struct sXd(hit) hit; /* Hit of the random walk */
-  enum sdis_side_flag hit_side;
+  enum sdis_side hit_side;
 };
 static const struct XD(rwalk) XD(RWALK_NULL) = {
   SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__, SDIS_SIDE_NULL__
@@ -851,7 +851,7 @@ XD(boundary_realisation)
    const size_t iprim,
    const double uv[DIM],
    const double time,
-   const enum sdis_side_flag side,
+   const enum sdis_side side,
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
