@@ -224,7 +224,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interf_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;

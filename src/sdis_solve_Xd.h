@@ -553,6 +553,7 @@ XD(boundary_temperature)
   const struct sdis_interface* interf = NULL;
   const struct sdis_medium* mdm_front = NULL;
   const struct sdis_medium* mdm_back = NULL;
+  const struct sdis_medium* mdm = NULL;
   double tmp;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm == NULL);
@@ -571,6 +572,43 @@ XD(boundary_temperature)
     return RES_OK;
   }
 
+  /* Check if the boundary flux is known. Note that actually, only solid media
+   * can have a flux as limit condition */
+  mdm = interface_get_medium(interf, frag.side);
+  if(sdis_medium_get_type(mdm) == SDIS_MEDIUM_SOLID) {
+    const double phi = interface_side_get_flux(interf, &frag);
+
+    if(phi != SDIS_FLUX_NONE) {
+      double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
+      double delta_b = solid_get_delta_boundary(mdm, &rwalk->vtx);
+      double delta_b_in_meter = delta_b * fp_to_meter;
+      float pos[3];
+      float range[2];
+      float dir[3];
+
+      /* Update the temperature */
+      T->value += phi * delta_b_in_meter / lambda;
+
+      /* Ensuure that the normal points toward the solid */
+      fX(normalize)(dir, rwalk->hit.normal);
+      if(frag.side == SDIS_BACK) fX(minus)(dir, dir);
+
+      /* "Reinject" the random walk into the solid */
+      fX_set_dX(pos, rwalk->vtx.P);
+      range[0] = 0, range[1] = (float)delta_b*RAY_RANGE_MAX_SCALE;
+      SXD(scene_view_trace_ray
+        (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
+      if(!SXD_HIT_NONE(&rwalk->hit)) delta_b = rwalk->hit.distance * 0.5;
+      XD(move_pos)(rwalk->vtx.P, dir, (float)delta_b);
+
+      /* Switch in solid random walk */
+      T->func = XD(solid_temperature);
+      rwalk->hit = SXD_HIT_NULL;
+      rwalk->hit_side = SDIS_SIDE_NULL__;
+      rwalk->mdm = mdm;
+      return RES_OK;
+    }
+  }
   mdm_front = interface_get_medium(interf, SDIS_FRONT);
   mdm_back = interface_get_medium(interf, SDIS_BACK);
 

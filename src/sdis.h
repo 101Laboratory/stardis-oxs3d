@@ -490,7 +490,7 @@ sdis_scene_get_boundary_position
  *              , ,
  *               b         E1
  *      E0      / \    ,P
- *             /   \,*^
+ *             /   \,*'
  *            /     \
  *       ....a-------c......
  *          '         '
