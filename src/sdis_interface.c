@@ -29,31 +29,51 @@
  ******************************************************************************/
 static int
 check_interface_shader
-  (const struct sdis_interface_shader* shader,
+  (struct sdis_device* dev,
+   const char* caller_name,
+   const struct sdis_interface_shader* shader,
    const struct sdis_medium* front,
    const struct sdis_medium* back)
 {
-  enum sdis_medium_type type_front;
-  enum sdis_medium_type type_back;
-  ASSERT(shader && front && back);
+  enum sdis_medium_type type[2];
+  const struct sdis_interface_side_shader* shaders[2];
+  int i;
+  ASSERT(dev && caller_name && shader && front && back);
 
-  type_front = sdis_medium_get_type(front);
-  type_back = sdis_medium_get_type(back);
-
-  if(type_front == SDIS_MEDIUM_SOLID
-  && (shader->front.emissivity || shader->front.specular_fraction)) {
-    return 0;
-  }
-  if(type_back == SDIS_MEDIUM_SOLID
-  && (shader->back.emissivity || shader->back.specular_fraction)) {
-    return 0;
-  }
+  type[0] = sdis_medium_get_type(front);
+  type[1] = sdis_medium_get_type(back);
+  shaders[0] = &shader->front;
+  shaders[1] = &shader->back;
 
   /* Fluid<->solid interface */
-  if(type_front == SDIS_MEDIUM_SOLID 
-  && type_back == SDIS_MEDIUM_SOLID
+  if(type[0] == SDIS_MEDIUM_SOLID
+  && type[1] == SDIS_MEDIUM_SOLID
   && shader->convection_coef) {
-    return 0;
+    log_warn(dev,
+      "%s: a solid/solid interface can't have a convection coefficient. This "
+      "function of the interface shader should be NULL.\n", caller_name);
+  }
+
+  FOR_EACH(i, 0, 2) {
+    switch(type[i]) {
+      case SDIS_MEDIUM_SOLID:
+        if(shaders[i]->emissivity || shaders[i]->specular_fraction) {
+          log_warn(dev,
+            "%s: the interface side toward a solid can't have the emissivity "
+            "and specular_fraction properties. The shader functions that return "
+            "these attributes should be NULL.\n", caller_name);
+        }
+        break;
+      case SDIS_MEDIUM_FLUID:
+        if(shaders[i]->flux) {
+          log_warn(dev,
+            "%s: the interface side toward a fluid can't have a flux property. "
+            "The shader function that returns this attribute should be NULL.\n",
+            caller_name);
+        }
+        break;
+      default: FATAL("Unreachable code.\n"); break;
+    }
   }
   return 1;
 }
@@ -101,7 +121,7 @@ sdis_interface_create
     goto error;
   }
 
-  if(!check_interface_shader(shader, front, back)) {
+  if(!check_interface_shader(dev, FUNC_NAME, shader, front, back)) {
     log_err(dev, "%s: invalid interface shader.\n", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;

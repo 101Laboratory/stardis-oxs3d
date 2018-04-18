@@ -173,7 +173,7 @@ struct sdis_interface_side_shader {
   sdis_interface_getter_T temperature;  /* In Kelvin. < 0 <=> Unknown temp */
   sdis_interface_getter_T flux; /* In W.m^-2. SDIS_FLUX_NONE <=> no flux  */
 
-  /* Control the emissivity of the interface. May be NULL for solid/sold
+  /* Control the emissivity of the interface. May be NULL for solid/solid
    * interface or if the emissivity is 0 onto the whole interface. */
   sdis_interface_getter_T emissivity; /* Overall emissivity. */
   sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */

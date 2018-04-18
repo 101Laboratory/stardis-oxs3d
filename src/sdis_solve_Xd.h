@@ -239,11 +239,12 @@ XD(trace_radiative_path)
         break;
       } else {
         log_err(scn->dev,
-"%s: the random walk reaches an invalid ambient radiative temperature of `%gK'\n"
-"at position `%g %g %g'. This may be due to numerical inaccuracies or to\n"
-"inconsistency in the simulated system (eg: unclosed geometry). For systems\n"
-"where the random walks can reach such temperature, one has to setup a valid\n"
-"ambient radiative temperature, i.e. it must be greater or equal to 0.\n",
+          "%s: the random walk reaches an invalid ambient radiative temperature "
+          "of `%gK' at position `%g %g %g'. This may be due to numerical "
+          "inaccuracies or to inconsistency in the simulated system (eg: "
+          "unclosed geometry). For systems where the random walks can reach "
+          "such temperature, one has to setup a valid ambient radiative "
+          "temperature, i.e. it must be greater or equal to 0.\n",
           FUNC_NAME,
           ctx->Tarad,
           SPLIT3(rwalk->vtx.P));

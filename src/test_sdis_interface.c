@@ -31,7 +31,7 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
@@ -97,10 +97,12 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf) == RES_OK);
   shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
   shader.front.emissivity = dummy_interface_getter;
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK); /* Warning */
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
   shader.front.emissivity = NULL;
   shader.front.specular_fraction = dummy_interface_getter;
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK); /* Warning */
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
   #undef CREATE
 
   CHK(sdis_device_ref_put(dev) == RES_OK);

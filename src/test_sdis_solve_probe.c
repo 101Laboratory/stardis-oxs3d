@@ -191,7 +191,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct context ctx;
   struct fluid* fluid_param;
   struct solid* solid_param;
@@ -206,7 +206,7 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
   CHK(sdis_data_create
