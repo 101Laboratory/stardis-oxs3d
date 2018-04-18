@@ -40,6 +40,9 @@
  * as CPU cores */
 #define SDIS_NTHREADS_DEFAULT (~0u)
 
+#define SDIS_VOLUMIC_POWER_NONE DBL_MAX /* <=> No volumic power */
+#define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
+
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
@@ -91,8 +94,9 @@ struct sdis_interface_fragment {
   double Ng[3]; /* Normalized world space geometry normal at the interface */
   double uv[2]; /* Parametric coordinates of the interface */
   double time; /* Current time */
+  enum sdis_side_flag side;
 };
-#define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1}
+#define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1, SDIS_SIDE_NULL__}
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
@@ -129,13 +133,16 @@ typedef double
 /* Define the physical properties of a solid */
 struct sdis_solid_shader {
   /* Properties */
-  sdis_medium_getter_T calorific_capacity;
-  sdis_medium_getter_T thermal_conductivity;
-  sdis_medium_getter_T volumic_mass;
+  sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
+  sdis_medium_getter_T thermal_conductivity; /* In W.m^-1.K^-1 */
+  sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
   sdis_medium_getter_T delta_solid;
   sdis_medium_getter_T delta_boundary;
 
-  sdis_medium_getter_T volumic_power; /* May be NULL <=> no volumic power */
+  /* May be NULL if there is no volumic power. One can also return
+   * SDIS_VOLUMIC_POWER_NONE to define that there is no volumic power at the
+   * submitted position and time */
+  sdis_medium_getter_T volumic_power;  /* In W.m^-3 */
 
   /* Initial/limit condition. A temperature < 0 means that the temperature is
    * unknown for the submitted random walk vertex. */
@@ -148,8 +155,8 @@ static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
 /* Define the physical properties of a fluid */
 struct sdis_fluid_shader {
   /* Properties */
-  sdis_medium_getter_T calorific_capacity;
-  sdis_medium_getter_T volumic_mass;
+  sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
+  sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
 
   /* Initial/limit condition. A temperature < 0 means that the temperature is
    * unknown for the submitted position and time. */
@@ -159,16 +166,33 @@ struct sdis_fluid_shader {
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
+/* Define the physical properties of one side of an interface. */
+struct sdis_interface_side_shader {
+  /* Fixed temperature/flux. May be NULL if the temperature/flux is unknown
+   * onto the whole interface */
+  sdis_interface_getter_T temperature;  /* In Kelvin. < 0 <=> Unknown temp */
+  sdis_interface_getter_T flux; /* In W.m^-2. SDIS_FLUX_NONE <=> no flux  */
+
+  /* Control the emissivity of the interface. May be NULL for solid/sold
+   * interface or if the emissivity is 0 onto the whole interface. */
+  sdis_interface_getter_T emissivity; /* Overall emissivity. */
+  sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
+};
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL }
+static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
+  SDIS_INTERFACE_SIDE_SHADER_NULL__;
+
 /* Define the physical properties of an interface between 2 media .*/
 struct sdis_interface_shader {
-  sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
-  sdis_interface_getter_T convection_coef; /* May be NULL for solid/solid */
+  /* May be NULL for solid/solid or if the convection coefficient is 0 onto
+   * the whole interface. */
+  sdis_interface_getter_T convection_coef;  /* In W.K^-1.m^-2 */
 
-  /* Interface emssivity. May be NULL for solid/solid interface  */
-  sdis_interface_getter_T emissivity; /* Overall emissivity */
-  sdis_interface_getter_T specular_fraction; /* Specular fraction in [0, 1] */
+  struct sdis_interface_side_shader front;
+  struct sdis_interface_side_shader back;
 };
-#define SDIS_INTERFACE_SHADER_NULL__ {NULL, NULL, NULL, NULL}
+#define SDIS_INTERFACE_SHADER_NULL__ \
+  {NULL, SDIS_INTERFACE_SIDE_SHADER_NULL__, SDIS_INTERFACE_SIDE_SHADER_NULL__}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
@@ -530,6 +554,7 @@ sdis_solve_probe_boundary
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
    const double time, /* Observation time */
+   const enum sdis_side_flag side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */

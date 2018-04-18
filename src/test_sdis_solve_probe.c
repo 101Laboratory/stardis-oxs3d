@@ -243,9 +243,10 @@ main(int argc, char** argv)
   interface_param->epsilon = 0;
   interface_param->specular_fraction = 0;
   interface_shader.convection_coef = interface_get_convection_coef;
-  interface_shader.temperature = NULL;
-  interface_shader.emissivity = interface_get_emissivity;
-  interface_shader.specular_fraction = interface_get_specular_fraction;
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
+  interface_shader.back.temperature = NULL;
+  interface_shader.back.emissivity = interface_get_emissivity;
+  interface_shader.back.specular_fraction = interface_get_specular_fraction;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);

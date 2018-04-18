@@ -106,9 +106,9 @@ solid_get_volumic_power
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
-  return mdm->shader.solid.volumic_power 
+  return mdm->shader.solid.volumic_power
     ? mdm->shader.solid.volumic_power(vtx, mdm->data)
-    : 0;
+    : SDIS_VOLUMIC_POWER_NONE;
 }
 
 static INLINE double

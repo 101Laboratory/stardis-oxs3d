@@ -273,6 +273,7 @@ sdis_solve_probe_boundary
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
    const double time, /* Observation time */
+   const enum sdis_side_flag side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -289,7 +290,7 @@ sdis_solve_probe_boundary
   res_T res = RES_OK;
 
   if(!scn || !nrealisations || !uv || time < 0 || fp_to_meter <= 0
-  || Tref < 0 || !out_estimator) {
+  || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK) || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -363,10 +364,10 @@ sdis_solve_probe_boundary
 
     if(scene_is_2d(scn)) {
       res_local = boundary_realisation_2d
-        (scn, rng, iprim, uv, time, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
     } else {
       res_local = boundary_realisation_3d
-        (scn, rng, iprim, uv, time, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
     }
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) {

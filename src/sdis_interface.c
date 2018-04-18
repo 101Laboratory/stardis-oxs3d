@@ -33,22 +33,28 @@ check_interface_shader
    const struct sdis_medium* front,
    const struct sdis_medium* back)
 {
-  enum sdis_medium_type type0;
-  enum sdis_medium_type type1;
+  enum sdis_medium_type type_front;
+  enum sdis_medium_type type_back;
   ASSERT(shader && front && back);
 
-  type0 = sdis_medium_get_type(front);
-  type1 = sdis_medium_get_type(back);
+  type_front = sdis_medium_get_type(front);
+  type_back = sdis_medium_get_type(back);
 
-  /* Fluid<->solid interface */
-  if(type0 != type1) {
-    if(shader->convection_coef == NULL
-    || shader->emissivity == NULL
-    || shader->specular_fraction == NULL) {
-      return 0;
-    }
+  if(type_front == SDIS_MEDIUM_SOLID
+  && (shader->front.emissivity || shader->front.specular_fraction)) {
+    return 0;
+  }
+  if(type_back == SDIS_MEDIUM_SOLID
+  && (shader->back.emissivity || shader->back.specular_fraction)) {
+    return 0;
   }
 
+  /* Fluid<->solid interface */
+  if(type_front == SDIS_MEDIUM_SOLID 
+  && type_back == SDIS_MEDIUM_SOLID
+  && shader->convection_coef) {
+    return 0;
+  }
   return 1;
 }
 
@@ -177,27 +183,33 @@ void
 setup_interface_fragment_2d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
-   const struct s2d_hit* hit)
+   const struct s2d_hit* hit,
+   const enum sdis_side_flag side)
 {
   ASSERT(frag && vertex && hit && !S2D_HIT_NONE(hit));
+  ASSERT(side == SDIS_FRONT || side == SDIS_BACK);
   d2_set(frag->P, vertex->P);
   frag->P[2] = 0;
   d2_normalize(frag->Ng, d2_set_f2(frag->Ng, hit->normal));
   frag->Ng[2] = 0;
   frag->uv[0] = hit->u;
   frag->time = vertex->time;
+  frag->side = side;
 }
 
 void
 setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
-   const struct s3d_hit* hit)
+   const struct s3d_hit* hit,
+   const enum sdis_side_flag side)
 {
   ASSERT(frag && vertex && hit && !S3D_HIT_NONE(hit));
+  ASSERT(side == SDIS_FRONT || side == SDIS_BACK);
   d3_set(frag->P, vertex->P);
   d3_normalize(frag->Ng, d3_set_f3(frag->Ng, hit->normal));
   d2_set_f2(frag->uv, hit->uv);
   frag->time = vertex->time;
+  frag->side = side;
 }
 

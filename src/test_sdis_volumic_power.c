@@ -210,22 +210,6 @@ interface_get_convection_coef
   return 0;
 }
 
-static double
-interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  CHK(frag && data);
-  return 0;
-}
-
-static double
-interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  CHK(frag && data);
-  return 0;
-}
-
 /*******************************************************************************
  * Test
  ******************************************************************************/
@@ -245,7 +229,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interf_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
@@ -275,10 +259,8 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
 
   /* Setup the interface shader */
-  interf_shader.temperature = interface_get_temperature;
   interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.emissivity = interface_get_emissivity;
-  interf_shader.specular_fraction = interface_get_specular_fraction;
+  interf_shader.front.temperature = interface_get_temperature;
 
   /* Create the adiabatic interface */
   CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);

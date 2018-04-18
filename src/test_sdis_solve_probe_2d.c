@@ -131,14 +131,6 @@ interface_get_convection_coef
   return 0.5;
 }
 
-static double
-interface_null_reflectivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  (void)frag, (void)data;
-  return 0;
-}
-
 /*******************************************************************************
  * Main test
  ******************************************************************************/
@@ -184,9 +176,8 @@ main(int argc, char** argv)
 
   /* Create the solid/fluid interface */
   interface_shader.convection_coef = interface_get_convection_coef;
-  interface_shader.temperature = NULL;
-  interface_shader.emissivity = interface_null_reflectivity;
-  interface_shader.specular_fraction = interface_null_reflectivity;
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
+  interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &interf) == RES_OK);
 
