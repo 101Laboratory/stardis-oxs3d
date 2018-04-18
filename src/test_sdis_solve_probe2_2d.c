@@ -194,21 +194,21 @@ main(int argc, char** argv)
 
   /* Create the fluid/solid interface with no limit conidition */
   interface_shader.convection_coef = null_interface_value;
-  interface_shader.temperature = NULL;
-  interface_shader.emissivity = null_interface_value;
-  interface_shader.specular_fraction = null_interface_value;
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL; 
+  interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL; 
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &Tnone) == RES_OK);
+
+  interface_shader.convection_coef = null_interface_value;
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL; 
+  interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL; 
+  interface_shader.front.temperature = interface_get_temperature;
 
   /* Create the fluid/solid interface with a fixed temperature of 300K */
   CHK(sdis_data_create(dev, sizeof(struct interf),
     ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->temperature = 300;
-  interface_shader.convection_coef = null_interface_value;
-  interface_shader.temperature = interface_get_temperature;
-  interface_shader.emissivity = null_interface_value;
-  interface_shader.specular_fraction = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &T300) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -218,10 +218,6 @@ main(int argc, char** argv)
     ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interface_param = sdis_data_get(data);
   interface_param->temperature = 350;
-  interface_shader.convection_coef = null_interface_value;
-  interface_shader.temperature = interface_get_temperature;
-  interface_shader.emissivity = null_interface_value;
-  interface_shader.specular_fraction = null_interface_value;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &T350) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);

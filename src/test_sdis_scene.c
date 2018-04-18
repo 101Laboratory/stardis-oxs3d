@@ -261,8 +261,10 @@ main(int argc, char** argv)
   struct sdis_interface* interf = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   (void)argc, (void)argv;
+
+  interface_shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create(NULL, &allocator, 1, 0, &dev) == RES_OK);

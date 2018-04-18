@@ -94,9 +94,10 @@ struct XD(rwalk) {
   struct sdis_rwalk_vertex vtx; /* Position and time of the Random walk */
   const struct sdis_medium* mdm; /* Medium in which the random walk lies */
   struct sXd(hit) hit; /* Hit of the random walk */
+  enum sdis_side hit_side;
 };
 static const struct XD(rwalk) XD(RWALK_NULL) = {
-  SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__
+  SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__, SDIS_SIDE_NULL__
 };
 
 struct XD(temperature) {
@@ -231,17 +232,19 @@ XD(trace_radiative_path)
       (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
 #endif
     if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
+      rwalk->hit_side = SDIS_SIDE_NULL__;
       if(ctx->Tarad >= 0) {
         T->value += ctx->Tarad;
         T->done = 1;
         break;
       } else {
         log_err(scn->dev,
-"%s: the random walk reaches an invalid ambient radiative temperature of `%gK'\n"
-"at position `%g %g %g'. This may be due to numerical inaccuracies or to\n"
-"inconsistency in the simulated system (eg: unclosed geometry). For systems\n"
-"where the random walks can reach such temperature, one has to setup a valid\n"
-"ambient radiative temperature, i.e. it must be greater or equal to 0.\n",
+          "%s: the random walk reaches an invalid ambient radiative temperature "
+          "of `%gK' at position `%g %g %g'. This may be due to numerical "
+          "inaccuracies or to inconsistency in the simulated system (eg: "
+          "unclosed geometry). For systems where the random walks can reach "
+          "such temperature, one has to setup a valid ambient radiative "
+          "temperature, i.e. it must be greater or equal to 0.\n",
           FUNC_NAME,
           ctx->Tarad,
           SPLIT3(rwalk->vtx.P));
@@ -250,16 +253,20 @@ XD(trace_radiative_path)
       }
     }
 
+    /* Define the hit side */
+    rwalk->hit_side = fX(dot)(dir, rwalk->hit.normal) < 0
+      ? SDIS_FRONT : SDIS_BACK;
+
     /* Move the random walk to the hit position */
     XD(move_pos)(rwalk->vtx.P, dir, rwalk->hit.distance);
 
     /* Fetch the new interface and setup the hit fragment */
     interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit);
+    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 
     /* Fetch the interface emissivity */
-    epsilon = interface_get_emissivity(interf, &frag);
-    if(epsilon > 1 && epsilon >= 0) {
+    epsilon = interface_side_get_emissivity(interf, &frag);
+    if(epsilon > 1 || epsilon < 0) {
       log_err(scn->dev,
         "%s: invalid overall emissivity `%g' at position `%g %g %g'.\n",
         FUNC_NAME, epsilon, SPLIT3(rwalk->vtx.P));
@@ -278,7 +285,7 @@ XD(trace_radiative_path)
     /* Normalize the normal of the interface and ensure that it points toward the
      * current medium */
     fX(normalize)(N, rwalk->hit.normal);
-    if(f3_dot(N, dir) > 0) {
+    if(rwalk->hit_side == SDIS_BACK){
       chk_mdm = interf->medium_back;
       fX(minus)(N, N);
     } else {
@@ -288,10 +295,10 @@ XD(trace_radiative_path)
     if(chk_mdm != rwalk->mdm) {
       log_err(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
         FUNC_NAME, SPLIT3(rwalk->vtx.P));
-      res = RES_BAD_ARG;
+      res = RES_BAD_OP;
       goto error;
     }
-    alpha =  interface_get_specular_fraction(interf, &frag);
+    alpha =  interface_side_get_specular_fraction(interf, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
       reflect(dir, f3_minus(dir, dir), N);
@@ -315,8 +322,6 @@ XD(radiative_temperature)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  const struct sdis_interface* interf;
-
   /* The radiative random walk is always perform in 3D. In 2D, the geometry are
    * assumed to be extruded to the infinty along the Z dimension. */
   float N[3] = {0, 0, 0};
@@ -327,13 +332,10 @@ XD(radiative_temperature)
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
   (void)fp_to_meter;
 
-  /* Fetch the current interface */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-
   /* Normalize the normal of the interface and ensure that it points toward the
    * current medium */
   fX(normalize(N, rwalk->hit.normal));
-  if(interf->medium_back == rwalk->mdm) {
+  if(rwalk->hit_side == SDIS_BACK) {
     fX(minus(N, N));
   }
 
@@ -362,7 +364,7 @@ XD(fluid_temperature)
   double tmp;
   (void)rng, (void)fp_to_meter, (void)ctx;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
-  ASSERT(rwalk->mdm->type == SDIS_MEDIUM_FLUID);
+  ASSERT(rwalk->mdm->type == SDIS_FLUID);
 
   tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
   if(tmp < 0) {
@@ -404,8 +406,8 @@ XD(solid_solid_boundary_temperature)
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
   solid_front = interface_get_medium(interf, SDIS_FRONT);
   solid_back = interface_get_medium(interf, SDIS_BACK);
-  ASSERT(solid_front->type == SDIS_MEDIUM_SOLID);
-  ASSERT(solid_back->type == SDIS_MEDIUM_SOLID);
+  ASSERT(solid_front->type == SDIS_SOLID);
+  ASSERT(solid_back->type == SDIS_SOLID);
 
   /* Fetch the properties of the media */
   lambda_front = solid_get_thermal_conductivity(solid_front, &rwalk->vtx);
@@ -442,6 +444,8 @@ XD(solid_solid_boundary_temperature)
 
   /* Switch in solid random walk */
   T->func = XD(solid_temperature);
+  rwalk->hit = SXD_HIT_NULL;
+  rwalk->hit_side = SDIS_SIDE_NULL__;
 }
 
 static void
@@ -459,6 +463,7 @@ XD(solid_fluid_boundary_temperature)
   const struct sdis_medium* mdm_back = NULL;
   const struct sdis_medium* solid = NULL;
   const struct sdis_medium* fluid = NULL;
+  struct sdis_interface_fragment frag_fluid;
   double hc;
   double hr;
   double epsilon; /* Interface emissivity */
@@ -478,12 +483,16 @@ XD(solid_fluid_boundary_temperature)
   mdm_front = interface_get_medium(interf, SDIS_FRONT);
   mdm_back = interface_get_medium(interf, SDIS_BACK);
   ASSERT(mdm_front->type != mdm_back->type);
-  if(mdm_front->type == SDIS_MEDIUM_SOLID) {
+
+  frag_fluid = *frag;
+  if(mdm_front->type == SDIS_SOLID) {
     solid = mdm_front;
     fluid = mdm_back;
+    frag_fluid.side = SDIS_BACK;
   } else {
     solid = mdm_back;
     fluid = mdm_front;
+    frag_fluid.side = SDIS_FRONT;
   }
 
   /* Fetch the solid properties */
@@ -491,7 +500,7 @@ XD(solid_fluid_boundary_temperature)
   delta_boundary = solid_get_delta_boundary(solid, &rwalk->vtx);
 
   /* Fetch the boundary properties */
-  epsilon = interface_get_emissivity(interf, frag);
+  epsilon = interface_side_get_emissivity(interf, &frag_fluid);
   hc = interface_get_convection_coef(interf, frag);
 
   /* Compute the radiative coefficient */
@@ -505,11 +514,13 @@ XD(solid_fluid_boundary_temperature)
 
   r = ssp_rng_canonical(rng);
   if(r < radia_proba) { /* Switch in radiative random walk */
-    rwalk->mdm = fluid;
     T->func = XD(radiative_temperature);
-  } else if(r < fluid_proba + radia_proba) { /* Switch to fluid random walk */
     rwalk->mdm = fluid;
+    rwalk->hit_side = rwalk->mdm == mdm_front ? SDIS_FRONT : SDIS_BACK;
+  } else if(r < fluid_proba + radia_proba) { /* Switch to fluid random walk */
     T->func = XD(fluid_temperature);
+    rwalk->mdm = fluid;
+    rwalk->hit_side = rwalk->mdm == mdm_front ? SDIS_FRONT : SDIS_BACK;
   } else { /* Solid random walk */
     rwalk->mdm = solid;
     fX(normalize)(dir, rwalk->hit.normal);
@@ -525,6 +536,8 @@ XD(solid_fluid_boundary_temperature)
 
     /* Switch in solid random walk */
     T->func = XD(solid_temperature);
+    rwalk->hit = SXD_HIT_NULL;
+    rwalk->hit_side = SDIS_SIDE_NULL__;
   }
 }
 
@@ -541,24 +554,62 @@ XD(boundary_temperature)
   const struct sdis_interface* interf = NULL;
   const struct sdis_medium* mdm_front = NULL;
   const struct sdis_medium* mdm_back = NULL;
+  const struct sdis_medium* mdm = NULL;
   double tmp;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm == NULL);
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
 
-  XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit);
+  XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 
   /* Retrieve the current interface */
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
 
-  /* Check if the boundary condition is known */
-  tmp = interface_get_temperature(interf, &frag);
+  /* Check if the boundary temperature is known */
+  tmp = interface_side_get_temperature(interf, &frag);
   if(tmp >= 0) {
     T->value += tmp;
     T->done = 1;
     return RES_OK;
   }
 
+  /* Check if the boundary flux is known. Note that actually, only solid media
+   * can have a flux as limit condition */
+  mdm = interface_get_medium(interf, frag.side);
+  if(sdis_medium_get_type(mdm) == SDIS_SOLID) {
+    const double phi = interface_side_get_flux(interf, &frag);
+
+    if(phi != SDIS_FLUX_NONE) {
+      double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
+      double delta_b = solid_get_delta_boundary(mdm, &rwalk->vtx);
+      double delta_b_in_meter = delta_b * fp_to_meter;
+      float pos[3];
+      float range[2];
+      float dir[3];
+
+      /* Update the temperature */
+      T->value += phi * delta_b_in_meter / lambda;
+
+      /* Ensuure that the normal points toward the solid */
+      fX(normalize)(dir, rwalk->hit.normal);
+      if(frag.side == SDIS_BACK) fX(minus)(dir, dir);
+
+      /* "Reinject" the random walk into the solid */
+      fX_set_dX(pos, rwalk->vtx.P);
+      range[0] = 0, range[1] = (float)delta_b*RAY_RANGE_MAX_SCALE;
+      SXD(scene_view_trace_ray
+        (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
+      if(!SXD_HIT_NONE(&rwalk->hit)) delta_b = rwalk->hit.distance * 0.5;
+      XD(move_pos)(rwalk->vtx.P, dir, (float)delta_b);
+
+      /* Switch in solid random walk */
+      T->func = XD(solid_temperature);
+      rwalk->hit = SXD_HIT_NULL;
+      rwalk->hit_side = SDIS_SIDE_NULL__;
+      rwalk->mdm = mdm;
+      return RES_OK;
+    }
+  }
   mdm_front = interface_get_medium(interf, SDIS_FRONT);
   mdm_back = interface_get_medium(interf, SDIS_BACK);
 
@@ -584,7 +635,7 @@ XD(solid_temperature)
   double position_start[DIM];
   const struct sdis_medium* mdm;
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
-  ASSERT(rwalk->mdm->type == SDIS_MEDIUM_SOLID);
+  ASSERT(rwalk->mdm->type == SDIS_SOLID);
   (void)ctx;
 
   /* Check the random walk consistency */
@@ -665,14 +716,20 @@ XD(solid_temperature)
 
     /* Add the volumic power density to the measured temperature */
     power = solid_get_volumic_power(mdm, &rwalk->vtx);
-    if(power > 0) {
+    if(power != SDIS_VOLUMIC_POWER_NONE) {
       const double delta_in_meter = delta * fp_to_meter;
       tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
       T->value += tmp;
     }
 
     /* Define if the random walk hits something along dir0 */
-    rwalk->hit = hit0.distance > delta ? SXD_HIT_NULL : hit0;
+    if(hit0.distance > delta) {
+      rwalk->hit = SXD_HIT_NULL;
+      rwalk->hit_side = SDIS_SIDE_NULL__;
+    } else {
+      rwalk->hit = hit0;
+      rwalk->hit_side = fX(dot)(hit0.normal, dir0) < 0 ? SDIS_FRONT : SDIS_BACK;
+    }
 
     /* Update the random walk position */
     XD(move_pos)(rwalk->vtx.P, dir0, delta);
@@ -683,9 +740,7 @@ XD(solid_temperature)
     } else {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-      mdm = interface_get_medium
-        (interf,
-         fX(dot(rwalk->hit.normal, dir0)) < 0 ? SDIS_FRONT : SDIS_BACK);
+      mdm = interface_get_medium(interf, rwalk->hit_side);
     }
 
     /* Check random walk consistency */
@@ -766,8 +821,8 @@ XD(probe_realisation)
   ASSERT(medium && position && fp_to_meter > 0 && weight && time >= 0);
 
   switch(medium->type) {
-    case SDIS_MEDIUM_FLUID: T.func = XD(fluid_temperature); break;
-    case SDIS_MEDIUM_SOLID: T.func = XD(solid_temperature); break;
+    case SDIS_FLUID: T.func = XD(fluid_temperature); break;
+    case SDIS_SOLID: T.func = XD(solid_temperature); break;
     default: FATAL("Unreachable code\n"); break;
   }
 
@@ -796,6 +851,7 @@ XD(boundary_realisation)
    const size_t iprim,
    const double uv[DIM],
    const double time,
+   const enum sdis_side side,
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
@@ -815,6 +871,7 @@ XD(boundary_realisation)
 
   T.func = XD(boundary_temperature);
 
+  rwalk.hit_side = side;
   rwalk.hit.distance = 0;
   rwalk.vtx.time = time;
   rwalk.mdm = NULL; /* The random walk is at an interface between 2 media */
@@ -873,11 +930,12 @@ XD(ray_realisation)
   float dir[3];
   res_T res = RES_OK;
   ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight);
-  ASSERT(medium && medium->type == SDIS_MEDIUM_FLUID);
+  ASSERT(medium && medium->type == SDIS_FLUID);
 
   dX(set)(rwalk.vtx.P, position);
   rwalk.vtx.time = time;
   rwalk.hit = SXD_HIT_NULL;
+  rwalk.hit_side = SDIS_SIDE_NULL__;
   rwalk.mdm = medium;
 
   ctx.Tarad = Tarad;

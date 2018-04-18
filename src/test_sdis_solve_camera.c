@@ -361,7 +361,7 @@ create_interface
 {
   struct sdis_data* data = NULL;
   struct interf* interface_param = NULL;
-  struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
 
   CHK(mdm_front != NULL);
   CHK(mdm_back != NULL);
@@ -376,10 +376,16 @@ create_interface
 
   /* Setup the interface shader */
   interface_shader.convection_coef = interface_get_convection_coef;
-  interface_shader.temperature = interface_get_temperature;
-  interface_shader.emissivity = interface_get_emissivity;
-  interface_shader.specular_fraction = interface_get_specular_fraction;
-
+  interface_shader.front.temperature = interface_get_temperature;
+  interface_shader.back.temperature = interface_get_temperature;
+  if(sdis_medium_get_type(mdm_front) == SDIS_FLUID) {
+    interface_shader.front.emissivity = interface_get_emissivity;
+    interface_shader.front.specular_fraction = interface_get_specular_fraction;
+  } 
+  if(sdis_medium_get_type(mdm_back) == SDIS_FLUID) {
+    interface_shader.back.emissivity = interface_get_emissivity;
+    interface_shader.back.specular_fraction = interface_get_specular_fraction;
+  }
   /* Create the interface */
   CHK(sdis_interface_create
     (dev, mdm_front, mdm_back, &interface_shader, data, interf) == RES_OK);

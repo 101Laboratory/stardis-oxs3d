@@ -114,7 +114,7 @@ sdis_fluid_create
     goto error;
   }
 
-  res = medium_create(dev, &medium, SDIS_MEDIUM_FLUID);
+  res = medium_create(dev, &medium, SDIS_FLUID);
   if(res != RES_OK) {
     log_err(dev, "%s: could not create the fluid medium.\n", FUNC_NAME);
     goto error;
@@ -159,7 +159,7 @@ sdis_solid_create
     goto error;
   }
 
-  res = medium_create(dev, &medium, SDIS_MEDIUM_SOLID);
+  res = medium_create(dev, &medium, SDIS_SOLID);
   if(res != RES_OK) {
     log_err(dev, "%s: could not create the solid medium.\n", FUNC_NAME);
     goto error;
