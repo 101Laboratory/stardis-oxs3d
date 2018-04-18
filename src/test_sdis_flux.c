@@ -17,38 +17,36 @@
 #include "test_sdis_utils.h"
 
 #include <rsys/double3.h>
-#include <rsys/math.h>
 
 /*
  * The scene is composed of a solid cube/square whose temperature is unknown.
- * The convection coefficient with the surrounding fluid is null everywhere The
- * Temperature of the +/- X faces are fixed to T0, and the solid has a volumic
- * power of P0. This test computes the temperature of a probe position pos into
- * the solid and check that it is is equal to:
+ * The temperature is fixed at T0 on the +X face. The Flux of the -X face is
+ * fixed to PHI. The flux on the other faces is null (i.e. adiabatic). This
+ * test computes the temperature of a probe position pos into the solid and
+ * check that it is equal to:
  *
- *    T(pos) = P0 / (2*LAMBDA) * (A^2/4 - (pos-0.5)^2) + T0
+ *    T(pos) = T0 + (A-pos) * PHI/LAMBDA
  *
- * with LAMBDA the conductivity of the solid and A the size of the cube/square,
- * i.e. 1.
+ * with LAMBDA the conductivity of the solid and A the size of cube/square.
  *
  *          3D                 2D
  *
  *       ///// (1,1,1)      ///// (1,1)
  *       +-------+          +-------+
  *      /'      /|          |       |
- *     +-------+ T0        T0       T0
- *    T0 +.....|.+          |       |
+ *     +-------+ T0        PHI      T0
+ *   PHI +.....|.+          |       |
  *     |,      |/           +-------+
  *     +-------+          (0,0) /////
  * (0,0,0) /////
  */
 
 #define UNKNOWN_TEMPERATURE -1
-#define N 10000 /* #realisations */
+#define N 10000
 
-#define T0 320
+#define PHI 10.0
+#define T0 320.0
 #define LAMBDA 0.1
-#define P0 10
 
 /*******************************************************************************
  * Geometry 3D
@@ -111,18 +109,10 @@ square_get_interface
   *bound = interfaces[iseg];
 }
 
+
 /*******************************************************************************
  * Media
  ******************************************************************************/
-static double
-fluid_get_temperature
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  (void)data;
-  CHK(vtx != NULL);
-  return UNKNOWN_TEMPERATURE;
-}
-
 static double
 solid_get_calorific_capacity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
@@ -177,20 +167,12 @@ solid_get_temperature
   return UNKNOWN_TEMPERATURE;
 }
 
-static double
-solid_get_volumic_power
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  (void)data;
-  CHK(vtx != NULL);
-  return P0;
-}
-
 /*******************************************************************************
  * Interfaces
  ******************************************************************************/
 struct interf {
   double temperature;
+  double phi;
 };
 
 static double
@@ -203,11 +185,12 @@ interface_get_temperature
 }
 
 static double
-interface_get_convection_coef
+interface_get_flux
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
+  const struct interf* interf = sdis_data_cget(data);
   CHK(frag && data);
-  return 0;
+  return interf->phi;
 }
 
 /*******************************************************************************
@@ -224,6 +207,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_interface* interf_adiabatic = NULL;
   struct sdis_interface* interf_T0 = NULL;
+  struct sdis_interface* interf_phi = NULL;
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_estimator* estimator = NULL;
@@ -234,7 +218,6 @@ main(int argc, char** argv)
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
   double pos[3];
-  double x;
   double ref;
   size_t nreals;
   size_t nfails;
@@ -244,8 +227,7 @@ main(int argc, char** argv)
   CHK(sdis_device_create
     (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
 
-  /* Create the fluid medium */
-  fluid_shader.temperature = fluid_get_temperature;
+  /* Create the dummy fluid medium */
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
 
   /* Create the solid_medium */
@@ -255,17 +237,17 @@ main(int argc, char** argv)
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = solid_get_temperature;
-  solid_shader.volumic_power = solid_get_volumic_power;
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
 
   /* Setup the interface shader */
-  interf_shader.convection_coef = interface_get_convection_coef;
   interf_shader.front.temperature = interface_get_temperature;
+  interf_shader.front.flux = interface_get_flux;
 
   /* Create the adiabatic interface */
   CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
   interf_props = sdis_data_get(data);
   interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->phi = 0;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_adiabatic) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -274,8 +256,18 @@ main(int argc, char** argv)
   CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
   interf_props = sdis_data_get(data);
   interf_props->temperature = T0;
+  interf_props->phi = 0; /* Unused */
   CHK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_T0) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* Create the PHI interface */
+  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  interf_props = sdis_data_get(data);
+  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->phi = PHI;
+  CHK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_phi) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Release the media */
@@ -284,7 +276,7 @@ main(int argc, char** argv)
 
   /* Map the interfaces to their box triangles */
   box_interfaces[0] = box_interfaces[1] = interf_adiabatic; /* Front */
-  box_interfaces[2] = box_interfaces[3] = interf_T0;        /* Left */
+  box_interfaces[2] = box_interfaces[3] = interf_phi;        /* Left */
   box_interfaces[4] = box_interfaces[5] = interf_adiabatic; /* Back */
   box_interfaces[6] = box_interfaces[7] = interf_T0;        /* Right */
   box_interfaces[8] = box_interfaces[9] = interf_adiabatic; /* Top */
@@ -292,7 +284,7 @@ main(int argc, char** argv)
 
   /* Map the interfaces to their square segments */
   square_interfaces[0] = interf_adiabatic; /* Bottom */
-  square_interfaces[1] = interf_T0;        /* Left */
+  square_interfaces[1] = interf_phi;       /* Left */
   square_interfaces[2] = interf_adiabatic; /* Top */
   square_interfaces[3] = interf_T0;        /* Right */
 
@@ -309,10 +301,10 @@ main(int argc, char** argv)
   /* Release the interfaces */
   CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
   CHK(sdis_interface_ref_put(interf_T0) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_phi) == RES_OK);
 
   d3_splat(pos, 0.25);
-  x = pos[0] - 0.5;
-  ref = P0 / (2*LAMBDA) * (1.0/4.0 - x*x) + T0;
+  ref = T0 + (1 - pos[0]) * PHI/LAMBDA;
 
   /* Solve in 3D */
   CHK(sdis_solve_probe(box_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
@@ -346,4 +338,5 @@ main(int argc, char** argv)
   mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
+
 }

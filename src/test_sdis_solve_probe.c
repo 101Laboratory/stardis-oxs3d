@@ -191,7 +191,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct context ctx;
   struct fluid* fluid_param;
   struct solid* solid_param;
@@ -206,7 +206,7 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
   CHK(sdis_data_create
@@ -243,9 +243,10 @@ main(int argc, char** argv)
   interface_param->epsilon = 0;
   interface_param->specular_fraction = 0;
   interface_shader.convection_coef = interface_get_convection_coef;
-  interface_shader.temperature = NULL;
-  interface_shader.emissivity = interface_get_emissivity;
-  interface_shader.specular_fraction = interface_get_specular_fraction;
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
+  interface_shader.back.temperature = NULL;
+  interface_shader.back.emissivity = interface_get_emissivity;
+  interface_shader.back.specular_fraction = interface_get_specular_fraction;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);

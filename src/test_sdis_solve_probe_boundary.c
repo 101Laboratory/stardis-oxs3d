@@ -204,22 +204,6 @@ interface_get_convection_coef
   return interf->hc;
 }
 
-static double
-interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  CHK(frag && data);
-  return 0;
-}
-
-static double
-interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  CHK(frag && data);
-  return 0;
-}
-
 /*******************************************************************************
  * Test
  ******************************************************************************/
@@ -240,7 +224,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interf_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
@@ -270,10 +254,11 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
 
   /* Setup the interface shader */
-  interf_shader.temperature = interface_get_temperature;
   interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.emissivity = interface_get_emissivity;
-  interf_shader.specular_fraction = interface_get_specular_fraction;
+  interf_shader.front.temperature = interface_get_temperature;
+  interf_shader.front.emissivity = NULL;
+  interf_shader.front.specular_fraction = NULL;
+  interf_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
 
   /* Create the adiabatic interface */
   CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
@@ -340,13 +325,15 @@ main(int argc, char** argv)
   iprim = 6;
 
   #define SOLVE sdis_solve_probe_boundary
-  CHK(SOLVE(NULL, N, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, 0, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, 12, uv, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, NULL, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, 0, 0, NULL) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_OK);
+  #define F SDIS_FRONT
+  CHK(SOLVE(NULL, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, 0, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, 12, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, NULL, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, -1, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, NULL) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
 
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
@@ -355,10 +342,6 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
-  CHK(sdis_scene_get_boundary_position(NULL, iprim, uv, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(box_scn, 12, uv, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(box_scn, iprim, NULL, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, NULL) == RES_BAD_ARG);
   CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
 
   ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
@@ -370,7 +353,7 @@ main(int argc, char** argv)
 
   uv[0] = 0.5;
   iprim = 3;
-  CHK(SOLVE(square_scn, N, iprim, uv, INF, 1.0, 0, 0, &estimator) == RES_OK);
+  CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
   CHK(nfails + nreals == N);
