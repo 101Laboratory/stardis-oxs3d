@@ -23,6 +23,22 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.3
+
+- Some interface properties become double sided: the temperature, emissivity
+  and specular fraction is defined for each side of the interface. Actually,
+  only the convection coefficient is shared by the 2 sides of the interface.
+  The per side interface properties are grouped into the new `struct
+  sdis_interface_side_shader` data structure.
+- Add the support of fixed flux: the flux is per side interface property.
+  Currently, the flux can be fixed only for the interface sides facing a solid
+  medium.
+- Update the default comportment of the interface shader when a function is not
+  set. 
+- Rename the `SDIS_MEDIUM_<FLUID|SOLID>` constants in `SDIS_<FLUID|SOLID>`.
+- Rename the `enum sdis_side_flag` enumerate in `enum sdis_side` and update its
+  values.
+
 ### Version 0.2
 
 - Add the support of volumic power to solid media: add the `volumic_power`
