@@ -46,8 +46,8 @@ check_interface_shader
   shaders[1] = &shader->back;
 
   /* Fluid<->solid interface */
-  if(type[0] == SDIS_MEDIUM_SOLID
-  && type[1] == SDIS_MEDIUM_SOLID
+  if(type[0] == SDIS_SOLID
+  && type[1] == SDIS_SOLID
   && shader->convection_coef) {
     log_warn(dev,
       "%s: a solid/solid interface can't have a convection coefficient. This "
@@ -56,7 +56,7 @@ check_interface_shader
 
   FOR_EACH(i, 0, 2) {
     switch(type[i]) {
-      case SDIS_MEDIUM_SOLID:
+      case SDIS_SOLID:
         if(shaders[i]->emissivity || shaders[i]->specular_fraction) {
           log_warn(dev,
             "%s: the interface side toward a solid can't have the emissivity "
@@ -64,7 +64,7 @@ check_interface_shader
             "these attributes should be NULL.\n", caller_name);
         }
         break;
-      case SDIS_MEDIUM_FLUID:
+      case SDIS_FLUID:
         if(shaders[i]->flux) {
           log_warn(dev,
             "%s: the interface side toward a fluid can't have a flux property. "
@@ -114,8 +114,8 @@ sdis_interface_create
     goto error;
   }
 
-  if(sdis_medium_get_type(front) == SDIS_MEDIUM_FLUID
-  && sdis_medium_get_type(back) == SDIS_MEDIUM_FLUID) {
+  if(sdis_medium_get_type(front) == SDIS_FLUID
+  && sdis_medium_get_type(back) == SDIS_FLUID) {
     log_err(dev, "%s: invalid fluid<->fluid interface.\n", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;

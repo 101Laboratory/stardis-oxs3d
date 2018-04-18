@@ -255,11 +255,11 @@ create_interface
   if(type_f != type_b) {
     shader.convection_coef = interface_get_convection_coef;
   }
-  if(type_f == SDIS_MEDIUM_FLUID) {
+  if(type_f == SDIS_FLUID) {
     shader.front.emissivity = interface_get_emissivity;
     shader.front.specular_fraction = interface_get_specular_fraction;
   }
-  if(type_b == SDIS_MEDIUM_FLUID) {
+  if(type_b == SDIS_FLUID) {
     shader.back.emissivity = interface_get_emissivity;
     shader.back.specular_fraction = interface_get_specular_fraction;
   }

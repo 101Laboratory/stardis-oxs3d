@@ -378,11 +378,11 @@ create_interface
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.front.temperature = interface_get_temperature;
   interface_shader.back.temperature = interface_get_temperature;
-  if(sdis_medium_get_type(mdm_front) == SDIS_MEDIUM_FLUID) {
+  if(sdis_medium_get_type(mdm_front) == SDIS_FLUID) {
     interface_shader.front.emissivity = interface_get_emissivity;
     interface_shader.front.specular_fraction = interface_get_specular_fraction;
   } 
-  if(sdis_medium_get_type(mdm_back) == SDIS_MEDIUM_FLUID) {
+  if(sdis_medium_get_type(mdm_back) == SDIS_FLUID) {
     interface_shader.back.emissivity = interface_get_emissivity;
     interface_shader.back.specular_fraction = interface_get_specular_fraction;
   }

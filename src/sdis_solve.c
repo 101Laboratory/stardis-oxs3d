@@ -449,7 +449,7 @@ sdis_solve_camera
   res = scene_get_medium(scn, cam->position, &medium);
   if(res != RES_OK) goto error;
 
-  if(medium->type != SDIS_MEDIUM_FLUID) {
+  if(medium->type != SDIS_FLUID) {
     log_err(scn->dev, "%s: the camera position `%g %g %g' is not in a fluid.\n",
       FUNC_NAME, SPLIT3(cam->position));
     res = RES_BAD_ARG;

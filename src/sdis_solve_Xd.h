@@ -364,7 +364,7 @@ XD(fluid_temperature)
   double tmp;
   (void)rng, (void)fp_to_meter, (void)ctx;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
-  ASSERT(rwalk->mdm->type == SDIS_MEDIUM_FLUID);
+  ASSERT(rwalk->mdm->type == SDIS_FLUID);
 
   tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
   if(tmp < 0) {
@@ -406,8 +406,8 @@ XD(solid_solid_boundary_temperature)
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
   solid_front = interface_get_medium(interf, SDIS_FRONT);
   solid_back = interface_get_medium(interf, SDIS_BACK);
-  ASSERT(solid_front->type == SDIS_MEDIUM_SOLID);
-  ASSERT(solid_back->type == SDIS_MEDIUM_SOLID);
+  ASSERT(solid_front->type == SDIS_SOLID);
+  ASSERT(solid_back->type == SDIS_SOLID);
 
   /* Fetch the properties of the media */
   lambda_front = solid_get_thermal_conductivity(solid_front, &rwalk->vtx);
@@ -485,7 +485,7 @@ XD(solid_fluid_boundary_temperature)
   ASSERT(mdm_front->type != mdm_back->type);
 
   frag_fluid = *frag;
-  if(mdm_front->type == SDIS_MEDIUM_SOLID) {
+  if(mdm_front->type == SDIS_SOLID) {
     solid = mdm_front;
     fluid = mdm_back;
     frag_fluid.side = SDIS_BACK;
@@ -576,7 +576,7 @@ XD(boundary_temperature)
   /* Check if the boundary flux is known. Note that actually, only solid media
    * can have a flux as limit condition */
   mdm = interface_get_medium(interf, frag.side);
-  if(sdis_medium_get_type(mdm) == SDIS_MEDIUM_SOLID) {
+  if(sdis_medium_get_type(mdm) == SDIS_SOLID) {
     const double phi = interface_side_get_flux(interf, &frag);
 
     if(phi != SDIS_FLUX_NONE) {
@@ -635,7 +635,7 @@ XD(solid_temperature)
   double position_start[DIM];
   const struct sdis_medium* mdm;
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
-  ASSERT(rwalk->mdm->type == SDIS_MEDIUM_SOLID);
+  ASSERT(rwalk->mdm->type == SDIS_SOLID);
   (void)ctx;
 
   /* Check the random walk consistency */
@@ -821,8 +821,8 @@ XD(probe_realisation)
   ASSERT(medium && position && fp_to_meter > 0 && weight && time >= 0);
 
   switch(medium->type) {
-    case SDIS_MEDIUM_FLUID: T.func = XD(fluid_temperature); break;
-    case SDIS_MEDIUM_SOLID: T.func = XD(solid_temperature); break;
+    case SDIS_FLUID: T.func = XD(fluid_temperature); break;
+    case SDIS_SOLID: T.func = XD(solid_temperature); break;
     default: FATAL("Unreachable code\n"); break;
   }
 
@@ -930,7 +930,7 @@ XD(ray_realisation)
   float dir[3];
   res_T res = RES_OK;
   ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight);
-  ASSERT(medium && medium->type == SDIS_MEDIUM_FLUID);
+  ASSERT(medium && medium->type == SDIS_FLUID);
 
   dX(set)(rwalk.vtx.P, position);
   rwalk.vtx.time = time;

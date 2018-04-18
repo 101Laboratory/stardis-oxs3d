@@ -70,8 +70,8 @@ enum sdis_side {
 };
 
 enum sdis_medium_type {
-  SDIS_MEDIUM_FLUID,
-  SDIS_MEDIUM_SOLID,
+  SDIS_FLUID,
+  SDIS_SOLID,
   SDIS_MEDIUM_TYPES_COUNT__
 };
 
