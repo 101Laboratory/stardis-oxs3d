@@ -30,11 +30,19 @@ variable the install directories of its dependencies.
   only the convection coefficient is shared by the 2 sides of the interface.
   The per side interface properties are grouped into the new `struct
   sdis_interface_side_shader` data structure.
-- Add the support of fixed flux: the flux is per side interface property.
-  Currently, the flux can be fixed only for the interface sides facing a solid
+- Add the support of fixed fluxes: the flux is a per side interface property.
+  Currently, the flux is handled only for the interface sides facing a solid
   medium.
+- Add the `sdis_scene_boundary_project_pos` function that computes the
+  parametric coordinates of a world space position projected onto a given
+  primitive with respect to its normal. If the projection lies outside the
+  primitive, its parametric coordinates are wrapped against its boundaries in
+  order to ensure that they are valid coordinates into the primitive. Actually,
+  this function was mainly added to help in the definition of the probe
+  position onto a boundary as expected by the
+  `sdis_solve_probe_boundary` function.
 - Update the default comportment of the interface shader when a function is not
-  set. 
+  set.
 - Rename the `SDIS_MEDIUM_<FLUID|SOLID>` constants in `SDIS_<FLUID|SOLID>`.
 - Rename the `enum sdis_side_flag` enumerate in `enum sdis_side` and update its
   values.
