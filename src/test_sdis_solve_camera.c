@@ -381,7 +381,7 @@ create_interface
   if(sdis_medium_get_type(mdm_front) == SDIS_FLUID) {
     interface_shader.front.emissivity = interface_get_emissivity;
     interface_shader.front.specular_fraction = interface_get_specular_fraction;
-  } 
+  }
   if(sdis_medium_get_type(mdm_back) == SDIS_FLUID) {
     interface_shader.back.emissivity = interface_get_emissivity;
     interface_shader.back.specular_fraction = interface_get_specular_fraction;

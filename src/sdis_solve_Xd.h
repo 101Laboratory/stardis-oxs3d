@@ -784,13 +784,13 @@ XD(compute_temperature)
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
 
   do {
-    res = T->func(scn, fp_to_meter, ctx, rwalk, rng, T);
-    if(res != RES_OK) goto error;
-
 #ifndef NDEBUG
     sa_push(stack, *T);
     ++istack;
 #endif
+    res = T->func(scn, fp_to_meter, ctx, rwalk, rng, T);
+    if(res != RES_OK) goto error;
+
   } while(!T->done);
 
 exit:
