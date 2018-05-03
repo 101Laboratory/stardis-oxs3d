@@ -511,7 +511,7 @@ sdis_solve_camera
     tile_org[0] *= TILE_SIZE;
     tile_org[1] *= TILE_SIZE;
     tile_sz[0] = MMIN(TILE_SIZE, width - tile_org[0]);
-    tile_sz[1] = MMIN(TILE_SIZE, width - tile_org[1]);
+    tile_sz[1] = MMIN(TILE_SIZE, height - tile_org[1]);
 
     /* Fetch the accumulations buffer */
     accums = darray_accum_data_get(tiles+ithread);
