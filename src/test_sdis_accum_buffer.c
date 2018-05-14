@@ -60,7 +60,7 @@ main(int argc, char** argv)
   accums_tmp = MEM_CALLOC
     (&allocator, layout.width*layout.height, sizeof(struct sdis_accum));
   CHK(accums_tmp != NULL);
-  memcpy(accums_tmp, accums_tmp, 
+  memmove(accums_tmp, accums_tmp, 
     layout.width*layout.height*sizeof(struct sdis_accum));
   MEM_RM(&allocator, accums_tmp);
 
