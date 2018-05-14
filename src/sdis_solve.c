@@ -88,7 +88,9 @@ solve_pixel
       sum_weights += w;
       sum_weights_sqr += w*w;
       ++N;
-    } else if(res != RES_BAD_OP) {
+    } else if(res == RES_BAD_OP) {
+      res = RES_OK;
+    } else {
       goto error;
     }
   }
