@@ -17,6 +17,7 @@
 #define SDIS_H
 
 #include <rsys/rsys.h>
+#include <float.h>
 
 /* Library symbol management */
 #if defined(SDIS_SHARED_BUILD)
