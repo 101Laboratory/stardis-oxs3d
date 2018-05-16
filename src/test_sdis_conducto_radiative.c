@@ -179,7 +179,7 @@ solid_get_delta_boundary
 /*******************************************************************************
  * Interface
  ******************************************************************************/
-struct interface {
+struct interfac {
   double temperature;
   double convection_coef;
   double emissivity;
@@ -191,7 +191,7 @@ interface_get_temperature
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->temperature;
+  return ((const struct interfac*)sdis_data_cget(data))->temperature;
 }
 
 static double
@@ -199,7 +199,7 @@ interface_get_convection_coef
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->convection_coef;
+  return ((const struct interfac*)sdis_data_cget(data))->convection_coef;
 }
 
 static double
@@ -207,7 +207,7 @@ interface_get_emissivity
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->emissivity;
+  return ((const struct interfac*)sdis_data_cget(data))->emissivity;
 }
 
 static double
@@ -215,7 +215,7 @@ interface_get_specular_fraction
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->specular_fraction;
+  return ((const struct interfac*)sdis_data_cget(data))->specular_fraction;
 }
 
 /*******************************************************************************
@@ -226,7 +226,7 @@ create_interface
   (struct sdis_device* dev,
    struct sdis_medium* front,
    struct sdis_medium* back,
-   const struct interface* interf,
+   const struct interfac* interf,
    struct sdis_interface** out_interf)
 {
   struct sdis_interface_shader shader = SDIS_INTERFACE_SHADER_NULL;
@@ -248,9 +248,9 @@ create_interface
     shader.back.specular_fraction = interface_get_specular_fraction;
   }
 
-  CHK(sdis_data_create(dev, sizeof(struct interface), ALIGNOF(struct interface),
+  CHK(sdis_data_create(dev, sizeof(struct interfac), ALIGNOF(struct interfac),
     NULL, &data) == RES_OK);
-  *((struct interface*)sdis_data_get(data)) = *interf;
+  *((struct interfac*)sdis_data_get(data)) = *interf;
 
   CHK(sdis_interface_create(dev, front, back, &shader, data, out_interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -263,7 +263,7 @@ int
 main(int argc, char** argv)
 {
   struct mem_allocator allocator;
-  struct interface interf;
+  struct interfac interf;
   struct geometry geom;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
