@@ -75,14 +75,23 @@ rcmake_prepend_path(SDIS_FILES_INC ${SDIS_SOURCE_DIR})
 rcmake_prepend_path(SDIS_FILES_INC_API ${SDIS_SOURCE_DIR})
 rcmake_prepend_path(SDIS_FILES_DOC ${PROJECT_SOURCE_DIR}/../)
 
+if(CMAKE_COMPILER_IS_GNUCC)
+  set(MATH_LIB m)
+endif()
+
+if(MSVC)
+  ### disable verbose warnings:
+  # warning C4127: conditional expression is constant
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4127")
+  # warning C4938: Floating point reduction variable may cause inconsistent results under /fp:strict or #pragma fenv_access
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4938")
+endif()
+
 add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star2D Star3D StarSP m)
-if(CMAKE_COMPILER_IS_GNUCC)
-  target_link_libraries(sdis m)
-endif()
+target_link_libraries(sdis RSys Star2D Star3D StarSP ${MATH_LIB})
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD
@@ -92,7 +101,7 @@ set_target_properties(sdis PROPERTIES
 rcmake_copy_runtime_libraries(sdis)
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS} -lm")
+  set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif()
 
 rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
@@ -141,9 +150,7 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
-  if(CMAKE_COMPILER_IS_GNUCC)
-    target_link_libraries(test_sdis_solve_probe3_2d m)
-  endif()
+  target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
 endif()
 
 ################################################################################
