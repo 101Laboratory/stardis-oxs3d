@@ -17,27 +17,38 @@
 #include "test_sdis_utils.h"
 #include <rsys/math.h>
 
+#define Pw 10000.0
+#define LAMBDA 10.0
+#define LAMBDA1 1.0
+#define LAMBDA2 LAMBDA1
+#define T1 373.15
+#define T2 273.15
+#define H1 5.0
+#define H2 10.0
+
 static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
- -0.5,-1.0,
- -0.5, 1.0,
-  0.5, 1.0,
-  0.5,-1.0,
- -0.1, 0.4,
- -0.1, 0.6,
-  0.1, 0.6,
-  0.1, 0.4
+ -0.5, 0.0,
+ -0.5, 1.4,
+ -0.5, 1.6,
+ -0.5, 2.0,
+  0.5, 2.0,
+  0.5, 1.6,
+  0.5, 1.4,
+  0.5, 0.0
 };
 static const size_t nvertices = sizeof(vertices)/sizeof(double[2]);
 
-static const size_t indices[8/*#segments*/*2/*#indices per segment*/]= {
-  0, 1, /* Rectangle left */
-  1, 2, /* Rectangle top */
-  2, 3, /* Rectangle right */
-  3, 0, /* Rectangle bottom */
-  4, 5, /* Square left */
-  5, 6, /* Square top */
-  6, 7, /* Square right */
-  7, 4  /* Square bottom */
+static const size_t indices[10/*#segments*/*2/*#indices per segment*/]= {
+  0, 1,
+  1, 2,
+  2, 3,
+  3, 4,
+  4, 5,
+  5, 6,
+  6, 7,
+  7, 0,
+  6, 1,
+  2, 5
 };
 static const size_t nsegments = sizeof(indices)/sizeof(size_t[2]);
 
@@ -78,8 +89,8 @@ struct solid {
   double lambda;
   double rho;
   double delta;
-  double P;
-  double T;
+  double volumic_power;
+  double temperature;
 };
 
 static double
@@ -127,7 +138,7 @@ solid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->T;
+  return ((const struct solid*)sdis_data_cget(data))->temperature;
 }
 
 static double
@@ -135,14 +146,15 @@ solid_get_volumic_power
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->P;
+  return ((const struct solid*)sdis_data_cget(data))->volumic_power;
 }
 
 /*******************************************************************************
  * Fluid medium
  ******************************************************************************/
 struct fluid {
-  double T0, T1;
+  double temperature_lower;
+  double temperature_upper;
 };
 
 static double
@@ -152,7 +164,7 @@ fluid_get_temperature
   const struct fluid* fluid;
   CHK(data != NULL && vtx != NULL);
   fluid = sdis_data_cget(data);
-  return vtx->P[1] < 0 ? fluid->T0 : fluid->T1;
+  return vtx->P[1] < 0 ? fluid->temperature_lower : fluid->temperature_upper;
 }
 
 
@@ -195,10 +207,11 @@ main(int argc, char** argv)
   struct sdis_interface* interf_solid0_solid1 = NULL;
   struct sdis_interface* interf_solid0_T0 = NULL;
   struct sdis_interface* interf_solid0_T1 = NULL;
-  struct sdis_interface* interfaces[8 /*#segment*/];
+  struct sdis_interface* interf_solid1_adiabatic = NULL;
+  struct sdis_interface* interfaces[10/*#segment*/];
   struct sdis_mc T = SDIS_MC_NULL;
   double pos[2];
-  const size_t N = 10000;
+  const size_t N = 100000;
   size_t i;
   (void)argc, (void)argv;
 
@@ -213,8 +226,8 @@ main(int argc, char** argv)
   CHK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
   fluid_param = sdis_data_get(data);
-  fluid_param->T0 = 273.15;
-  fluid_param->T1 = 373.15;
+  fluid_param->temperature_upper = T1;
+  fluid_param->temperature_lower = T2;
   CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
@@ -233,10 +246,10 @@ main(int argc, char** argv)
   solid_param = sdis_data_get(data);
   solid_param->cp = 500000;
   solid_param->rho = 1000;
-  solid_param->lambda = 1;
+  solid_param->lambda = LAMBDA1;
   solid_param->delta = 0.05;
-  solid_param->P = SDIS_VOLUMIC_POWER_NONE;
-  solid_param->T = -1;
+  solid_param->volumic_power = SDIS_VOLUMIC_POWER_NONE;
+  solid_param->temperature = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid0) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
@@ -246,10 +259,10 @@ main(int argc, char** argv)
   solid_param = sdis_data_get(data);
   solid_param->cp = 500000;
   solid_param->rho = 1000;
-  solid_param->lambda = 10;
+  solid_param->lambda = LAMBDA;
   solid_param->delta = 0.01;
-  solid_param->P = 10000;
-  solid_param->T = -1;
+  solid_param->volumic_power = Pw;
+  solid_param->temperature = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid1) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
@@ -276,7 +289,7 @@ main(int argc, char** argv)
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
-  interf_param->h = 10;
+  interf_param->h = H2;
   CHK(sdis_interface_create(dev, solid0, fluid, &interf_shader, data,
     &interf_solid0_T0) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -285,9 +298,18 @@ main(int argc, char** argv)
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
-  interf_param->h = 5;
+  interf_param->h = H1;
   CHK(sdis_interface_create(dev, solid0, fluid, &interf_shader, data,
     &interf_solid0_T1) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* Create the solid1 adiabatic interface */
+  CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data) == RES_OK);
+  interf_param = sdis_data_get(data);
+  interf_param->h = 0;
+  CHK(sdis_interface_create(dev, solid1, fluid, &interf_shader, data,
+    &interf_solid1_adiabatic) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Release the media */
@@ -297,22 +319,24 @@ main(int argc, char** argv)
 
   /* Map the interfaces to their square segments */
   interfaces[0] = interf_adiabatic;
-  interfaces[1] = interf_solid0_T1;
+  interfaces[1] = interf_solid1_adiabatic;
   interfaces[2] = interf_adiabatic;
-  interfaces[3] = interf_solid0_T0;
-  interfaces[4] = interf_solid0_solid1;
-  interfaces[5] = interf_solid0_solid1;
-  interfaces[6] = interf_solid0_solid1;
-  interfaces[7] = interf_solid0_solid1;
+  interfaces[3] = interf_solid0_T1;
+  interfaces[4] = interf_adiabatic;
+  interfaces[5] = interf_solid1_adiabatic;
+  interfaces[6] = interf_adiabatic;
+  interfaces[7] = interf_solid0_T0;
+  interfaces[8] = interf_solid0_solid1;
+  interfaces[9] = interf_solid0_solid1;
+
+#if 0
+  dump_segments(stdout, vertices, nvertices, indices, nsegments);
+  exit(0);
+#endif
 
   /* Create the scene */
   CHK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
     nvertices, get_position, interfaces, &scn) == RES_OK);
-
-#if 1
-  dump_segments(stdout, vertices, nvertices, indices, nsegments);
-  exit(0);
-#endif
 
   /* Release the interfaces */
   CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
@@ -321,11 +345,37 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf_solid0_solid1) == RES_OK);
 
   FOR_EACH(i, 0, 8) {
+    const double l = 0.2; /* Size of the middle slab */
+    const double l1 = 0.4; /* Size of the upper slab */
+    const double l2 = 1.4; /* Size of the lower slab */
+    double ta, tb;
+    double tp1, tp2;
+    double Tref;
+
     pos[0] = 0;
-    pos[1] = 0.85 - (double)i*0.2;;
+    pos[1] = 1.85 - (double)i*0.2;
+
+    ta = 1199.5651;
+    tb = 1207.1122;
+    tp1 = 648.6217;
+    tp2 = 335.4141;
+
+    if(pos[1] > 0 && pos[1] < l2) { /* Lower slab */
+      Tref = tp2 + (tb - tp2) * pos[1] / l2;
+    } else if(pos[1] > l2 && pos[1] < l2 + l) { /* Middle slab */
+      Tref = (ta + tb) / 2
+           + (ta - tb)/l * (pos[1] - (l2+l/2))
+           + Pw * (l*l/4.0 - pow((pos[1] - (l2+l/2)), 2)) / (2*LAMBDA);
+    } else if(pos[1] > l2 + l && pos[1] < l2 + l1 + l) {
+      Tref = ta + (tp1 - ta) / l1 * (pos[1] - (l+l2));
+    } else {
+      FATAL("Unreachable code.\n");
+    }
+
     CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
     CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-    printf("Temperature at (%g %g) = %g +/- %g\n", SPLIT2(pos), T.E-273.15, T.SE);
+    printf("Temperature at (%g %g) = %g ~ %g +/- %g\n",
+      SPLIT2(pos), Tref, T.E, T.SE);
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   }
 

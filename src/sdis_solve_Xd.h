@@ -394,6 +394,7 @@ XD(solid_solid_boundary_temperature)
   double delta_front_boundary, delta_back_boundary;
   double delta_front_boundary_meter, delta_back_boundary_meter;
   double delta_boundary;
+  double power;
   double proba;
   double tmp;
   double r;
@@ -440,9 +441,20 @@ XD(solid_solid_boundary_temperature)
   SXD(scene_view_trace_ray
     (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
   if(!SXD_HIT_NONE(&rwalk->hit)) delta_boundary = rwalk->hit.distance * 0.5;
-  XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
+
+  /* Add the volumic power */
+  power = solid_get_volumic_power(rwalk->mdm, &rwalk->vtx);
+  if(power != SDIS_VOLUMIC_POWER_NONE) {
+    const double delta_in_meter = delta_boundary * fp_to_meter;
+    double lambda;
+    lambda = solid_get_thermal_conductivity(rwalk->mdm, &rwalk->vtx);
+    tmp = power * delta_in_meter * delta_in_meter / (2.0 * lambda);
+    T->value += tmp;
+  }
 
   /* Switch in solid random walk */
+  XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
+
   T->func = XD(solid_temperature);
   rwalk->hit = SXD_HIT_NULL;
   rwalk->hit_side = SDIS_SIDE_NULL__;
