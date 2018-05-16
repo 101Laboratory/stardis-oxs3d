@@ -176,13 +176,14 @@ sdis_solve_probe
   struct ssp_rng** rngs = NULL;
   double weight = 0;
   double sqr_weight = 0;
-  size_t irealisation = 0;
+  const int64_t rcount = (int64_t)nrealisations;
+  int64_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || !position || time < 0 || fp_to_meter <= 0
-  || Tref < 0 || !out_estimator) {
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !position
+    || time < 0 || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -215,7 +216,7 @@ sdis_solve_probe
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
-  for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
+  for(irealisation = 0; irealisation < rcount; ++irealisation) {
     res_T res_local;
     double w;
     const int ithread = omp_get_thread_num();
@@ -286,13 +287,15 @@ sdis_solve_probe_boundary
   struct ssp_rng** rngs = NULL;
   double weight = 0;
   double sqr_weight = 0;
-  size_t irealisation = 0;
+  const int64_t rcount = (int64_t)nrealisations;
+  int64_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
   res_T res = RES_OK;
 
-  if(!scn || !nrealisations || !uv || time < 0 || fp_to_meter <= 0
-  || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK) || !out_estimator) {
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
+    || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
+    || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -356,7 +359,7 @@ sdis_solve_probe_boundary
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
-  for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
+  for(irealisation = 0; irealisation < rcount; ++irealisation) {
     res_T res_local;
     double w;
     const int ithread = omp_get_thread_num();
