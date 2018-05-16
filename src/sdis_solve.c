@@ -291,7 +291,7 @@ sdis_solve_probe_boundary
   int64_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
-  res_T res = RES_OK;
+  ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
     || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
@@ -403,7 +403,7 @@ exit:
   }
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
-  return res;
+  return (res_T)res;
 error:
   if(estimator) {
     SDIS(estimator_ref_put(estimator));
