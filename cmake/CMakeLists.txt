@@ -140,6 +140,7 @@ if(NOT NO_TEST)
 
   build_test(test_sdis_volumic_power2_2d)
   build_test(test_sdis_volumic_power3_2d)
+  build_test(test_sdis_volumic_power4_2d)
 
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_camera Star3DUT)
