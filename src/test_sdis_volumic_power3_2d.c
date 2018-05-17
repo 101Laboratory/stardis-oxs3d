@@ -27,14 +27,14 @@
 #define H2 10.0
 
 static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
- -0.5, 0.0,
- -0.5, 1.4,
- -0.5, 1.6,
- -0.5, 2.0,
-  0.5, 2.0,
-  0.5, 1.6,
-  0.5, 1.4,
-  0.5, 0.0
+ -100000.5, 0.0,
+ -100000.5, 1.4,
+ -100000.5, 1.6,
+ -100000.5, 2.0,
+  100000.5, 2.0,
+  100000.5, 1.6,
+  100000.5, 1.4,
+  100000.5, 0.0
 };
 static const size_t nvertices = sizeof(vertices)/sizeof(double[2]);
 
@@ -164,7 +164,7 @@ fluid_get_temperature
   const struct fluid* fluid;
   CHK(data != NULL && vtx != NULL);
   fluid = sdis_data_cget(data);
-  return vtx->P[1] < 0 ? fluid->temperature_lower : fluid->temperature_upper;
+  return vtx->P[1] < 1 ? fluid->temperature_lower : fluid->temperature_upper;
 }
 
 
@@ -173,6 +173,7 @@ fluid_get_temperature
  ******************************************************************************/
 struct interf {
   double h;
+  double temperature;
 };
 
 static double
@@ -181,6 +182,14 @@ interface_get_convection_coef
 {
   CHK(frag && data);
   return ((const struct interf*)sdis_data_cget(data))->h;
+}
+
+static double
+interface_get_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(frag && data);
+  return ((const struct interf*)sdis_data_cget(data))->temperature;
 }
 
 /*******************************************************************************
@@ -204,14 +213,15 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* interf_adiabatic = NULL;
-  struct sdis_interface* interf_solid0_solid1 = NULL;
-  struct sdis_interface* interf_solid0_T0 = NULL;
-  struct sdis_interface* interf_solid0_T1 = NULL;
+  struct sdis_interface* interf_solid0_solid1_upp = NULL;
+  struct sdis_interface* interf_solid0_solid1_low = NULL;
+  struct sdis_interface* interf_solid0_upp = NULL;
+  struct sdis_interface* interf_solid0_low = NULL;
   struct sdis_interface* interf_solid1_adiabatic = NULL;
   struct sdis_interface* interfaces[10/*#segment*/];
   struct sdis_mc T = SDIS_MC_NULL;
   double pos[2];
-  const size_t N = 100000;
+  const size_t N = 10000;
   size_t i;
   (void)argc, (void)argv;
 
@@ -247,7 +257,7 @@ main(int argc, char** argv)
   solid_param->cp = 500000;
   solid_param->rho = 1000;
   solid_param->lambda = LAMBDA1;
-  solid_param->delta = 0.05;
+  solid_param->delta = 0.02;
   solid_param->volumic_power = SDIS_VOLUMIC_POWER_NONE;
   solid_param->temperature = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid0) == RES_OK);
@@ -266,32 +276,48 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid1) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
-  /* Setup the interface shader */
-  interf_shader.convection_coef = interface_get_convection_coef;
+  interf_shader.front.temperature = interface_get_temperature;
 
-  /* Create the solid0/solid1 interface */
+  /* Create the solid0/solid1 upper interface */
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
-  CHK(sdis_interface_create(dev, solid1, solid0, &SDIS_INTERFACE_SHADER_NULL,
-    NULL, &interf_solid0_solid1) == RES_OK);
+  interf_param = sdis_data_get(data);
+  interf_param->temperature = -1/*1199.5651*/;
+  CHK(sdis_interface_create(dev, solid1, solid0, &interf_shader,
+    data, &interf_solid0_solid1_upp) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* Create the solid0/solid1 lower interface */
+  CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data) == RES_OK);
+  interf_param = sdis_data_get(data);
+  interf_param->temperature = -1/*1207.1122*/;
+  CHK(sdis_interface_create(dev, solid1, solid0, &interf_shader,
+    data, &interf_solid0_solid1_low) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* Setup the interface shader */
+  interf_shader.convection_coef = interface_get_convection_coef;
+  interf_shader.front.temperature = interface_get_temperature;
 
   /* Create the adiabatic interface */
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
   interf_param->h = 0;
+  interf_param->temperature = -1;
   CHK(sdis_interface_create(dev, solid0, fluid, &interf_shader, data,
     &interf_adiabatic) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
-  /* Create the solid0 T0 interace */
+  /* Create the solid0 fluid lower interface */
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
   interf_param->h = H2;
+  interf_param->temperature = -1/*335.4141*/;
   CHK(sdis_interface_create(dev, solid0, fluid, &interf_shader, data,
-    &interf_solid0_T0) == RES_OK);
+    &interf_solid0_low) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the solid0 T1 interace */
@@ -299,8 +325,9 @@ main(int argc, char** argv)
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
   interf_param->h = H1;
+  interf_param->temperature = -1/*648.6217*/;
   CHK(sdis_interface_create(dev, solid0, fluid, &interf_shader, data,
-    &interf_solid0_T1) == RES_OK);
+    &interf_solid0_upp) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the solid1 adiabatic interface */
@@ -308,6 +335,7 @@ main(int argc, char** argv)
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
   interf_param->h = 0;
+  interf_param->temperature = -1;
   CHK(sdis_interface_create(dev, solid1, fluid, &interf_shader, data,
     &interf_solid1_adiabatic) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -321,13 +349,13 @@ main(int argc, char** argv)
   interfaces[0] = interf_adiabatic;
   interfaces[1] = interf_solid1_adiabatic;
   interfaces[2] = interf_adiabatic;
-  interfaces[3] = interf_solid0_T1;
+  interfaces[3] = interf_solid0_upp;
   interfaces[4] = interf_adiabatic;
   interfaces[5] = interf_solid1_adiabatic;
   interfaces[6] = interf_adiabatic;
-  interfaces[7] = interf_solid0_T0;
-  interfaces[8] = interf_solid0_solid1;
-  interfaces[9] = interf_solid0_solid1;
+  interfaces[7] = interf_solid0_low;
+  interfaces[8] = interf_solid0_solid1_low;
+  interfaces[9] = interf_solid0_solid1_upp;
 
 #if 0
   dump_segments(stdout, vertices, nvertices, indices, nsegments);
@@ -340,9 +368,11 @@ main(int argc, char** argv)
 
   /* Release the interfaces */
   CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_solid0_T0) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_solid0_T1) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_solid0_solid1) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid0_upp) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid0_low) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid1_adiabatic) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid0_solid1_upp) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid0_solid1_low) == RES_OK);
 
   FOR_EACH(i, 0, 8) {
     const double l = 0.2; /* Size of the middle slab */
@@ -363,9 +393,10 @@ main(int argc, char** argv)
     if(pos[1] > 0 && pos[1] < l2) { /* Lower slab */
       Tref = tp2 + (tb - tp2) * pos[1] / l2;
     } else if(pos[1] > l2 && pos[1] < l2 + l) { /* Middle slab */
-      Tref = (ta + tb) / 2
-           + (ta - tb)/l * (pos[1] - (l2+l/2))
-           + Pw * (l*l/4.0 - pow((pos[1] - (l2+l/2)), 2)) / (2*LAMBDA);
+      Tref =
+        (ta + tb) / 2
+      + (ta - tb)/l * (pos[1] - (l2+l/2))
+      + Pw * (l*l/4.0 - pow((pos[1] - (l2+l/2)), 2)) / (2*LAMBDA);
     } else if(pos[1] > l2 + l && pos[1] < l2 + l1 + l) {
       Tref = ta + (tp1 - ta) / l1 * (pos[1] - (l+l2));
     } else {
