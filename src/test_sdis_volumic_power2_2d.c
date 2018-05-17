@@ -234,7 +234,7 @@ main(int argc, char** argv)
   solid_param->cp = 500000;
   solid_param->rho = 1000;
   solid_param->lambda = 1;
-  solid_param->delta = 0.05;
+  solid_param->delta = 0.02;
   solid_param->P = SDIS_VOLUMIC_POWER_NONE;
   solid_param->T = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid0) == RES_OK);
@@ -309,7 +309,7 @@ main(int argc, char** argv)
   CHK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
     nvertices, get_position, interfaces, &scn) == RES_OK);
 
-#if 1
+#if 0
   dump_segments(stdout, vertices, nvertices, indices, nsegments);
   exit(0);
 #endif
