@@ -378,6 +378,50 @@ XD(fluid_temperature)
 }
 
 static void
+XD(reinject_in_solid)
+  (const struct sdis_scene* scn,
+   const float fp_to_meter,
+   struct XD(rwalk)* rwalk,
+   const double delta_in,
+   const float dir[DIM],
+   struct XD(temperature)* T,
+   const int handle_volumic_power)
+{
+  float pos[DIM];
+  float range[2];
+  double power;
+  double delta = delta_in;
+  ASSERT(scn && delta > 0 && rwalk->mdm && rwalk->mdm->type == SDIS_SOLID && T);
+  ASSERT(fX(is_normalized)(dir));
+
+  fX_set_dX(pos, rwalk->vtx.P);
+  f2(range, 0, (float)delta*RAY_RANGE_MAX_SCALE);
+
+  /* "Reinject" the random walk into the solid */
+  SXD(scene_view_trace_ray
+    (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
+  if(!SXD_HIT_NONE(&rwalk->hit)) delta = rwalk->hit.distance * 0.5;
+
+  /* Add the volumic power */
+  if(handle_volumic_power) {
+    power = solid_get_volumic_power(rwalk->mdm, &rwalk->vtx);
+    if(power != SDIS_VOLUMIC_POWER_NONE) {
+      const double delta_in_meter = delta * fp_to_meter;
+      const double lambda = solid_get_thermal_conductivity(rwalk->mdm, &rwalk->vtx);
+      const double tmp = power * delta_in_meter * delta_in_meter / (2.0 * lambda);
+      T->value += tmp;
+    }
+  }
+
+  XD(move_pos)(rwalk->vtx.P, dir, (float)delta);
+
+  /* Switch in solid random walk */
+  T->func = XD(solid_temperature);
+  rwalk->hit = SXD_HIT_NULL;
+  rwalk->hit_side = SDIS_SIDE_NULL__;
+}
+
+static void
 XD(solid_solid_boundary_temperature)
   (const struct sdis_scene* scn,
    const double fp_to_meter,
@@ -394,11 +438,10 @@ XD(solid_solid_boundary_temperature)
   double delta_front_boundary, delta_back_boundary;
   double delta_front_boundary_meter, delta_back_boundary_meter;
   double delta_boundary;
-  double power;
   double proba;
   double tmp;
   double r;
-  float pos[DIM], dir[DIM], range[2];
+  float dir[DIM];
   ASSERT(scn && fp_to_meter > 0 && ctx && frag && rwalk && rng && T);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)frag, (void)ctx;
@@ -436,28 +479,7 @@ XD(solid_solid_boundary_temperature)
   }
 
   /* "Reinject" the path into the solid along the surface normal. */
-  fX_set_dX(pos, rwalk->vtx.P);
-  range[0] = 0, range[1] = (float)delta_boundary*RAY_RANGE_MAX_SCALE;
-  SXD(scene_view_trace_ray
-    (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
-  if(!SXD_HIT_NONE(&rwalk->hit)) delta_boundary = rwalk->hit.distance * 0.5;
-
-  /* Add the volumic power */
-  power = solid_get_volumic_power(rwalk->mdm, &rwalk->vtx);
-  if(power != SDIS_VOLUMIC_POWER_NONE) {
-    const double delta_in_meter = delta_boundary * fp_to_meter;
-    double lambda;
-    lambda = solid_get_thermal_conductivity(rwalk->mdm, &rwalk->vtx);
-    tmp = power * delta_in_meter * delta_in_meter / (2.0 * lambda);
-    T->value += tmp;
-  }
-
-  /* Switch in solid random walk */
-  XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
-
-  T->func = XD(solid_temperature);
-  rwalk->hit = SXD_HIT_NULL;
-  rwalk->hit_side = SDIS_SIDE_NULL__;
+  XD(reinject_in_solid)(scn, 1, rwalk, delta_boundary, dir, T, 1);
 }
 
 static void
@@ -485,7 +507,7 @@ XD(solid_fluid_boundary_temperature)
   double delta_boundary;
   double r;
   double tmp;
-  float dir[DIM], pos[DIM], range[2];
+  float dir[DIM];
 
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T && ctx);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
@@ -538,18 +560,8 @@ XD(solid_fluid_boundary_temperature)
     fX(normalize)(dir, rwalk->hit.normal);
     if(solid == mdm_back) fX(minus)(dir, dir);
 
-    /* "Reinject" the random walk into the solid */
-    fX_set_dX(pos, rwalk->vtx.P);
-    range[0] = 0, range[1] = (float)delta_boundary*RAY_RANGE_MAX_SCALE;
-    SXD(scene_view_trace_ray
-      (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
-    if(!SXD_HIT_NONE(&rwalk->hit)) delta_boundary = rwalk->hit.distance * 0.5;
-    XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
-
-    /* Switch in solid random walk */
-    T->func = XD(solid_temperature);
-    rwalk->hit = SXD_HIT_NULL;
-    rwalk->hit_side = SDIS_SIDE_NULL__;
+    /* "Reinject" the path into the solid along the surface normal. */
+    XD(reinject_in_solid)(scn, 1, rwalk, delta_boundary, dir, T, 1);
   }
 }
 
