@@ -25,6 +25,29 @@
 #define Delta (1.0/20.0)
 #define Nrealisations 10000
 
+/*
+ * The 2D scene is a solid slabs stretched along the X dimension to simulate a
+ * 1D case. The slab has a volumic power and has a convective exchange with the
+ * surrounding fluid whose temperature is fixed to Tfluid.
+ *
+ *
+ *           _\  TFluid
+ *          / /
+ *          \__/
+ *
+ * ... -----Hboundary----- ...
+ *
+ *        Lambda, Power
+ *
+ * ... -----Hboundary----- ...
+ *
+ *           _\  TFluid
+ *          / /
+ *          \__/
+ *
+ */
+
+
 static const double vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
  -10000.5,-0.5,
  -10000.5, 0.5,
@@ -301,8 +324,8 @@ main(int argc, char** argv)
   } else {
     Tinterf = Power*L / (2*Hboundary) + Tfluid;
   }
-  Tref = 
-    Tinterf 
+  Tref =
+    Tinterf
   + Power / (2*Lambda) * ((L*L)/4.0 - pos[1]*pos[1]);
 
   CHK(sdis_solve_probe(scn, Nrealisations, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);

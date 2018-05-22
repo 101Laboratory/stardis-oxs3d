@@ -26,6 +26,31 @@
 #define H1 5.0
 #define H2 10.0
 
+/*
+ * The 2D scene is composed of 3 stacked solid slabs whose middle slab has a
+ * volumic power. The +/-X sides of the slabs are stretched far away to
+ * simulate a 1D case. The upper and lower bounds of the "sandwich" has a
+ * convective exchange with the surrounding fluid whose temperature is known.
+ *
+ *           _\  T1
+ *          / /
+ *          \__/
+ * ... -----H1------ ...
+ *       LAMBDA1
+ *
+ * ... ------------- ...
+ *       LAMBDA, Pw
+ * ... ------------- ...
+ *
+ *       LAMBDA2
+ *
+ *
+ * ... -----H2------ ...
+ *            _\  T2
+ *           / /
+ *           \__/
+ */
+
 static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
  -100000.5, 0.0,
  -100000.5, 1.4,
