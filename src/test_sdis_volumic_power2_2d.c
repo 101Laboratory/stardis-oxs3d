@@ -17,21 +17,27 @@
 #include "test_sdis_utils.h"
 #include <rsys/math.h>
 
-#define Tboundary1 373.15
-#define Tboundary2 273.15
+#define N 10000 /* #realisations */
+#define NONE -1
 
 /* H delta T */
+/*#define Tboundary1 NONE
+#define Tboundary2 NONE*/
 /*#define DELTA 0.01*/ /* 324.258 +/- 2.52665; #failures: 0 */
 /*#define DELTA 0.005*/ /* 314.234 +/- 2.48794; #failures: 4 */
 /*#define DELTA 0.0025*/ /* 306.579 +/- 2.36081; #failures: 26 */
 /*#define DELTA 0.00125 */ /* 297.787 +/- 2.3423; #failures: 0 */
 /*#define DELTA 0.000625*/ /* 284.659 +/- 2.18559; #failures: 379 */
 
-/* Dirichlets */
-/*#define DELTA 0.01*/ /* 290.442 +/- 2.18906; #failures: 0 */
-/*#define DELTA 0.005*/ /* 270.611 +/- 1.98415; #failures: 0 */
-/*#define DELTA 0.0025*/ /* 264.352 +/- 1.96071; #failures: 0 */
-#define DELTA 0.00125
+/* Dirichlets : expected 246.93 C*/
+#define Tboundary1 373.15
+#define Tboundary2 273.15
+/*#define DELTA 0.01*/ /* 287.487 +/- 2.17576; #failures: 0 */
+/*#define DELTA 0.005*/ /* 273.532 +/- 1.98965; #failures: 0 */
+/*#define DELTA 0.0025*/ /* 263.626 +/- 1.90191; #failures: 0 */
+/*#define DELTA 0.00125*/ /* 256.081 +/- 1.8687; #failures: 0 */
+/*#define DELTA 0.000625*/ /* 250.615 +/- 1.80813; #failures: 0 */
+#define DELTA 0.0003125  /* */
 
 /*
  *           _\  T1
@@ -54,7 +60,6 @@
  *           / /
  *           \__/
  */
-
 
 static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
  -0.5,-1.0,
@@ -245,9 +250,7 @@ main(int argc, char** argv)
   struct sdis_interface* interfaces[8 /*#segment*/];
   struct sdis_mc T = SDIS_MC_NULL;
   size_t nfails, nreals;
-  const size_t N = 10000;
   double pos[2];
-  size_t i;
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);

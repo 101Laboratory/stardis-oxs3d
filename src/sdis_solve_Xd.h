@@ -512,7 +512,7 @@ XD(solid_fluid_boundary_temperature)
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T && ctx);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
 
-  /* Retrieve the solid and the fluid split by the boundary */
+    /* Retrieve the solid and the fluid split by the boundary */
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
   mdm_front = interface_get_medium(interf, SDIS_FRONT);
   mdm_back = interface_get_medium(interf, SDIS_BACK);
@@ -658,9 +658,19 @@ XD(solid_temperature)
 {
   double position_start[DIM];
   const struct sdis_medium* mdm;
+  float low[DIM], upp[DIM];
+  int i;
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_SOLID);
   (void)ctx;
+
+  /* FIXME hack */
+  SXD(scene_view_get_aabb(scn->sXd(view), low, upp));
+  FOR_EACH(i, 0, DIM) { 
+    low[i] *= low[i] < 0 ? 1.01f : 0.99f;
+    upp[i] *= upp[i] < 0 ? 0.99f : 1.01f;
+  }
+
 
   /* Check the random walk consistency */
   CHK(scene_get_medium(scn, rwalk->vtx.P, NULL, &mdm) == RES_OK);
@@ -759,6 +769,14 @@ XD(solid_temperature)
     /* Update the random walk position */
     XD(move_pos)(rwalk->vtx.P, dir0, delta);
 
+#if 0
+    FOR_EACH(i, 0, DIM) {
+      if(rwalk->vtx.P[i] < low[i] || rwalk->vtx.P[i] > upp[i]) {
+        log_err(scn->dev,"%s: invalid solid random walk.\n", FUNC_NAME);
+        return RES_BAD_OP;
+      }
+    }
+#else
     /* Fetch the current medium */
     if(SXD_HIT_NONE(&rwalk->hit)) {
       CHK(scene_get_medium(scn, rwalk->vtx.P, &info, &mdm) == RES_OK);
@@ -796,6 +814,7 @@ XD(solid_temperature)
 #undef VEC_SPLIT
       return RES_BAD_OP;
     }
+#endif
 
   /* Keep going while the solid random walk does not hit an interface */
   } while(SXD_HIT_NONE(&rwalk->hit));
