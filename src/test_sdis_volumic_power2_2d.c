@@ -244,8 +244,9 @@ main(int argc, char** argv)
   struct sdis_interface* interf_solid1_fluid2 = NULL;
   struct sdis_interface* interfaces[8 /*#segment*/];
   struct sdis_mc T = SDIS_MC_NULL;
-  double pos[2];
+  size_t nfails, nreals;
   const size_t N = 10000;
+  double pos[2];
   size_t i;
   (void)argc, (void)argv;
 
@@ -382,19 +383,16 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf_solid1_fluid2) == RES_OK);
   CHK(sdis_interface_ref_put(interf_solid1_solid2) == RES_OK);
 
-  FOR_EACH(i, 2, 3) {
-    size_t nfails, nreals;
-    pos[0] = 0;
-    pos[1] = 0.85 - (double)i*0.2;;
-    CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
-    CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-    printf("Temperature at (%g %g) = %g +/- %g\n", SPLIT2(pos), T.E-273.15, T.SE);
-    printf("#realisations: %lu; #failures: %lu\n",
-      (unsigned long)nreals, (unsigned long)nfails);
-    CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-  }
+  pos[0] = 0;
+  pos[1] = 0.5;
+  CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
+  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  printf("Temperature at (%g %g) = %g +/- %g\n", SPLIT2(pos), T.E-273.15, T.SE);
+  printf("#realisations: %lu; #failures: %lu\n",
+    (unsigned long)nreals, (unsigned long)nfails);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);
