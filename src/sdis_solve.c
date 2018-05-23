@@ -209,7 +209,7 @@ sdis_solve_probe
   if(res != RES_OK) goto error;
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, position, &medium);
+  res = scene_get_medium(scn, position, NULL, &medium);
   if(res != RES_OK) goto error;
 
   /* Here we go! Launch the Monte Carlo estimation */
@@ -448,7 +448,7 @@ sdis_solve_camera
   }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, cam->position, &medium);
+  res = scene_get_medium(scn, cam->position, NULL, &medium);
   if(res != RES_OK) goto error;
 
   if(medium->type != SDIS_FLUID) {

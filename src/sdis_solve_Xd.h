@@ -28,7 +28,7 @@
 
 /* Emperical scale factor to apply to the upper bound of the ray range in order
  * to handle numerical imprecisions */
-#define RAY_RANGE_MAX_SCALE 1.0001f
+#define RAY_RANGE_MAX_SCALE 1.01f
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
 
@@ -663,7 +663,7 @@ XD(solid_temperature)
   (void)ctx;
 
   /* Check the random walk consistency */
-  CHK(scene_get_medium(scn, rwalk->vtx.P, &mdm) == RES_OK);
+  CHK(scene_get_medium(scn, rwalk->vtx.P, NULL, &mdm) == RES_OK);
   if(mdm != rwalk->mdm) {
     log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n",
@@ -674,6 +674,7 @@ XD(solid_temperature)
   dX(set)(position_start, rwalk->vtx.P);
 
   do { /* Solid random walk */
+    struct get_medium_info info;
     struct sXd(hit) hit0, hit1;
     double lambda; /* Thermal conductivity */
     double rho; /* Volumic mass */
@@ -760,7 +761,7 @@ XD(solid_temperature)
 
     /* Fetch the current medium */
     if(SXD_HIT_NONE(&rwalk->hit)) {
-      CHK(scene_get_medium(scn, rwalk->vtx.P, &mdm) == RES_OK);
+      CHK(scene_get_medium(scn, rwalk->vtx.P, &info, &mdm) == RES_OK);
     } else {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
@@ -771,15 +772,28 @@ XD(solid_temperature)
     if(mdm != rwalk->mdm) {
       log_err(scn->dev,
         "%s: inconsistent medium during the solid random walk.\n", FUNC_NAME);
-      if(DIM == 2) {
-        log_err(scn->dev,
-          "  start position: %g %g; current position: %g %g\n",
-          SPLIT2(position_start), SPLIT2(rwalk->vtx.P));
-      } else {
-        log_err(scn->dev,
-          "  start position: %g %g %g; current position: %g %g %g\n",
-          SPLIT3(position_start), SPLIT3(rwalk->vtx.P));
+#if DIM == 2
+  #define VEC_STR "%g %g"
+  #define VEC_SPLIT SPLIT2
+#else
+  #define VEC_STR "%g %g %g"
+  #define VEC_SPLIT SPLIT3
+#endif
+      log_err(scn->dev,
+        "  start position: " VEC_STR "; current position: " VEC_STR "\n",
+        VEC_SPLIT(position_start), VEC_SPLIT(rwalk->vtx.P));
+      if(SXD_HIT_NONE(&rwalk->hit)) {
+        float hit_pos[DIM];
+        fX(mulf)(hit_pos, info.ray_dir, info.XD(hit).distance);
+        fX(add)(hit_pos, info.ray_org, hit_pos);
+        log_err(scn->dev, "  ray org: " VEC_STR "; ray dir: " VEC_STR "\n",
+          VEC_SPLIT(info.ray_org), VEC_SPLIT(info.ray_dir));
+        log_err(scn->dev, "  targeted point: " VEC_STR "\n",
+          VEC_SPLIT(info.pos_tgt));
+        log_err(scn->dev, "  hit pos: " VEC_STR "\n", VEC_SPLIT(hit_pos));
       }
+#undef VEC_STR
+#undef VEC_SPLIT
       return RES_BAD_OP;
     }
 
@@ -804,15 +818,28 @@ XD(compute_temperature)
   struct XD(temperature)* stack = NULL;
   size_t istack = 0;
 #endif
+  const size_t max_fails = 10;
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
 
   do {
+    /* Save the current random walk state */
+    const struct XD(rwalk) rwalk_bkp = *rwalk;
+    const struct XD(temperature) T_bkp = *T;
+
+    size_t nfails = 0;
+
 #ifndef NDEBUG
     sa_push(stack, *T);
     ++istack;
 #endif
-    res = T->func(scn, fp_to_meter, ctx, rwalk, rng, T);
+
+    /* Reject the current step if a BAD_OP occurs and retry up to "max_fails"
+     * times */
+    do {
+      res = T->func(scn, fp_to_meter, ctx, rwalk, rng, T);
+      if(res == RES_BAD_OP) { *rwalk = rwalk_bkp; *T = T_bkp; }
+    } while(res == RES_BAD_OP && ++nfails < max_fails);
     if(res != RES_OK) goto error;
 
   } while(!T->done);

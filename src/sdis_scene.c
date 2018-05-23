@@ -24,9 +24,6 @@
 #include <rsys/double3.h>
 #include <rsys/mem_allocator.h>
 
-#include <star/s2d.h>
-#include <star/s3d.h>
-
 #include <limits.h>
 
 /* Context used to wrap the user geometry to Star-XD. */
@@ -455,6 +452,7 @@ static INLINE res_T
 scene_get_medium_2d
   (const struct sdis_scene* scn,
    const double pos[2],
+   struct get_medium_info* info, /* May be NULL */
    const struct sdis_medium** out_medium)
 {
   const struct sdis_medium* medium = NULL;
@@ -502,6 +500,14 @@ scene_get_medium_2d
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
         (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+
+      /* Register the get_medium_info */
+      if(info) {
+        f2_set(info->pos_tgt, attr.value);
+        f2_set(info->ray_org, P);
+        f2_set(info->ray_dir, dir);
+        info->hit_2d = hit;
+      }
       break;
     }
   }
@@ -519,6 +525,7 @@ static INLINE res_T
 scene_get_medium_3d
   (const struct sdis_scene* scn,
    const double pos[3],
+   struct get_medium_info* info,
    const struct sdis_medium** out_medium)
 {
   const struct sdis_medium* medium = NULL;
@@ -566,6 +573,13 @@ scene_get_medium_3d
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
         (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+
+      if(info) {
+        f3_set(info->pos_tgt, attr.value);
+        f3_set(info->ray_org, P);
+        f3_set(info->ray_dir, dir);
+        info->hit_3d = hit;
+      }
       break;
     }
   }
@@ -775,10 +789,11 @@ res_T
 scene_get_medium
   (const struct sdis_scene* scn,
    const double pos[],
+   struct get_medium_info* info,
    const struct sdis_medium** out_medium)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_2d(scn, pos, out_medium)
-    : scene_get_medium_3d(scn, pos, out_medium);
+    ? scene_get_medium_2d(scn, pos, info, out_medium)
+    : scene_get_medium_3d(scn, pos, info, out_medium);
 }
 
