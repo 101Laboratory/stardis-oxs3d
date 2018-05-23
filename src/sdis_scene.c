@@ -467,33 +467,47 @@ scene_get_medium_2d
     struct s2d_hit hit;
     struct s2d_attrib attr;
     struct s2d_primitive prim;
-    float s;
     const float range[2] = {0.f, FLT_MAX};
     float N[2], P[2], dir[2], cos_N_dir;
-    s = 1.f / 3.f;
 
-    /* Retrieve a position onto the primitive */
-    S2D(scene_view_get_primitive(scn->s2d_view, (unsigned)iprim, &prim));
-    S2D(primitive_get_attrib(&prim, S2D_POSITION, s, &attr));
+    /* Range of the parametric coordinate into which positions are challenged */
+    const float s_range[2] = {0.25, 0.75};
+    const size_t s_nsteps = 3; /* #challenges per primitive into the range */
+    float s;
+    float s_step;
 
-    /* Trace a ray from the randomw walk vertex  toward the retrieved primitive
-     * position */
-    f2_normalize(dir, f2_sub(dir, attr.value, f2_set_d2(P, pos)));
-    S2D(scene_view_trace_ray(scn->s2d_view, P, dir, range, NULL, &hit));
+    s_step = (s_range[1] - s_range[0]) / (float)(s_nsteps-1);
+    s = s_range[0];
+    do {
+      /* Retrieve a position onto the primitive */
+      S2D(scene_view_get_primitive(scn->s2d_view, (unsigned)iprim, &prim));
+      S2D(primitive_get_attrib(&prim, S2D_POSITION, s, &attr));
+
+      /* Trace a ray from the random walk vertex toward the retrieved primitive
+       * position */
+      f2_normalize(dir, f2_sub(dir, attr.value, f2_set_d2(P, pos)));
+      S2D(scene_view_trace_ray(scn->s2d_view, P, dir, range, NULL, &hit));
+
+      /* Unforeseen error. One has to intersect a primitive ! */
+      if(S2D_HIT_NONE(&hit)) {
+        ++nfailures;
+        if(nfailures < max_failures) {
+          continue;
+        } else {
+          res = RES_BAD_ARG;
+          goto error;
+        }
+      }
+    /* Discard the hit if it is on a vertex, i.e. between 2 segments,  and
+     * target a new position onto the current primitive */
+    } while(hit_on_vertex(&hit) && (s+=s_step) <= s_range[1]);
+
+    /* The hits of all targeted positions on the current primitive, are on
+     * edges. Try positions on another primitive. */
+    if(s > 0.75f) continue;
 
     f2_normalize(N, hit.normal);
     cos_N_dir = f2_dot(N, dir);
-
-    /* Unforeseen error. One has to intersect a primitive ! */
-    if(S2D_HIT_NONE(&hit)) {
-      ++nfailures;
-      if(nfailures < max_failures) {
-        continue;
-      } else {
-        res = RES_BAD_ARG;
-        goto error;
-      }
-    }
 
     if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
       const struct sdis_interface* interf;
