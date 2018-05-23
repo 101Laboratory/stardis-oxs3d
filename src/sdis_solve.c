@@ -179,6 +179,7 @@ sdis_solve_probe
   size_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
+  ATOMIC nreals = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || !position || time < 0 || fp_to_meter <= 0
@@ -220,6 +221,7 @@ sdis_solve_probe
     double w;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
+    ATOMIC n;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
 
@@ -240,7 +242,15 @@ sdis_solve_probe
       sqr_weight += w*w;
       ++N;
     }
+
+    if((n = ATOMIC_INCR(&nreals)) % 10 == 0) {
+      #pragma omp critical
+      fprintf(stdout, "%c[2K\rProgress: %lu of %lu",
+        27, (unsigned long)n, (unsigned long)nrealisations);
+      fflush(stdout);
+    }
   }
+  printf("\n");
 
   estimator->nrealisations = N;
   estimator->nfailures = nrealisations - N;
@@ -493,7 +503,7 @@ sdis_solve_camera
   pix_sz[1] = 1.0 / (double)height;
 
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static, 1/*chunki size*/)
+  #pragma omp parallel for schedule(static, 1/*chunk size*/)
   for(mcode = 0; mcode < (int64_t)ntiles; ++mcode) {
     size_t tile_org[2] = {0, 0};
     size_t tile_sz[2] = {0, 0};
