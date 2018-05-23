@@ -17,6 +17,34 @@
 #include "test_sdis_utils.h"
 #include <rsys/math.h>
 
+/*#define DELTA 0.01*/ /* 337.835 +/- 2.72063; #failures: 2 */
+/*#define DELTA 0.005*/ /* 314.234 +/- 2.48794; #failures: 4 */
+#define DELTA 0.0025 /* 306.579 +/- 2.36081; #failures: 26 */
+/*#define DELTA 0.00125*/ /* 292.96 +/- 2.3041; #failures: 116 */
+/*#define DELTA 0.000625*/ /* 284.659 +/- 2.18559; #failures: 379 */
+
+/*
+ *           _\  T1
+ *          / /
+ *          \__/
+ *   ///+-----H1-------+///
+ *   ///|              |///
+ *   ///|   +------+   |///
+ *   ///|   |LAMBDA|   |///
+ *   ///|   |  Pw  |   |///
+ *   ///|   +------+   |///
+ *   ///|              |///
+ *   ///|              |///
+ *   ///|   LAMBDA1    |///
+ *   ///|              |///
+ *   ///|              |///
+ *   ///|              |///
+ *   ///+-----H2-------+///
+ *            _\  T2
+ *           / /
+ *           \__/
+ */
+
 static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
  -0.5,-1.0,
  -0.5, 1.0,
@@ -234,7 +262,7 @@ main(int argc, char** argv)
   solid_param->cp = 500000;
   solid_param->rho = 1000;
   solid_param->lambda = 1;
-  solid_param->delta = 0.02;
+  solid_param->delta = DELTA;
   solid_param->P = SDIS_VOLUMIC_POWER_NONE;
   solid_param->T = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid0) == RES_OK);
@@ -247,7 +275,7 @@ main(int argc, char** argv)
   solid_param->cp = 500000;
   solid_param->rho = 1000;
   solid_param->lambda = 10;
-  solid_param->delta = 0.01;
+  solid_param->delta = DELTA;
   solid_param->P = 10000;
   solid_param->T = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid1) == RES_OK);
@@ -320,12 +348,17 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf_solid0_T1) == RES_OK);
   CHK(sdis_interface_ref_put(interf_solid0_solid1) == RES_OK);
 
-  FOR_EACH(i, 0, 8) {
+  FOR_EACH(i, 2, 3) {
+    size_t nfails, nreals;
     pos[0] = 0;
     pos[1] = 0.85 - (double)i*0.2;;
     CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
     CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
     printf("Temperature at (%g %g) = %g +/- %g\n", SPLIT2(pos), T.E-273.15, T.SE);
+    printf("#realisations: %lu; #failures: %lu\n",
+      (unsigned long)nreals, (unsigned long)nfails);
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   }
 
