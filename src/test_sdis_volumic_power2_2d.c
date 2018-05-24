@@ -32,12 +32,21 @@
 /* Dirichlets : expected 246.93 C*/
 #define Tboundary1 373.15
 #define Tboundary2 273.15
-/*#define DELTA 0.01*/ /* 287.487 +/- 2.17576; #failures: 0 */
-/*#define DELTA 0.005*/ /* 273.532 +/- 1.98965; #failures: 0 */
-/*#define DELTA 0.0025*/ /* 263.626 +/- 1.90191; #failures: 0 */
+
+/* Db = 2.1*D: 287.487 +/- 2.17576; #failures: 0
+ * Db = 0.5*D: 244.382 +/- 1.71547; #failures: 1 */
+/*#define delta 0.01*/
+/* Db = 2.1*D: 273.532 +/- 1.98965; #failures: 0
+ * Db = 0.5*D: 243.219 +/- 1.70725: #failures: 1 */
+/*#define DELTA 0.005*/
+/* Db = 2.1*D: 263.626 +/- 1.90191; #failures: 0
+ * Db = 0.5*D: 242.744 +/- 1.70677; #failures: 1 */
+#define DELTA 0.0025
+
 /*#define DELTA 0.00125*/ /* 256.081 +/- 1.8687; #failures: 0 */
 /*#define DELTA 0.000625*/ /* 250.615 +/- 1.80813; #failures: 0 */
-#define DELTA 0.0003125  /* */
+/*#define DELTA 0.0003125*/  /* 247.591 +/- 1.71263; #failures: 0 */
+/*#define DELTA 0.00015625*/ /* */
 
 /*
  *           _\  T1
@@ -163,7 +172,7 @@ solid_get_delta_boundary
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->delta * 2.1;
+  return ((const struct solid*)sdis_data_cget(data))->delta * 0.5;
 }
 
 static double
