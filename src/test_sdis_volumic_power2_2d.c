@@ -18,32 +18,35 @@
 #include <rsys/math.h>
 
 #define N 10000 /* #realisations */
+#define Pw 10000 /* Volumic power */
+#define MDb 1.0 /* Multiplier applied to delta to define delta_boundary */
 #define NONE -1
 
-/* H delta T */
+/* H delta T: expected 286.83 C */
 /*#define Tboundary1 NONE
 #define Tboundary2 NONE*/
-/*#define DELTA 0.01*/ /* 324.258 +/- 2.52665; #failures: 0 */
-/*#define DELTA 0.005*/ /* 314.234 +/- 2.48794; #failures: 4 */
-/*#define DELTA 0.0025*/ /* 306.579 +/- 2.36081; #failures: 26 */
-/*#define DELTA 0.00125 */ /* 297.787 +/- 2.3423; #failures: 0 */
-/*#define DELTA 0.000625*/ /* 284.659 +/- 2.18559; #failures: 379 */
+/* Db = 2.1*D:           339.091 +/- 2.734920; #failures: 0
+ * Db = 0.5*D:           286.182 +/- 2.202150; #failures: 0
+ * Db = 0.5*D 100K real: 283.29  +/- 0.688329; #failures: 1
+ * Db = 2.1*D wo Pw:     69.12   +/- 0.461998; #failures: 0
+ * Db = 0.5*D wo Pw:     69.764  +/- 0.459326; #failures: 0 */
+/*#define DELTA 0.01*/
 
-/* Dirichlets : expected 246.93 C*/
+/* Dirichlets: expected 246.93 C */
 #define Tboundary1 373.15
 #define Tboundary2 273.15
-
-/* Db = 2.1*D: 287.487 +/- 2.17576; #failures: 0
+/* Db = 2.1*D: 288.487 +/- 2.17576; #failures: 0
  * Db = 0.5*D: 244.382 +/- 1.71547; #failures: 1 */
-/*#define delta 0.01*/
+#define DELTA 0.01
 /* Db = 2.1*D: 273.532 +/- 1.98965; #failures: 0
  * Db = 0.5*D: 243.219 +/- 1.70725: #failures: 1 */
 /*#define DELTA 0.005*/
 /* Db = 2.1*D: 263.626 +/- 1.90191; #failures: 0
  * Db = 0.5*D: 242.744 +/- 1.70677; #failures: 1 */
-#define DELTA 0.0025
-
-/*#define DELTA 0.00125*/ /* 256.081 +/- 1.8687; #failures: 0 */
+/*#define DELTA 0.0025*/
+/* Db = 2.1*D: 256.081 +/- 1.8687; #failures: 0 
+ * Db = 0.5*D: 244.196 +/- 1.71475; # failures: 3 */
+/*#define DELTA 0.00125*/
 /*#define DELTA 0.000625*/ /* 250.615 +/- 1.80813; #failures: 0 */
 /*#define DELTA 0.0003125*/  /* 247.591 +/- 1.71263; #failures: 0 */
 /*#define DELTA 0.00015625*/ /* */
@@ -172,7 +175,7 @@ solid_get_delta_boundary
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->delta * 0.5;
+  return ((const struct solid*)sdis_data_cget(data))->delta * MDb;
 }
 
 static double
@@ -317,7 +320,7 @@ main(int argc, char** argv)
   solid_param->rho = 1000;
   solid_param->lambda = 10;
   solid_param->delta = DELTA;
-  solid_param->P = 10000;
+  solid_param->P = Pw;
   solid_param->T = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -348,7 +351,7 @@ main(int argc, char** argv)
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
-  interf_param->h = 10;
+  interf_param->h = 5;
   interf_param->temperature = Tboundary1;
   CHK(sdis_interface_create(dev, solid1, fluid1, &interf_shader, data,
     &interf_solid1_fluid1) == RES_OK);
@@ -358,7 +361,7 @@ main(int argc, char** argv)
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
-  interf_param->h = 5;
+  interf_param->h = 10;
   interf_param->temperature = Tboundary2;
   CHK(sdis_interface_create(dev, solid1, fluid2, &interf_shader, data,
     &interf_solid1_fluid2) == RES_OK);
