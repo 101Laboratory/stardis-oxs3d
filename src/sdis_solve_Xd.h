@@ -459,6 +459,91 @@ XD(solid_solid_boundary_temperature)
   delta_front_boundary = solid_get_delta_boundary(solid_front, &rwalk->vtx);
   delta_back_boundary = solid_get_delta_boundary(solid_back, &rwalk->vtx);
 
+#if DIM == 2
+  {
+    const struct sdis_medium* mdm;
+    struct s2d_hit hit0, hit1;
+    struct s2d_hit hit;
+    double scale;
+    double power;
+    double dst;
+    float range0[2], range1[2];
+    float dir0[2], dir1[2];
+    float pos[2];
+
+    /* Sample a direction */
+    r = ssp_rng_canonical(rng);
+    if(r < 0.5) {
+      f3_set(dir0, rwalk->hit.normal);
+      scale = 1.0;
+    } else if(r < 0.75) {
+      dir0[0] = rwalk->hit.normal[0] - rwalk->hit.normal[1];
+      dir0[1] = rwalk->hit.normal[0] + rwalk->hit.normal[1];
+      scale = sqrt(2.0);
+    } else {
+      dir0[0] = rwalk->hit.normal[0] + rwalk->hit.normal[1];
+      dir0[1] =-rwalk->hit.normal[0] + rwalk->hit.normal[1];
+      scale = sqrt(2.0);
+    }
+    f2_normalize(dir0, dir0);
+    f2_minus(dir1, dir0);
+
+    /* Adjust the delta */
+    delta_front_boundary *= scale;
+    delta_back_boundary *= scale;
+
+    /* Trace the dir0 and dir1 */
+    f2_set_d2(pos, rwalk->vtx.P);
+    f2(range0, 0, (float)delta_front_boundary*RAY_RANGE_MAX_SCALE);
+    f2(range1, 0, (float)delta_back_boundary *RAY_RANGE_MAX_SCALE);
+    S2D(scene_view_trace_ray(scn->s2d_view, pos, dir0, range0, &rwalk->hit, &hit0));
+    S2D(scene_view_trace_ray(scn->s2d_view, pos, dir1, range1, &rwalk->hit, &hit1));
+
+    /* Define the reinjection distance */
+    dst = MMIN
+      (MMIN(delta_front_boundary, delta_back_boundary),
+       MMIN(hit0.distance, hit1.distance));
+
+    /* Define the delta to use */
+    delta_boundary = dst / scale;
+
+    /* Define the reinjection side */
+    r = ssp_rng_canonical(rng);
+    proba = lambda_front / (lambda_front+lambda_back);
+    if(r < proba) { /* Reinject in front */
+      f2_set(dir, dir0);
+      hit = hit0;
+      mdm = solid_front;
+    } else { /* Reinject in back */
+      f2_set(dir, dir1);
+      hit = hit1;
+      mdm = solid_back;
+    }
+
+    /* Handle the volumic power */
+    power = solid_get_volumic_power(mdm, &rwalk->vtx);
+    if(power != SDIS_VOLUMIC_POWER_NONE) {
+      const double delta_in_meter = delta_boundary * fp_to_meter;
+      const double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
+      tmp = power * delta_in_meter * delta_in_meter / (2.0 * lambda);
+      T->value += tmp;
+    }
+
+    /* Reinject */
+    XD(move_pos)(rwalk->vtx.P, dir, (float)dst);
+    if(hit.distance == dst) {
+      T->func = XD(boundary_temperature);
+      rwalk->mdm = NULL;
+      rwalk->hit = hit;
+      rwalk->hit_side = f2_dot(hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+    } else {
+      T->func = XD(solid_temperature);
+      rwalk->mdm = mdm;
+      rwalk->hit = SXD_HIT_NULL;
+      rwalk->hit_side = SDIS_SIDE_NULL__;
+    }
+  }
+#else
   /* Convert the delta boundary from floating point units to meters */
   delta_front_boundary_meter = fp_to_meter * delta_front_boundary;
   delta_back_boundary_meter = fp_to_meter * delta_back_boundary;
@@ -480,6 +565,7 @@ XD(solid_solid_boundary_temperature)
 
   /* "Reinject" the path into the solid along the surface normal. */
   XD(reinject_in_solid)(scn, 1, rwalk, delta_boundary, dir, T, 1);
+#endif
 }
 
 static void
@@ -666,7 +752,7 @@ XD(solid_temperature)
 
   /* FIXME hack */
   SXD(scene_view_get_aabb(scn->sXd(view), low, upp));
-  FOR_EACH(i, 0, DIM) { 
+  FOR_EACH(i, 0, DIM) {
     low[i] *= low[i] < 0 ? 1.01f : 0.99f;
     upp[i] *= upp[i] < 0 ? 0.99f : 1.01f;
   }
