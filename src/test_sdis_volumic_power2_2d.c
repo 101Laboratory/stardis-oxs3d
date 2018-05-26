@@ -49,7 +49,7 @@
 /*#define DELTA 0.00125*/
 /*#define DELTA 0.000625*/ /* 250.615 +/- 1.80813; #failures: 0 */
 /*#define DELTA 0.0003125*/  /* 247.591 +/- 1.71263; #failures: 0 */
-/*#define DELTA 0.00015625*/ /* */
+/*#define DELTA 0.00015625*/ /* 249.829 +/- 1.77636; #failures: 2 */
 
 /*
  *           _\  T1
