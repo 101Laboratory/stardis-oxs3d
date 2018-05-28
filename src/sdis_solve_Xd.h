@@ -525,7 +525,7 @@ XD(solid_solid_boundary_temperature)
     if(power != SDIS_VOLUMIC_POWER_NONE) {
       const double delta_in_meter = delta_boundary * fp_to_meter;
       const double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-      tmp = power * delta_in_meter * delta_in_meter / (2.0 * lambda);
+      tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
       T->value += tmp;
     }
 

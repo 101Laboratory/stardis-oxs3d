@@ -25,6 +25,8 @@
 #define T2 273.15
 #define H1 5.0
 #define H2 10.0
+#define MDb 1.0
+#define N 10000 /* #realisations */
 
 /*
  * The 2D scene is composed of 3 stacked solid slabs whose middle slab has a
@@ -155,7 +157,7 @@ solid_get_delta_boundary
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->delta * 2.1;
+  return ((const struct solid*)sdis_data_cget(data))->delta * MDb;
 }
 
 static double
@@ -246,7 +248,6 @@ main(int argc, char** argv)
   struct sdis_interface* interfaces[10/*#segment*/];
   struct sdis_mc T = SDIS_MC_NULL;
   double pos[2];
-  const size_t N = 10000;
   size_t i;
   (void)argc, (void)argv;
 
