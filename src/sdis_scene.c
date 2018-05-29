@@ -462,13 +462,11 @@ scene_get_medium_2d
   /* Range of the parametric coordinate into which positions are challenged */
   const float s_range[2] = {0.25, 0.75};
   const size_t s_nsteps = 3; /* #challenges per primitive into the range */
-  float s;
   float s_step;
   res_T res = RES_OK;
   ASSERT(scn && pos);
 
   s_step = (s_range[1] - s_range[0]) / (float)(s_nsteps-1);
-  s = s_range[0];
 
   S2D(scene_view_primitives_count(scn->s2d_view, &nprims));
   FOR_EACH(iprim, 0, nprims) {
@@ -477,6 +475,7 @@ scene_get_medium_2d
     struct s2d_primitive prim;
     const float range[2] = {0.f, FLT_MAX};
     float N[2], P[2], dir[2], cos_N_dir;
+    float s = s_range[0];
 
     do {
       /* Retrieve a position onto the primitive */
