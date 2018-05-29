@@ -48,8 +48,12 @@
 #define Tsolid_solid1 UNKNOWN_TEMPERATURE /*Ta*/
 #define Tsolid_solid2 UNKNOWN_TEMPERATURE /*Tb*/
 
-/* Legacy deltas, 400K realisations: 924.093 ~ 928.405 +/- 0.847232
- * Deltas / 2,    400K realisations: 924.093 ~ 926.632 +/- 0.844205 */
+/* 1D reinjection scheme:
+ *  - Legacy deltas, 400K realisations: 924.093 ~ 928.405 +/- 0.847232
+ *  - Deltas / 2,    400K realisations: 924.093 ~ 926.632 +/- 0.844205
+ *
+ * 2D reinjection scheme:
+ *  - Legacy deltas, 400K realisations: 924.093 ~ 928.013 +/- 0.847624 */
 #define PROBE_POS 1.8
 
 /*
