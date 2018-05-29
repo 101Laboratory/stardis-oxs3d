@@ -26,7 +26,7 @@
 #define H1 5.0
 #define H2 10.0
 #define MDb 1.0
-#define N 10000 /* #realisations */
+#define N 400000 /* #realisations */
 
 /*
  * The 2D scene is composed of 3 stacked solid slabs whose middle slab has a
@@ -341,17 +341,17 @@ main(int argc, char** argv)
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
   interf_param->h = H2;
-  interf_param->temperature = -1/*335.4141*/;
+  interf_param->temperature = 335.4141;
   CHK(sdis_interface_create(dev, solid0, fluid, &interf_shader, data,
     &interf_solid0_low) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
-  /* Create the solid0 T1 interace */
+  /* Create the solid0 upp interace */
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
   interf_param->h = H1;
-  interf_param->temperature = -1/*648.6217*/;
+  interf_param->temperature = 648.6217;
   CHK(sdis_interface_create(dev, solid0, fluid, &interf_shader, data,
     &interf_solid0_upp) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -409,7 +409,7 @@ main(int argc, char** argv)
     double Tref;
 
     pos[0] = 0;
-    pos[1] = 1.85 - (double)i*0.2;
+    pos[1] = 0.7; /*1.85 - (double)i*0.2;*/
 
     ta = 1199.5651;
     tb = 1207.1122;

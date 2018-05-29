@@ -17,9 +17,9 @@
 #include "test_sdis_utils.h"
 #include <rsys/math.h>
 
-#define N 10000 /* #realisations */
+#define N 40000 /* #realisations */
 #define Pw 10000 /* Volumic power */
-#define MDb 1.0 /* Multiplier applied to delta to define delta_boundary */
+#define MDb sqrt(2.0) /* Multiplier applied to delta to define delta_boundary */
 #define NONE -1
 
 /* H delta T: expected 286.83 C */
