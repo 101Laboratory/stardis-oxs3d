@@ -44,7 +44,7 @@
 /* Db = 2.1*D: 263.626 +/- 1.90191; #failures: 0
  * Db = 0.5*D: 242.744 +/- 1.70677; #failures: 1 */
 /*#define DELTA 0.0025*/
-/* Db = 2.1*D: 256.081 +/- 1.8687; #failures: 0 
+/* Db = 2.1*D: 256.081 +/- 1.8687; #failures: 0
  * Db = 0.5*D: 244.196 +/- 1.71475; # failures: 3 */
 /*#define DELTA 0.00125*/
 /*#define DELTA 0.000625*/ /* 250.615 +/- 1.80813; #failures: 0 */
