@@ -21,15 +21,17 @@
 #define Pw 10000 /* Volumic power */
 #define NONE -1
 
-/* H delta T. Expected temperature 286.83 C */
+/* H delta T */
 #define Tboundary1 NONE
 #define Tboundary2 NONE
 #define DELTA 0.01
+#define Tref 286.83 /* In celcius. Computed by EDF with Syrthes */
 
-/* Dirichlets. Expected temperature 246.93 C */
+/* Dirichlets */
 /*#define Tboundary1 373.15*/
 /*#define Tboundary2 273.15*/
 /*#define DELTA 0.01*/
+/*#define Tref 246.93*/ /* In celcius. Computed by EDF with Syrthes */
 
 /*
  *           _\  T1
@@ -378,6 +380,7 @@ main(int argc, char** argv)
   printf("Temperature at (%g %g) = %g +/- %g\n", SPLIT2(pos), T.E-273.15, T.SE);
   printf("#realisations: %lu; #failures: %lu\n",
     (unsigned long)nreals, (unsigned long)nfails);
+  CHK(eq_eps(T.E-273.15, Tref, T.SE*3));
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
