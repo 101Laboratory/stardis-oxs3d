@@ -188,8 +188,19 @@ XD(sample_reinjection_dir)
     dir[1] =-rwalk->hit.normal[0] + rwalk->hit.normal[1];
   }
 #else
+  /* Sample the corner of a reversed squared pyramid, i.e. the base is a square
+   * and the apex is below the base. The apex of the pyramid is the current
+   * position of the random walk. The length of the edges from the corners of
+   * to the apex is equal to sqrt(2). The height of the pyramid is 1
+   * and the size of a base edges is 2/sqrt(2). The directions from the apex to
+   * the corner are thus:
+   *          | +/-1/sqrt(2) |   | +/-1    |
+   *    dir = | +/-1/sqrt(2) | = | +/-1    |
+   *          | 1            |   | sqrt(2) |
+   * The sampled direction is finally transformed in world space by a random
+   * frame around the normal onto which the random walk lies. */
   const uint64_t r = ssp_rng_uniform_uint64(rng, 0, 3);
-  float basis[9];
+  float frame[9];
   ASSERT(rwalk && dir);
   dir[2] = (float)sqrt(2.0);
   switch(r) {
@@ -199,8 +210,8 @@ XD(sample_reinjection_dir)
     case 3: dir[0]=-1.f; dir[1]=-1.f; break;
     default: FATAL("Unreachalbe code.\n");
   }
-  f33_basis(basis, rwalk->hit.normal);
-  f33_mulf3(dir, basis, dir);
+  f33_basis(frame, rwalk->hit.normal);
+  f33_mulf3(dir, frame, dir);
 #endif
   fX(normalize)(dir, dir);
 }
@@ -473,17 +484,23 @@ XD(solid_solid_boundary_temperature)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
+  struct sXd(hit) hit0, hit1;
+  struct sXd(hit) hit;
   const struct sdis_interface* interf = NULL;
   const struct sdis_medium* solid_front = NULL;
   const struct sdis_medium* solid_back = NULL;
+  const struct sdis_medium* mdm;
   double lambda_front, lambda_back;
-  double delta_front_boundary, delta_back_boundary;
-  double delta_front_boundary_meter, delta_back_boundary_meter;
-  double delta_boundary;
+  double reinject_dst_front, reinject_dst_back;
+  double delta;
   double proba;
   double tmp;
   double r;
+  double power;
+  float range0[2], range1[2];
+  float dir0[DIM], dir1[DIM];
   float dir[DIM];
+  float pos[DIM];
   ASSERT(scn && fp_to_meter > 0 && ctx && frag && rwalk && rng && T);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)frag, (void)ctx;
@@ -498,99 +515,63 @@ XD(solid_solid_boundary_temperature)
   /* Fetch the properties of the media */
   lambda_front = solid_get_thermal_conductivity(solid_front, &rwalk->vtx);
   lambda_back = solid_get_thermal_conductivity(solid_back, &rwalk->vtx);
-#if DIM == 2
-  {
-    const struct sdis_medium* mdm;
-    struct sXd(hit) hit0, hit1;
-    struct sXd(hit) hit;
-    double power;
-    float range0[2], range1[2];
-    float dir0[DIM], dir1[DIM];
-    float pos[DIM];
 
-    /* Note that delta boundary is *FIXED*. It MUST ensure that the orthogonal
-     * distance from the boundary to the point to chalenge is equal to delta. */
-    delta_front_boundary = solid_get_delta(solid_front, &rwalk->vtx)*sqrt(2.0);
-    delta_back_boundary = solid_get_delta(solid_back, &rwalk->vtx)*sqrt(2.0);
+  /* Note that reinjection distance is *FIXED*. It MUST ensure that the orthogonal
+   * distance from the boundary to the point to challenge is equal to delta. */
+  reinject_dst_front = solid_get_delta(solid_front, &rwalk->vtx)*sqrt(2.0);
+  reinject_dst_back  = solid_get_delta(solid_back, &rwalk->vtx) *sqrt(2.0);
 
-    /* Sample a direction */
-    XD(sample_reinjection_dir)(rwalk, rng, dir0);
-    fX(minus)(dir1, dir0);
+  /* Sample a reinjection direction */
+  XD(sample_reinjection_dir)(rwalk, rng, dir0);
+  fX(minus)(dir1, dir0);
 
-    /* Trace the dir0 and dir1 */
-    fX_set_dX(pos, rwalk->vtx.P);
-    f2(range0, 0, (float)delta_front_boundary*RAY_RANGE_MAX_SCALE);
-    f2(range1, 0, (float)delta_back_boundary *RAY_RANGE_MAX_SCALE);
-    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range0, &rwalk->hit, &hit0));
-    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range1, &rwalk->hit, &hit1));
+  /* Trace the dir0 and dir1 */
+  fX_set_dX(pos, rwalk->vtx.P);
+  f2(range0, 0, (float)reinject_dst_front*RAY_RANGE_MAX_SCALE);
+  f2(range1, 0, (float)reinject_dst_back *RAY_RANGE_MAX_SCALE);
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range0, &rwalk->hit, &hit0));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range1, &rwalk->hit, &hit1));
 
-    /* Define the reinjection distance */
-    delta_boundary = MMIN
-      (MMIN(delta_front_boundary, delta_back_boundary),
-       MMIN(hit0.distance, hit1.distance));
+  /* Adjust the reinjection distance along the sampled direction */
+  delta = MMIN
+    (MMIN(reinject_dst_front, reinject_dst_back),
+     MMIN(hit0.distance, hit1.distance));
 
-    /* Define the reinjection side */
-    r = ssp_rng_canonical(rng);
-    proba = lambda_front / (lambda_front+lambda_back);
-    if(r < proba) { /* Reinject in front */
-      fX(set)(dir, dir0);
-      hit = hit0;
-      mdm = solid_front;
-    } else { /* Reinject in back */
-      fX(set)(dir, dir1);
-      hit = hit1;
-      mdm = solid_back;
-    }
-
-    /* Handle the volumic power */
-    power = solid_get_volumic_power(mdm, &rwalk->vtx);
-    if(power != SDIS_VOLUMIC_POWER_NONE) {
-      const double delta_in_meter = delta_boundary * fp_to_meter;
-      const double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-      tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
-      T->value += tmp;
-    }
-
-    /* Reinject */
-    XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
-    if(hit.distance == delta_boundary) {
-      T->func = XD(boundary_temperature);
-      rwalk->mdm = NULL;
-      rwalk->hit = hit;
-      rwalk->hit_side = fX(dot)(hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
-    } else {
-      T->func = XD(solid_temperature);
-      rwalk->mdm = mdm;
-      rwalk->hit = SXD_HIT_NULL;
-      rwalk->hit_side = SDIS_SIDE_NULL__;
-    }
-  }
-#else
-  delta_front_boundary = solid_get_delta_boundary(solid_front, &rwalk->vtx);
-  delta_back_boundary = solid_get_delta_boundary(solid_back, &rwalk->vtx);
-
-  /* Convert the delta boundary from floating point units to meters */
-  delta_front_boundary_meter = fp_to_meter * delta_front_boundary;
-  delta_back_boundary_meter = fp_to_meter * delta_back_boundary;
-
-  /* Compute the proba to switch in solid0 or in solid1 */
-  tmp = lambda_front / delta_front_boundary_meter;
-  proba = tmp / (tmp + lambda_back / delta_back_boundary_meter);
-
+  /* Define the reinjection side */
   r = ssp_rng_canonical(rng);
-  fX(normalize)(dir, rwalk->hit.normal);
+  proba = lambda_front / (lambda_front+lambda_back);
   if(r < proba) { /* Reinject in front */
-    delta_boundary = delta_front_boundary;
-    rwalk->mdm = solid_front;
+    fX(set)(dir, dir0);
+    hit = hit0;
+    mdm = solid_front;
   } else { /* Reinject in back */
-    delta_boundary = delta_back_boundary;
-    fX(minus)(dir, dir);
-    rwalk->mdm = solid_back;
+    fX(set)(dir, dir1);
+    hit = hit1;
+    mdm = solid_back;
   }
 
-  /* "Reinject" the path into the solid along the surface normal. */
-  XD(reinject_in_solid)(scn, 1, rwalk, delta_boundary, dir, T, 1);
-#endif
+  /* Handle the volumic power */
+  power = solid_get_volumic_power(mdm, &rwalk->vtx);
+  if(power != SDIS_VOLUMIC_POWER_NONE) {
+    const double delta_in_meter = delta * fp_to_meter;
+    const double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
+    tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+    T->value += tmp;
+  }
+
+  /* Reinject */
+  XD(move_pos)(rwalk->vtx.P, dir, (float)delta);
+  if(hit.distance == delta) {
+    T->func = XD(boundary_temperature);
+    rwalk->mdm = NULL;
+    rwalk->hit = hit;
+    rwalk->hit_side = fX(dot)(hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+  } else {
+    T->func = XD(solid_temperature);
+    rwalk->mdm = mdm;
+    rwalk->hit = SXD_HIT_NULL;
+    rwalk->hit_side = SDIS_SIDE_NULL__;
+  }
 }
 
 static void
@@ -647,22 +628,14 @@ XD(solid_fluid_boundary_temperature)
   /* Fetch the solid properties */
   lambda = solid_get_thermal_conductivity(solid, &rwalk->vtx);
   delta = solid_get_delta(solid, &rwalk->vtx);
-  /* Note that delta boundary is *FIXED*. It MUST ensure that the orthogonal
-   * distance from the boundary to the point to chalenge is equal to delta. */
+
+  /* Note that the reinjection distance is *FIXED*. It MUST ensure that the
+   * orthogonal distance from the boundary to the point to chalenge is equal to
+   * delta. */
   delta_boundary = sqrt(2.0) * delta;
 
-  /* Sample a direction. FIXME this only works in 2D */
-#if DIM == 3
-  FATAL("Un-implemented yet!\n");
-#endif
-  r = ssp_rng_canonical(rng);
-  if(r < 0.5) {
-    dir[0] = rwalk->hit.normal[0] - rwalk->hit.normal[1];
-    dir[1] = rwalk->hit.normal[0] + rwalk->hit.normal[1];
-  } else {
-    dir[0] = rwalk->hit.normal[0] + rwalk->hit.normal[1];
-    dir[1] =-rwalk->hit.normal[0] + rwalk->hit.normal[1];
-  }
+  /* Sample a reinjection direction */
+  XD(sample_reinjection_dir)(rwalk, rng, dir);
   fX(normalize)(dir, dir);
   if(solid == mdm_back) fX(minus)(dir, dir);
 
