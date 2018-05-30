@@ -19,37 +19,17 @@
 
 #define N 10000 /* #realisations */
 #define Pw 10000 /* Volumic power */
-#define MDb sqrt(2.0) /* Multiplier applied to delta to define delta_boundary */
 #define NONE -1
 
-/* H delta T: expected 286.83 C */
+/* H delta T. Expected temperature 286.83 C */
 #define Tboundary1 NONE
 #define Tboundary2 NONE
-/* Db = 2.1*D:           339.091 +/- 2.734920; #failures: 0
- * Db = 0.5*D:           286.182 +/- 2.202150; #failures: 0
- * Db = 0.5*D 100K real: 283.29  +/- 0.688329; #failures: 1
- * Db = 2.1*D wo Pw:     69.12   +/- 0.461998; #failures: 0
- * Db = 0.5*D wo Pw:     69.764  +/- 0.459326; #failures: 0 */
-#define DELTA 0.005
+#define DELTA 0.01
 
-/* Dirichlets: expected 246.93 C */
+/* Dirichlets. Expected temperature 246.93 C */
 /*#define Tboundary1 373.15*/
 /*#define Tboundary2 273.15*/
-/* Db = 2.1*D: 288.487 +/- 2.17576; #failures: 0
- * Db = 0.5*D: 244.382 +/- 1.71547; #failures: 1 */
 /*#define DELTA 0.01*/
-/* Db = 2.1*D: 273.532 +/- 1.98965; #failures: 0
- * Db = 0.5*D: 243.219 +/- 1.70725: #failures: 1 */
-/*#define DELTA 0.005*/
-/* Db = 2.1*D: 263.626 +/- 1.90191; #failures: 0
- * Db = 0.5*D: 242.744 +/- 1.70677; #failures: 1 */
-/*#define DELTA 0.0025*/
-/* Db = 2.1*D: 256.081 +/- 1.8687; #failures: 0
- * Db = 0.5*D: 244.196 +/- 1.71475; # failures: 3 */
-/*#define DELTA 0.00125*/
-/*#define DELTA 0.000625*/ /* 250.615 +/- 1.80813; #failures: 0 */
-/*#define DELTA 0.0003125*/  /* 247.591 +/- 1.71263; #failures: 0 */
-/*#define DELTA 0.00015625*/ /* 249.829 +/- 1.77636; #failures: 2 */
 
 /*
  *           _\  T1
@@ -171,14 +151,6 @@ solid_get_delta
 }
 
 static double
-solid_get_delta_boundary
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->delta * MDb;
-}
-
-static double
 solid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
@@ -295,7 +267,6 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = solid_get_temperature;
   solid_shader.volumic_power = solid_get_volumic_power;
 

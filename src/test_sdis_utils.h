@@ -104,7 +104,6 @@ static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
   dummy_medium_getter,
   dummy_medium_getter,
   dummy_medium_getter,
-  dummy_medium_getter,
   dummy_medium_getter
 };
 

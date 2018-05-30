@@ -114,15 +114,6 @@ solid_get_delta
   return 1.0/20.0;
 }
 
-static double
-solid_get_delta_boundary
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  (void)data;
-  CHK(vtx != NULL);
-  return 2.1/20.0;
-}
-
 /*******************************************************************************
  * Interface
  ******************************************************************************/
@@ -191,7 +182,6 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = temperature_unknown;
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
 

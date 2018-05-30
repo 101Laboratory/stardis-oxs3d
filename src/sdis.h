@@ -138,7 +138,6 @@ struct sdis_solid_shader {
   sdis_medium_getter_T thermal_conductivity; /* In W.m^-1.K^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
   sdis_medium_getter_T delta_solid;
-  sdis_medium_getter_T delta_boundary;
 
   /* May be NULL if there is no volumic power. One can also return
    * SDIS_VOLUMIC_POWER_NONE to define that there is no volumic power at the
@@ -149,7 +148,7 @@ struct sdis_solid_shader {
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 

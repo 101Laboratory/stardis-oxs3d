@@ -28,7 +28,6 @@
 #define DELTA 0.01 /* Delta of the middle slab */
 #define DELTA1 0.02 /* Delta of the upper slab */
 #define DELTA2 0.07 /* Delta of the lower slab */
-#define MDb 1.0 /* Multiplier applied to delta to define delta boundary */
 #define L 0.2 /* Size of the middle slab */
 #define L1 0.4 /* Size of the upper slab */
 #define L2 1.4 /* Size of the lower slab */
@@ -181,14 +180,6 @@ solid_get_delta
 }
 
 static double
-solid_get_delta_boundary
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->delta * MDb;
-}
-
-static double
 solid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
@@ -302,7 +293,6 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = solid_get_temperature;
   solid_shader.volumic_power = solid_get_volumic_power;
 

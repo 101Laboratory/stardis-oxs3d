@@ -87,10 +87,6 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
   solid_shader.delta_solid = DUMMY_SOLID_SHADER.delta_solid;
 
-  solid_shader.delta_boundary = NULL;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
-  solid_shader.delta_boundary = DUMMY_SOLID_SHADER.delta_boundary;
-
   solid_shader.temperature = NULL;
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
   solid_shader.temperature = DUMMY_SOLID_SHADER.temperature;

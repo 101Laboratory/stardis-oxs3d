@@ -733,8 +733,10 @@ XD(boundary_temperature)
   mdm = interface_get_medium(interf, frag.side);
   if(sdis_medium_get_type(mdm) == SDIS_SOLID) {
     const double phi = interface_side_get_flux(interf, &frag);
-
-    if(phi != SDIS_FLUX_NONE) {
+    if(phi != SDIS_FLUX_NONE) { /* FIXME */
+#if 1
+    FATAL("Not implemented yet\n"); 
+#else
       double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
       double delta_b = solid_get_delta_boundary(mdm, &rwalk->vtx);
       double delta_b_in_meter = delta_b * fp_to_meter;
@@ -745,7 +747,7 @@ XD(boundary_temperature)
       /* Update the temperature */
       T->value += phi * delta_b_in_meter / lambda;
 
-      /* Ensuure that the normal points toward the solid */
+      /* Ensure that the normal points toward the solid */
       fX(normalize)(dir, rwalk->hit.normal);
       if(frag.side == SDIS_BACK) fX(minus)(dir, dir);
 
@@ -763,6 +765,7 @@ XD(boundary_temperature)
       rwalk->hit_side = SDIS_SIDE_NULL__;
       rwalk->mdm = mdm;
       return RES_OK;
+#endif
     }
   }
   mdm_front = interface_get_medium(interf, SDIS_FRONT);
