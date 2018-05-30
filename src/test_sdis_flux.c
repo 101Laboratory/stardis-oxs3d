@@ -306,7 +306,7 @@ main(int argc, char** argv)
   printf("Temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(eq_eps(T.E, ref, T.SE*2));
+  CHK(eq_eps(T.E, ref, T.SE*3));
 
   /* Solve in 2D */
   CHK(sdis_solve_probe(square_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
@@ -318,7 +318,7 @@ main(int argc, char** argv)
   printf("Temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(eq_eps(T.E, ref, T.SE*2.0));
+  CHK(eq_eps(T.E, ref, T.SE*3));
 
   CHK(sdis_scene_ref_put(box_scn) == RES_OK);
   CHK(sdis_scene_ref_put(square_scn) == RES_OK);

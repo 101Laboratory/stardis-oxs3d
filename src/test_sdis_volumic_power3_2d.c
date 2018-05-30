@@ -449,6 +449,7 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g, %g]\n",
     SPLIT2(pos), Tref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
+  CHK(eq_eps(T.E, Tref, T.SE*3));
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);

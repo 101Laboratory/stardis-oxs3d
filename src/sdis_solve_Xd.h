@@ -636,7 +636,6 @@ XD(solid_fluid_boundary_temperature)
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir);
-  fX(normalize)(dir, dir);
   if(solid == mdm_back) fX(minus)(dir, dir);
 
   /* Trace dir to adjust the reinjection distance */
@@ -644,7 +643,7 @@ XD(solid_fluid_boundary_temperature)
   f2(range, 0, (float)delta_boundary*RAY_RANGE_MAX_SCALE);
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dir, range, &rwalk->hit, &hit));
 
-  /* Adjuste the deltab boundary to the hit distance */
+  /* Adjust the delta boundary to the hit distance */
   delta_boundary = MMIN(delta_boundary, hit.distance);
   /* Define the orthogonal distance from the reinjection pos to the interface */
   delta = delta_boundary / sqrt(2.0);
@@ -696,6 +695,91 @@ XD(solid_fluid_boundary_temperature)
   }
 }
 
+static void
+XD(solid_boundary_with_flux_temperature)
+  (const struct sdis_scene* scn,
+   const double fp_to_meter,
+   const struct rwalk_context* ctx,
+   const struct sdis_interface_fragment* frag,
+   const double phi,
+   struct XD(rwalk)* rwalk,
+   struct ssp_rng* rng,
+   struct XD(temperature)* T)
+{
+  const struct sdis_interface* interf = NULL;
+  const struct sdis_medium* mdm = NULL;
+  double lambda;
+  double delta;
+  double delta_boundary;
+  double delta_in_meter;
+  double power;
+  struct sXd(hit) hit;
+  float pos[DIM];
+  float dir[DIM];
+  float range[2];
+  ASSERT(frag && phi != SDIS_FLUX_NONE);
+  ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
+  (void)ctx;
+
+  /* Fetch current interface  */
+  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  ASSERT(phi == interface_side_get_flux(interf, frag));
+
+  /* Fetch incoming solid */
+  mdm = interface_get_medium(interf, frag->side);
+  ASSERT(mdm->type == SDIS_SOLID);
+
+  /* Fetch medium properties */
+  lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
+  delta = solid_get_delta(mdm, &rwalk->vtx);
+
+  /* Compute the reinjection distance.  It MUST ensure that the orthogonal
+   * distance from the boundary to the point to chalenge is equal to delta. */
+  delta_boundary = delta * sqrt(2.0);
+
+  /* Sample a reinjection direction */
+  XD(sample_reinjection_dir)(rwalk, rng, dir);
+  if(frag->side == SDIS_BACK) fX(minus)(dir, dir);
+
+  /* Trace dir to adjust the reinjection distance wrt to the geometry */
+  fX_set_dX(pos, rwalk->vtx.P);
+  f2(range, 0, (float)delta_boundary*RAY_RANGE_MAX_SCALE);
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir, range, &rwalk->hit, &hit));
+
+  /* Adjust the delta boundary to the hit distance */
+  delta_boundary = MMIN(delta_boundary, hit.distance);
+
+  /* Define the orthogonal distance from the reinjection pos to the interface */
+  delta = delta_boundary / sqrt(2.0);
+
+  /* Update the temperature. Note that we use delta and not delta_boundary */
+  delta_in_meter = delta*fp_to_meter;
+  T->value += phi * delta_in_meter / lambda;
+
+  /* Handle the volumic power */
+  power = solid_get_volumic_power(mdm, &rwalk->vtx);
+  if(power != SDIS_VOLUMIC_POWER_NONE) {
+    double tmp;
+    delta_in_meter = delta_boundary * fp_to_meter;
+    tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+    T->value += tmp;
+  }
+
+  /* Reinject into the solid */
+  XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
+  if(hit.distance == delta_boundary) {
+    T->func = XD(boundary_temperature);
+    rwalk->mdm = NULL;
+    rwalk->hit = hit;
+    rwalk->hit_side = fX(dot)(hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+  } else {
+    T->func = XD(solid_temperature);
+    rwalk->mdm = mdm;
+    rwalk->hit = SXD_HIT_NULL;
+    rwalk->hit_side = SDIS_SIDE_NULL__;
+  }
+}
+
 res_T
 XD(boundary_temperature)
   (const struct sdis_scene* scn,
@@ -731,43 +815,15 @@ XD(boundary_temperature)
   /* Check if the boundary flux is known. Note that actually, only solid media
    * can have a flux as limit condition */
   mdm = interface_get_medium(interf, frag.side);
-  if(sdis_medium_get_type(mdm) == SDIS_SOLID) {
+  if(sdis_medium_get_type(mdm) == SDIS_SOLID ) {
     const double phi = interface_side_get_flux(interf, &frag);
-    if(phi != SDIS_FLUX_NONE) { /* FIXME */
-#if 1
-    FATAL("Not implemented yet\n"); 
-#else
-      double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-      double delta_b = solid_get_delta_boundary(mdm, &rwalk->vtx);
-      double delta_b_in_meter = delta_b * fp_to_meter;
-      float pos[3];
-      float range[2];
-      float dir[3];
-
-      /* Update the temperature */
-      T->value += phi * delta_b_in_meter / lambda;
-
-      /* Ensure that the normal points toward the solid */
-      fX(normalize)(dir, rwalk->hit.normal);
-      if(frag.side == SDIS_BACK) fX(minus)(dir, dir);
-
-      /* "Reinject" the random walk into the solid */
-      fX_set_dX(pos, rwalk->vtx.P);
-      range[0] = 0, range[1] = (float)delta_b*RAY_RANGE_MAX_SCALE;
-      SXD(scene_view_trace_ray
-        (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
-      if(!SXD_HIT_NONE(&rwalk->hit)) delta_b = rwalk->hit.distance * 0.5;
-      XD(move_pos)(rwalk->vtx.P, dir, (float)delta_b);
-
-      /* Switch in solid random walk */
-      T->func = XD(solid_temperature);
-      rwalk->hit = SXD_HIT_NULL;
-      rwalk->hit_side = SDIS_SIDE_NULL__;
-      rwalk->mdm = mdm;
+    if(phi != SDIS_FLUX_NONE) {
+      XD(solid_boundary_with_flux_temperature)
+        (scn, fp_to_meter, ctx, &frag, phi, rwalk, rng, T);
       return RES_OK;
-#endif
     }
   }
+
   mdm_front = interface_get_medium(interf, SDIS_FRONT);
   mdm_back = interface_get_medium(interf, SDIS_BACK);
 
