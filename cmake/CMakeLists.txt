@@ -17,8 +17,13 @@ cmake_minimum_required(VERSION 3.0)
 project(stardis C)
 enable_testing()
 
+include(CMakeDependentOption)
+
 set(SDIS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/../src)
 option(NO_TEST "Do not build tests" OFF)
+
+CMAKE_DEPENDENT_OPTION(ALL_TESTS
+  "Perform basic and advanced tests" OFF "NOT NO_TEST" OFF)
 
 ################################################################################
 # Check dependencies
@@ -138,13 +143,19 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_boundary)
   new_test(test_sdis_volumic_power)
 
+  # Additionnal tests
   build_test(test_sdis_volumic_power2_2d)
   build_test(test_sdis_volumic_power3_2d)
   build_test(test_sdis_volumic_power4_2d)
 
+  if(ALL_TESTS)
+    add_test(test_sdis_volumic_power2_2d test_sdis_volumic_power2_2d)
+    add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
+    add_test(test_sdis_volumic_power4_2d test_sdis_volumic_power4_2d)
+  endif()
+
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_camera Star3DUT)
-
   if(CMAKE_COMPILER_IS_GNUCC)
     target_link_libraries(test_sdis_solve_probe3_2d m)
   endif()
