@@ -417,7 +417,7 @@ main(int argc, char** argv)
     printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
       SPLIT2(pos), ref, T.E, T.SE);
 
-    CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
+    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   }

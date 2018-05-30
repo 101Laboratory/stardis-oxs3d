@@ -366,7 +366,7 @@ main(int argc, char** argv)
   printf("Boundary temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(eq_eps(T.E, ref, T.SE));
+  CHK(eq_eps(T.E, ref, 3*T.SE));
   #undef SOLVE
 
   CHK(sdis_scene_ref_put(box_scn) == RES_OK);

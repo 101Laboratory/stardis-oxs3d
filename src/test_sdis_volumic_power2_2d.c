@@ -17,27 +17,27 @@
 #include "test_sdis_utils.h"
 #include <rsys/math.h>
 
-#define N 40000 /* #realisations */
+#define N 10000 /* #realisations */
 #define Pw 10000 /* Volumic power */
 #define MDb sqrt(2.0) /* Multiplier applied to delta to define delta_boundary */
 #define NONE -1
 
 /* H delta T: expected 286.83 C */
-/*#define Tboundary1 NONE
-#define Tboundary2 NONE*/
+#define Tboundary1 NONE
+#define Tboundary2 NONE
 /* Db = 2.1*D:           339.091 +/- 2.734920; #failures: 0
  * Db = 0.5*D:           286.182 +/- 2.202150; #failures: 0
  * Db = 0.5*D 100K real: 283.29  +/- 0.688329; #failures: 1
  * Db = 2.1*D wo Pw:     69.12   +/- 0.461998; #failures: 0
  * Db = 0.5*D wo Pw:     69.764  +/- 0.459326; #failures: 0 */
-/*#define DELTA 0.01*/
+#define DELTA 0.005
 
 /* Dirichlets: expected 246.93 C */
-#define Tboundary1 373.15
-#define Tboundary2 273.15
+/*#define Tboundary1 373.15*/
+/*#define Tboundary2 273.15*/
 /* Db = 2.1*D: 288.487 +/- 2.17576; #failures: 0
  * Db = 0.5*D: 244.382 +/- 1.71547; #failures: 1 */
-#define DELTA 0.01
+/*#define DELTA 0.01*/
 /* Db = 2.1*D: 273.532 +/- 1.98965; #failures: 0
  * Db = 0.5*D: 243.219 +/- 1.70725: #failures: 1 */
 /*#define DELTA 0.005*/
