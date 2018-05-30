@@ -26,11 +26,17 @@
 
 #include <star/ssp.h>
 
-/* Emperical scale factor to apply to the upper bound of the ray range in order
+/* Define a new result code from RES_BAD_OP saying that the bad operation is
+ * definitive, i.e. in the current state, the realisation will inevitably fail.
+ * It is thus unecessary to retry a specific section of the random walk */
+#define RES_BAD_OP_IRRECOVERABLE (-RES_BAD_OP)
+
+/* Empirical scale factor to apply to the upper bound of the ray range in order
  * to handle numerical imprecisions */
 #define RAY_RANGE_MAX_SCALE 1.001f
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
+#define SQRT_2 1.41421356237309504880
 
 struct rwalk_context {
   double Tarad; /* Ambient radiative temperature */
@@ -190,9 +196,9 @@ XD(sample_reinjection_dir)
 #else
   /* Sample the corner of a reversed squared pyramid, i.e. the base is a square
    * and the apex is below the base. The apex of the pyramid is the current
-   * position of the random walk. The length of the edges from the corners of
+   * position of the random walk. The length of the edges from the corners
    * to the apex is equal to sqrt(2). The height of the pyramid is 1
-   * and the size of a base edges is 2/sqrt(2). The directions from the apex to
+   * and the size of the base edges is 2/sqrt(2). The directions from the apex to
    * the corner are thus:
    *          | +/-1/sqrt(2) |   | +/-1    |
    *    dir = | +/-1/sqrt(2) | = | +/-1    |
@@ -202,7 +208,7 @@ XD(sample_reinjection_dir)
   const uint64_t r = ssp_rng_uniform_uint64(rng, 0, 3);
   float frame[9];
   ASSERT(rwalk && dir);
-  dir[2] = (float)sqrt(2.0);
+  dir[2] = (float)SQRT_2;
   switch(r) {
     case 0: dir[0]= 1.f; dir[1]= 1.f; break;
     case 1: dir[0]=-1.f; dir[1]= 1.f; break;
@@ -301,7 +307,7 @@ XD(trace_radiative_path)
           FUNC_NAME,
           ctx->Tarad,
           SPLIT3(rwalk->vtx.P));
-        res = RES_BAD_ARG;
+        res = RES_BAD_OP;
         goto error;
       }
     }
@@ -518,8 +524,8 @@ XD(solid_solid_boundary_temperature)
 
   /* Note that reinjection distance is *FIXED*. It MUST ensure that the orthogonal
    * distance from the boundary to the point to challenge is equal to delta. */
-  reinject_dst_front = solid_get_delta(solid_front, &rwalk->vtx)*sqrt(2.0);
-  reinject_dst_back  = solid_get_delta(solid_back, &rwalk->vtx) *sqrt(2.0);
+  reinject_dst_front = solid_get_delta(solid_front, &rwalk->vtx)*SQRT_2;
+  reinject_dst_back  = solid_get_delta(solid_back, &rwalk->vtx) *SQRT_2;
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir0);
@@ -632,7 +638,7 @@ XD(solid_fluid_boundary_temperature)
   /* Note that the reinjection distance is *FIXED*. It MUST ensure that the
    * orthogonal distance from the boundary to the point to chalenge is equal to
    * delta. */
-  delta_boundary = sqrt(2.0) * delta;
+  delta_boundary = SQRT_2 * delta;
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir);
@@ -646,7 +652,7 @@ XD(solid_fluid_boundary_temperature)
   /* Adjust the delta boundary to the hit distance */
   delta_boundary = MMIN(delta_boundary, hit.distance);
   /* Define the orthogonal distance from the reinjection pos to the interface */
-  delta = delta_boundary / sqrt(2.0);
+  delta = delta_boundary / SQRT_2;
 
   /* Fetch the boundary properties */
   epsilon = interface_side_get_emissivity(interf, &frag_fluid);
@@ -735,7 +741,7 @@ XD(solid_boundary_with_flux_temperature)
 
   /* Compute the reinjection distance.  It MUST ensure that the orthogonal
    * distance from the boundary to the point to chalenge is equal to delta. */
-  delta_boundary = delta * sqrt(2.0);
+  delta_boundary = delta * SQRT_2;
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir);
@@ -750,9 +756,9 @@ XD(solid_boundary_with_flux_temperature)
   delta_boundary = MMIN(delta_boundary, hit.distance);
 
   /* Define the orthogonal distance from the reinjection pos to the interface */
-  delta = delta_boundary / sqrt(2.0);
+  delta = delta_boundary / SQRT_2;
 
-  /* Update the temperature. Note that we use delta and not delta_boundary */
+  /* Handle the flux */
   delta_in_meter = delta*fp_to_meter;
   T->value += phi * delta_in_meter / lambda;
 
@@ -858,7 +864,7 @@ XD(solid_temperature)
     log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(rwalk->vtx.P));
-    return RES_BAD_OP;
+    return RES_BAD_OP_IRRECOVERABLE;
   }
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
@@ -1038,7 +1044,7 @@ exit:
 #ifndef NDEBUG
   sa_release(stack);
 #endif
-  return res;
+  return res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res;
 error:
   goto exit;
 }

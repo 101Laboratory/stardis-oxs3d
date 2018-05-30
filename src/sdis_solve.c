@@ -218,7 +218,7 @@ sdis_solve_probe
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
   for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
     res_T res_local;
-    double w;
+    double w = NaN;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
     ATOMIC n;
@@ -368,7 +368,7 @@ sdis_solve_probe_boundary
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
   for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
     res_T res_local;
-    double w;
+    double w = NaN;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
 
