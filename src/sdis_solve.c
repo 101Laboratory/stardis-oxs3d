@@ -250,7 +250,7 @@ sdis_solve_probe
       fflush(stdout);
     }
   }
-  printf("\n");
+  printf("%c[2K\r", 27);
 
   estimator->nrealisations = N;
   estimator->nfailures = nrealisations - N;
