@@ -204,3 +204,9 @@ sdis_medium_get_type(const struct sdis_medium* medium)
   ASSERT(medium != NULL);
   return medium->type;
 }
+struct sdis_data*
+sdis_medium_get_data(struct sdis_medium* medium)
+{
+  ASSERT(medium);
+  return medium->data;
+}

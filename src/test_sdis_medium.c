@@ -25,6 +25,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
+  void* ptr = (void*)((intptr_t)0xDEADBEEF);
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
@@ -60,15 +61,19 @@ main(int argc, char** argv)
 
   CHK(sdis_fluid_create
     (dev, &SDIS_FLUID_SHADER_NULL, NULL, &fluid) == RES_BAD_ARG);
+  CHK(sdis_medium_get_type(fluid) == SDIS_FLUID);
+  CHK(sdis_medium_get_data(fluid) == NULL);
 
-  CHK(sdis_solid_create(NULL, NULL, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, NULL, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(NULL, &solid_shader, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(NULL, NULL, NULL, &solid) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, NULL, NULL, &solid) == RES_BAD_ARG);
-  CHK(sdis_solid_create(NULL, &solid_shader, NULL, &solid) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+  CHK(sdis_solid_create(NULL, NULL, ptr, NULL) == RES_BAD_ARG);
+  CHK(sdis_solid_create(dev, NULL, ptr, NULL) == RES_BAD_ARG);
+  CHK(sdis_solid_create(NULL, &solid_shader, ptr, NULL) == RES_BAD_ARG);
+  CHK(sdis_solid_create(dev, &solid_shader, ptr, NULL) == RES_BAD_ARG);
+  CHK(sdis_solid_create(NULL, NULL, ptr, &solid) == RES_BAD_ARG);
+  CHK(sdis_solid_create(dev, NULL, ptr, &solid) == RES_BAD_ARG);
+  CHK(sdis_solid_create(NULL, &solid_shader, ptr, &solid) == RES_BAD_ARG);
+  CHK(sdis_solid_create(dev, &solid_shader, ptr, &solid) == RES_OK);
+  CHK(sdis_medium_get_type(solid) == SDIS_SOLID);
+  CHK(sdis_medium_get_data(solid) == ptr);
   CHK(sdis_medium_ref_put(solid) == RES_OK);
 
   solid_shader.calorific_capacity = NULL;

@@ -373,6 +373,10 @@ SDIS_API enum sdis_medium_type
 sdis_medium_get_type
   (const struct sdis_medium* medium);
 
+SDIS_API struct sdis_data*
+sdis_medium_get_data
+  (struct sdis_medium* medium);
+
 /*******************************************************************************
  * An interface is the boundary between 2 media.
  ******************************************************************************/
