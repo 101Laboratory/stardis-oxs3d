@@ -25,13 +25,13 @@
 #define Tboundary1 NONE
 #define Tboundary2 NONE
 #define DELTA 0.01
-#define Tref 286.83 /* In celcius. Computed by EDF with Syrthes */
+#define Tref 286.83 /* In C. Computed with Syrthes at the position 0.5 */
 
 /* Dirichlets */
 /*#define Tboundary1 373.15*/
 /*#define Tboundary2 273.15*/
 /*#define DELTA 0.01*/
-/*#define Tref 246.93*/ /* In celcius. Computed by EDF with Syrthes */
+/*#define Tref 246.93*/ /* In C. Computed with Syrthes at the position 0.5 */
 
 /*
  *           _\  T1
@@ -54,6 +54,11 @@
  *           / /
  *           \__/
  */
+
+struct reference {
+  double pos[2];
+  double temperature; /* In celcius */
+};
 
 static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
  -0.5,-1.0,
@@ -209,6 +214,38 @@ interface_get_temperature
 }
 
 /*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static void
+check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
+{
+  struct sdis_estimator* estimator = NULL;
+  struct sdis_mc T = SDIS_MC_NULL;
+  size_t nreals;
+  size_t nfails;
+  double pos[2] = {0,0};
+  size_t i;
+
+  FOR_EACH(i, 0, nrefs) {
+    double Tc;
+    pos[0] = refs[i].pos[0];
+    pos[1] = refs[i].pos[1];
+
+    CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
+    CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+    Tc = T.E - 273.15; /* Convert in Celcius */
+    printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g, %g]\n",
+      SPLIT2(pos), refs[i].temperature, Tc, T.SE, Tc-3*T.SE, Tc+3*T.SE);
+    printf("#realisations: %lu; #failures: %lu\n",
+      (unsigned long)nreals, (unsigned long)nfails);
+    /*CHK(eq_eps(Tc, refs[i].temperature, T.SE*3));*/
+    CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  }
+}
+
+/*******************************************************************************
  * Test
  ******************************************************************************/
 int
@@ -225,7 +262,6 @@ main(int argc, char** argv)
   struct sdis_medium* solid1 = NULL;
   struct sdis_medium* solid2 = NULL;
   struct sdis_scene* scn = NULL;
-  struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = SDIS_FLUID_SHADER_NULL;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -234,9 +270,34 @@ main(int argc, char** argv)
   struct sdis_interface* interf_solid1_fluid1 = NULL;
   struct sdis_interface* interf_solid1_fluid2 = NULL;
   struct sdis_interface* interfaces[8 /*#segment*/];
-  struct sdis_mc T = SDIS_MC_NULL;
-  size_t nfails, nreals;
-  double pos[2];
+
+  /* In celcius. Computed by EDF with Syrthes */
+  const struct reference refs1[] = { /* Lambda1=1, Lambda2=10, Pw = 10000 */
+    {{0, 0.85}, 190.29},
+    {{0, 0.65}, 259.95},
+    {{0, 0.45}, 286.33},
+    {{0, 0.25}, 235.44},
+    {{0, 0.05}, 192.33},
+    {{0,-0.15}, 156.82},
+    {{0,-0.35}, 123.26},
+    {{0,-0.55}, 90.250}
+  };
+  const struct reference refs2[] = { /* Lambda1=0.1, Lambda2=10, Pw=10000 */
+    {{0, 0.85}, 678.17},
+    {{0, 0.65}, 1520.84},
+    {{0, 0.45}, 1794.57},
+    {{0, 0.25}, 1429.74}
+  };
+  const struct reference refs3[] = { /* Lambda1=1, Lambda2=10, Pw=NONE */
+    {{0, 0.85}, 83.99},
+    {{0, 0.65}, 73.90},
+    {{0, 0.45}, 68.43},
+    {{0, 0.25}, 60.61},
+    {{0, 0.05}, 52.09},
+    {{0,-0.15}, 42.75},
+    {{0,-0.35}, 33.04},
+    {{0,-0.55}, 24.58}
+  };
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
@@ -340,11 +401,6 @@ main(int argc, char** argv)
     &interf_solid1_fluid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
-  /* Release the media */
-  CHK(sdis_medium_ref_put(fluid1) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid2) == RES_OK);
-  CHK(sdis_medium_ref_put(solid1) == RES_OK);
-  CHK(sdis_medium_ref_put(solid2) == RES_OK);
 
   /* Map the interfaces to their square segments */
   interfaces[0] = interf_adiabatic;
@@ -360,6 +416,35 @@ main(int argc, char** argv)
   CHK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
     nvertices, get_position, interfaces, &scn) == RES_OK);
 
+  printf(">>> Check 1\n");
+  check(scn, refs1, sizeof(refs1)/sizeof(struct reference));
+
+  /* Update the scene */
+  CHK(sdis_scene_ref_put(scn) == RES_OK);
+  data = sdis_medium_get_data(solid1);
+  solid_param = sdis_data_get(data);
+  solid_param->lambda = 0.1;
+  CHK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
+    nvertices, get_position, interfaces, &scn) == RES_OK);
+
+  printf("\n>>> Check 2\n");
+  check(scn, refs2, sizeof(refs2)/sizeof(struct reference));
+
+  /* Update the scene */
+  CHK(sdis_scene_ref_put(scn) == RES_OK);
+  data = sdis_medium_get_data(solid1);
+  solid_param = sdis_data_get(data);
+  solid_param->lambda = 1;
+  data = sdis_medium_get_data(solid2);
+  solid_param = sdis_data_get(data);
+  solid_param->lambda = 10;
+  solid_param->P = SDIS_VOLUMIC_POWER_NONE;
+  CHK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
+    nvertices, get_position, interfaces, &scn) == RES_OK);
+
+  printf("\n>>> Check 3\n");
+  check(scn, refs3, sizeof(refs3)/sizeof(struct reference));
+
 #if 0
   dump_segments(stdout, vertices, nvertices, indices, nsegments);
   exit(0);
@@ -371,17 +456,11 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf_solid1_fluid2) == RES_OK);
   CHK(sdis_interface_ref_put(interf_solid1_solid2) == RES_OK);
 
-  pos[0] = 0;
-  pos[1] = 0.5;
-  CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  printf("Temperature at (%g %g) = %g +/- %g\n", SPLIT2(pos), T.E-273.15, T.SE);
-  printf("#realisations: %lu; #failures: %lu\n",
-    (unsigned long)nreals, (unsigned long)nfails);
-  CHK(eq_eps(T.E-273.15, Tref, T.SE*3));
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  /* Release the media */
+  CHK(sdis_medium_ref_put(fluid1) == RES_OK);
+  CHK(sdis_medium_ref_put(fluid2) == RES_OK);
+  CHK(sdis_medium_ref_put(solid1) == RES_OK);
+  CHK(sdis_medium_ref_put(solid2) == RES_OK);
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);
