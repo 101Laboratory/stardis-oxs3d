@@ -193,6 +193,7 @@ XD(sample_reinjection_dir)
     dir[0] = rwalk->hit.normal[0] + rwalk->hit.normal[1];
     dir[1] =-rwalk->hit.normal[0] + rwalk->hit.normal[1];
   }
+  f2_normalize(dir, dir);
 #else
   /* Sample the corner of a reversed squared pyramid, i.e. the base is a square
    * and the apex is below the base. The apex of the pyramid is the current
@@ -207,6 +208,7 @@ XD(sample_reinjection_dir)
    * frame around the normal onto which the random walk lies. */
   const uint64_t r = ssp_rng_uniform_uint64(rng, 0, 3);
   float frame[9];
+  float N[3];
   ASSERT(rwalk && dir);
   dir[2] = (float)SQRT_2;
   switch(r) {
@@ -216,10 +218,12 @@ XD(sample_reinjection_dir)
     case 3: dir[0]=-1.f; dir[1]=-1.f; break;
     default: FATAL("Unreachalbe code.\n");
   }
-  f33_basis(frame, rwalk->hit.normal);
+  f3_normalize(N, rwalk->hit.normal);
+  f33_basis(frame, N);
   f33_mulf3(dir, frame, dir);
+  f3_normalize(dir, dir);
+  ASSERT(eq_epsf(f3_dot(dir, N), (float)(SQRT_2*0.5), 1.e-4f));
 #endif
-  fX(normalize)(dir, dir);
 }
 
 /* Check that the interface fragment is consistent with the current state of
