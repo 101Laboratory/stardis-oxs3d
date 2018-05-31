@@ -499,7 +499,8 @@ scene_get_medium_2d
       }
     /* Discard the hit if it is on a vertex, i.e. between 2 segments,  and
      * target a new position onto the current primitive */
-    } while(hit_on_vertex(&hit) && (s+=s_step) <= s_range[1]);
+    } while((S2D_HIT_NONE(&hit) || hit_on_vertex(&hit))
+         && (s+=s_step) <= s_range[1]);
 
     /* The hits of all targeted positions on the current primitive are on
      * vertices. Challenge positions on another primitive. */
@@ -586,7 +587,7 @@ scene_get_medium_3d
       }
     /* Discard the hit if it is on an edge, i.e. between 2 triangles,  and
      * target a new position onto the current primitive */
-    } while(hit_on_edge(&hit) && ++istep < nsteps);
+    } while((S3D_HIT_NONE(&hit) || hit_on_edge(&hit)) && ++istep < nsteps);
 
     /* The hits of all targeted positions on the current primitive are on
      * edges. Challenge positions on another primitive. */
