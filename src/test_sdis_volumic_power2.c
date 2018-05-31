@@ -24,7 +24,8 @@
 
 struct reference {
   double pos[3];
-  double temperature; /* In celcius */
+  double temperature_2d; /* In celcius */
+  double temperature_3d; /* In celcius */
 };
 
 static const double vertices[16/*#vertices*/*3/*#coords per vertex*/] = {
@@ -36,24 +37,32 @@ static const double vertices[16/*#vertices*/*3/*#coords per vertex*/] = {
  -0.5, 1.0, 0.5,
   0.5, 1.0, 0.5,
   0.5,-1.0, 0.5,
- -0.1, 0.4,-0.1,
- -0.1, 0.6,-0.1,
-  0.1, 0.6,-0.1,
-  0.1, 0.4,-0.1,
- -0.1, 0.4, 0.1,
- -0.1, 0.6, 0.1,
-  0.1, 0.6, 0.1,
-  0.1, 0.4, 0.1
+ -0.1, 0.4,-0.5,
+ -0.1, 0.6,-0.5,
+  0.1, 0.6,-0.5,
+  0.1, 0.4,-0.5,
+ -0.1, 0.4, 0.5,
+ -0.1, 0.6, 0.5,
+  0.1, 0.6, 0.5,
+  0.1, 0.4, 0.5
 };
 static const size_t nvertices = sizeof(vertices)/sizeof(double[3]);
 
-static const size_t indices[24/*#triangles*/*3/*#indices per triangle*/]= {
+static const size_t indices[36/*#triangles*/*3/*#indices per triangle*/]= {
   0, 4, 5, 5, 1, 0, /* Cuboid left */
   1, 5, 6, 6, 2, 1, /* Cuboid top */
   6, 7, 3, 3, 2, 6, /* Cuboid right */
   0, 3, 7, 7, 4, 0, /* Cuboid bottom */
-  0, 1, 2, 2, 3, 0, /* Cuboid back */
-  4, 7, 6, 6, 5, 4, /* Cuboid front */
+  /* Cuboid back */
+  0, 1, 9, 9, 8, 0,
+  1, 2, 10, 10, 9, 1,
+  2, 3, 11, 11, 10, 2,
+  3, 0, 8, 8, 11, 3,
+  /* Cuboid front */
+  5, 4, 12, 12, 13, 5,
+  5, 13, 14, 14, 6, 5,
+  6, 14, 15, 15, 7, 6,
+  7, 15, 12, 12, 4, 7,
   8, 12, 13, 13, 9, 8, /* Cube left */
   9, 13, 14, 14, 10, 9, /* Cube top */
   14, 15, 11, 11, 10, 14, /* Cube right */
@@ -211,11 +220,12 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = SDIS_FLUID_SHADER_NULL;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
-  struct sdis_interface* interf_adiabatic = NULL;
+  struct sdis_interface* interf_solid1_adiabatic = NULL;
+  struct sdis_interface* interf_solid2_adiabatic = NULL;
   struct sdis_interface* interf_solid1_solid2 = NULL;
   struct sdis_interface* interf_solid1_fluid1 = NULL;
   struct sdis_interface* interf_solid1_fluid2 = NULL;
-  struct sdis_interface* interfaces[12 /*#rectangles*/];
+  struct sdis_interface* interfaces[18 /*#rectangles*/];
   struct sdis_estimator* estimator = NULL;
   struct sdis_mc T = SDIS_MC_NULL;
   size_t nreals;
@@ -224,14 +234,14 @@ main(int argc, char** argv)
   size_t i;
   /* In celcius. Computed by EDF with Syrthes */
   const struct reference refs[] = { /* Lambda1=1, Lambda2=10, Pw = 10000 */
-    {{0, 0.85, 0}, 189.13},
-    {{0, 0.65, 0}, 247.09},
-    {{0, 0.45, 0}, 308.42},
-    {{0, 0.25, 0}, 233.55},
-    {{0, 0.05, 0}, 192.3},
-    {{0,-0.15, 0}, 156.98},
-    {{0,-0.35, 0}, 123.43},
-    {{0,-0.55, 0}, 90.04}
+    {{0, 0.85, 0}, 192.29, 189.13},
+    {{0, 0.65, 0}, 259.95, 247.09},
+    {{0, 0.45, 0}, 286.33, 308.42},
+    {{0, 0.25, 0}, 235.44, 233.55},
+    {{0, 0.05, 0}, 192.33, 192.30},
+    {{0,-0.15, 0}, 156.82, 156.98},
+    {{0,-0.35, 0}, 123.26, 123.43},
+    {{0,-0.55, 0}, 90.250, 90.040}
   };
   size_t nrefs = sizeof(refs)/sizeof(struct reference);
   (void)argc, (void)argv;
@@ -305,13 +315,15 @@ main(int argc, char** argv)
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
 
-  /* Create the adiabatic interface */
+  /* Create the adiabatic interfaces */
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
   interf_param->h = 0;
   CHK(sdis_interface_create(dev, solid1, fluid1, &interf_shader, data,
-    &interf_adiabatic) == RES_OK);
+    &interf_solid1_adiabatic) == RES_OK);
+  CHK(sdis_interface_create(dev, solid2, fluid1, &interf_shader, data,
+    &interf_solid2_adiabatic) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Setup the interface shader */
@@ -337,20 +349,25 @@ main(int argc, char** argv)
     &interf_solid1_fluid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
-
   /* Map the interfaces to their faces */
-  interfaces[0] = interf_adiabatic;
+  interfaces[0] = interf_solid1_adiabatic;
   interfaces[1] = interf_solid1_fluid1;
-  interfaces[2] = interf_adiabatic;
+  interfaces[2] = interf_solid1_adiabatic;
   interfaces[3] = interf_solid1_fluid2;
-  interfaces[4] = interf_adiabatic;
-  interfaces[5] = interf_adiabatic;
-  interfaces[6] = interf_solid1_solid2;
-  interfaces[7] = interf_solid1_solid2;
-  interfaces[8] = interf_solid1_solid2;
-  interfaces[9] = interf_solid1_solid2;
-  interfaces[10] = interf_solid1_solid2;
-  interfaces[11] = interf_solid1_solid2;
+  interfaces[4] = interf_solid1_adiabatic;
+  interfaces[5] = interf_solid1_adiabatic;
+  interfaces[6] = interf_solid1_adiabatic;
+  interfaces[7] = interf_solid1_adiabatic;
+  interfaces[8] = interf_solid1_adiabatic;
+  interfaces[9] = interf_solid1_adiabatic;
+  interfaces[10] = interf_solid1_adiabatic;
+  interfaces[11] = interf_solid1_adiabatic;
+  interfaces[12] = interf_solid1_solid2;
+  interfaces[13] = interf_solid1_solid2;
+  interfaces[14] = interf_solid1_solid2;
+  interfaces[15] = interf_solid1_solid2;
+  interfaces[16] = interf_solid2_adiabatic;
+  interfaces[17] = interf_solid2_adiabatic;
 
   /* Create the scene */
   CHK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
@@ -360,7 +377,6 @@ main(int argc, char** argv)
   dump_mesh(stdout, vertices, nvertices, indices, ntriangles);
   exit(0);
 #endif
-
 
   FOR_EACH(i, 0, nrefs) {
     double Tc;
@@ -373,8 +389,9 @@ main(int argc, char** argv)
     CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
     CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
     Tc = T.E - 273.15; /* Convert in Celcius */
-    printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g, %g]\n",
-      SPLIT2(pos), refs[i].temperature, Tc, T.SE, Tc-3*T.SE, Tc+3*T.SE);
+    printf("Temperature at (%g %g); 2D = %g; 3D = %g ~ %g +/- %g [%g, %g]\n",
+      SPLIT2(pos), refs[i].temperature_2d, refs[i].temperature_3d,
+      Tc, T.SE, Tc-3*T.SE, Tc+3*T.SE);
     printf("#realisations: %lu; #failures: %lu\n",
       (unsigned long)nreals, (unsigned long)nfails);
     /*CHK(eq_eps(Tc, refs[i].temperature, T.SE*3));*/
@@ -382,7 +399,8 @@ main(int argc, char** argv)
   }
 
   /* Release the interfaces */
-  CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid1_adiabatic) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid2_adiabatic) == RES_OK);
   CHK(sdis_interface_ref_put(interf_solid1_fluid1) == RES_OK);
   CHK(sdis_interface_ref_put(interf_solid1_fluid2) == RES_OK);
   CHK(sdis_interface_ref_put(interf_solid1_solid2) == RES_OK);
