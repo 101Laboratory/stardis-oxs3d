@@ -144,11 +144,13 @@ if(NOT NO_TEST)
   new_test(test_sdis_volumic_power)
 
   # Additionnal tests
+  build_test(test_sdis_volumic_power2)
   build_test(test_sdis_volumic_power2_2d)
   build_test(test_sdis_volumic_power3_2d)
   build_test(test_sdis_volumic_power4_2d)
 
   if(ALL_TESTS)
+    add_test(test_sdis_volumic_power2    test_sdis_volumic_power2)
     add_test(test_sdis_volumic_power2_2d test_sdis_volumic_power2_2d)
     add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
     add_test(test_sdis_volumic_power4_2d test_sdis_volumic_power4_2d)
