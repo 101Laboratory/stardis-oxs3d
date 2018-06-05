@@ -36,7 +36,6 @@
 #define RAY_RANGE_MAX_SCALE 1.001f
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
-#define SQRT_2 1.41421356237309504880
 
 struct rwalk_context {
   double Tarad; /* Ambient radiative temperature */
@@ -210,7 +209,7 @@ XD(sample_reinjection_dir)
   float frame[9];
   float N[3];
   ASSERT(rwalk && dir);
-  dir[2] = (float)SQRT_2;
+  dir[2] = 1;
   switch(r) {
     case 0: dir[0]= 1.f; dir[1]= 1.f; break;
     case 1: dir[0]=-1.f; dir[1]= 1.f; break;
@@ -222,7 +221,7 @@ XD(sample_reinjection_dir)
   f33_basis(frame, N);
   f33_mulf3(dir, frame, dir);
   f3_normalize(dir, dir);
-  ASSERT(eq_epsf(f3_dot(dir, N), (float)(SQRT_2*0.5), 1.e-4f));
+  ASSERT(eq_epsf(f3_dot(dir, N), (float)(sqrt(2.0)/2.0), 1.e-4f));
 #endif
 }
 
@@ -528,8 +527,8 @@ XD(solid_solid_boundary_temperature)
 
   /* Note that reinjection distance is *FIXED*. It MUST ensure that the orthogonal
    * distance from the boundary to the point to challenge is equal to delta. */
-  reinject_dst_front = solid_get_delta(solid_front, &rwalk->vtx)*SQRT_2;
-  reinject_dst_back  = solid_get_delta(solid_back, &rwalk->vtx) *SQRT_2;
+  reinject_dst_front = solid_get_delta(solid_front, &rwalk->vtx)*sqrt(DIM);
+  reinject_dst_back  = solid_get_delta(solid_back, &rwalk->vtx) *sqrt(DIM);
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir0);
@@ -642,7 +641,7 @@ XD(solid_fluid_boundary_temperature)
   /* Note that the reinjection distance is *FIXED*. It MUST ensure that the
    * orthogonal distance from the boundary to the point to chalenge is equal to
    * delta. */
-  delta_boundary = SQRT_2 * delta;
+  delta_boundary = sqrt(DIM) * delta;
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir);
@@ -656,7 +655,7 @@ XD(solid_fluid_boundary_temperature)
   /* Adjust the delta boundary to the hit distance */
   delta_boundary = MMIN(delta_boundary, hit.distance);
   /* Define the orthogonal distance from the reinjection pos to the interface */
-  delta = delta_boundary / SQRT_2;
+  delta = delta_boundary / sqrt(DIM);
 
   /* Fetch the boundary properties */
   epsilon = interface_side_get_emissivity(interf, &frag_fluid);
@@ -745,7 +744,7 @@ XD(solid_boundary_with_flux_temperature)
 
   /* Compute the reinjection distance.  It MUST ensure that the orthogonal
    * distance from the boundary to the point to chalenge is equal to delta. */
-  delta_boundary = delta * SQRT_2;
+  delta_boundary = delta * sqrt(DIM);
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir);
@@ -760,7 +759,7 @@ XD(solid_boundary_with_flux_temperature)
   delta_boundary = MMIN(delta_boundary, hit.distance);
 
   /* Define the orthogonal distance from the reinjection pos to the interface */
-  delta = delta_boundary / SQRT_2;
+  delta = delta_boundary / sqrt(DIM);
 
   /* Handle the flux */
   delta_in_meter = delta*fp_to_meter;
