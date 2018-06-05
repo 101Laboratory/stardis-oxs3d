@@ -194,34 +194,20 @@ XD(sample_reinjection_dir)
   }
   f2_normalize(dir, dir);
 #else
-  /* Sample the corner of a reversed squared pyramid, i.e. the base is a square
-   * and the apex is below the base. The apex of the pyramid is the current
-   * position of the random walk. The length of the edges from the corners
-   * to the apex is equal to sqrt(2). The height of the pyramid is 1
-   * and the size of the base edges is 2/sqrt(2). The directions from the apex to
-   * the corner are thus:
-   *          | +/-1/sqrt(2) |   | +/-1    |
-   *    dir = | +/-1/sqrt(2) | = | +/-1    |
-   *          | 1            |   | sqrt(2) |
-   * The sampled direction is finally transformed in world space by a random
-   * frame around the normal onto which the random walk lies. */
-  const uint64_t r = ssp_rng_uniform_uint64(rng, 0, 3);
+  /* Sample a random direction around the normal whose cosine is 1/sqrt(3). To
+   * do so we sample a position onto a cone whose height is 1 and the radius of
+   * its base is sqrt(2). */
   float frame[9];
   float N[3];
-  ASSERT(rwalk && dir);
-  dir[2] = 1;
-  switch(r) {
-    case 0: dir[0]= 1.f; dir[1]= 1.f; break;
-    case 1: dir[0]=-1.f; dir[1]= 1.f; break;
-    case 2: dir[0]= 1.f; dir[1]=-1.f; break;
-    case 3: dir[0]=-1.f; dir[1]=-1.f; break;
-    default: FATAL("Unreachalbe code.\n");
-  }
+
+  ssp_ran_circle_uniform_float(rng, dir, NULL);
+  dir[2]  = (float)(1.0/sqrt(2));
+
   f3_normalize(N, rwalk->hit.normal);
   f33_basis(frame, N);
   f33_mulf3(dir, frame, dir);
   f3_normalize(dir, dir);
-  ASSERT(eq_epsf(f3_dot(dir, N), (float)(sqrt(2.0)/2.0), 1.e-4f));
+  ASSERT(eq_epsf(f3_dot(dir, N), (float)(1.0/sqrt(3)), 1.e-4f));
 #endif
 }
 
