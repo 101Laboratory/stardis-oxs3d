@@ -17,13 +17,14 @@
 #include "test_sdis_utils.h"
 #include <rsys/math.h>
 
-#define Tfluid 0
-#define Power 10000
-#define Tboundary -1
-#define Hboundary 50
-#define Lambda 10.0
-#define Delta (1.0/20.0)
-#define Nrealisations 10000
+#define Tf1 0
+#define Tf2 100
+#define Power 0 /*10000*/
+#define H1 50
+#define H2 50
+#define LAMBDA 100.0
+#define DELTA (1.0/20.0)
+#define N 10000
 
 /*
  * The 2D scene is a solid slabs stretched along the X dimension to simulate a
@@ -46,7 +47,6 @@
  *          \__/
  *
  */
-
 
 static const double vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
  -10000.5,-0.5,
@@ -206,7 +206,8 @@ main(int argc, char** argv)
   struct interf* interf_param = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_data* data = NULL;
-  struct sdis_medium* fluid = NULL;
+  struct sdis_medium* fluid1 = NULL;
+  struct sdis_medium* fluid2 = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_estimator* estimator = NULL;
@@ -214,12 +215,14 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* interf_adiabatic = NULL;
-  struct sdis_interface* interf_solid_fluid = NULL;
+  struct sdis_interface* interf_solid_fluid1 = NULL;
+  struct sdis_interface* interf_solid_fluid2 = NULL;
   struct sdis_interface* interfaces[4/*#segment*/];
   struct sdis_mc T = SDIS_MC_NULL;
+  size_t nreals, nfails;
   double pos[2];
   double Tref;
-  double Tinterf;
+  double a, b, x;
   double L;
   (void)argc, (void)argv;
 
@@ -231,11 +234,19 @@ main(int argc, char** argv)
   fluid_shader.temperature = fluid_get_temperature;
   fluid_shader.calorific_capacity = dummy_medium_getter;
   fluid_shader.volumic_mass = dummy_medium_getter;
+
   CHK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
   fluid_param = sdis_data_get(data);
-  fluid_param->temperature = Tfluid;
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
+  fluid_param->temperature = Tf1;
+  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid1) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  CHK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  fluid_param = sdis_data_get(data);
+  fluid_param->temperature = Tf2;
+  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Setup the solid shader */
@@ -252,8 +263,8 @@ main(int argc, char** argv)
   solid_param = sdis_data_get(data);
   solid_param->cp = 500000;
   solid_param->rho = 1000;
-  solid_param->lambda = Lambda;
-  solid_param->delta = Delta;
+  solid_param->lambda = LAMBDA;
+  solid_param->delta = DELTA;
   solid_param->volumic_power = Power;
   solid_param->temperature = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
@@ -269,29 +280,40 @@ main(int argc, char** argv)
   interf_param = sdis_data_get(data);
   interf_param->h = 0;
   interf_param->temperature = -1;
-  CHK(sdis_interface_create(dev, solid, fluid, &interf_shader, data,
+  CHK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
     &interf_adiabatic) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
-  /* Create the solid fluid interface */
+  /* Create the solid fluid1 interface */
   CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data) == RES_OK);
   interf_param = sdis_data_get(data);
-  interf_param->h = Hboundary;
-  interf_param->temperature = Tboundary;
-  CHK(sdis_interface_create(dev, solid, fluid, &interf_shader, data,
-    &interf_solid_fluid) == RES_OK);
+  interf_param->h = H1;
+  interf_param->temperature = -1;
+  CHK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
+    &interf_solid_fluid1) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  /* Create the solid fluid2 interface */
+  CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data) == RES_OK);
+  interf_param = sdis_data_get(data);
+  interf_param->h = H2;
+  interf_param->temperature = -1;
+  CHK(sdis_interface_create(dev, solid, fluid2, &interf_shader, data,
+    &interf_solid_fluid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  CHK(sdis_medium_ref_put(fluid1) == RES_OK);
+  CHK(sdis_medium_ref_put(fluid2) == RES_OK);
   CHK(sdis_medium_ref_put(solid) == RES_OK);
 
   /* Map the interfaces to their square segments */
   interfaces[0] = interf_adiabatic;
-  interfaces[1] = interf_solid_fluid;
+  interfaces[1] = interf_solid_fluid1;
   interfaces[2] = interf_adiabatic;
-  interfaces[3] = interf_solid_fluid;
+  interfaces[3] = interf_solid_fluid2;
 
 #if 0
   dump_segments(stdout, vertices, nvertices, indices, nsegments);
@@ -304,25 +326,36 @@ main(int argc, char** argv)
 
   /* Release the interfaces */
   CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_solid_fluid) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid_fluid1) == RES_OK);
+  CHK(sdis_interface_ref_put(interf_solid_fluid2) == RES_OK);
 
   pos[0] = 0;
   pos[1] = 0.25;
 
   L = vertices[3] - vertices[1];
-  if(Tboundary >= 0) {
-    Tinterf = Tboundary;
-  } else {
-    Tinterf = Power*L / (2*Hboundary) + Tfluid;
-  }
-  Tref =
-    Tinterf
-  + Power / (2*Lambda) * ((L*L)/4.0 - pos[1]*pos[1]);
+#if 1
+  x = pos[1] + vertices[3];
+  a = (H2*Power*L + H1*H2*(Tf1 - Tf2) + H1*H2*Power*L*L/(2*LAMBDA))
+    / (LAMBDA * (H1 + H2) + H1*H2*L);
+  b = Tf2 + a * LAMBDA / H2;
+  Tref = -Power / (2*LAMBDA) * x*x + a * x + b;
+#else
+  tmp = LAMBDA / L;
+  T1 = H1 * (H2+tmp) / (tmp*(H1+H2) + H1*H2) * Tf1
+     + H2 *     tmp  / (tmp*(H1+H2) + H1*H2) * Tf2;
+  T2 = H1 *     tmp  / (tmp*(H1+H2) + H1*H2) * Tf1
+     + H2 * (H1+tmp) / (tmp*(H1+H2) + H1*H2) * Tf2;
+  Tref = T2 + (T1-T2)/L * (pos[1]  + vertices[3]);
+#endif
 
-  CHK(sdis_solve_probe(scn, Nrealisations, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
+  CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  printf("Temperature at (%g %g) = %g ~ %g +/- %g\n",
-    SPLIT2(pos), Tref, T.E, T.SE);
+  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g %g]\n",
+    SPLIT2(pos), Tref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
+  printf("#realisations: %lu; #failures: %lu\n",
+      (unsigned long)nreals, (unsigned long)nfails);
   CHK(eq_eps(T.E, Tref, T.SE*3));
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 

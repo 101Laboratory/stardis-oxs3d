@@ -325,6 +325,8 @@ main(int argc, char** argv)
   CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, NULL) == RES_BAD_ARG);
   CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
 
+  ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
+
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
   CHK(nfails + nreals == N);
@@ -334,12 +336,11 @@ main(int argc, char** argv)
 
   CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
 
-  ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
 
   printf("Boundary temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(eq_eps(T.E, ref, T.SE*2));
+  CHK(eq_eps(T.E, ref, 3*T.SE));
 
   uv[0] = 0.5;
   iprim = 3;

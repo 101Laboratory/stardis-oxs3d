@@ -49,6 +49,7 @@
 #define T0 320
 #define LAMBDA 0.1
 #define P0 10
+#define DELTA 1.0/20.0
 
 /*******************************************************************************
  * Geometry 3D
@@ -156,7 +157,7 @@ solid_get_delta
 {
   (void)data;
   CHK(vtx != NULL);
-  return 1.0/20.0;
+  return DELTA;
 }
 
 static double

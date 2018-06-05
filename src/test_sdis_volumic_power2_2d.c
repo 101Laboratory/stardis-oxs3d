@@ -25,13 +25,39 @@
 #define Tboundary1 NONE
 #define Tboundary2 NONE
 #define DELTA 0.01
-#define Tref 286.83 /* In C. Computed with Syrthes at the position 0.5 */
+#define Tref 286.83 /* In Celsius. Computed with Syrthes at the position 0.5 */
 
 /* Dirichlets */
 /*#define Tboundary1 373.15*/
 /*#define Tboundary2 273.15*/
 /*#define DELTA 0.01*/
-/*#define Tref 246.93*/ /* In C. Computed with Syrthes at the position 0.5 */
+/*#define Tref 246.93*/ /* In Celsius. Computed with Syrthes at the position 0.5 */
+
+/* >>> Check1: results in Celcius with delta 0.01 and 10000 realisations
+ * 0.85; 190.29 ~ 192.630 +/- 1.85469 [187.066, 198.194]; #failures: 4
+ * 0.65; 259.95 ~ 262.472 +/- 2.20362 [255.861, 269.083]; #failures: 3
+ * 0.45; 286.33 ~ 292.721 +/- 2.30152 [285.817, 299.626]; #failures: 3
+ * 0.25; 235.44 ~ 238.142 +/- 2.30356 [231.231, 245.052]; #failures: 2
+ * 0.05; 192.33 ~ 192.162 +/- 2.18725 [185.601, 198.724]; #failures: 4
+ *-0.15; 156.82 ~ 156.178 +/- 2.16574 [149.681, 162.675]; #failures: 8
+ *-0.35; 123.26 ~ 123.506 +/- 1.97662 [117.577, 129.436]; #failures: 1
+ *-0.55; 90.250 ~ 90.6612 +/- 1.78979 [85.2918, 96.0306]; #failures: 0
+ *
+ * >>> Check2: results in Celcius with delta 0.01 and 10000 realisations
+ * 0.85; 678.170 ~ 689.735 +/- 13.1487 [650.289, 729.181]; #failures: 12
+ * 0.65; 1520.84 ~ 1526.45 +/- 17.2470 [1474.71, 1578.19]; #failures: 38
+ * 0.45; 1794.57 ~ 1801.35 +/- 17.5958 [1748.57, 1854.14]; #failures: 31
+ * 0.25; 1429.74 ~ 1421.25 +/- 17.4008 [1369.04, 1473.45]; #failures: 32
+ *
+ * >>> Check3: results in Celcius with delta 0.01 and 10000 realisations
+ * 0.85; 83.99 ~ 84.0036 +/- 0.366646 [82.9037, 85.1035]; #failures: 4
+ * 0.65; 73.90 ~ 73.6821 +/- 0.440425 [72.3608, 75.0034]; #failures: 3
+ * 0.45; 68.43 ~ 69.4908 +/- 0.460515 [68.1093, 70.8724]; #failures: 3
+ * 0.25; 60.61 ~ 60.9922 +/- 0.487816 [59.5287, 62.4556]; #failures: 2
+ * 0.05; 52.09 ~ 51.5106 +/- 0.499872 [50.0110, 53.0102]; #failures: 4
+ *-0.15; 42.75 ~ 42.1037 +/- 0.493923 [40.6219, 43.5855]; #failures: 8
+ *-0.35; 33.04 ~ 33.6234 +/- 0.472444 [32.2060, 35.0407]; #failures: 1
+ *-0.55; 24.58 ~ 24.2100 +/- 0.428355 [22.9249, 25.4951]; #failures: 0 */
 
 /*
  *           _\  T1
