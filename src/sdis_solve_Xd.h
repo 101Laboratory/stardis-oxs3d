@@ -22,6 +22,8 @@
 #include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
 
+#include <rsys/float2.h>
+#include <rsys/float3.h>
 #include <rsys/stretchy_array.h>
 
 #include <star/ssp.h>
@@ -45,7 +47,22 @@ struct rwalk_context {
 /* Reflect the vector V wrt the normal N. By convention V points outward the
  * surface. */
 static INLINE float*
-reflect(float res[3], const float V[3], const float N[3])
+reflect_2d(float res[2], const float V[2], const float N[2])
+{
+  float tmp[2];
+  float cos_V_N;
+  ASSERT(res && V && N);
+  ASSERT(f2_is_normalized(V) && f2_is_normalized(N));
+  cos_V_N = f2_dot(V, N);
+  f2_mulf(tmp, N, 2*cos_V_N);
+  f2_sub(res, tmp, V);
+  return res;
+}
+
+/* Reflect the vector V wrt the normal N. By convention V points outward the
+ * surface. */
+static INLINE float*
+reflect_3d(float res[3], const float V[3], const float N[3])
 {
   float tmp[3];
   float cos_V_N;
@@ -198,16 +215,15 @@ XD(sample_reinjection_dir)
    * do so we sample a position onto a cone whose height is 1 and the radius of
    * its base is sqrt(2). */
   float frame[9];
-  float N[3];
+  ASSERT(fX(is_normalized)(rwalk->hit.normal));
 
   ssp_ran_circle_uniform_float(rng, dir, NULL);
   dir[2]  = (float)(1.0/sqrt(2));
 
-  f3_normalize(N, rwalk->hit.normal);
-  f33_basis(frame, N);
+  f33_basis(frame, rwalk->hit.normal);
   f33_mulf3(dir, frame, dir);
   f3_normalize(dir, dir);
-  ASSERT(eq_epsf(f3_dot(dir, N), (float)(1.0/sqrt(3)), 1.e-4f));
+  ASSERT(eq_epsf(f3_dot(dir, rwalk->hit.normal), (float)(1.0/sqrt(3)), 1.e-4f));
 #endif
 }
 
@@ -349,7 +365,7 @@ XD(trace_radiative_path)
     alpha =  interface_side_get_specular_fraction(interf, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
-      reflect(dir, f3_minus(dir, dir), N);
+      reflect_3d(dir, f3_minus(dir, dir), N);
     } else { /* Sample diffuse part */
       ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
     }
@@ -425,50 +441,6 @@ XD(fluid_temperature)
   return RES_OK;
 }
 
-static INLINE void
-XD(reinject_in_solid)
-  (const struct sdis_scene* scn,
-   const float fp_to_meter,
-   struct XD(rwalk)* rwalk,
-   const double delta_in,
-   const float dir[DIM],
-   struct XD(temperature)* T,
-   const int handle_volumic_power)
-{
-  float pos[DIM];
-  float range[2];
-  double power;
-  double delta = delta_in;
-  ASSERT(scn && delta > 0 && rwalk->mdm && rwalk->mdm->type == SDIS_SOLID && T);
-  ASSERT(fX(is_normalized)(dir));
-
-  fX_set_dX(pos, rwalk->vtx.P);
-  f2(range, 0, (float)delta*RAY_RANGE_MAX_SCALE);
-
-  /* "Reinject" the random walk into the solid */
-  SXD(scene_view_trace_ray
-    (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
-  if(!SXD_HIT_NONE(&rwalk->hit)) delta = rwalk->hit.distance * 0.5;
-
-  /* Add the volumic power */
-  if(handle_volumic_power) {
-    power = solid_get_volumic_power(rwalk->mdm, &rwalk->vtx);
-    if(power != SDIS_VOLUMIC_POWER_NONE) {
-      const double delta_in_meter = delta * fp_to_meter;
-      const double lambda = solid_get_thermal_conductivity(rwalk->mdm, &rwalk->vtx);
-      const double tmp = power * delta_in_meter * delta_in_meter / (2.0 * lambda);
-      T->value += tmp;
-    }
-  }
-
-  XD(move_pos)(rwalk->vtx.P, dir, (float)delta);
-
-  /* Switch in solid random walk */
-  T->func = XD(solid_temperature);
-  rwalk->hit = SXD_HIT_NULL;
-  rwalk->hit_side = SDIS_SIDE_NULL__;
-}
-
 static void
 XD(solid_solid_boundary_temperature)
   (const struct sdis_scene* scn,
@@ -479,7 +451,7 @@ XD(solid_solid_boundary_temperature)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  struct sXd(hit) hit0, hit1;
+  struct sXd(hit) hit0, hit1, hit2, hit3;
   struct sXd(hit) hit;
   const struct sdis_interface* interf = NULL;
   const struct sdis_medium* solid_front = NULL;
@@ -493,7 +465,7 @@ XD(solid_solid_boundary_temperature)
   double r;
   double power;
   float range0[2], range1[2];
-  float dir0[DIM], dir1[DIM];
+  float dir0[DIM], dir1[DIM], dir2[DIM], dir3[DIM];
   float dir[DIM];
   float pos[DIM];
   ASSERT(scn && fp_to_meter > 0 && ctx && frag && rwalk && rng && T);
@@ -518,7 +490,9 @@ XD(solid_solid_boundary_temperature)
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir0);
+  XD(reflect)(dir2, dir0, rwalk->hit.normal);
   fX(minus)(dir1, dir0);
+  fX(minus)(dir3, dir2);
 
   /* Trace the dir0 and dir1 */
   fX_set_dX(pos, rwalk->vtx.P);
@@ -526,11 +500,13 @@ XD(solid_solid_boundary_temperature)
   f2(range1, 0, (float)reinject_dst_back *RAY_RANGE_MAX_SCALE);
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range0, &rwalk->hit, &hit0));
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range1, &rwalk->hit, &hit1));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir2, range0, &rwalk->hit, &hit2));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir3, range1, &rwalk->hit, &hit3));
 
   /* Adjust the reinjection distance along the sampled direction */
   delta = MMIN
     (MMIN(reinject_dst_front, reinject_dst_back),
-     MMIN(hit0.distance, hit1.distance));
+     MMIN(MMIN(hit0.distance, hit1.distance), MMIN(hit2.distance, hit3.distance)));
 
   /* Define the reinjection side */
   r = ssp_rng_canonical(rng);
@@ -556,7 +532,7 @@ XD(solid_solid_boundary_temperature)
 
   /* Reinject */
   XD(move_pos)(rwalk->vtx.P, dir, (float)delta);
-  if(hit.distance == delta) {
+  if(eq_epsf(hit.distance, (float)delta, 1.e-4f)) {
     T->func = XD(boundary_temperature);
     rwalk->mdm = NULL;
     rwalk->hit = hit;
@@ -584,7 +560,8 @@ XD(solid_fluid_boundary_temperature)
   const struct sdis_medium* mdm_back = NULL;
   const struct sdis_medium* solid = NULL;
   const struct sdis_medium* fluid = NULL;
-  struct sXd(hit) hit = SXD_HIT_NULL;
+  struct sXd(hit) hit0 = SXD_HIT_NULL;
+  struct sXd(hit) hit1 = SXD_HIT_NULL;
   struct sdis_interface_fragment frag_fluid;
   double hc;
   double hr;
@@ -597,7 +574,7 @@ XD(solid_fluid_boundary_temperature)
   double r;
   double tmp;
   float pos[DIM];
-  float dir[DIM];
+  float dir0[DIM], dir1[DIM];
   float range[2];
 
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T && ctx);
@@ -630,16 +607,24 @@ XD(solid_fluid_boundary_temperature)
   delta_boundary = sqrt(DIM) * delta;
 
   /* Sample a reinjection direction */
-  XD(sample_reinjection_dir)(rwalk, rng, dir);
-  if(solid == mdm_back) fX(minus)(dir, dir);
+  XD(sample_reinjection_dir)(rwalk, rng, dir0);
 
-  /* Trace dir to adjust the reinjection distance */
+  /* Reflect the sampled direction around the normal */
+  XD(reflect)(dir1, dir0, rwalk->hit.normal);
+
+  if(solid == mdm_back) {
+    fX(minus)(dir0, dir0);
+    fX(minus)(dir1, dir1);
+  }
+
+  /* Trace dir0/dir1 to adjust the reinjection distance */
   fX_set_dX(pos, rwalk->vtx.P);
   f2(range, 0, (float)delta_boundary*RAY_RANGE_MAX_SCALE);
-  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir, range, &rwalk->hit, &hit));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range, &rwalk->hit, &hit1));
 
   /* Adjust the delta boundary to the hit distance */
-  delta_boundary = MMIN(delta_boundary, hit.distance);
+  delta_boundary = MMIN(MMIN(delta_boundary, hit0.distance), hit1.distance);
   /* Define the orthogonal distance from the reinjection pos to the interface */
   delta = delta_boundary / sqrt(DIM);
 
@@ -675,12 +660,12 @@ XD(solid_fluid_boundary_temperature)
     }
 
     /* Reinject */
-    XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
-    if(hit.distance == delta_boundary) {
+    XD(move_pos)(rwalk->vtx.P, dir0, (float)delta_boundary);
+    if(eq_epsf(hit0.distance, (float)delta_boundary, 1.e-4f)) {
       T->func = XD(boundary_temperature);
       rwalk->mdm = NULL;
-      rwalk->hit = hit;
-      rwalk->hit_side = fX(dot)(hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+      rwalk->hit = hit0;
+      rwalk->hit_side = fX(dot)(hit0.normal, dir0) < 0 ? SDIS_FRONT : SDIS_BACK;
     } else {
       T->func = XD(solid_temperature);
       rwalk->mdm = solid;
@@ -708,9 +693,11 @@ XD(solid_boundary_with_flux_temperature)
   double delta_boundary;
   double delta_in_meter;
   double power;
-  struct sXd(hit) hit;
+  struct sXd(hit) hit0;
+  struct sXd(hit) hit1;
   float pos[DIM];
-  float dir[DIM];
+  float dir0[DIM];
+  float dir1[DIM];
   float range[2];
   ASSERT(frag && phi != SDIS_FLUX_NONE);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
@@ -733,16 +720,24 @@ XD(solid_boundary_with_flux_temperature)
   delta_boundary = delta * sqrt(DIM);
 
   /* Sample a reinjection direction */
-  XD(sample_reinjection_dir)(rwalk, rng, dir);
-  if(frag->side == SDIS_BACK) fX(minus)(dir, dir);
+  XD(sample_reinjection_dir)(rwalk, rng, dir0);
 
-  /* Trace dir to adjust the reinjection distance wrt to the geometry */
+  /* Reflect the sampled direction around the normal */
+  XD(reflect)(dir1, dir0, rwalk->hit.normal);
+
+  if(frag->side == SDIS_BACK) {
+    fX(minus)(dir0, dir0);
+    fX(minus)(dir1, dir1);
+  }
+
+  /* Trace dir0/dir1 to adjust the reinjection distance wrt to the geometry */
   fX_set_dX(pos, rwalk->vtx.P);
   f2(range, 0, (float)delta_boundary*RAY_RANGE_MAX_SCALE);
-  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir, range, &rwalk->hit, &hit));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range, &rwalk->hit, &hit1));
 
   /* Adjust the delta boundary to the hit distance */
-  delta_boundary = MMIN(delta_boundary, hit.distance);
+  delta_boundary = MMIN(MMIN(delta_boundary, hit0.distance), hit1.distance);
 
   /* Define the orthogonal distance from the reinjection pos to the interface */
   delta = delta_boundary / sqrt(DIM);
@@ -761,12 +756,12 @@ XD(solid_boundary_with_flux_temperature)
   }
 
   /* Reinject into the solid */
-  XD(move_pos)(rwalk->vtx.P, dir, (float)delta_boundary);
-  if(hit.distance == delta_boundary) {
+  XD(move_pos)(rwalk->vtx.P, dir0, (float)delta_boundary);
+  if(eq_epsf(hit0.distance, (float)delta_boundary, 1.e-4f)) {
     T->func = XD(boundary_temperature);
     rwalk->mdm = NULL;
-    rwalk->hit = hit;
-    rwalk->hit_side = fX(dot)(hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+    rwalk->hit = hit0;
+    rwalk->hit_side = fX(dot)(hit0.normal, dir0) < 0 ? SDIS_FRONT : SDIS_BACK;
   } else {
     T->func = XD(solid_temperature);
     rwalk->mdm = mdm;
@@ -795,6 +790,8 @@ XD(boundary_temperature)
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
 
   XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+
+  fX(normalize)(rwalk->hit.normal, rwalk->hit.normal);
 
   /* Retrieve the current interface */
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
