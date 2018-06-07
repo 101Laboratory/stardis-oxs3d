@@ -37,6 +37,12 @@
  * to handle numerical imprecisions */
 #define RAY_RANGE_MAX_SCALE 1.001f
 
+/* Emperical scale factor applied to the challenged reinjection distance. If
+ * the distance to reinject is less than this adjusted value, the solver
+ * switches from 2D reinjection scheme to the 1D reinjection scheme in order to
+ * avoid numerical issues. */
+#define REINJECT_DST_MIN_SCALE 1.f
+
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
 
 struct rwalk_context {
@@ -452,22 +458,25 @@ XD(solid_solid_boundary_temperature)
    struct XD(temperature)* T)
 {
   struct sXd(hit) hit0, hit1, hit2, hit3;
-  struct sXd(hit) hit;
+  struct sXd(hit)* hit;
   const struct sdis_interface* interf = NULL;
   const struct sdis_medium* solid_front = NULL;
   const struct sdis_medium* solid_back = NULL;
   const struct sdis_medium* mdm;
   double lambda_front, lambda_back;
+  double delta_front, delta_back;
   double reinject_dst_front, reinject_dst_back;
   double delta;
+  double reinject_dst;
   double proba;
   double tmp;
   double r;
   double power;
   float range0[2], range1[2];
   float dir0[DIM], dir1[DIM], dir2[DIM], dir3[DIM];
-  float dir[DIM];
+  const float* dir;
   float pos[DIM];
+  int dim = DIM;
   ASSERT(scn && fp_to_meter > 0 && ctx && frag && rwalk && rng && T);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)frag, (void)ctx;
@@ -485,8 +494,25 @@ XD(solid_solid_boundary_temperature)
 
   /* Note that reinjection distance is *FIXED*. It MUST ensure that the orthogonal
    * distance from the boundary to the point to challenge is equal to delta. */
-  reinject_dst_front = solid_get_delta(solid_front, &rwalk->vtx)*sqrt(DIM);
-  reinject_dst_back  = solid_get_delta(solid_back, &rwalk->vtx) *sqrt(DIM);
+  delta_front = solid_get_delta(solid_front, &rwalk->vtx);
+  delta_back = solid_get_delta(solid_back, &rwalk->vtx);
+  reinject_dst_front = delta_front*sqrt(DIM);
+  reinject_dst_back  = delta_back *sqrt(DIM);
+
+  /* Define the reinjection side */
+  r = ssp_rng_canonical(rng);
+  proba = lambda_front / (lambda_front+lambda_back);
+  if(r < proba) { /* Reinject in front */
+    dir = dir0;
+    hit = &hit0;
+    mdm = solid_front;
+    delta = delta_front;
+  } else { /* Reinject in back */
+    dir = dir1;
+    hit = &hit1;
+    mdm = solid_back;
+    delta = delta_back;
+  }
 
   /* Sample a reinjection direction */
   XD(sample_reinjection_dir)(rwalk, rng, dir0);
@@ -504,21 +530,22 @@ XD(solid_solid_boundary_temperature)
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dir3, range1, &rwalk->hit, &hit3));
 
   /* Adjust the reinjection distance along the sampled direction */
-  delta = MMIN
-    (MMIN(reinject_dst_front, reinject_dst_back),
-     MMIN(MMIN(hit0.distance, hit1.distance), MMIN(hit2.distance, hit3.distance)));
-
-  /* Define the reinjection side */
-  r = ssp_rng_canonical(rng);
-  proba = lambda_front / (lambda_front+lambda_back);
-  if(r < proba) { /* Reinject in front */
-    fX(set)(dir, dir0);
-    hit = hit0;
-    mdm = solid_front;
-  } else { /* Reinject in back */
-    fX(set)(dir, dir1);
-    hit = hit1;
-    mdm = solid_back;
+  reinject_dst = MMIN(reinject_dst_front, reinject_dst_back);
+  tmp = MMIN(MMIN(MMIN(MMIN
+    (reinject_dst, hit0.distance), hit1.distance), hit2.distance), hit3.distance);
+  if(tmp >= reinject_dst * REINJECT_DST_MIN_SCALE) {
+    delta = tmp;
+  } else { /* Switch in 1D reinjection scheme */
+    fX(set)(dir0, rwalk->hit.normal);
+    fX(minus)(dir1, dir0);
+    f2(range0, 0, (float)delta_front*RAY_RANGE_MAX_SCALE);
+    f2(range1, 0, (float)delta_back *RAY_RANGE_MAX_SCALE);
+    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range0, &rwalk->hit, &hit0));
+    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range1, &rwalk->hit, &hit1));
+    delta = MMIN
+      (MMIN(delta_front, delta_back),
+       MMIN(hit0.distance, hit1.distance));
+    dim = 1;
   }
 
   /* Handle the volumic power */
@@ -526,17 +553,17 @@ XD(solid_solid_boundary_temperature)
   if(power != SDIS_VOLUMIC_POWER_NONE) {
     const double delta_in_meter = delta * fp_to_meter;
     const double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-    tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+    tmp = power * delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
     T->value += tmp;
   }
 
   /* Reinject */
   XD(move_pos)(rwalk->vtx.P, dir, (float)delta);
-  if(eq_epsf(hit.distance, (float)delta, 1.e-4f)) {
+  if(eq_epsf(hit->distance, (float)delta, 1.e-4f)) {
     T->func = XD(boundary_temperature);
     rwalk->mdm = NULL;
-    rwalk->hit = hit;
-    rwalk->hit_side = fX(dot)(hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+    rwalk->hit = *hit;
+    rwalk->hit_side = fX(dot)(hit->normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
   } else {
     T->func = XD(solid_temperature);
     rwalk->mdm = mdm;
@@ -576,6 +603,7 @@ XD(solid_fluid_boundary_temperature)
   float pos[DIM];
   float dir0[DIM], dir1[DIM];
   float range[2];
+  int dim = DIM;
 
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T && ctx);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
@@ -624,9 +652,21 @@ XD(solid_fluid_boundary_temperature)
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range, &rwalk->hit, &hit1));
 
   /* Adjust the delta boundary to the hit distance */
-  delta_boundary = MMIN(MMIN(delta_boundary, hit0.distance), hit1.distance);
-  /* Define the orthogonal distance from the reinjection pos to the interface */
-  delta = delta_boundary / sqrt(DIM);
+  tmp = MMIN(MMIN(delta_boundary, hit0.distance), hit1.distance);
+
+  if(tmp >= delta_boundary * REINJECT_DST_MIN_SCALE) {
+    delta_boundary = tmp;
+    /* Define the orthogonal dst from the reinjection pos to the interface */
+    delta = delta_boundary / sqrt(DIM);
+  } else { /* Switch in 1D reinjection scheme. */
+    fX(set)(dir0, rwalk->hit.normal);
+    if(frag->side == SDIS_BACK) fX(minus)(dir0, dir0);
+    f2(range, 0, (float)delta*RAY_RANGE_MAX_SCALE);
+    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
+    delta_boundary = MMIN(hit0.distance, delta_boundary);
+    delta = delta_boundary;
+    dim = 1;
+  }
 
   /* Fetch the boundary properties */
   epsilon = interface_side_get_emissivity(interf, &frag_fluid);
@@ -655,7 +695,7 @@ XD(solid_fluid_boundary_temperature)
     const double power = solid_get_volumic_power(solid, &rwalk->vtx);
     if(power != SDIS_VOLUMIC_POWER_NONE) {
       const double delta_in_meter = delta_boundary * fp_to_meter;
-      tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+      tmp = power * delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
       T->value += tmp;
     }
 
@@ -693,12 +733,14 @@ XD(solid_boundary_with_flux_temperature)
   double delta_boundary;
   double delta_in_meter;
   double power;
+  double tmp;
   struct sXd(hit) hit0;
   struct sXd(hit) hit1;
   float pos[DIM];
   float dir0[DIM];
   float dir1[DIM];
   float range[2];
+  int dim = DIM;
   ASSERT(frag && phi != SDIS_FLUX_NONE);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)ctx;
@@ -737,10 +779,21 @@ XD(solid_boundary_with_flux_temperature)
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range, &rwalk->hit, &hit1));
 
   /* Adjust the delta boundary to the hit distance */
-  delta_boundary = MMIN(MMIN(delta_boundary, hit0.distance), hit1.distance);
+  tmp = MMIN(MMIN(delta_boundary, hit0.distance), hit1.distance);
 
-  /* Define the orthogonal distance from the reinjection pos to the interface */
-  delta = delta_boundary / sqrt(DIM);
+  if(tmp >= delta_boundary * REINJECT_DST_MIN_SCALE) {
+    delta_boundary = tmp;
+    /* Define the orthogonal dst from the reinjection pos to the interface */
+    delta = delta_boundary / sqrt(DIM);
+  } else { /* Switch in 1D reinjection scheme. */
+    fX(set)(dir0, rwalk->hit.normal);
+    if(frag->side == SDIS_BACK) fX(minus)(dir0, dir0);
+    f2(range, 0, (float)delta*RAY_RANGE_MAX_SCALE);
+    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
+    delta_boundary = MMIN(hit0.distance, delta_boundary);
+    delta = delta_boundary;
+    dim = 1;
+  }
 
   /* Handle the flux */
   delta_in_meter = delta*fp_to_meter;
@@ -749,9 +802,8 @@ XD(solid_boundary_with_flux_temperature)
   /* Handle the volumic power */
   power = solid_get_volumic_power(mdm, &rwalk->vtx);
   if(power != SDIS_VOLUMIC_POWER_NONE) {
-    double tmp;
     delta_in_meter = delta_boundary * fp_to_meter;
-    tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+    tmp = power * delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
     T->value += tmp;
   }
 
@@ -997,7 +1049,10 @@ XD(compute_temperature)
    struct XD(temperature)* T)
 {
 #ifndef NDEBUG
-  struct XD(temperature)* stack = NULL;
+  struct entry {
+    struct XD(temperature) temperature;
+    struct XD(rwalk) rwalk;
+  }* stack = NULL;
   size_t istack = 0;
 #endif
   const size_t max_fails = 10;
@@ -1012,7 +1067,10 @@ XD(compute_temperature)
     size_t nfails = 0;
 
 #ifndef NDEBUG
-    sa_push(stack, *T);
+    struct entry e;
+    e.temperature = *T;
+    e.rwalk = *rwalk;
+    sa_push(stack, e);
     ++istack;
 #endif
 
@@ -1028,6 +1086,16 @@ XD(compute_temperature)
 
 exit:
 #ifndef NDEBUG
+/*  if(res == RES_BAD_OP_IRRECOVERABLE) {
+    size_t i;
+    FOR_EACH(i, 0, sa_size(stack)) {
+      fprintf(stderr, "v %g %g 0\n", SPLIT2(stack[i].rwalk.vtx.P));
+    }
+    FOR_EACH(i, 0, sa_size(stack)-1) {
+      fprintf(stderr, "l %lu %lu\n", i+1, i+2);
+    }
+    exit(0);
+  } */
   sa_release(stack);
 #endif
   return res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res;
