@@ -41,7 +41,7 @@
  * the distance to reinject is less than this adjusted value, the solver
  * switches from 2D reinjection scheme to the 1D reinjection scheme in order to
  * avoid numerical issues. */
-#define REINJECT_DST_MIN_SCALE 1.f
+#define REINJECT_DST_MIN_SCALE 0.125f
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
 
@@ -955,9 +955,49 @@ XD(solid_temperature)
     if(SXD_HIT_NONE(&hit0) && SXD_HIT_NONE(&hit1)) {
       /* Hit nothing: move along dir0 of the original delta */
       delta = delta_solid;
+      /* Add the volumic power density to the measured temperature */
+      power = solid_get_volumic_power(mdm, &rwalk->vtx);
+      if(power != SDIS_VOLUMIC_POWER_NONE) {
+        const double delta_in_meter = delta * fp_to_meter;
+        tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+        T->value += tmp;
+      }
     } else {
       /* Hit something: move along dir0 of the minimum hit distance */
       delta = MMIN(hit0.distance, hit1.distance);
+      /* Add the volumic power density to the measured temperature */
+      power = solid_get_volumic_power(mdm, &rwalk->vtx);
+      if(power != SDIS_VOLUMIC_POWER_NONE) {
+        const double delta_s_in_meter = delta_solid * fp_to_meter;
+        double h;
+        double h_in_meter;
+        double cos_U_N;
+        float N[DIM];
+
+        if (hit0.distance < hit1.distance){
+          fX(normalize(N,hit0.normal));
+          cos_U_N = (double)fX(dot)(dir0,N);
+        } else {
+          fX(normalize(N,hit1.normal));
+          cos_U_N = (double)fX(dot)(dir1,N);
+        }
+
+        h = delta * fabs(cos_U_N); 
+        h_in_meter = h * fp_to_meter;
+
+        /*the normal power term at wall*/
+        tmp = power * h_in_meter * h_in_meter / (2.0 * lambda);
+
+        /*add the power corrective term*/
+        if (h <= delta_solid){ 
+          double alpha;
+          alpha = asin(h/delta_solid) ;
+
+          tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0*DIM*lambda)
+            *2.0*sin(alpha)*cos(alpha)/(PI - 2.0*alpha);
+        }
+        T->value += tmp;
+      }
     }
 
     /* Sample the time */
@@ -973,14 +1013,7 @@ XD(solid_temperature)
       return RES_OK;
     }
 
-    /* Add the volumic power density to the measured temperature */
-    power = solid_get_volumic_power(mdm, &rwalk->vtx);
-    if(power != SDIS_VOLUMIC_POWER_NONE) {
-      const double delta_in_meter = delta * fp_to_meter;
-      tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
-      T->value += tmp;
-    }
-
+    
     /* Define if the random walk hits something along dir0 */
     if(hit0.distance > delta) {
       rwalk->hit = SXD_HIT_NULL;
