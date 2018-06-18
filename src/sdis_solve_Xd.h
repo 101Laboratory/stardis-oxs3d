@@ -995,8 +995,9 @@ XD(solid_temperature)
           const double sin_a = h / delta_solid;
           /* tmp1 = sin(2a) / (PI - 2*a) */
           const double tmp1 = sin_a * sqrt(1 - sin_a*sin_a)/acos(sin_a);
-          tmp += -(power*delta_s_in_meter*delta_s_in_meter)/(2.0*DIM*lambda)
-               * tmp1;
+          tmp += -(power*delta_s_in_meter*delta_s_in_meter)/(2.0*DIM*lambda) * tmp1;
+        } else if (h == delta_solid) {
+          tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0*DIM*lambda);
         }
         T->value += tmp;
       }
