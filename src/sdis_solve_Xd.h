@@ -989,12 +989,14 @@ XD(solid_temperature)
         tmp = power * h_in_meter * h_in_meter / (2.0 * lambda);
 
         /*add the power corrective term*/
-        if (h <= delta_solid){ 
+        if (h < delta_solid){ 
           double alpha;
           alpha = asin(h/delta_solid) ;
 
-          tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0*DIM*lambda)
+          tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0 * DIM * lambda)
             *2.0*sin(alpha)*cos(alpha)/(PI - 2.0*alpha);
+        } else if (h == delta_solid) {
+          tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0 * DIM * lambda);
         }
         T->value += tmp;
       }
