@@ -934,6 +934,7 @@ XD(solid_temperature)
     lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
     rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
     cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
+    power = solid_get_volumic_power(mdm, &rwalk->vtx);
 
 #if (SDIS_SOLVE_DIMENSION == 2)
     /* Sample a direction around 2PI */
@@ -955,8 +956,8 @@ XD(solid_temperature)
     if(SXD_HIT_NONE(&hit0) && SXD_HIT_NONE(&hit1)) {
       /* Hit nothing: move along dir0 of the original delta */
       delta = delta_solid;
+
       /* Add the volumic power density to the measured temperature */
-      power = solid_get_volumic_power(mdm, &rwalk->vtx);
       if(power != SDIS_VOLUMIC_POWER_NONE) {
         const double delta_in_meter = delta * fp_to_meter;
         tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
@@ -965,8 +966,8 @@ XD(solid_temperature)
     } else {
       /* Hit something: move along dir0 of the minimum hit distance */
       delta = MMIN(hit0.distance, hit1.distance);
+
       /* Add the volumic power density to the measured temperature */
-      power = solid_get_volumic_power(mdm, &rwalk->vtx);
       if(power != SDIS_VOLUMIC_POWER_NONE) {
         const double delta_s_in_meter = delta_solid * fp_to_meter;
         double h;
@@ -974,27 +975,28 @@ XD(solid_temperature)
         double cos_U_N;
         float N[DIM];
 
-        if (hit0.distance < hit1.distance){
-          fX(normalize(N,hit0.normal));
-          cos_U_N = (double)fX(dot)(dir0,N);
+        if(delta == hit0.distance) {
+          fX(normalize)(N, hit0.normal);
+          cos_U_N = fX(dot)(dir0, N);
         } else {
-          fX(normalize(N,hit1.normal));
-          cos_U_N = (double)fX(dot)(dir1,N);
+          ASSERT(delta == hit1.distance);
+          fX(normalize)(N, hit1.normal);
+          cos_U_N = fX(dot)(dir1, N);
         }
 
-        h = delta * fabs(cos_U_N); 
+        h = delta * fabs(cos_U_N);
         h_in_meter = h * fp_to_meter;
 
-        /*the normal power term at wall*/
+        /* The regular power term at wall */
         tmp = power * h_in_meter * h_in_meter / (2.0 * lambda);
 
-        /*add the power corrective term*/
-        if (h <= delta_solid){ 
-          double alpha;
-          alpha = asin(h/delta_solid) ;
-
-          tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0*DIM*lambda)
-            *2.0*sin(alpha)*cos(alpha)/(PI - 2.0*alpha);
+        /* Add the power corrective term */
+        if(h < delta_solid) {
+          const double sin_a = h / delta_solid;
+          /* tmp1 = sin(2a) / (PI - 2*a) */
+          const double tmp1 = sin_a * sqrt(1 - sin_a*sin_a)/acos(sin_a);
+          tmp += -(power*delta_s_in_meter*delta_s_in_meter)/(2.0*DIM*lambda)
+               * tmp1;
         }
         T->value += tmp;
       }
@@ -1013,7 +1015,6 @@ XD(solid_temperature)
       return RES_OK;
     }
 
-    
     /* Define if the random walk hits something along dir0 */
     if(hit0.distance > delta) {
       rwalk->hit = SXD_HIT_NULL;
