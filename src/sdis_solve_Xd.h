@@ -1121,16 +1121,6 @@ XD(compute_temperature)
 
 exit:
 #ifndef NDEBUG
-/*  if(res == RES_BAD_OP_IRRECOVERABLE) {
-    size_t i;
-    FOR_EACH(i, 0, sa_size(stack)) {
-      fprintf(stderr, "v %g %g 0\n", SPLIT2(stack[i].rwalk.vtx.P));
-    }
-    FOR_EACH(i, 0, sa_size(stack)-1) {
-      fprintf(stderr, "l %lu %lu\n", i+1, i+2);
-    }
-    exit(0);
-  } */
   sa_release(stack);
 #endif
   return res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res;
