@@ -546,6 +546,13 @@ XD(solid_solid_boundary_temperature)
       (MMIN(delta_front, delta_back),
        MMIN(hit0.distance, hit1.distance));
     dim = 1;
+
+    /* Hit something in 1D. Arbitrarly move the random walk to 0.5 of the hit
+     * distance */
+    if(delta == hit->distance) {
+      delta *= 0.5;
+      *hit = SXD_HIT_NULL;
+    }
   }
 
   /* Handle the volumic power */
@@ -664,6 +671,14 @@ XD(solid_fluid_boundary_temperature)
     f2(range, 0, (float)delta*RAY_RANGE_MAX_SCALE);
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
     delta_boundary = MMIN(hit0.distance, delta_boundary);
+
+    /* Hit something in 1D. Arbitrarly move the random walk to 0.5 of the hit
+     * distance in order to avoid infinite bounces for parallel plane */
+    if(!SXD_HIT_NONE(&hit0)) {
+      delta_boundary *= 0.5;
+      hit0 = SXD_HIT_NULL;
+    }
+
     delta = delta_boundary;
     dim = 1;
   }
@@ -791,6 +806,14 @@ XD(solid_boundary_with_flux_temperature)
     f2(range, 0, (float)delta*RAY_RANGE_MAX_SCALE);
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
     delta_boundary = MMIN(hit0.distance, delta_boundary);
+
+    /* Hit something in 1D. Arbitrarly move the random walk to 0.5 of the hit
+     * distance in order to avoid infinite bounces for parallel plane */
+    if(!SXD_HIT_NONE(&hit0)) {
+      delta_boundary *= 0.5;
+      hit0 = SXD_HIT_NULL;
+    }
+
     delta = delta_boundary;
     dim = 1;
   }
