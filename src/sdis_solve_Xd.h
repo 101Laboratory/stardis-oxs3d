@@ -993,9 +993,15 @@ XD(solid_temperature)
         /* Add the power corrective term */
         if(h < delta_solid) {
           const double sin_a = h / delta_solid;
+#if DIM==2
           /* tmp1 = sin(2a) / (PI - 2*a) */
           const double tmp1 = sin_a * sqrt(1 - sin_a*sin_a)/acos(sin_a);
-          tmp += -(power*delta_s_in_meter*delta_s_in_meter)/(2.0*DIM*lambda) * tmp1;
+          tmp += -(power*delta_s_in_meter*delta_s_in_meter)/(4.0*lambda) * tmp1;
+#else
+          const double tmp1 = (sin_a*sin_a*sin_a - sin_a)/ (1-sin_a);
+          tmp += (power*delta_s_in_meter*delta_s_in_meter)/(6*lambda) * tmp1;
+#endif
+
         } else if (h == delta_solid) {
           tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0*DIM*lambda);
         }
