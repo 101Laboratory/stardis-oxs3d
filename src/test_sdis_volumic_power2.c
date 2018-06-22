@@ -21,12 +21,17 @@
 #define Pw 10000 /* Volumic power */
 #define NONE -1
 #define DELTA 0.01
+#define DELTA_PSQUARE 0.01
 
 struct reference {
   double pos[3];
   double temperature_2d; /* In celcius */
   double temperature_3d; /* In celcius */
 };
+
+/* 100000 realisations
+ * (0 0.85); 2D = 190.29; 3D = 189.13 ~ 186.505 +/- 0.553322 [184.845, 188.165]
+ */
 
 /* Results in Celcius with delta 0.01 and 10000 realisations
  * 0.85: 2D = 190.29 ~ 194.022 +/- 1.87163 [188.407, 199.637]; #failures: 2
@@ -188,7 +193,6 @@ fluid_get_temperature
   return ((const struct fluid*)sdis_data_cget(data))->temperature;
 }
 
-
 /*******************************************************************************
  * Interfaces
  ******************************************************************************/
@@ -213,6 +217,40 @@ interface_get_temperature
   return ((const struct interf*)sdis_data_cget(data))->temperature;
 }
 
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static void
+check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
+{
+  struct sdis_estimator* estimator = NULL;
+  struct sdis_mc T = SDIS_MC_NULL;
+  size_t nreals;
+  size_t nfails;
+  double pos[3] = {0,0};
+  size_t i;
+
+  FOR_EACH(i, 0, nrefs) {
+    double Tc;
+    pos[0] = refs[i].pos[0];
+    pos[1] = refs[i].pos[1];
+    pos[2] = refs[i].pos[2];
+
+    CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
+    CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+    Tc = T.E - 273.15; /* Convert in Celcius */
+    printf("Temperature at (%g %g %g) = %g ~ %g +/- %g [%g, %g]\n",
+      SPLIT3(pos), refs[i].temperature_2d, Tc, T.SE, Tc-3*T.SE, Tc+3*T.SE);
+    printf("#realisations: %lu; #failures: %lu\n",
+      (unsigned long)nreals, (unsigned long)nfails);
+    /*CHK(eq_eps(Tc, refs[i].temperature, T.SE*3));*/
+    CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  }
+}
+
+
 int
 main(int argc, char** argv)
 {
@@ -236,14 +274,8 @@ main(int argc, char** argv)
   struct sdis_interface* interf_solid1_fluid1 = NULL;
   struct sdis_interface* interf_solid1_fluid2 = NULL;
   struct sdis_interface* interfaces[18 /*#rectangles*/];
-  struct sdis_estimator* estimator = NULL;
-  struct sdis_mc T = SDIS_MC_NULL;
-  size_t nreals;
-  size_t nfails;
-  double pos[3] = {0,0,0};
-  size_t i;
   /* In celcius. Computed by EDF with Syrthes */
-  const struct reference refs[] = { /* Lambda1=1, Lambda2=10, Pw = 10000 */
+  const struct reference refs1[] = { /* Lambda1=1, Lambda2=10, Pw = 10000 */
     {{0, 0.85, 0}, 190.29, 189.13},
     {{0, 0.65, 0}, 259.95, 247.09},
     {{0, 0.45, 0}, 286.33, 308.42},
@@ -253,7 +285,12 @@ main(int argc, char** argv)
     {{0,-0.35, 0}, 123.26, 123.43},
     {{0,-0.55, 0}, 90.250, 90.040}
   };
-  size_t nrefs = sizeof(refs)/sizeof(struct reference);
+  const struct reference refs2[] = { /* Lambda1=0.1, Lambda2=10, Pw=10000 */
+    {{0, 0.85}, 678.170, -1},
+    {{0, 0.65}, 1520.84, -1},
+    {{0, 0.45}, 1794.57, -1},
+    {{0, 0.25}, 1429.74, -1}
+  };
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
@@ -309,7 +346,7 @@ main(int argc, char** argv)
   solid_param->cp = 500000;
   solid_param->rho = 1000;
   solid_param->lambda = 10;
-  solid_param->delta = DELTA;
+  solid_param->delta = DELTA_PSQUARE;
   solid_param->P = Pw;
   solid_param->T = -1;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
@@ -388,25 +425,19 @@ main(int argc, char** argv)
   exit(0);
 #endif
 
-  FOR_EACH(i, 0, nrefs) {
-    double Tc;
-    pos[0] = refs[i].pos[0];
-    pos[1] = refs[i].pos[1];
-    pos[2] = refs[i].pos[2];
+  printf(">>> Check 1\n");
+  check(scn, refs1, sizeof(refs1)/sizeof(struct reference));
 
-    CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
-    CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-    Tc = T.E - 273.15; /* Convert in Celcius */
-    printf("Temperature at (%g %g); 2D = %g; 3D = %g ~ %g +/- %g [%g, %g]\n",
-      SPLIT2(pos), refs[i].temperature_2d, refs[i].temperature_3d,
-      Tc, T.SE, Tc-3*T.SE, Tc+3*T.SE);
-    printf("#realisations: %lu; #failures: %lu\n",
-      (unsigned long)nreals, (unsigned long)nfails);
-    /*CHK(eq_eps(Tc, refs[i].temperature, T.SE*3));*/
-    CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-  }
+  /* Update the scene */
+  CHK(sdis_scene_ref_put(scn) == RES_OK);
+  data = sdis_medium_get_data(solid1);
+  solid_param = sdis_data_get(data);
+  solid_param->lambda = 0.1;
+  CHK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
+    nvertices, get_position, interfaces, &scn) == RES_OK);
+
+  printf("\n>>> Check 2\n");
+  check(scn, refs2, sizeof(refs2)/sizeof(struct reference));
 
   /* Release the interfaces */
   CHK(sdis_interface_ref_put(interf_solid1_adiabatic) == RES_OK);

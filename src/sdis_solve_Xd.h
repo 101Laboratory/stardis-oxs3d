@@ -218,8 +218,8 @@ XD(sample_reinjection_dir)
   f2_normalize(dir, dir);
 #else
   /* Sample a random direction around the normal whose cosine is 1/sqrt(3). To
-   * do so we sample a position onto a cone whose height is 1 and the radius of
-   * its base is sqrt(2). */
+   * do so we sample a position onto a cone whose height is 1/sqrt(2) and the
+   * radius of its base is 1. */
   float frame[9];
   ASSERT(fX(is_normalized)(rwalk->hit.normal));
 
@@ -368,7 +368,7 @@ XD(trace_radiative_path)
       res = RES_BAD_OP;
       goto error;
     }
-    alpha =  interface_side_get_specular_fraction(interf, &frag);
+    alpha = interface_side_get_specular_fraction(interf, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
       reflect_3d(dir, f3_minus(dir, dir), N);
@@ -500,13 +500,15 @@ XD(solid_solid_boundary_temperature)
   delta_boundary_front = delta_front*sqrt(DIM);
   delta_boundary_back  = delta_back *sqrt(DIM);
 
-  /* Sample a reinjection direction */
+  /* Sample a reinjection direction and reflect it around the normal. Then
+   * reflect them on the back side of the interfaces */
   XD(sample_reinjection_dir)(rwalk, rng, dir0);
   XD(reflect)(dir2, dir0, rwalk->hit.normal);
   fX(minus)(dir1, dir0);
   fX(minus)(dir3, dir2);
 
-  /* Trace the dir0 and dir1 */
+  /* Trace the sampled directions to adjust the reinjection distance of the
+   * random walk on both sides of the interface. */
   fX_set_dX(pos, rwalk->vtx.P);
   f2(range0, 0, (float)delta_boundary_front*RAY_RANGE_MAX_SCALE);
   f2(range1, 0, (float)delta_boundary_back *RAY_RANGE_MAX_SCALE);
