@@ -681,7 +681,7 @@ XD(solid_fluid_boundary_temperature)
     delta = delta_boundary / sqrt(DIM);
   } else { /* Switch in 1D reinjection scheme. */
     fX(set)(dir0, rwalk->hit.normal);
-    if(frag->side == SDIS_BACK) fX(minus)(dir0, dir0);
+    if(solid == mdm_back) fX(minus)(dir0, dir0);
     f2(range, 0, (float)delta*RAY_RANGE_MAX_SCALE);
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
     delta_boundary = MMIN(hit0.distance, delta);
