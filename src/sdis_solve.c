@@ -179,7 +179,6 @@ sdis_solve_probe
   size_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
-  ATOMIC nreals = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || !position || time < 0 || fp_to_meter <= 0
@@ -221,7 +220,6 @@ sdis_solve_probe
     double w = NaN;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
-    ATOMIC n;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
 
@@ -242,15 +240,7 @@ sdis_solve_probe
       sqr_weight += w*w;
       ++N;
     }
-
-    if((n = ATOMIC_INCR(&nreals)) % 10 == 0) {
-      #pragma omp critical
-      fprintf(stdout, "%c[2K\rProgress: %lu of %lu",
-        27, (unsigned long)n, (unsigned long)nrealisations);
-      fflush(stdout);
-    }
   }
-  printf("%c[2K\r", 27);
 
   estimator->nrealisations = N;
   estimator->nfailures = nrealisations - N;
