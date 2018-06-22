@@ -30,7 +30,7 @@ struct reference {
 };
 
 /* Temperature in Celcius. The reference is computed by EDF with Syrthes
- * #realisations: 100000 
+ * #realisations: 100000
  *
  * >>> Check 1
  * 0.85 0 = 190.29 ~ 190.198 +/- 0.572596; #failures: 46
@@ -40,7 +40,13 @@ struct reference {
  * 0.05 0 = 192.33 ~ 192.464 +/- 0.693148; #failures: 70
  *-0.15 0 = 156.82 ~ 157.526 +/- 0.668902; #failures: 43
  *-0.35 0 = 123.26 ~ 124.234 +/- 0.634061; #failures: 31
- *-0.55 0 = 90.250 ~ 91.0285 +/- 0.566423; #failures: 32 */
+ *-0.55 0 = 90.250 ~ 91.0285 +/- 0.566423; #failures: 32
+ *
+ * >>> Check 2
+ * 0.85 0 = 678.170 ~ 671.302 +/- 4.03424; #failures: 186
+ * 0.65 0 = 1520.84 ~ 1523.42 +/- 5.38182; #failures: 442
+ * 0.45 0 = 1794.57 ~ 1790.60 +/- 5.44808; #failures: 528
+ * 0.25 0 = 1429.74 ~ 1419.80 +/- 5.33467; #failures: 406 */
 
 static const double vertices[16/*#vertices*/*3/*#coords per vertex*/] = {
  -0.5,-1.0,-0.5,
