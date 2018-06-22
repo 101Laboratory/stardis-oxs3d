@@ -88,7 +88,9 @@ solve_pixel
       sum_weights += w;
       sum_weights_sqr += w*w;
       ++N;
-    } else if(res != RES_BAD_OP) {
+    } else if(res == RES_BAD_OP) {
+      res = RES_OK;
+    } else {
       goto error;
     }
   }
@@ -96,6 +98,7 @@ solve_pixel
   accum->sum_weights = sum_weights;
   accum->sum_weights_sqr = sum_weights_sqr;
   accum->nweights = N;
+  accum->nfailures = nrealisations - N;
 
 exit:
   return res;
@@ -174,13 +177,14 @@ sdis_solve_probe
   struct ssp_rng** rngs = NULL;
   double weight = 0;
   double sqr_weight = 0;
-  size_t irealisation = 0;
+  const int64_t rcount = (int64_t)nrealisations;
+  int64_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || !position || time < 0 || fp_to_meter <= 0
-  || Tref < 0 || !out_estimator) {
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !position
+    || time < 0 || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -207,15 +211,15 @@ sdis_solve_probe
   if(res != RES_OK) goto error;
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, position, &medium);
+  res = scene_get_medium(scn, position, NULL, &medium);
   if(res != RES_OK) goto error;
 
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
-  for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
+  for(irealisation = 0; irealisation < rcount; ++irealisation) {
     res_T res_local;
-    double w;
+    double w = NaN;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
 
@@ -284,13 +288,15 @@ sdis_solve_probe_boundary
   struct ssp_rng** rngs = NULL;
   double weight = 0;
   double sqr_weight = 0;
-  size_t irealisation = 0;
+  const int64_t rcount = (int64_t)nrealisations;
+  int64_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
-  res_T res = RES_OK;
+  ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || !uv || time < 0 || fp_to_meter <= 0
-  || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK) || !out_estimator) {
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
+    || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
+    || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -354,9 +360,9 @@ sdis_solve_probe_boundary
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
-  for(irealisation = 0; irealisation < nrealisations; ++irealisation) {
+  for(irealisation = 0; irealisation < rcount; ++irealisation) {
     res_T res_local;
-    double w;
+    double w = NaN;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
 
@@ -398,7 +404,7 @@ exit:
   }
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
-  return res;
+  return (res_T)res;
 error:
   if(estimator) {
     SDIS(estimator_ref_put(estimator));
@@ -446,7 +452,7 @@ sdis_solve_camera
   }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, cam->position, &medium);
+  res = scene_get_medium(scn, cam->position, NULL, &medium);
   if(res != RES_OK) goto error;
 
   if(medium->type != SDIS_FLUID) {
@@ -491,7 +497,7 @@ sdis_solve_camera
   pix_sz[1] = 1.0 / (double)height;
 
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static, 1/*chunki size*/)
+  #pragma omp parallel for schedule(static, 1/*chunk size*/)
   for(mcode = 0; mcode < (int64_t)ntiles; ++mcode) {
     size_t tile_org[2] = {0, 0};
     size_t tile_sz[2] = {0, 0};
@@ -511,7 +517,7 @@ sdis_solve_camera
     tile_org[0] *= TILE_SIZE;
     tile_org[1] *= TILE_SIZE;
     tile_sz[0] = MMIN(TILE_SIZE, width - tile_org[0]);
-    tile_sz[1] = MMIN(TILE_SIZE, width - tile_org[1]);
+    tile_sz[1] = MMIN(TILE_SIZE, height - tile_org[1]);
 
     /* Fetch the accumulations buffer */
     accums = darray_accum_data_get(tiles+ithread);

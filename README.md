@@ -23,6 +23,23 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.4
+
+Full rewrite of how the volumetric power is taken into account.
+
+- Change the scheme of the random walk "solid re-injection": use a 2D
+  re-injection scheme in order to handle 2D effects. On one hand, this scheme
+  drastically improves the accuracy of the temperature estimation in solid with
+  a volumetric power term. On the other hand it is more sensible to numerical
+  imprecisions. The previous 1D scheme is thus used in situations where the 2D
+  scheme exhibits too numerical issues, i.e. on sharp angles.
+- Add the missing volumetric power term on solid re-injection.
+- Add a corrective term to fix the bias on the volumetric power introduced when
+  the random walk progresses at a distance of `delta` of a boundary.
+- Add several volumetric power tests.
+- Remove the `delta_boundary` parameter of the `struct sdis_solid_shader` data
+  structure.
+
 ### Version 0.3
 
 - Some interface properties become double sided: the temperature, emissivity

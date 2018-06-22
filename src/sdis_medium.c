@@ -39,7 +39,6 @@ check_solid_shader(const struct sdis_solid_shader* shader)
       && shader->thermal_conductivity
       && shader->volumic_mass
       && shader->delta_solid
-      && shader->delta_boundary
       && shader->temperature;
 }
 
@@ -204,4 +203,10 @@ sdis_medium_get_type(const struct sdis_medium* medium)
 {
   ASSERT(medium != NULL);
   return medium->type;
+}
+struct sdis_data*
+sdis_medium_get_data(struct sdis_medium* medium)
+{
+  ASSERT(medium);
+  return medium->data;
 }

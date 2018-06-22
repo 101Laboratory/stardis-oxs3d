@@ -19,6 +19,20 @@
 #include <rsys/dynamic_array.h>
 #include <rsys/ref_count.h>
 
+#include <star/s2d.h>
+#include <star/s3d.h>
+
+struct get_medium_info {
+  /* Targeted position */
+  float pos_tgt[3];
+  /* Ray trace to the targeted position in order to define the current medium */
+  float ray_org[3];
+  float ray_dir[3];
+  /* Hit encouters along the ray and used to define the current medium */
+  struct s2d_hit hit_2d;
+  struct s3d_hit hit_3d;
+};
+
 static INLINE void
 interface_init
   (struct mem_allocator* allocator,
@@ -62,6 +76,7 @@ extern LOCAL_SYM res_T
 scene_get_medium
   (const struct sdis_scene* scene,
    const double position[],
+   struct get_medium_info* info, /* May be NULL */
    const struct sdis_medium** medium);
 
 static FINLINE int

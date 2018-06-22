@@ -49,6 +49,7 @@
 #define T0 320
 #define LAMBDA 0.1
 #define P0 10
+#define DELTA 1.0/20.0
 
 /*******************************************************************************
  * Geometry 3D
@@ -114,6 +115,13 @@ square_get_interface
 /*******************************************************************************
  * Media
  ******************************************************************************/
+struct solid {
+  double lambda;
+  double rho;
+  double cp;
+  double delta;
+};
+
 static double
 fluid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
@@ -127,45 +135,32 @@ static double
 solid_get_calorific_capacity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
   CHK(vtx != NULL);
-  return 2.0;
+  return ((struct solid*)sdis_data_cget(data))->cp;
 }
 
 static double
 solid_get_thermal_conductivity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
   CHK(vtx != NULL);
-  return LAMBDA;
+  return ((struct solid*)sdis_data_cget(data))->lambda;
 }
 
 static double
 solid_get_volumic_mass
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
   CHK(vtx != NULL);
-  return 25.0;
+  return ((struct solid*)sdis_data_cget(data))->rho;
 }
 
 static double
 solid_get_delta
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
   CHK(vtx != NULL);
-  return 1.0/20.0;
-}
-
-static double
-solid_get_delta_boundary
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  (void)data;
-  CHK(vtx != NULL);
-  return 2.1/20.0;
+  return ((struct solid*)sdis_data_cget(data))->delta;
 }
 
 static double
@@ -222,6 +217,7 @@ main(int argc, char** argv)
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
+  struct sdis_medium* solid2 = NULL; /* For debug */
   struct sdis_interface* interf_adiabatic = NULL;
   struct sdis_interface* interf_T0 = NULL;
   struct sdis_scene* box_scn = NULL;
@@ -233,6 +229,7 @@ main(int argc, char** argv)
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
+  struct solid* solid_props = NULL;
   double pos[3];
   double x;
   double ref;
@@ -242,21 +239,37 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
-  /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
 
-  /* Create the solid_medium */
+  /* Setup the solid shader */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = solid_get_temperature;
   solid_shader.volumic_power = solid_get_volumic_power;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+
+  /* Create the solid medium */
+  CHK(sdis_data_create(dev, sizeof(struct solid), 16, NULL, &data) == RES_OK);
+  solid_props = sdis_data_get(data);
+  solid_props->lambda = LAMBDA;
+  solid_props->cp = 2;
+  solid_props->rho = 25;
+  solid_props->delta = DELTA;
+  CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
+
+  CHK(sdis_data_create(dev, sizeof(struct solid), 16, NULL, &data) == RES_OK);
+  solid_props = sdis_data_get(data);
+  solid_props->lambda = 0;
+  solid_props->cp = 0;
+  solid_props->rho = 0;
+  solid_props->delta = DELTA/4;
+  CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
@@ -280,6 +293,7 @@ main(int argc, char** argv)
 
   /* Release the media */
   CHK(sdis_medium_ref_put(solid) == RES_OK);
+  CHK(sdis_medium_ref_put(solid2) == RES_OK);
   CHK(sdis_medium_ref_put(fluid) == RES_OK);
 
   /* Map the interfaces to their box triangles */
@@ -324,19 +338,22 @@ main(int argc, char** argv)
   printf("Temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(eq_eps(T.E, ref, T.SE*2));
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, ref, 3*T.SE));
 
   /* Solve in 2D */
   CHK(sdis_solve_probe(square_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(nfails + nreals == N);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   printf("Temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(eq_eps(T.E, ref, T.SE*2.0));
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, ref, 3*T.SE));
 
   CHK(sdis_scene_ref_put(box_scn) == RES_OK);
   CHK(sdis_scene_ref_put(square_scn) == RES_OK);

@@ -24,9 +24,6 @@
 #include <rsys/double3.h>
 #include <rsys/mem_allocator.h>
 
-#include <star/s2d.h>
-#include <star/s3d.h>
-
 #include <limits.h>
 
 /* Context used to wrap the user geometry to Star-XD. */
@@ -455,53 +452,76 @@ static INLINE res_T
 scene_get_medium_2d
   (const struct sdis_scene* scn,
    const double pos[2],
+   struct get_medium_info* info, /* May be NULL */
    const struct sdis_medium** out_medium)
 {
   const struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
   size_t nfailures = 0;
   const size_t max_failures = 10;
+  /* Range of the parametric coordinate into which positions are challenged */
+  const float s_range[2] = {0.25, 0.75};
+  const size_t s_nsteps = 3; /* #challenges per primitive into the range */
+  float s_step;
   res_T res = RES_OK;
   ASSERT(scn && pos);
+
+  s_step = (s_range[1] - s_range[0]) / (float)(s_nsteps-1);
 
   S2D(scene_view_primitives_count(scn->s2d_view, &nprims));
   FOR_EACH(iprim, 0, nprims) {
     struct s2d_hit hit;
     struct s2d_attrib attr;
     struct s2d_primitive prim;
-    float s;
     const float range[2] = {0.f, FLT_MAX};
     float N[2], P[2], dir[2], cos_N_dir;
-    s = 1.f / 3.f;
+    float s = s_range[0];
 
-    /* Retrieve a position onto the primitive */
-    S2D(scene_view_get_primitive(scn->s2d_view, (unsigned)iprim, &prim));
-    S2D(primitive_get_attrib(&prim, S2D_POSITION, s, &attr));
+    do {
+      /* Retrieve a position onto the primitive */
+      S2D(scene_view_get_primitive(scn->s2d_view, (unsigned)iprim, &prim));
+      S2D(primitive_get_attrib(&prim, S2D_POSITION, s, &attr));
 
-    /* Trace a ray from the randomw walk vertex  toward the retrieved primitive
-     * position */
-    f2_normalize(dir, f2_sub(dir, attr.value, f2_set_d2(P, pos)));
-    S2D(scene_view_trace_ray(scn->s2d_view, P, dir, range, NULL, &hit));
+      /* Trace a ray from the random walk vertex toward the retrieved primitive
+       * position */
+      f2_normalize(dir, f2_sub(dir, attr.value, f2_set_d2(P, pos)));
+      S2D(scene_view_trace_ray(scn->s2d_view, P, dir, range, NULL, &hit));
+
+      /* Unforeseen error. One has to intersect a primitive ! */
+      if(S2D_HIT_NONE(&hit)) {
+        ++nfailures;
+        if(nfailures < max_failures) {
+          continue;
+        } else {
+          res = RES_BAD_ARG;
+          goto error;
+        }
+      }
+    /* Discard the hit if it is on a vertex, i.e. between 2 segments,  and
+     * target a new position onto the current primitive */
+    } while((S2D_HIT_NONE(&hit) || hit_on_vertex(&hit))
+         && (s+=s_step) <= s_range[1]);
+
+    /* The hits of all targeted positions on the current primitive are on
+     * vertices. Challenge positions on another primitive. */
+    if(s > s_range[1]) continue;
 
     f2_normalize(N, hit.normal);
     cos_N_dir = f2_dot(N, dir);
-
-    /* Unforeseen error. One has to intersect a primitive ! */
-    if(S2D_HIT_NONE(&hit)) {
-      ++nfailures;
-      if(nfailures < max_failures) {
-        continue;
-      } else {
-        res = RES_BAD_ARG;
-        goto error;
-      }
-    }
 
     if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
         (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+
+      /* Register the get_medium_info */
+      if(info) {
+        f2_set(info->pos_tgt, attr.value);
+        f2_set(info->ray_org, P);
+        f2_set(info->ray_dir, dir);
+        info->hit_2d = hit;
+      }
       break;
     }
   }
@@ -519,53 +539,75 @@ static INLINE res_T
 scene_get_medium_3d
   (const struct sdis_scene* scn,
    const double pos[3],
+   struct get_medium_info* info,
    const struct sdis_medium** out_medium)
 {
   const struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
   size_t nfailures = 0;
   const size_t max_failures = 10;
+  float st[3][2]; /* Position to challenge onto the primitive */
+  const size_t nsteps = sizeof(st)/sizeof(float[2]);
   res_T res = RES_OK;
   ASSERT(scn && pos);
+
+  /* Setup the position to challenge onto the primitives */
+  f2(st[0], 1.f/6.f, 5.f/12.f);
+  f2(st[1], 5.f/12.f, 1.f/6.f);
+  f2(st[2], 5.f/12.f, 5.f/12.f);
 
   S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
   FOR_EACH(iprim, 0, nprims) {
     struct s3d_hit hit;
     struct s3d_attrib attr;
     struct s3d_primitive prim;
-    float st[2];
     const float range[2] = {0.f, FLT_MAX};
     float N[3], P[3], dir[3], cos_N_dir;
-    st[0] = st[1] = 1.f / 3.f; /* Or MSVC will issue a warning */
+    size_t istep = 0;
 
-    /* Retrieve a position onto the primitive */
-    S3D(scene_view_get_primitive(scn->s3d_view, (unsigned)iprim, &prim));
-    S3D(primitive_get_attrib(&prim, S3D_POSITION, st, &attr));
+    do {
+      /* Retrieve a position onto the primitive */
+      S3D(scene_view_get_primitive(scn->s3d_view, (unsigned)iprim, &prim));
+      S3D(primitive_get_attrib(&prim, S3D_POSITION, st[istep], &attr));
 
-    /* Trace a ray from the randomw walk vertex  toward the retrieved primitive
-     * position */
-    f3_normalize(dir, f3_sub(dir, attr.value, f3_set_d3(P, pos)));
-    S3D(scene_view_trace_ray(scn->s3d_view, P, dir, range, NULL, &hit));
+      /* Trace a ray from the randomw walk vertex  toward the retrieved primitive
+       * position */
+      f3_normalize(dir, f3_sub(dir, attr.value, f3_set_d3(P, pos)));
+      S3D(scene_view_trace_ray(scn->s3d_view, P, dir, range, NULL, &hit));
+
+      /* Unforeseen error. One has to intersect a primitive ! */
+      if(S3D_HIT_NONE(&hit)) {
+        ++nfailures;
+        if(nfailures < max_failures) {
+          continue;
+        } else {
+          res = RES_BAD_ARG;
+          goto error;
+        }
+      }
+    /* Discard the hit if it is on an edge, i.e. between 2 triangles,  and
+     * target a new position onto the current primitive */
+    } while((S3D_HIT_NONE(&hit) || hit_on_edge(&hit)) && ++istep < nsteps);
+
+    /* The hits of all targeted positions on the current primitive are on
+     * edges. Challenge positions on another primitive. */
+    if(istep >= nsteps) continue;
 
     f3_normalize(N, hit.normal);
     cos_N_dir = f3_dot(N, dir);
-
-    /* Unforeseen error. One has to intersect a primitive ! */
-    if(S3D_HIT_NONE(&hit)) {
-      ++nfailures;
-      if(nfailures < max_failures) {
-        continue;
-      } else {
-        res = RES_BAD_ARG;
-        goto error;
-      }
-    }
 
     if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
         (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+
+      if(info) {
+        f3_set(info->pos_tgt, attr.value);
+        f3_set(info->ray_org, P);
+        f3_set(info->ray_dir, dir);
+        info->hit_3d = hit;
+      }
       break;
     }
   }
@@ -775,10 +817,11 @@ res_T
 scene_get_medium
   (const struct sdis_scene* scn,
    const double pos[],
+   struct get_medium_info* info,
    const struct sdis_medium** out_medium)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_2d(scn, pos, out_medium)
-    : scene_get_medium_3d(scn, pos, out_medium);
+    ? scene_get_medium_2d(scn, pos, info, out_medium)
+    : scene_get_medium_3d(scn, pos, info, out_medium);
 }
 
