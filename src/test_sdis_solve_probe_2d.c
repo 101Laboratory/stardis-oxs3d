@@ -151,7 +151,7 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;
@@ -193,13 +193,15 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
 
-  CHK(nfails + nreals == N);
-
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
 
   ref = 300;
   printf("Temperature at (%g, %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);

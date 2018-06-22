@@ -276,8 +276,6 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_failure_count(NULL, &nfails) == RES_BAD_ARG);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
 
-  CHK(nfails + nreals == N);
-
   CHK(sdis_estimator_get_temperature(estimator, NULL) == RES_BAD_ARG);
   CHK(sdis_estimator_get_temperature(NULL, &T) == RES_BAD_ARG);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
@@ -285,6 +283,10 @@ main(int argc, char** argv)
   ref = 300;
   printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
   CHK(sdis_estimator_ref_get(NULL) ==  RES_BAD_ARG);

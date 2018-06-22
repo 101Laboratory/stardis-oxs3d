@@ -47,12 +47,6 @@
 #define Tsolid_solid1 UNKNOWN_TEMPERATURE /*Ta*/
 #define Tsolid_solid2 UNKNOWN_TEMPERATURE /*Tb*/
 
-/* 1D reinjection scheme:
- *  - Legacy deltas, 400K realisations: 924.093 ~ 928.405 +/- 0.847232
- *  - Deltas / 2,    400K realisations: 924.093 ~ 926.632 +/- 0.844205
- *
- * 2D reinjection scheme:
- *  - Legacy deltas, 400K realisations: 924.093 ~ 928.013 +/- 0.847624 */
 #define PROBE_POS 1.8
 
 /*
@@ -270,6 +264,8 @@ main(int argc, char** argv)
   struct sdis_mc T = SDIS_MC_NULL;
   double Tref;
   double pos[2];
+  size_t nfails;
+  size_t nreals;
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
@@ -447,10 +443,16 @@ main(int argc, char** argv)
 
   CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g, %g]\n",
     SPLIT2(pos), Tref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
-  CHK(eq_eps(T.E, Tref, T.SE*3));
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, Tref, T.SE*3));
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);

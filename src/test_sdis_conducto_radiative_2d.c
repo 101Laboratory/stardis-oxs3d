@@ -393,6 +393,7 @@ main(int argc, char** argv)
     double ref, u;
     size_t nreals = 0;
     size_t nfails = 0;
+    const size_t N = 10000;
 
     pos[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
@@ -406,7 +407,10 @@ main(int argc, char** argv)
     ref = u * Ts1 + (1-u) * Ts0;
     printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
       SPLIT2(pos), ref, T.E, T.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
+    CHK(nfails + nreals == N);
+    CHK(nfails < N/1000);
     CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);

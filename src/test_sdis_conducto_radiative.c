@@ -389,12 +389,13 @@ main(int argc, char** argv)
     double ref, u;
     size_t nreals = 0;
     size_t nfails = 0;
+    const size_t N = 10000;
 
     pos[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[2] = ssp_rng_uniform_double(rng, -0.9, 0.9);
 
-    CHK(sdis_solve_probe(scn, 10000, pos, INF, 1, -1, Tref, &estimator) == RES_OK);
+    CHK(sdis_solve_probe(scn, N, pos, INF, 1, -1, Tref, &estimator) == RES_OK);
     CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
     CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
     CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
@@ -403,7 +404,10 @@ main(int argc, char** argv)
     ref = u * Ts1 + (1-u) * Ts0;
     printf("Temperature at (%g, %g, %g)  = %g ~ %g +/- %g\n",
       SPLIT3(pos), ref, T.E, T.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
+    CHK(nfails + nreals == N);
+    CHK(nfails < N/1000);
     CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
 
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);

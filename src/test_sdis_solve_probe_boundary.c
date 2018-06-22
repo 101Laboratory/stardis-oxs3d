@@ -229,7 +229,7 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;
@@ -329,17 +329,14 @@ main(int argc, char** argv)
 
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(nfails + nreals == N);
-
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-
   CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
-
-
   printf("Boundary temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
   uv[0] = 0.5;
@@ -347,16 +344,14 @@ main(int argc, char** argv)
   CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(nfails + nreals == N);
-
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-
   CHK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos) == RES_OK);
-
   printf("Boundary temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, 3*T.SE));
   #undef SOLVE
 

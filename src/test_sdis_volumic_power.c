@@ -239,7 +239,7 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   fluid_shader.temperature = fluid_get_temperature;
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
@@ -338,19 +338,22 @@ main(int argc, char** argv)
   printf("Temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
   /* Solve in 2D */
   CHK(sdis_solve_probe(square_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(nfails + nreals == N);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   printf("Temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(eq_eps(T.E, ref, T.SE*3.0));
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, ref, 3*T.SE));
 
   CHK(sdis_scene_ref_put(box_scn) == RES_OK);
   CHK(sdis_scene_ref_put(square_scn) == RES_OK);

@@ -354,10 +354,11 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
   printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g %g]\n",
     SPLIT2(pos), Tref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
-  printf("#realisations: %lu; #failures: %lu\n",
-      (unsigned long)nreals, (unsigned long)nfails);
-  CHK(eq_eps(T.E, Tref, T.SE*3));
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, Tref, T.SE*3));
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);
