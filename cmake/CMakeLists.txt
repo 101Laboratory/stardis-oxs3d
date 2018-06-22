@@ -45,7 +45,7 @@ rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP)
 # Configure and define targets
 ################################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 3)
+set(VERSION_MINOR 4)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
@@ -88,7 +88,8 @@ if(MSVC)
   ### disable verbose warnings:
   # warning C4127: conditional expression is constant
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4127")
-  # warning C4938: Floating point reduction variable may cause inconsistent results under /fp:strict or #pragma fenv_access
+  # warning C4938: Floating point reduction variable may cause inconsistent
+  # results under /fp:strict or #pragma fenv_access
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4938")
 endif()
 
