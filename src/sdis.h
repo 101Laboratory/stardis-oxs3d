@@ -17,6 +17,7 @@
 #define SDIS_H
 
 #include <rsys/rsys.h>
+#include <float.h>
 
 /* Library symbol management */
 #if defined(SDIS_SHARED_BUILD)
@@ -105,6 +106,7 @@ struct sdis_accum {
   double sum_weights; /* Sum of Monte-Carlo weights */
   double sum_weights_sqr; /* Sum of Monte-Carlo square weights */
   size_t nweights; /* #accumulated weights */
+  size_t nfailures; /* #failures */
 };
 
 /* Monte-Carlo estimation */
@@ -137,7 +139,6 @@ struct sdis_solid_shader {
   sdis_medium_getter_T thermal_conductivity; /* In W.m^-1.K^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
   sdis_medium_getter_T delta_solid;
-  sdis_medium_getter_T delta_boundary;
 
   /* May be NULL if there is no volumic power. One can also return
    * SDIS_VOLUMIC_POWER_NONE to define that there is no volumic power at the
@@ -148,7 +149,7 @@ struct sdis_solid_shader {
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
@@ -372,6 +373,10 @@ sdis_medium_ref_put
 SDIS_API enum sdis_medium_type
 sdis_medium_get_type
   (const struct sdis_medium* medium);
+
+SDIS_API struct sdis_data*
+sdis_medium_get_data
+  (struct sdis_medium* medium);
 
 /*******************************************************************************
  * An interface is the boundary between 2 media.

@@ -149,14 +149,6 @@ solid_get_delta
   return 1.0/10.0;
 }
 
-static double
-solid_get_delta_boundary
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(vtx != NULL); (void)data;
-  return 2.1/10.0;
-}
-
 /*******************************************************************************
  * Interface
  ******************************************************************************/
@@ -317,7 +309,6 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = temperature_unknown;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -330,7 +321,6 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
@@ -403,6 +393,7 @@ main(int argc, char** argv)
     double ref, u;
     size_t nreals = 0;
     size_t nfails = 0;
+    const size_t N = 10000;
 
     pos[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
@@ -416,8 +407,11 @@ main(int argc, char** argv)
     ref = u * Ts1 + (1-u) * Ts0;
     printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
       SPLIT2(pos), ref, T.E, T.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
-    CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
+    CHK(nfails + nreals == N);
+    CHK(nfails < N/1000);
+    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   }

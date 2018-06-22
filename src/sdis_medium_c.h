@@ -94,14 +94,6 @@ solid_get_delta
 }
 
 static INLINE double
-solid_get_delta_boundary
-  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
-{
-  ASSERT(mdm && mdm->type == SDIS_SOLID);
-  return mdm->shader.solid.delta_boundary(vtx, mdm->data);
-}
-
-static INLINE double
 solid_get_volumic_power
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {

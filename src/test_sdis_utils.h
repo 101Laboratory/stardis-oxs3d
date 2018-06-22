@@ -69,7 +69,7 @@ static const double square_vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
 };
 static const size_t square_nvertices = sizeof(square_vertices)/sizeof(double[2]);
 
-static const size_t square_indices[4/*#triangles*/*2/*#indices per segment*/]= {
+static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   0, 1, /* Bottom */
   1, 2, /* Left */
   2, 3, /* Top */
@@ -99,7 +99,6 @@ dummy_interface_getter
 }
 
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
-  dummy_medium_getter,
   dummy_medium_getter,
   dummy_medium_getter,
   dummy_medium_getter,
