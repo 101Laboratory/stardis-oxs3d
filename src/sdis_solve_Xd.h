@@ -501,14 +501,14 @@ XD(solid_solid_boundary_temperature)
   delta_boundary_back  = delta_back *sqrt(DIM);
 
   /* Sample a reinjection direction and reflect it around the normal. Then
-   * reflect them on the back side of the interfaces */
+   * reflect them on the back side of the interface. */
   XD(sample_reinjection_dir)(rwalk, rng, dir0);
   XD(reflect)(dir2, dir0, rwalk->hit.normal);
   fX(minus)(dir1, dir0);
   fX(minus)(dir3, dir2);
 
-  /* Trace the sampled directions to adjust the reinjection distance of the
-   * random walk on both sides of the interface. */
+  /* Trace the sampled directions on both sides of the interface to adjust the
+   * reinjection distance of the random walk . */
   fX_set_dX(pos, rwalk->vtx.P);
   f2(range0, 0, (float)delta_boundary_front*RAY_RANGE_MAX_SCALE);
   f2(range1, 0, (float)delta_boundary_back *RAY_RANGE_MAX_SCALE);
@@ -521,7 +521,16 @@ XD(solid_solid_boundary_temperature)
   reinject_dst_front = MMIN(MMIN(delta_boundary_front, hit0.distance), hit2.distance);
   reinject_dst_back  = MMIN(MMIN(delta_boundary_back,  hit1.distance), hit3.distance);
 
-  /* Define the reinjection side */
+  /* Define the reinjection side. Note that the proba should be :
+   *    Lf/Df' / (Lf/Df' + Lb/Db')
+   *
+   * with L<f|b> the lambda of the <front|back> side and D<f|b>' the adjusted
+   * delta of the <front|back> side, i.e. :
+   *    D<f|b>' = reinject_dst_<front|back> / sqrt(DIM)
+   *
+   * Anyway, one can avoid to compute the adjusted delta by directly using the
+   * adjusted reinjection distance since the resulting proba is strictly the
+   * same; sqrt(DIM) can be simplified. */
   r = ssp_rng_canonical(rng);
   proba = (lambda_front/reinject_dst_front)
     / (lambda_front/reinject_dst_front + lambda_back/reinject_dst_back);
@@ -552,7 +561,7 @@ XD(solid_solid_boundary_temperature)
     reinject_dst = MMIN(delta_boundary, hit->distance),
     dim = 1;
 
-    /* Hit something in 1D. Arbitrarly move the random walk to 0.5 of the hit
+    /* Hit something in 1D. Arbitrarily move the random walk to 0.5 of the hit
      * distance */
     if(!SXD_HIT_NONE(hit)) {
       reinject_dst *= 0.5;
@@ -677,7 +686,7 @@ XD(solid_fluid_boundary_temperature)
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
     delta_boundary = MMIN(hit0.distance, delta);
 
-    /* Hit something in 1D. Arbitrarly move the random walk to 0.5 of the hit
+    /* Hit something in 1D. Arbitrarily move the random walk to 0.5 of the hit
      * distance in order to avoid infinite bounces for parallel plane */
     if(!SXD_HIT_NONE(&hit0)) {
       delta_boundary *= 0.5;
@@ -792,7 +801,7 @@ XD(solid_boundary_with_flux_temperature)
     fX(minus)(dir1, dir1);
   }
 
-  /* Trace dir0/dir1 to adjust the reinjection distance wrt to the geometry */
+  /* Trace dir0/dir1 to adjust the reinjection distance wrt the geometry */
   fX_set_dX(pos, rwalk->vtx.P);
   f2(range, 0, (float)delta_boundary*RAY_RANGE_MAX_SCALE);
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
@@ -812,7 +821,7 @@ XD(solid_boundary_with_flux_temperature)
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
     delta_boundary = MMIN(hit0.distance, delta_boundary);
 
-    /* Hit something in 1D. Arbitrarly move the random walk to 0.5 of the hit
+    /* Hit something in 1D. Arbitrarily move the random walk to 0.5 of the hit
      * distance in order to avoid infinite bounces for parallel plane */
     if(!SXD_HIT_NONE(&hit0)) {
       delta_boundary *= 0.5;
