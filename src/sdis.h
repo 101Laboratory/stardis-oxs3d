@@ -106,6 +106,7 @@ struct sdis_accum {
   double sum_weights; /* Sum of Monte-Carlo weights */
   double sum_weights_sqr; /* Sum of Monte-Carlo square weights */
   size_t nweights; /* #accumulated weights */
+  size_t nfailures; /* #failures */
 };
 
 /* Monte-Carlo estimation */

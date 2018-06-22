@@ -30,7 +30,7 @@
 #define UNKOWN_TEMPERATURE -1
 #define IMG_WIDTH 640
 #define IMG_HEIGHT 480
-#define SPP 4   /* #Samples per pixel, i.e. #realisations per pixel */
+#define SPP 4 /* #Samples per pixel, i.e. #realisations per pixel */
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
@@ -442,7 +442,7 @@ dump_image(const struct sdis_accum_buffer* buf)
   double Tmax = -DBL_MAX;
   double Tmin =  DBL_MAX;
   double norm;
-  size_t ix, iy;
+  size_t i, ix, iy;
 
   CHK(buf != NULL);
   CHK(sdis_accum_buffer_get_layout(buf, &layout) == RES_OK);
@@ -450,8 +450,17 @@ dump_image(const struct sdis_accum_buffer* buf)
   temps = mem_alloc(layout.width*layout.height*sizeof(double));
   CHK(temps != NULL);
 
-  /* Compute the per pixel temperature */
   CHK(sdis_accum_buffer_map(buf, &accums) == RES_OK);
+
+  /* Check the results validity */
+  FOR_EACH(i, 0, layout.height * layout.width) {
+    CHK(accums[i].nweights + accums[i].nfailures == SPP);
+    CHK(accums[i].nfailures <= SPP/100);
+    CHK(accums[i].sum_weights >= 0);
+    CHK(accums[i].sum_weights_sqr >= 0);
+  }
+
+  /* Compute the per pixel temperature */
   FOR_EACH(iy, 0, layout.height) {
     const struct sdis_accum* row_accums = accums + iy * layout.width;
     double* row = temps + iy * layout.width;
@@ -595,6 +604,11 @@ main(int argc, char** argv)
 
   /* Create the accum buffer */
   CHK(sdis_accum_buffer_create(dev, IMG_WIDTH, IMG_HEIGHT, &buf) == RES_OK);
+
+#if 0
+  dump_mesh(stdout, geom.positions, npos, geom.indices, ntris);
+  exit(0);
+#endif
 
   /* Launch the simulation */
   CHK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,

@@ -98,6 +98,7 @@ solve_pixel
   accum->sum_weights = sum_weights;
   accum->sum_weights_sqr = sum_weights_sqr;
   accum->nweights = N;
+  accum->nfailures = nrealisations - N;
 
 exit:
   return res;
