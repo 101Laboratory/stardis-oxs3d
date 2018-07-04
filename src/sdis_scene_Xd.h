@@ -115,10 +115,10 @@ clear_properties(struct sdis_scene* scn)
 
 /* Check the submitted dimension and include its specific headers */
 #if (SDIS_SCENE_DIMENSION == 2)
-  #include <senc2d.h>
+  #include <star/senc2d.h>
   #include <star/s2d.h>
 #elif (SDIS_SCENE_DIMENSION == 3)
-  #include <senc.h>
+  #include <star/senc.h>
   #include <star/s3d.h>
 #else
   #error "Invalid SDIS_SCENE_DIMENSION value."
