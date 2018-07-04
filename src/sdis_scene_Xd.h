@@ -313,8 +313,6 @@ XD(run_analyze)
   struct sencXd(device)* senc = NULL;
   struct sencXd(scene)* senc_scn = NULL;
   struct sencXd(descriptor)* desc = NULL;
-  size_t nmedia;
-  size_t iprim;
   res_T res = RES_OK;
   ASSERT(scn && nprims && indices && interf && nverts && position && out_desc);
 
@@ -322,20 +320,7 @@ XD(run_analyze)
     scn->dev->nthreads, scn->dev->verbose, &senc);
   if(res != RES_OK) goto error;
 
-  /* Conservatively define the number of media.
-   *
-   * FIXME The number of media is going to be remove from senc_scene_create
-   * profile and thus the following code should be unecessary soon. */
-  nmedia = 0;
-  FOR_EACH(iprim, 0, nprims) {
-    struct sdis_interface* itface;
-    interf(iprim, &itface, ctx);
-    nmedia = MMAX(nmedia, medium_get_id(itface->medium_front));
-    nmedia = MMAX(nmedia, medium_get_id(itface->medium_back));
-  }
-  nmedia += 1; /* +1 to define the "number of" media and not the max id */
-
-  res = sencXd(scene_create)(senc, (unsigned)nmedia, &senc_scn);
+  res = sencXd(scene_create)(senc, &senc_scn);
   if(res != RES_OK) goto error;
 
   /* Setup the geometry data */
@@ -521,9 +506,9 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   float S, V;
   unsigned iprim, nprims, nverts;
 #if DIM == 2
-  const struct enclosure2d_header* header;
+  struct senc2d_enclosure_header header;
 #else
-  const struct enclosure_header* header;
+  struct senc_enclosure_header header;
 #endif
   res_T res = RES_OK;
   ASSERT(scn && enc);
@@ -533,23 +518,23 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   SENCXD(enclosure_get_header(enc, &header));
 #if DIM == 2
   sXd_dev = scn->dev->s2d;
-  nprims = header->segment_count;
+  nprims = header.segment_count;
 #else
   sXd_dev = scn->dev->s3d;
-  nprims = header->triangle_count;
+  nprims = header.triangle_count;
 #endif
-  nverts = header->vertices_count;
+  nverts = header.vertices_count;
 
   /* Register the enclosure into the scene. Use a dummy data on their
    * registration; in order to avoid a costly copy, we are going to setup the
    * registered data rather than a local data that would be then registered. In
    * other words, the following hash table registration can be seen as an
    * allocation of the enclosure data to setup. */
-  res = htable_enclosure_set(&scn->enclosures, &header->enclosure_id, &enc_dummy);
+  res = htable_enclosure_set(&scn->enclosures, &header.enclosure_id, &enc_dummy);
   if(res != RES_OK) goto error;
 
   /* Fetch the data of the registered enclosure */
-  enc_data = htable_enclosure_find(&scn->enclosures, &header->enclosure_id);
+  enc_data = htable_enclosure_find(&scn->enclosures, &header.enclosure_id);
   ASSERT(enc_data != NULL);
 
   /* Setup the vertex data */
@@ -609,7 +594,7 @@ exit:
   if(sXd_scn) SXD(scene_ref_put(sXd_scn));
   return res;
 error:
-  htable_enclosure_erase(&scn->enclosures, &header->enclosure_id);
+  htable_enclosure_erase(&scn->enclosures, &header.enclosure_id);
   goto exit;
 }
 
@@ -626,21 +611,21 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
   SENCXD(descriptor_get_enclosure_count(desc, &nencs));
   FOR_EACH(ienc, 0, nencs) {
 #if DIM == 2
-    const struct enclosure2d_header* header;
+    struct senc2d_enclosure_header header;
 #else
-    const struct enclosure_header* header;
+    struct senc_enclosure_header header;
 #endif
     const struct sdis_medium* mdm;
 
     SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
 
-    ASSERT(header->enclosed_medium < darray_medium_size_get(&scn->media));
-    mdm = darray_medium_cdata_get(&scn->media)[header->enclosed_medium];
+    ASSERT(header.enclosed_medium < darray_medium_size_get(&scn->media));
+    mdm = darray_medium_cdata_get(&scn->media)[header.enclosed_medium];
     ASSERT(mdm);
 
     /* Silently discard the solid and infinite enclosures */
-    if(mdm->type == SDIS_MEDIUM_FLUID && !header->is_infinite) {
+    if(mdm->type == SDIS_MEDIUM_FLUID && !header.is_infinite) {
       res = XD(setup_enclosure_geometry)(scn, enc);
       if(res != RES_OK) goto error;
     }
