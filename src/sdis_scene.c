@@ -26,9 +26,70 @@
 #include "sdis.h"
 #include "sdis_scene_c.h"
 
+#include <limits.h>
+
 /*******************************************************************************
  * Helper function
  ******************************************************************************/
+static void
+project_position
+  (const double V0[3],
+   const double E0[3],
+   const double N[3],
+   const double NxE1[3],
+   const double rcp_det,
+   const double pos[3],
+   double uvw[3])
+{
+  double T[3], Q[3], k;
+  ASSERT(V0 && E0 && N && NxE1 && pos && uvw);
+
+  /* Use Moller/Trumbore intersection test the compute the parametric
+   * coordinates of the intersection between the triangle and the ray
+   * `r = pos + N*d' */
+  d3_sub(T, pos, V0);
+  uvw[0] = d3_dot(T, NxE1) * rcp_det;
+  d3_cross(Q, T, E0);
+  uvw[1] = d3_dot(Q, N) * rcp_det;
+  uvw[2] = 1.0 - uvw[0] - uvw[1];
+
+  if(uvw[0] >= 0 && uvw[1] >= 0 && uvw[2] >= 0) {/* The ray hits the triangle */
+    ASSERT(eq_eps(uvw[0] + uvw[1] + uvw[2], 1.0, 1.e-6));
+    return;
+  }
+
+  /* Clamp barycentric coordinates to triangle edges */
+  if(uvw[0] >= 0) {
+    if(uvw[1] >= 0) {
+      k = 1.0 / (uvw[0] + uvw[1]);
+      uvw[0] *= k;
+      uvw[1] *= k;
+      uvw[2] = 0;
+    } else if( uvw[2] >= 0) {
+      k = 1.0 / (uvw[0] + uvw[2]);
+      uvw[0] *= k;
+      uvw[1] = 0;
+      uvw[2] *= k;
+    } else {
+      ASSERT(uvw[0] >= 1.f);
+      d3(uvw, 1, 0, 0);
+    }
+  } else if(uvw[1] >= 0) {
+    if(uvw[2] >= 0) {
+      k = 1.0 / (uvw[1] + uvw[2]);
+      uvw[0] = 0;
+      uvw[1] *= k;
+      uvw[2] *= k;
+    } else {
+      ASSERT(uvw[1] >= 1);
+      d3(uvw, 0, 1, 0);
+    }
+  } else {
+    ASSERT(uvw[2] >= 1);
+    d3(uvw, 0, 0, 1);
+  }
+}
+
 static void
 scene_release(ref_T * ref)
 {
@@ -150,6 +211,69 @@ sdis_scene_get_boundary_position
   return RES_OK;
 }
 
+res_T
+sdis_scene_boundary_project_position
+  (const struct sdis_scene* scn,
+   const size_t iprim,
+   const double pos[],
+   double uv[])
+{
+  if(!scn || !pos || !uv) return RES_BAD_ARG;
+  if(iprim >= scene_get_primitives_count(scn)) return RES_BAD_ARG;
+
+  if(scene_is_2d(scn)) {
+    struct s2d_primitive prim;
+    struct s2d_attrib a;
+    double V[2][2]; /* Vertices */
+    double E[2][3]; /* V0->V1 and V0->pos */
+    double proj;
+
+    /* Retrieve the segment vertices */
+    S2D(scene_view_get_primitive(scn->s2d_view, (unsigned int)iprim, &prim));
+    S2D(primitive_get_attrib(&prim, S2D_POSITION, 0, &a)); d2_set_f2(V[0], a.value);
+    S2D(primitive_get_attrib(&prim, S2D_POSITION, 1, &a)); d2_set_f2(V[1], a.value);
+
+    /* Compute the parametric coordinate of the project of `pos' onto the
+     * segment.*/
+    d2_sub(E[0], V[1], V[0]);
+    d2_normalize(E[0], E[0]);
+    d2_sub(E[1], pos,  V[0]);
+    proj = d2_dot(E[0], E[1]);
+
+    uv[0] = CLAMP(proj, 0, 1); /* Clamp the parametric coordinate in [0, 1] */
+
+  } else {
+    struct s3d_primitive prim;
+    struct s3d_attrib a;
+    double V[3][3]; /* Vertices */
+    double E[2][3]; /* V0->V1 and V0->V2 edges */
+    double N[3]; /* Normal */
+    double NxE1[3], rcp_det; /* Muller/Trumboer triangle parameters */
+    double uvw[3];
+
+    S3D(scene_view_get_primitive(scn->s3d_view, (unsigned int)iprim, &prim));
+    S3D(triangle_get_vertex_attrib(&prim, 0, S3D_POSITION, &a)); d3_set_f3(V[0], a.value);
+    S3D(triangle_get_vertex_attrib(&prim, 1, S3D_POSITION, &a)); d3_set_f3(V[1], a.value);
+    S3D(triangle_get_vertex_attrib(&prim, 2, S3D_POSITION, &a)); d3_set_f3(V[2], a.value);
+    d3_sub(E[0], V[1], V[0]);
+    d3_sub(E[1], V[2], V[0]);
+    d3_cross(N, E[0], E[1]);
+
+    /* Muller/Trumbore triangle parameters */
+    d3_cross(NxE1, N, E[1]);
+    rcp_det = 1.0 / d3_dot(NxE1, E[0]);
+
+    /* Use the Muller/Trumbore intersection test to project `pos' onto the
+     * triangle and to retrieve the parametric coordinates of the projection
+     * point */
+    project_position(V[0], E[0], N, NxE1, rcp_det, pos, uvw);
+
+    uv[0] = uvw[2];
+    uv[1] = uvw[0];
+  }
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
@@ -164,10 +288,11 @@ res_T
 scene_get_medium
   (const struct sdis_scene* scn,
    const double pos[],
+   struct get_medium_info* info,
    const struct sdis_medium** out_medium)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_2d(scn, pos, out_medium)
-    : scene_get_medium_3d(scn, pos, out_medium);
+    ? scene_get_medium_2d(scn, pos, info, out_medium)
+    : scene_get_medium_3d(scn, pos, info, out_medium);
 }
 

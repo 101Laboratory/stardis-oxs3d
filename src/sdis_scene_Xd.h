@@ -154,6 +154,12 @@ clear_properties(struct sdis_scene* scn)
 /* Macro making generic its subimitted name to SDIS_SCENE_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
+#if DIM == 2
+  #define HIT_ON_BOUNDARY hit_on_vertex
+#else
+  #define HIT_ON_BOUNDARY hit_on_edge
+#endif
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
@@ -625,7 +631,7 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     ASSERT(mdm);
 
     /* Silently discard the solid and infinite enclosures */
-    if(mdm->type == SDIS_MEDIUM_FLUID && !header.is_infinite) {
+    if(mdm->type == SDIS_FLUID && !header.is_infinite) {
       res = XD(setup_enclosure_geometry)(scn, enc);
       if(res != RES_OK) goto error;
     }
@@ -717,15 +723,33 @@ error:
 static INLINE res_T
 XD(scene_get_medium)
   (const struct sdis_scene* scn,
-   const double pos[3],
+   const double pos[2],
+   struct get_medium_info* info, /* May be NULL */
    const struct sdis_medium** out_medium)
 {
   const struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
   size_t nfailures = 0;
   const size_t max_failures = 10;
+  /* Range of the parametric coordinate into which positions are challenged */
+#if DIM == 2
+  float st[3];
+#else
+  float st[3][2];
+#endif
+  size_t nsteps = 3;
   res_T res = RES_OK;
   ASSERT(scn && pos);
+
+#if DIM == 2
+  st[0] = 0.25f;
+  st[1] = 0.50f;
+  st[2] = 0.75f;
+#else
+  f2(st[0], 1.f/6.f, 5.f/12.f);
+  f2(st[1], 5.f/12.f, 1.f/6.f);
+  f2(st[2], 5.f/12.f, 5.f/12.f);
+#endif
 
   SXD(scene_view_primitives_count(scn->sXd(view), &nprims));
   FOR_EACH(iprim, 0, nprims) {
@@ -734,42 +758,53 @@ XD(scene_get_medium)
     struct sXd(primitive) prim;
     const float range[2] = {0.f, FLT_MAX};
     float N[DIM], P[DIM], dir[DIM], cos_N_dir;
-#if DIM == 2
-    float st;
-    st = 1.f / 3.f;
-#else
-    float st[2];
-    st[0] = st[1] = 1.f / 3.f; /* Or MSVC will issue a warning */
-#endif
+    size_t istep = 0;
 
-    /* Retrieve a position onto the primitive */
-    SXD(scene_view_get_primitive(scn->sXd(view), (unsigned)iprim, &prim));
-    SXD(primitive_get_attrib(&prim, SXD_POSITION, st, &attr));
+    do {
+      /* Retrieve a position onto the primitive */
+      SXD(scene_view_get_primitive(scn->sXd(view), (unsigned)iprim, &prim));
+      SXD(primitive_get_attrib(&prim, SXD_POSITION, st[istep], &attr));
 
-    /* Trace a ray from the randomw walk vertex  toward the retrieved primitive
-     * position */
-    fX(normalize)(dir, fX(sub)(dir, attr.value, fX_set_dX(P, pos)));
-    SXD(scene_view_trace_ray(scn->sXd(view), P, dir, range, NULL, &hit));
+      /* Trace a ray from the random walk vertex toward the retrieved primitive
+       * position */
+      fX(normalize)(dir, fX(sub)(dir, attr.value, fX_set_dX(P, pos)));
+      SXD(scene_view_trace_ray(scn->sXd(view), P, dir, range, NULL, &hit));
+
+      /* Unforeseen error. One has to intersect a primitive ! */
+      if(SXD_HIT_NONE(&hit)) {
+        ++nfailures;
+        if(nfailures < max_failures) {
+          continue;
+        } else {
+          res = RES_BAD_ARG;
+          goto error;
+        }
+      }
+    /* Discard the hit if it is on a vertex, i.e. between 2 segments,  and
+     * target a new position onto the current primitive */
+    } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit))
+         && ++istep < nsteps);
+
+    /* The hits of all targeted positions on the current primitive are on
+     * vertices. Challenge positions on another primitive. */
+    if(istep > nsteps) continue;
 
     fX(normalize)(N, hit.normal);
     cos_N_dir = fX(dot)(N, dir);
-
-    /* Unforeseen error. One has to intersect a primitive ! */
-    if(SXD_HIT_NONE(&hit)) {
-      ++nfailures;
-      if(nfailures < max_failures) {
-        continue;
-      } else {
-        res = RES_BAD_ARG;
-        goto error;
-      }
-    }
 
     if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
         (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+
+      /* Register the get_medium_info */
+      if(info) {
+        fX(set)(info->pos_tgt, attr.value);
+        fX(set)(info->ray_org, P);
+        fX(set)(info->ray_dir, dir);
+        info->XD(hit) = hit;
+      }
       break;
     }
   }
@@ -787,7 +822,6 @@ error:
 #endif
   goto exit;
 }
-
 #undef SDIS_SCENE_DIMENSION
 #undef DIM
 #undef sencXd
@@ -805,5 +839,6 @@ error:
 #undef fX
 #undef fX_set_dX
 #undef XD
+#undef HIT_ON_BOUNDARY
 
 #endif /* !SDIS_SCENE_DIMENSION */

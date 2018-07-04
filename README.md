@@ -23,13 +23,70 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.4
+
+Full rewrite of how the volumetric power is taken into account.
+
+- Change the scheme of the random walk "solid re-injection": use a 2D
+  re-injection scheme in order to handle 2D effects. On one hand, this scheme
+  drastically improves the accuracy of the temperature estimation in solid with
+  a volumetric power term. On the other hand it is more sensible to numerical
+  imprecisions. The previous 1D scheme is thus used in situations where the 2D
+  scheme exhibits too numerical issues, i.e. on sharp angles.
+- Add the missing volumetric power term on solid re-injection.
+- Add a corrective term to fix the bias on the volumetric power introduced when
+  the random walk progresses at a distance of `delta` of a boundary.
+- Add several volumetric power tests.
+- Remove the `delta_boundary` parameter of the `struct sdis_solid_shader` data
+  structure.
+
+### Version 0.3
+
+- Some interface properties become double sided: the temperature, emissivity
+  and specular fraction is defined for each side of the interface. Actually,
+  only the convection coefficient is shared by the 2 sides of the interface.
+  The per side interface properties are grouped into the new `struct
+  sdis_interface_side_shader` data structure.
+- Add the support of fixed fluxes: the flux is a per side interface property.
+  Currently, the flux is handled only for the interface sides facing a solid
+  medium.
+- Add the `sdis_scene_boundary_project_pos` function that computes the
+  parametric coordinates of a world space position projected onto a given
+  primitive with respect to its normal. If the projection lies outside the
+  primitive, its parametric coordinates are wrapped against its boundaries in
+  order to ensure that they are valid coordinates into the primitive. Actually,
+  this function was mainly added to help in the definition of the probe
+  position onto a boundary as expected by the
+  `sdis_solve_probe_boundary` function.
+- Update the default comportment of the interface shader when a function is not
+  set.
+- Rename the `SDIS_MEDIUM_<FLUID|SOLID>` constants in `SDIS_<FLUID|SOLID>`.
+- Rename the `enum sdis_side_flag` enumerate in `enum sdis_side` and update its
+  values.
+
+### Version 0.2
+
+- Add the support of volumic power to solid media: add the `volumic_power`
+  functor to the `sdis_solid_shader` data structure that, once defined, should
+  return the volumic power of the solid at a specific position and time. On
+  solve invocation, the conductive random walks take into account this
+  spatio-temporal volumic power in the computation of the solid temperature.
+- Add the `sdis_solve_probe_boundary` function: it computes the temperature at
+  a given position and time onto a geometric primitive. The probe position is
+  defined by the index of the primitive and a parametric coordinates onto it.
+- Add  the `sdis_scene_get_boundary_position` function: it computes a world
+  space position from the index of a geometric primitive and a parametric
+  coordinate onto it.
+- Fix how the `sdis_solve_probe` was parallelised. The submitted `threads_hint`
+  parameter was not correctly handled.
+
 ### Version 0.1
 
 - Add the support of radiative temperature.
-- Add the `sdis_camera` API : it defines a pinhole camera into the scene.
-- Add the `sdis_accum_buffer` API : it is a pool of MC accumulators, i.e. a sum
+- Add the `sdis_camera` API: it defines a pinhole camera into the scene.
+- Add the `sdis_accum_buffer` API: it is a pool of MC accumulators, i.e. a sum
   of MC weights and square weights.
-- Add the `sdis_solve_camera` function : it relies on a `sdis_camera` and a
+- Add the `sdis_solve_camera` function: it relies on a `sdis_camera` and a
   `sdis_accum_buffer` to compute the radiative temperature that reaches each
   pixel of an image whose definition is defined by the caller. Note that
   actually this function uses the same underlying MC algorithm behind the

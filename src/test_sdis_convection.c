@@ -204,10 +204,10 @@ main(int argc, char** argv)
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
 
   /* Setup the interface shader */
-  interf_shader.temperature = interface_get_temperature;
   interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.emissivity = interface_get_emissivity;
-  interf_shader.specular_fraction = interface_get_specular_fraction;
+  interf_shader.front.temperature = interface_get_temperature;
+  interf_shader.front.emissivity = interface_get_emissivity;
+  interf_shader.front.specular_fraction = interface_get_specular_fraction;
 
   /* Create the interfaces */
   interf_T0 = create_interface(dev, fluid, solid, &interf_shader, T0);

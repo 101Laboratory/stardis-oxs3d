@@ -31,10 +31,13 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
   CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+
+
+  shader = SDIS_INTERFACE_SHADER_NULL;
 
   #define CREATE sdis_interface_create
   CHK(CREATE(NULL, NULL, NULL, NULL, NULL, NULL) == RES_BAD_ARG);
@@ -78,23 +81,27 @@ main(int argc, char** argv)
 
   CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
-  shader.convection_coef = NULL;
-  shader.specular_fraction = NULL;
-  shader.emissivity = NULL;
+  shader = SDIS_INTERFACE_SHADER_NULL;
   CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
 
-  shader.temperature = NULL;
+  shader.front.temperature = dummy_interface_getter;
   CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK);
   CHK(sdis_interface_ref_put(interf) == RES_OK);
 
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
-  shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
-  shader.emissivity = DUMMY_INTERFACE_SHADER.emissivity;
-  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
-  shader.specular_fraction = DUMMY_INTERFACE_SHADER.specular_fraction;
+  shader.back.emissivity = dummy_interface_getter;
   CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  shader.back.specular_fraction = dummy_interface_getter;
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK);
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
+  shader.front.emissivity = dummy_interface_getter;
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK); /* Warning */
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  shader.front.emissivity = NULL;
+  shader.front.specular_fraction = dummy_interface_getter;
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK); /* Warning */
   CHK(sdis_interface_ref_put(interf) == RES_OK);
   #undef CREATE
 

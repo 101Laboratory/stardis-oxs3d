@@ -39,7 +39,7 @@ struct sdis_interface {
 extern LOCAL_SYM const struct sdis_medium*
 interface_get_medium
   (const struct sdis_interface* interf,
-   const enum sdis_side_flag side);
+   const enum sdis_side side);
 
 extern LOCAL_SYM unsigned
 interface_get_id
@@ -49,23 +49,15 @@ extern LOCAL_SYM void
 setup_interface_fragment_2d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
-   const struct s2d_hit* hit);
+   const struct s2d_hit* hit,
+   const enum sdis_side side);
 
 extern LOCAL_SYM void
 setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
-   const struct s3d_hit* hit);
-
-static INLINE double
-interface_get_temperature
-  (const struct sdis_interface* interf,
-   const struct sdis_interface_fragment* frag)
-{
-  ASSERT(interf && frag);
-  if(!interf->shader.temperature) return -DBL_MAX;
-  return interf->shader.temperature(frag, interf->data);
-}
+   const struct s3d_hit* hit,
+   const enum sdis_side side);
 
 static INLINE double
 interface_get_convection_coef
@@ -73,25 +65,69 @@ interface_get_convection_coef
    const struct sdis_interface_fragment* frag)
 {
   ASSERT(interf && frag);
-  return interf->shader.convection_coef(frag, interf->data);
+  return interf->shader.convection_coef
+    ? interf->shader.convection_coef(frag, interf->data) : 0;
 }
 
 static INLINE double
-interface_get_emissivity
+interface_side_get_temperature
   (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
 {
+  const struct sdis_interface_side_shader* shader;
   ASSERT(interf && frag);
-  return interf->shader.emissivity(frag, interf->data);
+  switch(frag->side) {
+    case SDIS_FRONT: shader = &interf->shader.front; break;
+    case SDIS_BACK: shader = &interf->shader.back; break;
+    default: FATAL("Unreachable code.\n");
+  }
+  return shader->temperature ? shader->temperature(frag, interf->data) : -1;
 }
 
 static INLINE double
-interface_get_specular_fraction
+interface_side_get_flux
   (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
 {
+  const struct sdis_interface_side_shader* shader;
   ASSERT(interf && frag);
-  return interf->shader.specular_fraction(frag, interf->data);
+  switch(frag->side) {
+    case SDIS_FRONT: shader = &interf->shader.front; break;
+    case SDIS_BACK: shader = &interf->shader.back; break;
+    default: FATAL("Unreachable code.\n");
+  }
+  return shader->flux ? shader->flux(frag, interf->data) : SDIS_FLUX_NONE;
+}
+
+static INLINE double
+interface_side_get_emissivity
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  const struct sdis_interface_side_shader* shader;
+  ASSERT(interf && frag);
+  switch(frag->side) {
+    case SDIS_FRONT: shader = &interf->shader.front; break;
+    case SDIS_BACK: shader = &interf->shader.back; break;
+    default: FATAL("Unreachable code\n"); break;
+  }
+  return shader->emissivity ? shader->emissivity(frag, interf->data) : 0;
+}
+
+static INLINE double
+interface_side_get_specular_fraction
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  const struct sdis_interface_side_shader* shader;
+  ASSERT(interf && frag);
+  switch(frag->side) {
+    case SDIS_FRONT: shader = &interf->shader.front; break;
+    case SDIS_BACK: shader = &interf->shader.back; break;
+    default: FATAL("Unreachable code\n"); break;
+  }
+  return shader->specular_fraction
+    ? shader->specular_fraction(frag, interf->data) : 0;
 }
 
 #endif /* SDIS_INTERFACE_C_H */

@@ -126,14 +126,6 @@ solid_get_delta
 }
 
 static double
-solid_get_delta_boundary
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->delta * 2.1;
-}
-
-static double
 solid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
@@ -191,7 +183,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct context ctx;
   struct fluid* fluid_param;
   struct solid* solid_param;
@@ -206,7 +198,7 @@ main(int argc, char** argv)
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
   CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
   CHK(sdis_data_create
@@ -230,7 +222,6 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = solid_get_temperature;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -243,9 +234,10 @@ main(int argc, char** argv)
   interface_param->epsilon = 0;
   interface_param->specular_fraction = 0;
   interface_shader.convection_coef = interface_get_convection_coef;
-  interface_shader.temperature = NULL;
-  interface_shader.emissivity = interface_get_emissivity;
-  interface_shader.specular_fraction = interface_get_specular_fraction;
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
+  interface_shader.back.temperature = NULL;
+  interface_shader.back.emissivity = interface_get_emissivity;
+  interface_shader.back.specular_fraction = interface_get_specular_fraction;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -284,8 +276,6 @@ main(int argc, char** argv)
   CHK(sdis_estimator_get_failure_count(NULL, &nfails) == RES_BAD_ARG);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
 
-  CHK(nfails + nreals == N);
-
   CHK(sdis_estimator_get_temperature(estimator, NULL) == RES_BAD_ARG);
   CHK(sdis_estimator_get_temperature(NULL, &T) == RES_BAD_ARG);
   CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
@@ -293,6 +283,10 @@ main(int argc, char** argv)
   ref = 300;
   printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
   CHK(sdis_estimator_ref_get(NULL) ==  RES_BAD_ARG);

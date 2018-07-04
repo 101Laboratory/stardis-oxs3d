@@ -149,54 +149,78 @@ solid_get_delta
   return 1.0/10.0;
 }
 
-static double
-solid_get_delta_boundary
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(vtx != NULL); (void)data;
-  return 2.1/10.0;
-}
-
 /*******************************************************************************
  * Interface
  ******************************************************************************/
-struct interface {
-  double temperature;
+struct interfac {
   double convection_coef;
-  double emissivity;
-  double specular_fraction;
+  struct {
+    double temperature;
+    double emissivity;
+    double specular_fraction;
+  } front, back;
+};
+
+static const struct interfac INTERFACE_NULL = {
+  0, {-1, -1, -1}, {-1, -1, -1}
 };
 
 static double
 interface_get_temperature
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
+  const struct interfac* interf;
+  double T = -1;
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->temperature;
+  interf = sdis_data_cget(data);
+  switch(frag->side) {
+    case SDIS_FRONT: T = interf->front.temperature; break;
+    case SDIS_BACK: T = interf->back.temperature; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return T;
 }
 
 static double
 interface_get_convection_coef
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
+  const struct interfac* interf;
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->convection_coef;
+  interf = sdis_data_cget(data);
+  return interf->convection_coef;
 }
 
 static double
 interface_get_emissivity
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
+  const struct interfac* interf;
+  double e = -1;
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->emissivity;
+  interf = sdis_data_cget(data);
+  switch(frag->side) {
+    case SDIS_FRONT: e = interf->front.emissivity; break;
+    case SDIS_BACK: e = interf->back.emissivity; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return e;
 }
 
 static double
 interface_get_specular_fraction
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
+  const struct interfac* interf;
+  double f = -1;
   CHK(data != NULL && frag != NULL);
-  return ((const struct interface*)sdis_data_cget(data))->specular_fraction;
+  interf = sdis_data_cget(data);
+  switch(frag->side) {
+    case SDIS_FRONT: f = interf->front.specular_fraction; break;
+    case SDIS_BACK: f = interf->back.specular_fraction; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return f;
 }
 
 /*******************************************************************************
@@ -207,27 +231,37 @@ create_interface
   (struct sdis_device* dev,
    struct sdis_medium* front,
    struct sdis_medium* back,
-   const struct interface* interf,
+   const struct interfac* interf,
    struct sdis_interface** out_interf)
 {
-  struct sdis_interface_shader shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_data* data = NULL;
+  const enum sdis_medium_type type_f = sdis_medium_get_type(front);
+  const enum sdis_medium_type type_b = sdis_medium_get_type(back);
 
   CHK(interf != NULL);
 
-  shader.temperature = interface_get_temperature;
-  shader.convection_coef = interface_get_convection_coef;
-  shader.emissivity = interface_get_emissivity;
-  shader.specular_fraction = interface_get_specular_fraction;
+  shader.back.temperature = interface_get_temperature;
+  shader.front.temperature = interface_get_temperature;
 
-  CHK(sdis_data_create(dev, sizeof(struct interface), ALIGNOF(struct interface),
+  if(type_f != type_b) {
+    shader.convection_coef = interface_get_convection_coef;
+  }
+  if(type_f == SDIS_FLUID) {
+    shader.front.emissivity = interface_get_emissivity;
+    shader.front.specular_fraction = interface_get_specular_fraction;
+  }
+  if(type_b == SDIS_FLUID) {
+    shader.back.emissivity = interface_get_emissivity;
+    shader.back.specular_fraction = interface_get_specular_fraction;
+  }
+  CHK(sdis_data_create(dev, sizeof(struct interfac), ALIGNOF(struct interfac),
     NULL, &data) == RES_OK);
-  *((struct interface*)sdis_data_get(data)) = *interf;
+  *((struct interfac*)sdis_data_get(data)) = *interf;
 
   CHK(sdis_interface_create(dev, front, back, &shader, data, out_interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 }
-
 
 /*******************************************************************************
  * Test
@@ -236,7 +270,7 @@ int
 main(int argc, char** argv)
 {
   struct mem_allocator allocator;
-  struct interface interf;
+  struct interfac interf;
   struct geometry geom;
   struct ssp_rng* rng = NULL;
   struct sdis_scene* scn = NULL;
@@ -275,7 +309,6 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   solid_shader.temperature = temperature_unknown;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -288,43 +321,39 @@ main(int argc, char** argv)
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.delta_boundary = solid_get_delta_boundary;
   CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the interface that forces to keep in conduction */
-  interf.temperature = UNKNOWN_TEMPERATURE;
-  interf.convection_coef = -1;
-  interf.emissivity = -1;
-  interf.specular_fraction = -1;
+  interf = INTERFACE_NULL;
   create_interface(dev, solid, solid2, &interf, interfaces+0);
 
   /* Create the interface that emits radiative heat from the solid */
-  interf.temperature = UNKNOWN_TEMPERATURE;
-  interf.convection_coef = 0;
-  interf.emissivity = emissivity;
-  interf.specular_fraction = -1;
+  interf = INTERFACE_NULL;
+  interf.back.temperature = UNKNOWN_TEMPERATURE;
+  interf.back.emissivity = emissivity;
+  interf.back.specular_fraction = -1; /* Should not be fetched */
   create_interface(dev, solid, fluid, &interf, interfaces+1);
 
   /* Create the interface that forces the radiative heat to bounce */
-  interf.temperature = UNKNOWN_TEMPERATURE;
-  interf.convection_coef = 0;
-  interf.emissivity = 0;
-  interf.specular_fraction = 1;
+  interf = INTERFACE_NULL;
+  interf.front.temperature = UNKNOWN_TEMPERATURE;
+  interf.front.emissivity = 0;
+  interf.front.specular_fraction = 1;
   create_interface(dev, fluid, solid2, &interf, interfaces+2);
 
   /* Create the interface with a limit condition of T0 Kelvin */
-  interf.temperature = T0;
-  interf.convection_coef = 0;
-  interf.emissivity = 1;
-  interf.specular_fraction = 1;
+  interf = INTERFACE_NULL;
+  interf.front.temperature = T0;
+  interf.front.emissivity = 1;
+  interf.front.specular_fraction = 1;
   create_interface(dev, fluid, solid2, &interf, interfaces+3);
 
   /* Create the interface with a limit condition of T1 Kelvin  */
-  interf.temperature = T1;
-  interf.convection_coef = 0;
-  interf.emissivity = 1;
-  interf.specular_fraction = 1;
+  interf = INTERFACE_NULL;
+  interf.front.temperature = T1;
+  interf.front.emissivity = 1;
+  interf.front.specular_fraction = 1;
   create_interface(dev, fluid, solid2, &interf, interfaces+4);
 
   /* Setup the per primitive interface of the solid medium */
@@ -364,6 +393,7 @@ main(int argc, char** argv)
     double ref, u;
     size_t nreals = 0;
     size_t nfails = 0;
+    const size_t N = 10000;
 
     pos[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
@@ -377,8 +407,11 @@ main(int argc, char** argv)
     ref = u * Ts1 + (1-u) * Ts0;
     printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
       SPLIT2(pos), ref, T.E, T.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
-    CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
+    CHK(nfails + nreals == N);
+    CHK(nfails < N/1000);
+    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   }

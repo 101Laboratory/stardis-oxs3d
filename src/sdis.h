@@ -17,6 +17,7 @@
 #define SDIS_H
 
 #include <rsys/rsys.h>
+#include <float.h>
 
 /* Library symbol management */
 #if defined(SDIS_SHARED_BUILD)
@@ -40,6 +41,9 @@
  * as CPU cores */
 #define SDIS_NTHREADS_DEFAULT (~0u)
 
+#define SDIS_VOLUMIC_POWER_NONE DBL_MAX /* <=> No volumic power */
+#define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
+
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
@@ -60,15 +64,15 @@ struct sdis_interface;
 struct sdis_medium;
 struct sdis_scene;
 
-enum sdis_side_flag {
-  SDIS_FRONT = BIT(0),
-  SDIS_BACK = BIT(1),
-  SDIS_SIDE_NULL__ = BIT(2)
+enum sdis_side {
+  SDIS_FRONT,
+  SDIS_BACK,
+  SDIS_SIDE_NULL__
 };
 
 enum sdis_medium_type {
-  SDIS_MEDIUM_FLUID,
-  SDIS_MEDIUM_SOLID,
+  SDIS_FLUID,
+  SDIS_SOLID,
   SDIS_MEDIUM_TYPES_COUNT__
 };
 
@@ -82,22 +86,27 @@ struct sdis_rwalk_vertex {
 static const struct sdis_rwalk_vertex SDIS_RWALK_VERTEX_NULL =
   SDIS_RWALK_VERTEX_NULL__;
 
-/* Spatiotemporal position onto an interface */
+/* Spatiotemporal position onto an interface. As a random walk vertex, it
+ * stores the position and time of the random walk, but since it lies onto an
+ * interface, it has additionnal parameters as the normal of the interface and
+ * the parametric coordinate of the position onto the interface */
 struct sdis_interface_fragment {
   double P[3]; /* World space position */
   double Ng[3]; /* Normalized world space geometry normal at the interface */
   double uv[2]; /* Parametric coordinates of the interface */
   double time; /* Current time */
+  enum sdis_side side;
 };
-#define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1}
+#define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1, SDIS_SIDE_NULL__}
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
 /* Monte-Carlo accumulator */
 struct sdis_accum {
-  double sum_weights; /* Sum of Monte-Carlo weight */
+  double sum_weights; /* Sum of Monte-Carlo weights */
   double sum_weights_sqr; /* Sum of Monte-Carlo square weights */
   size_t nweights; /* #accumulated weights */
+  size_t nfailures; /* #failures */
 };
 
 /* Monte-Carlo estimation */
@@ -109,40 +118,46 @@ struct sdis_mc {
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
 
-/* Functor type to retrieve the medium properties. */
+/* Functor type used to retrieve the spatio temporal physical properties of a
+ * medium. */
 typedef double
 (*sdis_medium_getter_T)
   (const struct sdis_rwalk_vertex* vert,
    struct sdis_data* data);
 
-/* Functor type to retrieve the interface properties. */
+/* Functor type used to retrieve the spatio temporal physical properties of an
+ * interface. */
 typedef double
 (*sdis_interface_getter_T)
   (const struct sdis_interface_fragment* frag,
    struct sdis_data* data);
 
+/* Define the physical properties of a solid */
 struct sdis_solid_shader {
   /* Properties */
-  sdis_medium_getter_T calorific_capacity;
-  sdis_medium_getter_T thermal_conductivity;
-  sdis_medium_getter_T volumic_mass;
+  sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
+  sdis_medium_getter_T thermal_conductivity; /* In W.m^-1.K^-1 */
+  sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
   sdis_medium_getter_T delta_solid;
-  sdis_medium_getter_T delta_boundary;
 
-  sdis_medium_getter_T volumic_power; /* May be NULL <=> no volumic power */
+  /* May be NULL if there is no volumic power. One can also return
+   * SDIS_VOLUMIC_POWER_NONE to define that there is no volumic power at the
+   * submitted position and time */
+  sdis_medium_getter_T volumic_power;  /* In W.m^-3 */
 
   /* Initial/limit condition. A temperature < 0 means that the temperature is
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
+/* Define the physical properties of a fluid */
 struct sdis_fluid_shader {
   /* Properties */
-  sdis_medium_getter_T calorific_capacity;
-  sdis_medium_getter_T volumic_mass;
+  sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
+  sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
 
   /* Initial/limit condition. A temperature < 0 means that the temperature is
    * unknown for the submitted position and time. */
@@ -152,15 +167,33 @@ struct sdis_fluid_shader {
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
-struct sdis_interface_shader {
-  sdis_interface_getter_T temperature; /* Limit condition. NULL <=> Unknown */
-  sdis_interface_getter_T convection_coef; /* May be NULL for solid/solid */
+/* Define the physical properties of one side of an interface. */
+struct sdis_interface_side_shader {
+  /* Fixed temperature/flux. May be NULL if the temperature/flux is unknown
+   * onto the whole interface */
+  sdis_interface_getter_T temperature;  /* In Kelvin. < 0 <=> Unknown temp */
+  sdis_interface_getter_T flux; /* In W.m^-2. SDIS_FLUX_NONE <=> no flux  */
 
-  /* Interface emssivity. May be NULL for solid/solid interface  */
-  sdis_interface_getter_T emissivity; /* Overall emissivity */
-  sdis_interface_getter_T specular_fraction; /* Specular fraction in [0, 1] */
+  /* Control the emissivity of the interface. May be NULL for solid/solid
+   * interface or if the emissivity is 0 onto the whole interface. */
+  sdis_interface_getter_T emissivity; /* Overall emissivity. */
+  sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
 };
-#define SDIS_INTERFACE_SHADER_NULL__ {NULL, NULL, NULL, NULL}
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL }
+static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
+  SDIS_INTERFACE_SIDE_SHADER_NULL__;
+
+/* Define the physical properties of an interface between 2 media .*/
+struct sdis_interface_shader {
+  /* May be NULL for solid/solid or if the convection coefficient is 0 onto
+   * the whole interface. */
+  sdis_interface_getter_T convection_coef;  /* In W.K^-1.m^-2 */
+
+  struct sdis_interface_side_shader front;
+  struct sdis_interface_side_shader back;
+};
+#define SDIS_INTERFACE_SHADER_NULL__ \
+  {NULL, SDIS_INTERFACE_SIDE_SHADER_NULL__, SDIS_INTERFACE_SIDE_SHADER_NULL__}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
@@ -204,7 +237,8 @@ sdis_device_ref_put
 
 /*******************************************************************************
  * A data stores in the Stardis memory space a set of user defined data. It can
- * be seen as a ref counted memory space allocated by Stardis.
+ * be seen as a ref counted memory space allocated by Stardis. It is used to
+ * attach user data to the media and to the interfaces.
  ******************************************************************************/
 SDIS_API res_T
 sdis_data_create
@@ -265,13 +299,15 @@ sdis_camera_look_at
    const double up[3]);
 
 /*******************************************************************************
- * A buffer of accumulations
+ * A buffer of accumulations is a 2D array whose each cell stores an
+ * Monte-Carlo accumulation, i.e. a sum of MC weights, the sum of their square
+ * and the overall number of summed weights (see struct sdis_accum)
  ******************************************************************************/
 SDIS_API res_T
 sdis_accum_buffer_create
   (struct sdis_device* dev,
-   const size_t width,
-   const size_t height,
+   const size_t width,  /* #cells in X */
+   const size_t height, /* #cells in Y */
    struct sdis_accum_buffer** buf);
 
 SDIS_API res_T
@@ -287,6 +323,7 @@ sdis_accum_buffer_get_layout
   (const struct sdis_accum_buffer* buf,
    struct sdis_accum_buffer_layout* layout);
 
+/* Get a read only pointer toward the memory space of the accum buffer */
 SDIS_API res_T
 sdis_accum_buffer_map
   (const struct sdis_accum_buffer* buf,
@@ -296,7 +333,11 @@ SDIS_API res_T
 sdis_accum_buffer_unmap
   (const struct sdis_accum_buffer* buf);
 
-/* Helper function that matches the `sdis_write_accums_T' functor type */
+/* Helper function that matches the `sdis_write_accums_T' functor type. On can
+ * send this function directly to the sdis_solve_camera function, to fill the
+ * accum buffer with the estimation of the radiative temperature that reaches
+ * each pixel of an image whose definition matches the definition of the accum
+ * buffer. */
 SDIS_API res_T
 sdis_accum_buffer_write
   (void* buf, /* User data */
@@ -333,14 +374,18 @@ SDIS_API enum sdis_medium_type
 sdis_medium_get_type
   (const struct sdis_medium* medium);
 
+SDIS_API struct sdis_data*
+sdis_medium_get_data
+  (struct sdis_medium* medium);
+
 /*******************************************************************************
- * An interface is the boundary between 2 mediums.
+ * An interface is the boundary between 2 media.
  ******************************************************************************/
 SDIS_API res_T
 sdis_interface_create
   (struct sdis_device* dev,
-   struct sdis_medium* front,
-   struct sdis_medium* back,
+   struct sdis_medium* front, /* Medium on the front side of the geometry */
+   struct sdis_medium* back, /* Medium on the back side of the geometry */
    const struct sdis_interface_shader* shader,
    struct sdis_data* data, /* Data sent to the shader. May be NULL */
    struct sdis_interface** interf);
@@ -357,6 +402,18 @@ sdis_interface_ref_put
  * A scene is a collection of primitives. Each primitive is the geometric
  * support of the interface between 2 mediums.
  ******************************************************************************/
+/* Create a 3D scene. The geometry of the scene is defined by an indexed
+ * triangular mesh: each triangle is composed of 3 indices where each index
+ * references an absolute 3D position. The physical properties of an interface
+ * is defined by the interface of the triangle.
+ *
+ * Note that each triangle has 2 sides: a front and a back side. By convention,
+ * the front side of a triangle is the side where its vertices are clock wise
+ * ordered.  The back side of a triangle is the exact opposite: it is the side
+ * where the triangle vertices are counter-clock wise ordered. The front and
+ * back media of a triangle interface directly refer to this convention and
+ * thus one has to take care of how the triangle vertices are defined to ensure
+ * that the front and the back media are correctly defined wrt the geometry. */
 SDIS_API res_T
 sdis_scene_create
   (struct sdis_device* dev,
@@ -371,6 +428,18 @@ sdis_scene_create
    void* ctx, /* Client side data sent as input of the previous callbacks */
    struct sdis_scene** scn);
 
+/* Create a 2D scene. The geometry of the 2D scene is defined by an indexed
+ * line segments: each segment is composed of 2 indices where each index
+ * references an absolute 2D position. The physical properties of an interface
+ * is defined by the interface of the segment.
+ *
+ * Note that each segment has 2 sides: a front and a back side. By convention,
+ * the front side of a segment is the side where its vertices are clock wise
+ * ordered. The back side of a segment is the exact opposite: it is the side
+ * where the segment vertices are counter-clock wise ordered. The front and
+ * back media of a segment interface directly refer to this convention and
+ * thus one has to take care of how the segment vertices are defined to ensure
+ * that the front and the back media are correctly defined wrt the geometry. */
 SDIS_API res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
@@ -400,12 +469,48 @@ sdis_scene_get_aabb
    double lower[3],
    double upper[3]);
 
+/* Define the world space position of a point onto the primitive `iprim' whose
+ * parametric coordinate is uv. */
 SDIS_API res_T
 sdis_scene_get_boundary_position
   (const struct sdis_scene* scn,
    const size_t iprim, /* Primitive index */
-   const double uv[2], /* Parametric coordinate onto the pimitive */
+   const double uv[2], /* Parametric coordinate onto the primitive */
    double pos[3]); /* World space position */
+
+/* Project a world space position onto a primitive wrt its normal and compute
+ * the parametric coordinates of the projected point onto the primitive. This
+ * function may help to define the probe position onto a boundary as expected
+ * by the sdis_solve_probe_boundary function.
+ *
+ * Note that the projected point can lie outside the submitted primitive. In
+ * this case, the parametric coordinates are clamped against the primitive
+ * boundaries in order to ensure that the returned parametric coordinates are
+ * valid according to the primitive. To ensure this, in 2D, the parametric
+ * coordinate is simply clamped to [0, 1]. In 3D, the `uv' coordinates are
+ * clamped against the triangle edges. For instance, let the
+ * following triangle whose vertices are `a', `b' and `c':
+ *            ,     ,
+ *             , B ,
+ *              , ,
+ *               b         E1
+ *      E0      / \    ,P
+ *             /   \,*'
+ *            /     \
+ *       ....a-------c......
+ *          '         '
+ *       A '    E2     '  C
+ *        '             '
+ * The projected point `P' is orthogonally wrapped to the edge `ab', `bc' or
+ * `ca' if it lies in the `E0', `E1' or `E2' region, respectively. If `P' is in
+ * the `A', `B' or `C' region, then it is taken back to the `a', `b' or `c'
+ * vertex, respectively. */
+SDIS_API res_T
+sdis_scene_boundary_project_position
+  (const struct sdis_scene* scn,
+   const size_t iprim,
+   const double pos[3],
+   double uv[]);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
@@ -454,6 +559,7 @@ sdis_solve_probe_boundary
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
    const double time, /* Observation time */
+   const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */

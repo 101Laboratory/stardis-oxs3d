@@ -39,7 +39,6 @@ check_solid_shader(const struct sdis_solid_shader* shader)
       && shader->thermal_conductivity
       && shader->volumic_mass
       && shader->delta_solid
-      && shader->delta_boundary
       && shader->temperature;
 }
 
@@ -116,7 +115,7 @@ sdis_fluid_create
     goto error;
   }
 
-  res = medium_create(dev, &medium, SDIS_MEDIUM_FLUID);
+  res = medium_create(dev, &medium, SDIS_FLUID);
   if(res != RES_OK) {
     log_err(dev, "%s: could not create the fluid medium.\n", FUNC_NAME);
     goto error;
@@ -161,7 +160,7 @@ sdis_solid_create
     goto error;
   }
 
-  res = medium_create(dev, &medium, SDIS_MEDIUM_SOLID);
+  res = medium_create(dev, &medium, SDIS_SOLID);
   if(res != RES_OK) {
     log_err(dev, "%s: could not create the solid medium.\n", FUNC_NAME);
     goto error;
@@ -206,4 +205,10 @@ sdis_medium_get_type(const struct sdis_medium* medium)
 {
   ASSERT(medium != NULL);
   return medium->type;
+}
+struct sdis_data*
+sdis_medium_get_data(struct sdis_medium* medium)
+{
+  ASSERT(medium);
+  return medium->data;
 }

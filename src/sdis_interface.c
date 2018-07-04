@@ -29,26 +29,52 @@
  ******************************************************************************/
 static int
 check_interface_shader
-  (const struct sdis_interface_shader* shader,
+  (struct sdis_device* dev,
+   const char* caller_name,
+   const struct sdis_interface_shader* shader,
    const struct sdis_medium* front,
    const struct sdis_medium* back)
 {
-  enum sdis_medium_type type0;
-  enum sdis_medium_type type1;
-  ASSERT(shader && front && back);
+  enum sdis_medium_type type[2];
+  const struct sdis_interface_side_shader* shaders[2];
+  int i;
+  ASSERT(dev && caller_name && shader && front && back);
 
-  type0 = sdis_medium_get_type(front);
-  type1 = sdis_medium_get_type(back);
+  type[0] = sdis_medium_get_type(front);
+  type[1] = sdis_medium_get_type(back);
+  shaders[0] = &shader->front;
+  shaders[1] = &shader->back;
 
   /* Fluid<->solid interface */
-  if(type0 != type1) {
-    if(shader->convection_coef == NULL
-    || shader->emissivity == NULL
-    || shader->specular_fraction == NULL) {
-      return 0;
-    }
+  if(type[0] == SDIS_SOLID
+  && type[1] == SDIS_SOLID
+  && shader->convection_coef) {
+    log_warn(dev,
+      "%s: a solid/solid interface can't have a convection coefficient. This "
+      "function of the interface shader should be NULL.\n", caller_name);
   }
 
+  FOR_EACH(i, 0, 2) {
+    switch(type[i]) {
+      case SDIS_SOLID:
+        if(shaders[i]->emissivity || shaders[i]->specular_fraction) {
+          log_warn(dev,
+            "%s: the interface side toward a solid can't have the emissivity "
+            "and specular_fraction properties. The shader functions that return "
+            "these attributes should be NULL.\n", caller_name);
+        }
+        break;
+      case SDIS_FLUID:
+        if(shaders[i]->flux) {
+          log_warn(dev,
+            "%s: the interface side toward a fluid can't have a flux property. "
+            "The shader function that returns this attribute should be NULL.\n",
+            caller_name);
+        }
+        break;
+      default: FATAL("Unreachable code.\n"); break;
+    }
+  }
   return 1;
 }
 
@@ -88,14 +114,14 @@ sdis_interface_create
     goto error;
   }
 
-  if(sdis_medium_get_type(front) == SDIS_MEDIUM_FLUID
-  && sdis_medium_get_type(back) == SDIS_MEDIUM_FLUID) {
+  if(sdis_medium_get_type(front) == SDIS_FLUID
+  && sdis_medium_get_type(back) == SDIS_FLUID) {
     log_err(dev, "%s: invalid fluid<->fluid interface.\n", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;
   }
 
-  if(!check_interface_shader(shader, front, back)) {
+  if(!check_interface_shader(dev, FUNC_NAME, shader, front, back)) {
     log_err(dev, "%s: invalid interface shader.\n", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;
@@ -154,7 +180,7 @@ sdis_interface_ref_put(struct sdis_interface* interf)
  ******************************************************************************/
 const struct sdis_medium*
 interface_get_medium
-  (const struct sdis_interface* interf, const enum sdis_side_flag side)
+  (const struct sdis_interface* interf, const enum sdis_side side)
 {
   struct sdis_medium* mdm = NULL;
   ASSERT(interf);
@@ -177,27 +203,33 @@ void
 setup_interface_fragment_2d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
-   const struct s2d_hit* hit)
+   const struct s2d_hit* hit,
+   const enum sdis_side side)
 {
   ASSERT(frag && vertex && hit && !S2D_HIT_NONE(hit));
+  ASSERT(side == SDIS_FRONT || side == SDIS_BACK);
   d2_set(frag->P, vertex->P);
   frag->P[2] = 0;
   d2_normalize(frag->Ng, d2_set_f2(frag->Ng, hit->normal));
   frag->Ng[2] = 0;
   frag->uv[0] = hit->u;
   frag->time = vertex->time;
+  frag->side = side;
 }
 
 void
 setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
-   const struct s3d_hit* hit)
+   const struct s3d_hit* hit,
+   const enum sdis_side side)
 {
   ASSERT(frag && vertex && hit && !S3D_HIT_NONE(hit));
+  ASSERT(side == SDIS_FRONT || side == SDIS_BACK);
   d3_set(frag->P, vertex->P);
   d3_normalize(frag->Ng, d3_set_f3(frag->Ng, hit->normal));
   d2_set_f2(frag->uv, hit->uv);
   frag->time = vertex->time;
+  frag->side = side;
 }
 

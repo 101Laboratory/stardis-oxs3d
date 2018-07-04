@@ -17,8 +17,13 @@ cmake_minimum_required(VERSION 3.0)
 project(stardis C)
 enable_testing()
 
+include(CMakeDependentOption)
+
 set(SDIS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/../src)
 option(NO_TEST "Do not build tests" OFF)
+
+CMAKE_DEPENDENT_OPTION(ALL_TESTS
+  "Perform basic and advanced tests" OFF "NOT NO_TEST" OFF)
 
 ################################################################################
 # Check dependencies
@@ -42,7 +47,7 @@ rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 # Configure and define targets
 ################################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
+set(VERSION_MINOR 4)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
@@ -78,14 +83,24 @@ rcmake_prepend_path(SDIS_FILES_INC ${SDIS_SOURCE_DIR})
 rcmake_prepend_path(SDIS_FILES_INC_API ${SDIS_SOURCE_DIR})
 rcmake_prepend_path(SDIS_FILES_DOC ${PROJECT_SOURCE_DIR}/../)
 
+if(CMAKE_COMPILER_IS_GNUCC)
+  set(MATH_LIB m)
+endif()
+
+if(MSVC)
+  ### disable verbose warnings:
+  # warning C4127: conditional expression is constant
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4127")
+  # warning C4938: Floating point reduction variable may cause inconsistent
+  # results under /fp:strict or #pragma fenv_access
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4938")
+endif()
+
 add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star2D Star3D StarEnc StarEnc2D StarSP m)
-if(CMAKE_COMPILER_IS_GNUCC)
-  target_link_libraries(sdis m)
-endif()
+target_link_libraries(sdis RSys Star2D Star3D StarSP StarEnc StarEnc2D ${MATH_LIB})
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD
@@ -95,7 +110,7 @@ set_target_properties(sdis PROPERTIES
 rcmake_copy_runtime_libraries(sdis)
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS} -lm")
+  set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif()
 
 rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
@@ -128,6 +143,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_convection)
   new_test(test_sdis_data)
   new_test(test_sdis_device)
+  new_test(test_sdis_flux)
   new_test(test_sdis_interface)
   new_test(test_sdis_medium)
   new_test(test_sdis_scene)
@@ -141,12 +157,23 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_boundary)
   new_test(test_sdis_volumic_power)
 
+  # Additionnal tests
+  build_test(test_sdis_volumic_power2)
+  build_test(test_sdis_volumic_power2_2d)
+  build_test(test_sdis_volumic_power3_2d)
+  build_test(test_sdis_volumic_power4_2d)
+
+  if(ALL_TESTS)
+    add_test(test_sdis_volumic_power2    test_sdis_volumic_power2)
+    add_test(test_sdis_volumic_power2_2d test_sdis_volumic_power2_2d)
+    add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
+    add_test(test_sdis_volumic_power4_2d test_sdis_volumic_power4_2d)
+  endif()
+
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
+  target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
-  if(CMAKE_COMPILER_IS_GNUCC)
-    target_link_libraries(test_sdis_solve_probe3_2d m)
-  endif()
 endif()
 
 ################################################################################

@@ -46,7 +46,7 @@ static INLINE double
 fluid_get_calorific_capacity
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_FLUID);
+  ASSERT(mdm && mdm->type == SDIS_FLUID);
   return mdm->shader.fluid.calorific_capacity(vtx, mdm->data);
 }
 
@@ -54,7 +54,7 @@ static INLINE double
 fluid_get_volumic_mass
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_FLUID);
+  ASSERT(mdm && mdm->type == SDIS_FLUID);
   return mdm->shader.fluid.volumic_mass(vtx, mdm->data);
 }
 
@@ -62,7 +62,7 @@ static INLINE double
 fluid_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_FLUID);
+  ASSERT(mdm && mdm->type == SDIS_FLUID);
   return mdm->shader.fluid.temperature(vtx, mdm->data);
 }
 
@@ -73,7 +73,7 @@ static INLINE double
 solid_get_calorific_capacity
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
+  ASSERT(mdm && mdm->type == SDIS_SOLID);
   return mdm->shader.solid.calorific_capacity(vtx, mdm->data);
 }
 
@@ -81,7 +81,7 @@ static INLINE double
 solid_get_thermal_conductivity
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
+  ASSERT(mdm && mdm->type == SDIS_SOLID);
   return mdm->shader.solid.thermal_conductivity(vtx, mdm->data);
 }
 
@@ -89,7 +89,7 @@ static INLINE double
 solid_get_volumic_mass
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
+  ASSERT(mdm && mdm->type == SDIS_SOLID);
   return mdm->shader.solid.volumic_mass(vtx, mdm->data);
 }
 
@@ -97,33 +97,25 @@ static INLINE double
 solid_get_delta
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
+  ASSERT(mdm && mdm->type == SDIS_SOLID);
   return mdm->shader.solid.delta_solid(vtx, mdm->data);
-}
-
-static INLINE double
-solid_get_delta_boundary
-  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
-{
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
-  return mdm->shader.solid.delta_boundary(vtx, mdm->data);
 }
 
 static INLINE double
 solid_get_volumic_power
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
-  return mdm->shader.solid.volumic_power 
+  ASSERT(mdm && mdm->type == SDIS_SOLID);
+  return mdm->shader.solid.volumic_power
     ? mdm->shader.solid.volumic_power(vtx, mdm->data)
-    : 0;
+    : SDIS_VOLUMIC_POWER_NONE;
 }
 
 static INLINE double
 solid_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
-  ASSERT(mdm && mdm->type == SDIS_MEDIUM_SOLID);
+  ASSERT(mdm && mdm->type == SDIS_SOLID);
   return mdm->shader.solid.temperature(vtx, mdm->data);
 }
 
