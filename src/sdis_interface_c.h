@@ -70,6 +70,14 @@ interface_get_convection_coef
 }
 
 static INLINE double
+interface_get_convection_coef_upper_bound
+  (const struct sdis_interface* interf)
+{
+  ASSERT(interf);
+  return interf->shader.convection_coef_upper_bound;
+}
+
+static INLINE double
 interface_side_get_temperature
   (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)

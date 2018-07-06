@@ -60,7 +60,13 @@
 #define T4 340.0
 #define T5 350.0
 
-#define H 10.0
+#define HC0 100.0
+#define HC1 30.0
+#define HC2 3020.0
+#define HC3 7300.0
+#define HC4 3400.0
+#define HC5 50.0
+
 #define RHO 25.0
 #define CP 2.0
 
@@ -99,6 +105,7 @@ fluid_get_calorific_capacity
  ******************************************************************************/
 struct interf {
   double temperature;
+  double hc;
 };
 
 static double
@@ -114,8 +121,9 @@ static double
 interface_get_convection_coef
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
+  const struct interf* interf = sdis_data_cget(data);
   CHK(frag && data);
-  return H;
+  return interf->hc;
 }
 
 static double
@@ -140,7 +148,8 @@ create_interface
    struct sdis_medium* front,
    struct sdis_medium* back,
    const struct sdis_interface_shader* interf_shader,
-   const double temperature)
+   const double temperature,
+   const double hc)
 {
   struct sdis_data* data;
   struct sdis_interface* interf;
@@ -150,6 +159,7 @@ create_interface
     (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data) == RES_OK);
   interf_props = sdis_data_get(data);
   interf_props->temperature = temperature;
+  interf_props->hc = hc;
   CHK(sdis_interface_create
     (dev, front, back, interf_shader, data, &interf) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -208,15 +218,20 @@ main(int argc, char** argv)
   interf_shader.front.temperature = interface_get_temperature;
   interf_shader.front.emissivity = interface_get_emissivity;
   interf_shader.front.specular_fraction = interface_get_specular_fraction;
-  interf_shader.convection_coef_upper_bound = H;
 
   /* Create the interfaces */
-  interf_T0 = create_interface(dev, fluid, solid, &interf_shader, T0);
-  interf_T1 = create_interface(dev, fluid, solid, &interf_shader, T1);
-  interf_T2 = create_interface(dev, fluid, solid, &interf_shader, T2);
-  interf_T3 = create_interface(dev, fluid, solid, &interf_shader, T3);
-  interf_T4 = create_interface(dev, fluid, solid, &interf_shader, T4);
-  interf_T5 = create_interface(dev, fluid, solid, &interf_shader, T5);
+  interf_shader.convection_coef_upper_bound = HC0;
+  interf_T0 = create_interface(dev, fluid, solid, &interf_shader, T0, HC0);
+  interf_shader.convection_coef_upper_bound = HC1;
+  interf_T1 = create_interface(dev, fluid, solid, &interf_shader, T1, HC1);
+  interf_shader.convection_coef_upper_bound = HC2;
+  interf_T2 = create_interface(dev, fluid, solid, &interf_shader, T2, HC2);
+  interf_shader.convection_coef_upper_bound = HC3;
+  interf_T3 = create_interface(dev, fluid, solid, &interf_shader, T3, HC3);
+  interf_shader.convection_coef_upper_bound = HC4;
+  interf_T4 = create_interface(dev, fluid, solid, &interf_shader, T4, HC4);
+  interf_shader.convection_coef_upper_bound = HC5;
+  interf_T5 = create_interface(dev, fluid, solid, &interf_shader, T5, HC5);
 
   /* Release the media */
   CHK(sdis_medium_ref_put(solid) == RES_OK);
@@ -257,8 +272,9 @@ main(int argc, char** argv)
   d3_splat(pos, 0.25);
 
   /* Test in 3D for various time values. */
-  nu = (6 * H) / (RHO*CP);
-  Tinf = (H*(T0 + T1 + T2 + T3 + T4 + T5)) / (6 * H);
+  nu = (HC0 + HC1 + HC2 + HC3 + HC4 + HC5) / (RHO * CP);
+  Tinf = (HC0 * T0 + HC1 * T1 + HC2 * T2 + HC3 * T3 + HC4 * T4 + HC5 * T5)
+    / (HC0 + HC1 + HC2 + HC3 + HC4 + HC5);
   printf("Temperature of the box at (%g %g %g)\n", SPLIT3(pos));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double) i / nu : INF;
@@ -273,19 +289,18 @@ main(int argc, char** argv)
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);
     printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
     if(nfails)
-      printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+      printf("#failures = %lu/%lu\n", (unsigned long)nfails,(unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
   }
 
   /* Test in 2D for various time values. */
-  nu = (4 * H) / (RHO*CP);
-  Tinf = (H * (T0 + T1 + T2 + T3)) / (4 * H);
+  nu = (HC0 + HC1 + HC2 + HC3) / (RHO * CP);
+  Tinf = (HC0 * T0 + HC1 * T1 + HC2 * T2 + HC3 * T3) / (HC0 + HC1 + HC2 + HC3);
   printf("Temperature of the square at (%g %g)\n", SPLIT2(pos));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double) i / nu : INF;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
 
-    /* Solve in 2D */
     CHK(sdis_solve_probe(square_scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
     CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
     CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
@@ -293,8 +308,8 @@ main(int argc, char** argv)
     CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
     CHK(sdis_estimator_ref_put(estimator) == RES_OK);
     printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
-    if(nfails)
-      printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+    if (nfails)
+      printf("#failures = %lu/%lu\n", (unsigned long)nfails,(unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
   }
 

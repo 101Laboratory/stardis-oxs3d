@@ -255,6 +255,8 @@ create_interface
     shader.back.emissivity = interface_get_emissivity;
     shader.back.specular_fraction = interface_get_specular_fraction;
   }
+  shader.convection_coef_upper_bound = MMAX(0, interf->convection_coef);
+
   CHK(sdis_data_create(dev, sizeof(struct interfac), ALIGNOF(struct interfac),
     NULL, &data) == RES_OK);
   *((struct interfac*)sdis_data_get(data)) = *interf;

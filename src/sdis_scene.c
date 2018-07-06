@@ -103,6 +103,7 @@ scene_release(ref_T * ref)
   darray_medium_release(&scn->media);
   darray_prim_prop_release(&scn->prim_props);
   htable_enclosure_release(&scn->enclosures);
+  htable_d_release(&scn->tmp_hc_ub);
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   MEM_RM(dev->allocator, scn);

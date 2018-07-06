@@ -103,6 +103,12 @@ main(int argc, char** argv)
   shader.front.specular_fraction = dummy_interface_getter;
   CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_OK); /* Warning */
   CHK(sdis_interface_ref_put(interf) == RES_OK);
+  shader.front.specular_fraction = NULL;
+  shader.convection_coef_upper_bound = -1;
+  CHK(CREATE(dev, solid, solid, &shader, NULL, &interf) == RES_OK); /* Warning */
+  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  CHK(CREATE(dev, solid, fluid, &shader, NULL, &interf) == RES_BAD_ARG);
+  shader.convection_coef_upper_bound = 0;
   #undef CREATE
 
   CHK(sdis_device_ref_put(dev) == RES_OK);

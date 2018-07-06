@@ -54,6 +54,13 @@ check_interface_shader
       "function of the interface shader should be NULL.\n", caller_name);
   }
 
+  if(shader->convection_coef_upper_bound < 0) {
+    log_warn(dev,
+      "%s: Invalid upper bound for convection coefficient (%g).\n",
+      caller_name, shader->convection_coef_upper_bound);
+    if(type[0] == SDIS_FLUID || type[1] == SDIS_FLUID) return 0;
+  }
+
   FOR_EACH(i, 0, 2) {
     switch(type[i]) {
       case SDIS_SOLID:

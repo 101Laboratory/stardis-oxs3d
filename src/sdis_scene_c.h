@@ -72,6 +72,7 @@ struct enclosure {
    * whole scene */
   struct darray_uint local2global;
 
+  double hc_upper_bound;
   double S_over_V; /* in 3D = surface/volume; in 2D = perimeter/area */
 };
 
@@ -83,6 +84,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->s3d_view = NULL;
   darray_uint_init(allocator, &enc->local2global);
   enc->S_over_V = 0;
+  enc->hc_upper_bound = 0;
 }
 
 static INLINE void
@@ -105,6 +107,7 @@ enclosure_copy(struct enclosure* dst, const struct enclosure* src)
     dst->s2d_view = src->s2d_view;
   }
   dst->S_over_V = src->S_over_V;
+  dst->hc_upper_bound = src->hc_upper_bound;
   return darray_uint_copy(&dst->local2global, &src->local2global);
 }
 
@@ -125,6 +128,7 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
     src->s2d_view = NULL;
   }
   dst->S_over_V = src->S_over_V;
+  dst->hc_upper_bound = src->hc_upper_bound;
   return RES_OK;
 }
 
@@ -156,6 +160,12 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
 #define HTABLE_DATA_FUNCTOR_COPY_AND_RELEASE enclosure_copy_and_release
 #include <rsys/hash_table.h>
 
+/* Declare the hash table that maps an enclosure id to its data */
+#define HTABLE_NAME d
+#define HTABLE_KEY unsigned
+#define HTABLE_DATA double
+#include <rsys/hash_table.h>
+
 struct sdis_scene {
   struct darray_interf interfaces; /* List of interfaces own by the scene */
   struct darray_medium media; /* List of media own by the scene */
@@ -163,6 +173,7 @@ struct sdis_scene {
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
 
+  struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */
 
   double ambient_radiative_temperature; /* In Kelvin */

@@ -188,12 +188,15 @@ struct sdis_interface_shader {
   /* May be NULL for solid/solid or if the convection coefficient is 0 onto
    * the whole interface. */
   sdis_interface_getter_T convection_coef;  /* In W.K^-1.m^-2 */
+  /* Under no circumstance can convection_coef() return outside of
+   * [0 convection_coef_upper_bound] */
+  double convection_coef_upper_bound;
 
   struct sdis_interface_side_shader front;
   struct sdis_interface_side_shader back;
 };
 #define SDIS_INTERFACE_SHADER_NULL__ \
-  {NULL, SDIS_INTERFACE_SIDE_SHADER_NULL__, SDIS_INTERFACE_SIDE_SHADER_NULL__}
+  {NULL, 0, SDIS_INTERFACE_SIDE_SHADER_NULL__, SDIS_INTERFACE_SIDE_SHADER_NULL__}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 

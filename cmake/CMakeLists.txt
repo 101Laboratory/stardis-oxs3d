@@ -29,11 +29,11 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.3 REQUIRED)
-find_package(Star2D 0.1 REQUIRED)
+find_package(Star2D 0.1.1 REQUIRED)
 find_package(Star3D 0.4 REQUIRED)
 find_package(StarSP 0.7 REQUIRED)
-find_package(StarEnc 0.1 REQUIRED)
-find_package(StarEnc2D 0.1 REQUIRED)
+find_package(StarEnc 0.1.1 REQUIRED)
+find_package(StarEnc2D 0.1.1 REQUIRED)
 find_package(RSys 0.6 REQUIRED)
 find_package(OpenMP 1.2 REQUIRED)
 
@@ -141,6 +141,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
   new_test(test_sdis_convection)
+  new_test(test_sdis_convection_non_uniform)
   new_test(test_sdis_data)
   new_test(test_sdis_device)
   new_test(test_sdis_flux)

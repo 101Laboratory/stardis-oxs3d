@@ -384,6 +384,8 @@ XD(setup_properties)
     unsigned enclosures[2];
     unsigned iprim_adjusted; /* Primitive id in user space */
     unsigned id;
+    int i;
+    double* enc_upper_bound;
     size_t ninterfaces;
 
 #if DIM == 2
@@ -433,6 +435,17 @@ XD(setup_properties)
      * front facing when their vertex are CCW ordered */
     prim_prop->back_enclosure = enclosures[0];
     prim_prop->front_enclosure = enclosures[1];
+
+    /* Build per-interface hc upper bounds in a tmp table */
+    FOR_EACH(i, 0, 2) {
+      enc_upper_bound = htable_d_find(&scn->tmp_hc_ub, enclosures+i);
+      double hc_ub = interface_get_convection_coef_upper_bound(itface);
+      if(!enc_upper_bound) {
+        res = htable_d_set(&scn->tmp_hc_ub, enclosures+i, &hc_ub);
+      } else {
+        *enc_upper_bound = MMAX(*enc_upper_bound, hc_ub);
+      }
+    }
   }
 
 exit:
@@ -510,6 +523,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   struct enclosure enc_dummy;
   struct enclosure* enc_data;
   float S, V;
+  double* p_ub;
   unsigned iprim, nprims, nverts;
 #if DIM == 2
   struct senc2d_enclosure_header header;
@@ -581,6 +595,11 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   enc_data->S_over_V = S/absf(V);
   #undef CALL
 
+  /* Set enclosure hc upper bound regardless of its media being a fluid */
+  p_ub = htable_d_find(&scn->tmp_hc_ub, &header.enclosure_id);
+  ASSERT(p_ub);
+  enc_data->hc_upper_bound = *p_ub;
+
   /* Define the identifier of the enclosure primitives in the whole scene */
   res = darray_uint_resize(&enc_data->local2global, nprims);
   if(res != RES_OK) goto error;
@@ -639,6 +658,8 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     enc = NULL;
   }
 
+  /* tmp table no more useful */
+  htable_d_purge(&scn->tmp_hc_ub);
 exit:
   if(enc) SENCXD(enclosure_ref_put(enc));
   return res;
@@ -682,6 +703,7 @@ XD(scene_create)
   darray_medium_init(dev->allocator, &scn->media);
   darray_prim_prop_init(dev->allocator, &scn->prim_props);
   htable_enclosure_init(dev->allocator, &scn->enclosures);
+  htable_d_init(dev->allocator, &scn->tmp_hc_ub);
 
   res = XD(run_analyze)(scn, nprims, indices, interf, nverts, position, ctx, &desc);
   if(res != RES_OK) {
