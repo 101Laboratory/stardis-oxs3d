@@ -630,6 +630,7 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 {
   struct sencXd(enclosure)* enc = NULL;
   unsigned ienc, nencs;
+  unsigned enclosed_medium;
   res_T res = RES_OK;
   ASSERT(scn && desc);
 
@@ -645,8 +646,19 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
 
-    ASSERT(header.enclosed_medium < darray_medium_size_get(&scn->media));
-    mdm = darray_medium_cdata_get(&scn->media)[header.enclosed_medium];
+    /* As paths don't go in infinite enclosures
+     * we can accept models are broken there.
+     * But nowhere else. */
+    if(header.enclosed_media_count != 1
+      && !header.is_infinite) {
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    SENCXD(enclosure_get_medium(enc, 0, &enclosed_medium));
+    if(res != RES_OK) goto error;
+    ASSERT(enclosed_medium < darray_medium_size_get(&scn->media));
+    mdm = darray_medium_cdata_get(&scn->media)[enclosed_medium];
     ASSERT(mdm);
 
     /* Silently discard the solid and infinite enclosures */
