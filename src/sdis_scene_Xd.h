@@ -438,8 +438,8 @@ XD(setup_properties)
 
     /* Build per-interface hc upper bounds in a tmp table */
     FOR_EACH(i, 0, 2) {
-      enc_upper_bound = htable_d_find(&scn->tmp_hc_ub, enclosures+i);
       double hc_ub = interface_get_convection_coef_upper_bound(itface);
+      enc_upper_bound = htable_d_find(&scn->tmp_hc_ub, enclosures+i);
       if(!enc_upper_bound) {
         res = htable_d_set(&scn->tmp_hc_ub, enclosures+i, &hc_ub);
       } else {

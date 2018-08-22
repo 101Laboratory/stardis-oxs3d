@@ -540,7 +540,7 @@ XD(fluid_temperature)
     hc = interface_get_convection_coef(interf, &frag);
     if(hc > enc->hc_upper_bound) {
       log_err(scn->dev,
-        "%s: hc (%g) exceeds its provided upper bound (%g) at %g %g %.\n",
+        "%s: hc (%g) exceeds its provided upper bound (%g) at %g %g %g.\n",
         FUNC_NAME, hc, enc->hc_upper_bound, SPLIT3(rwalk->vtx.P));
       return RES_BAD_OP;
     }
