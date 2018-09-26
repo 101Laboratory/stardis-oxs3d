@@ -652,6 +652,7 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     if(header.enclosed_media_count != 1
       && !header.is_infinite) {
       res = RES_BAD_ARG;
+      SENCXD(enclosure_ref_put(enc));
       goto error;
     }
 
