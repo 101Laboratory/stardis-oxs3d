@@ -47,9 +47,8 @@ geometry_media(const unsigned iprim, unsigned media[2], void* data)
   struct sdis_interface* interf;
   ASSERT(ctx && media);
   ctx->interf(iprim, &interf, ctx->data);
-  /* FIXME check that the order in which media are returned is good */
-  media[0] = medium_get_id(interf->medium_back);
-  media[1] = medium_get_id(interf->medium_front);
+  media[0] = medium_get_id(interf->medium_front);
+  media[1] = medium_get_id(interf->medium_back);
 }
 
 /* Register the submitted medium against the scene if it is not already
@@ -326,7 +325,13 @@ XD(run_analyze)
     scn->dev->nthreads, scn->dev->verbose, &senc);
   if(res != RES_OK) goto error;
 
-  res = sencXd(scene_create)(senc, &senc_scn);
+  res = sencXd(scene_create)(senc,
+#if DIM == 2
+    SENC2D_CONVENTION_NORMAL_BACK | SENC2D_CONVENTION_NORMAL_OUTSIDE,
+#else
+    SENC_CONVENTION_NORMAL_BACK | SENC_CONVENTION_NORMAL_OUTSIDE,
+#endif
+    &senc_scn);
   if(res != RES_OK) goto error;
 
   /* Setup the geometry data */
@@ -430,11 +435,8 @@ XD(setup_properties)
     /* Setup primitive properties */
     prim_prop = darray_prim_prop_data_get(&scn->prim_props) + iprim;
     prim_prop->interf = itface;
-    /* FIXME Ensure that the enclosure order is right one. Actually, it seems
-     * that Star-Enc front facing convention is reversed wrt Stardis. Faces are
-     * front facing when their vertex are CCW ordered */
-    prim_prop->back_enclosure = enclosures[0];
-    prim_prop->front_enclosure = enclosures[1];
+    prim_prop->front_enclosure = enclosures[0];
+    prim_prop->back_enclosure = enclosures[1];
 
     /* Build per-interface hc upper bounds in a tmp table */
     FOR_EACH(i, 0, 2) {
