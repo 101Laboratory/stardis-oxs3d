@@ -506,8 +506,8 @@ XD(fluid_temperature)
     return RES_BAD_OP;
   }
 
-  /* The hc upper bound can be 0 is h is uniformly 0.
-   * In that case the result is the initial condition. */
+  /* The hc upper bound can be 0 is h is uniformly 0. In that case the result
+   * is the initial condition. */
   if(enc->hc_upper_bound == 0) {
     /* Cannot be in the fluid without starting there. */
     ASSERT(SXD_HIT_NONE(&rwalk->hit));
@@ -530,9 +530,8 @@ XD(fluid_temperature)
   /* A trick to force first r test result. */
   r = 1;
 
-  /* Sample time until intial condition is reached
-   * or a true convection occurs. */
-  while(1) {
+  /* Sample time until init condition is reached or a true convection occurs. */
+  for(;;) {
     /* Setup the fragment of the interface. */
     XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 

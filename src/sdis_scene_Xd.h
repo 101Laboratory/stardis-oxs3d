@@ -648,13 +648,10 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
 
-    /* As paths don't go in infinite enclosures
-     * we can accept models are broken there.
-     * But nowhere else. */
-    if(header.enclosed_media_count != 1
-      && !header.is_infinite) {
+    /* As paths don't go in infinite enclosures we can accept models are broken
+     * there. But nowhere else. */
+    if(header.enclosed_media_count != 1 && !header.is_infinite) {
       res = RES_BAD_ARG;
-      SENCXD(enclosure_ref_put(enc));
       goto error;
     }
 
