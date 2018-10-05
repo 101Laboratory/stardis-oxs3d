@@ -23,6 +23,17 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.5
+
+Add support of fluid enclosure with unknown uniform temperature.
+
+- The convection coefficient of the surfaces surrounding a fluid whose
+  temperature is unknown can vary in time and space. Anyway, the caller has to
+  ensure that for each triangle of the fluid enclosure, the convection
+  coefficient returned by its `struct sdis_interface_shader` - at a given
+  position and time - is less than or equal to the `convection_coef_upper_bound`
+  parameter of the shader.
+
 ### Version 0.4
 
 Full rewrite of how the volumetric power is taken into account.
