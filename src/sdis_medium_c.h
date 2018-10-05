@@ -26,10 +26,18 @@ struct sdis_medium {
   } shader;
 
   struct sdis_data* data;
+  struct fid id; /* Unique identifier of the medium */
 
   ref_T ref;
   struct sdis_device* dev;
 };
+
+static FINLINE unsigned
+medium_get_id(const struct sdis_medium* mdm)
+{
+  ASSERT(mdm);
+  return mdm->id.index;
+}
 
 /*******************************************************************************
  * Fluid local functions

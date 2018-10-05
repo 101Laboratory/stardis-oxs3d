@@ -64,6 +64,7 @@ medium_create
   SDIS(device_ref_get(dev));
   medium->dev = dev;
   medium->type = type;
+  medium->id = flist_name_add(&dev->media_names);
 
 exit:
   if(out_medium) *out_medium = medium;
@@ -85,6 +86,7 @@ medium_release(ref_T* ref)
   medium = CONTAINER_OF(ref, struct sdis_medium, ref);
   dev = medium->dev;
   if(medium->data) SDIS(data_ref_put(medium->data));
+  flist_name_del(&dev->media_names, medium->id);
   MEM_RM(dev->allocator, medium);
   SDIS(device_ref_put(dev));
 }

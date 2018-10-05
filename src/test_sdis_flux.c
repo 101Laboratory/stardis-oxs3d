@@ -49,68 +49,6 @@
 #define LAMBDA 0.1
 
 /*******************************************************************************
- * Geometry 3D
- ******************************************************************************/
-static void
-box_get_indices(const size_t itri, size_t ids[3], void* context)
-{
-  (void)context;
-  CHK(ids);
-  ids[0] = box_indices[itri*3+0];
-  ids[1] = box_indices[itri*3+1];
-  ids[2] = box_indices[itri*3+2];
-}
-
-static void
-box_get_position(const size_t ivert, double pos[3], void* context)
-{
-  (void)context;
-  CHK(pos);
-  pos[0] = box_vertices[ivert*3+0];
-  pos[1] = box_vertices[ivert*3+1];
-  pos[2] = box_vertices[ivert*3+2];
-}
-
-static void
-box_get_interface(const size_t itri, struct sdis_interface** bound, void* context)
-{
-  struct sdis_interface** interfaces = context;
-  CHK(context && bound);
-  *bound = interfaces[itri];
-}
-
-/*******************************************************************************
- * Geometry 2D
- ******************************************************************************/
-static void
-square_get_indices(const size_t iseg, size_t ids[2], void* context)
-{
-  (void)context;
-  CHK(ids);
-  ids[0] = square_indices[iseg*2+0];
-  ids[1] = square_indices[iseg*2+1];
-}
-
-static void
-square_get_position(const size_t ivert, double pos[2], void* context)
-{
-  (void)context;
-  CHK(pos);
-  pos[0] = square_vertices[ivert*2+0];
-  pos[1] = square_vertices[ivert*2+1];
-}
-
-static void
-square_get_interface
-  (const size_t iseg, struct sdis_interface** bound, void* context)
-{
-  struct sdis_interface** interfaces = context;
-  CHK(context && bound);
-  *bound = interfaces[iseg];
-}
-
-
-/*******************************************************************************
  * Media
  ******************************************************************************/
 static double
