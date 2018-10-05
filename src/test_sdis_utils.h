@@ -58,6 +58,37 @@ static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
 };
 static const size_t box_ntriangles = sizeof(box_indices) / sizeof(size_t[3]);
 
+static INLINE void
+box_get_indices(const size_t itri, size_t ids[3], void* context)
+{
+  (void)context;
+  CHK(ids);
+  CHK(itri < box_ntriangles);
+  ids[0] = box_indices[itri*3+0];
+  ids[1] = box_indices[itri*3+1];
+  ids[2] = box_indices[itri*3+2];
+}
+
+static INLINE void
+box_get_position(const size_t ivert, double pos[3], void* context)
+{
+  (void)context;
+  CHK(pos);
+  CHK(ivert < box_nvertices);
+  pos[0] = box_vertices[ivert*3+0];
+  pos[1] = box_vertices[ivert*3+1];
+  pos[2] = box_vertices[ivert*3+2];
+}
+
+static INLINE void
+box_get_interface(const size_t itri, struct sdis_interface** bound, void* context)
+{
+  struct sdis_interface** interfaces = context;
+  CHK(context && bound);
+  CHK(itri < box_ntriangles);
+  *bound = interfaces[itri];
+}
+
 /*******************************************************************************
  * Square geometry
  ******************************************************************************/
@@ -76,6 +107,36 @@ static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   3, 0 /* Right */
 };
 static const size_t square_nsegments = sizeof(square_indices)/sizeof(size_t[2]);
+
+static INLINE void
+square_get_indices(const size_t iseg, size_t ids[2], void* context)
+{
+  (void)context;
+  CHK(ids);
+  CHK(iseg < square_nsegments);
+  ids[0] = square_indices[iseg*2+0];
+  ids[1] = square_indices[iseg*2+1];
+}
+
+static INLINE void
+square_get_position(const size_t ivert, double pos[2], void* context)
+{
+  (void)context;
+  CHK(pos);
+  CHK(ivert < square_nvertices);
+  pos[0] = square_vertices[ivert*2+0];
+  pos[1] = square_vertices[ivert*2+1];
+}
+
+static INLINE void
+square_get_interface
+  (const size_t iseg, struct sdis_interface** bound, void* context)
+{
+  struct sdis_interface** interfaces = context;
+  CHK(context && bound);
+  CHK(iseg < square_nsegments);
+  *bound = interfaces[iseg];
+}
 
 /*******************************************************************************
  * Medium & interface
@@ -122,6 +183,7 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
 }
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   dummy_interface_getter,
+  0,
   DUMMY_INTERFACE_SIDE_SHADER__,
   DUMMY_INTERFACE_SIDE_SHADER__
 };

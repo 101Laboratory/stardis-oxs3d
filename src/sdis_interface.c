@@ -54,6 +54,13 @@ check_interface_shader
       "function of the interface shader should be NULL.\n", caller_name);
   }
 
+  if(shader->convection_coef_upper_bound < 0) {
+    log_warn(dev,
+      "%s: Invalid upper bound for convection coefficient (%g).\n",
+      caller_name, shader->convection_coef_upper_bound);
+    if(type[0] == SDIS_FLUID || type[1] == SDIS_FLUID) return 0;
+  }
+
   FOR_EACH(i, 0, 2) {
     switch(type[i]) {
       case SDIS_SOLID:
@@ -89,7 +96,7 @@ interface_release(ref_T* ref)
   if(interf->medium_front) SDIS(medium_ref_put(interf->medium_front));
   if(interf->medium_back) SDIS(medium_ref_put(interf->medium_back));
   if(interf->data) SDIS(data_ref_put(interf->data));
-  flist_name_del(&dev->names, interf->id);
+  flist_name_del(&dev->interfaces_names, interf->id);
   MEM_RM(dev->allocator, interf);
   SDIS(device_ref_put(dev));
 }
@@ -141,7 +148,7 @@ sdis_interface_create
   interf->medium_back = back;
   interf->dev = dev;
   interf->shader = *shader;
-  interf->id = flist_name_add(&dev->names);
+  interf->id = flist_name_add(&dev->interfaces_names);
 
   if(data) {
     SDIS(data_ref_get(data));

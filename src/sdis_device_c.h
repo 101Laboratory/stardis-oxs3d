@@ -16,6 +16,8 @@
 #ifndef SDIS_DEVICE_C_H
 #define SDIS_DEVICE_C_H
 
+#include "sdis.h"
+
 #include <rsys/dynamic_array.h>
 #include <rsys/free_list.h>
 #include <rsys/ref_count.h>
@@ -42,7 +44,8 @@ struct sdis_device {
   unsigned nthreads;
   int verbose;
 
-  struct flist_name names;
+  struct flist_name interfaces_names;
+  struct flist_name media_names;
   struct darray_tile tiles;
 
   struct s2d_device* s2d;

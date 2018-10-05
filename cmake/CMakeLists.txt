@@ -28,24 +28,26 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 ################################################################################
 # Check dependencies
 ################################################################################
-find_package(RCMake 0.3 REQUIRED)
-find_package(Star2D 0.1 REQUIRED)
-find_package(Star3D 0.4 REQUIRED)
+find_package(RCMake 0.4 REQUIRED)
+find_package(Star2D 0.1.1 REQUIRED)
+find_package(Star3D 0.5 REQUIRED)
 find_package(StarSP 0.7 REQUIRED)
-find_package(RSys 0.6 REQUIRED)
-find_package(OpenMP 1.2 REQUIRED)
+find_package(StarEnc 0.2.0 REQUIRED)
+find_package(StarEnc2D 0.2.0 REQUIRED)
+find_package(RSys 0.6.1 REQUIRED)
+find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
 include(rcmake)
 include(rcmake_runtime)
 
-rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP)
+rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 
 ################################################################################
 # Configure and define targets
 ################################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 4)
+set(VERSION_MINOR 5)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
@@ -70,6 +72,7 @@ set(SDIS_FILES_INC
   sdis_interface_c.h
   sdis_medium_c.h
   sdis_scene_c.h
+  sdis_scene_Xd.h
   sdis_solve_Xd.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
@@ -97,7 +100,7 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star2D Star3D StarSP ${MATH_LIB})
+target_link_libraries(sdis RSys Star2D Star3D StarSP StarEnc StarEnc2D ${MATH_LIB})
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD
@@ -137,6 +140,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_camera)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
+  new_test(test_sdis_convection)
+  new_test(test_sdis_convection_non_uniform)
   new_test(test_sdis_data)
   new_test(test_sdis_device)
   new_test(test_sdis_flux)

@@ -130,7 +130,7 @@ static const struct XD(rwalk) XD(RWALK_NULL) = {
 
 struct XD(temperature) {
   res_T (*func)/* Next function to invoke in order to compute the temperature */
-    (const struct sdis_scene* scn,
+    (struct sdis_scene* scn,
      const double fp_to_meter,
      const struct rwalk_context* ctx,
      struct XD(rwalk)* rwalk,
@@ -143,7 +143,7 @@ static const struct XD(temperature) XD(TEMPERATURE_NULL) = { NULL, 0, 0 };
 
 static res_T
 XD(boundary_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -152,7 +152,7 @@ XD(boundary_temperature)
 
 static res_T
 XD(solid_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -161,7 +161,7 @@ XD(solid_temperature)
 
 static res_T
 XD(fluid_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -170,7 +170,7 @@ XD(fluid_temperature)
 
 static res_T
 XD(radiative_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -261,7 +261,7 @@ XD(check_rwalk_fragment_consistency)
 
 static res_T
 XD(trace_radiative_path)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const float ray_dir[3],
    const double fp_to_meter,
    const struct rwalk_context* ctx,
@@ -385,7 +385,7 @@ error:
 
 res_T
 XD(radiative_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -424,26 +424,192 @@ error:
 
 res_T
 XD(fluid_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
+  struct sXd(attrib) attr_P, attr_N;
+  struct sdis_interface_fragment frag;
+  const struct sdis_interface* interf;
+  const struct enclosure* enc;
+  unsigned enc_ids[2];
+  unsigned enc_id;
+  double rho; /* Volumic mass */
+  double hc; /* Convection coef */
+  double cp; /* Calorific capacity */
+  double mu;
+  double tau;
   double tmp;
+  double r;
+#if DIM == 2
+  float st;
+#else
+  float st[2];
+#endif
   (void)rng, (void)fp_to_meter, (void)ctx;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_FLUID);
 
   tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
-  if(tmp < 0) {
-    log_err(scn->dev, "%s: unknown fluid temperature is not supported.\n",
+  if(tmp >= 0) { /* T is known. */
+    T->value += tmp;
+    T->done = 1;
+    return RES_OK;
+  }
+
+  if(SXD_HIT_NONE(&rwalk->hit)) { /* The path begins in the fluid */
+    const float range[2] = {0, FLT_MAX};
+    float dir[DIM] = {0};
+    float org[DIM];
+
+    dir[DIM-1] = 1;
+    fX_set_dX(org, rwalk->vtx.P);
+
+    /* Init the path hit field required to define the current enclosure and
+     * fetch the interface data */
+    SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, NULL, &rwalk->hit));
+    rwalk->hit_side = fX(dot)(rwalk->hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+
+    if(SXD_HIT_NONE(&rwalk->hit)) {
+      log_err(scn->dev,
+"%s: the position %g %g %g lies in the surrounding fluid whose temperature must \n"
+"be known.\n",
+        FUNC_NAME, SPLIT3(rwalk->vtx.P));
+      return RES_BAD_OP;
+    }
+  }
+
+  /* Fetch the current interface and its associated enclosures */
+  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  scene_get_enclosure_ids(scn, rwalk->hit.prim.prim_id, enc_ids);
+
+  /* Define the enclosure identifier of the current medium */
+  ASSERT(interf->medium_front != interf->medium_back);
+  if(rwalk->mdm == interf->medium_front) {
+    enc_id = enc_ids[0];
+    ASSERT(rwalk->hit_side == SDIS_FRONT);
+  } else {
+    ASSERT(rwalk->mdm == interf->medium_back);
+    enc_id = enc_ids[1];
+    ASSERT(rwalk->hit_side == SDIS_BACK);
+  }
+
+  /* Fetch the enclosure data */
+  enc = scene_get_enclosure(scn, enc_id);
+  if(!enc) {
+    log_err(scn->dev,
+"%s: invalid enclosure. The position %g %g %g may lie in the surrounding fluid.\n",
+      FUNC_NAME, SPLIT3(rwalk->vtx.P));
+    return RES_BAD_OP;
+  }
+
+  /* The hc upper bound can be 0 is h is uniformly 0. In that case the result
+   * is the initial condition. */
+  if(enc->hc_upper_bound == 0) {
+    /* Cannot be in the fluid without starting there. */
+    ASSERT(SXD_HIT_NONE(&rwalk->hit));
+    rwalk->vtx.time = 0;
+    tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
+    if(tmp >= 0) {
+      T->value += tmp;
+      T->done = 1;
+      return RES_OK;
+    }
+
+    /* At t=0, the initial condition should have been reached. */
+    log_err(scn->dev,
+"%s: undefined initial condition. "
+"Time is 0 but the temperature remains unknown.\n",
       FUNC_NAME);
     return RES_BAD_OP;
   }
-  T->value += tmp;
-  T->done = 1;
+
+  /* A trick to force first r test result. */
+  r = 1;
+
+  /* Sample time until init condition is reached or a true convection occurs. */
+  for(;;) {
+    /* Setup the fragment of the interface. */
+    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+
+    /* Fetch hc. */
+    hc = interface_get_convection_coef(interf, &frag);
+    if(hc > enc->hc_upper_bound) {
+      log_err(scn->dev,
+        "%s: hc (%g) exceeds its provided upper bound (%g) at %g %g %g.\n",
+        FUNC_NAME, hc, enc->hc_upper_bound, SPLIT3(rwalk->vtx.P));
+      return RES_BAD_OP;
+    }
+
+    if(r < hc / enc->hc_upper_bound) {
+      /* True convection. Always true if hc == bound. */
+      break;
+    }
+
+    /* Fetch other physical properties. */
+    cp = fluid_get_calorific_capacity(rwalk->mdm, &rwalk->vtx);
+    rho = fluid_get_volumic_mass(rwalk->mdm, &rwalk->vtx);
+
+    /* Sample the time using the upper bound. */
+    mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
+    tau = ssp_ran_exp(rng, mu);
+    rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
+
+    /* Check the initial condition. */
+    tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
+    if(tmp >= 0) {
+      T->value += tmp;
+      T->done = 1;
+      return RES_OK;
+    }
+
+    if(rwalk->vtx.time <= 0) {
+      /* The initial condition should have been reached. */
+      log_err(scn->dev,
+"%s: undefined initial condition. "
+"Time is 0 but the temperature remains unknown.\n",
+        FUNC_NAME);
+      return RES_BAD_OP;
+    }
+
+    /* Uniformly sample the enclosure. */
+#if DIM == 2
+    SXD(scene_view_sample
+    (enc->sXd(view),
+      ssp_rng_canonical_float(rng),
+      ssp_rng_canonical_float(rng),
+      &rwalk->hit.prim,
+      &rwalk->hit.u));
+    st = rwalk->hit.u;
+#else
+    SXD(scene_view_sample
+    (enc->sXd(view),
+      ssp_rng_canonical_float(rng),
+      ssp_rng_canonical_float(rng),
+      ssp_rng_canonical_float(rng),
+      &rwalk->hit.prim,
+      rwalk->hit.uv));
+    f2_set(st, rwalk->hit.uv);
+#endif
+
+    SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_POSITION, st, &attr_P));
+    SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_GEOMETRY_NORMAL, st, &attr_N));
+    dX_set_fX(rwalk->vtx.P, attr_P.value);
+    fX(set)(rwalk->hit.normal, attr_N.value);
+
+    /* Fetch the interface of the sampled point. */
+    interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+
+    /* Renew r for next loop. */
+    r = ssp_rng_canonical_float(rng);
+  }
+
+  rwalk->hit.distance = 0;
+  T->func = XD(boundary_temperature);
+  rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
   return RES_OK;
 }
 
@@ -861,7 +1027,7 @@ XD(solid_boundary_with_flux_temperature)
 
 res_T
 XD(boundary_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -920,7 +1086,7 @@ XD(boundary_temperature)
 
 res_T
 XD(solid_temperature)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -1049,7 +1215,7 @@ XD(solid_temperature)
     /* Sample the time */
     mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
     tau = ssp_ran_exp(rng, mu);
-    rwalk->vtx.time -= tau;
+    rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
 
     /* Check the initial condition */
     tmp = solid_get_temperature(mdm, &rwalk->vtx);
@@ -1057,6 +1223,15 @@ XD(solid_temperature)
       T->value += tmp;
       T->done = 1;
       return RES_OK;
+    }
+
+    /* The initial condition should be reached */
+    if(rwalk->vtx.time <=0) {
+      log_err(scn->dev,
+        "%s: undefined initial condition. "
+        "The time is null but the temperature remains unknown.\n",
+        FUNC_NAME);
+      return RES_BAD_OP;
     }
 
     /* Define if the random walk hits something along dir0 */
