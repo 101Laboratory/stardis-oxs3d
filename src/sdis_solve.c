@@ -30,6 +30,11 @@
 #include <star/ssp.h>
 #include <omp.h>
 
+struct boundary_context {
+  struct s3d_scene_view* s3d_view;
+  const size_t* primitives;
+};
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
@@ -42,6 +47,53 @@ morton2D_decode(const uint32_t u32)
   x = (x | (x >> 4)) & 0x00FF00FF;
   x = (x | (x >> 8)) & 0x0000FFFF;
   return (uint16_t)x;
+}
+
+static INLINE void
+setup_estimator
+  (struct sdis_estimator* estimator,
+   const size_t nrealisations,
+   const size_t nsuccesses,
+   const double accum_weights,
+   const double accum_sqr_weights)
+{
+  ASSERT(estimator && nrealisations && nsuccesses);
+  estimator->nrealisations = nsuccesses;
+  estimator->nfailures = nrealisations - nsuccesses;
+  estimator->temperature.E = accum_weights / (double)nsuccesses;
+  estimator->temperature.V =
+    accum_sqr_weights / (double)nsuccesses
+  - estimator->temperature.E * estimator->temperature.E;
+  estimator->temperature.V = MMAX(estimator->temperature.V, 0);
+  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)nsuccesses);
+}
+
+static void
+get_indices(const unsigned itri, unsigned ids[3], void* context)
+{
+  (void)context;
+  ASSERT(ids);
+  ids[0] = itri*3+0;
+  ids[1] = itri*3+1;
+  ids[2] = itri*3+2;
+}
+
+static void
+get_position(const unsigned ivert, float pos[3], void* context)
+{
+  struct boundary_context* ctx = context;
+  struct s3d_primitive prim;
+  struct s3d_attrib attr;
+  const unsigned iprim = ivert / 3;
+  const unsigned itri_vert = ivert % 3;
+  unsigned itri;
+  ASSERT(pos && context);
+
+  itri = (unsigned)ctx->primitives[iprim];
+  S3D(scene_view_get_primitive(ctx->s3d_view, itri, &prim));
+  S3D(triangle_get_vertex_attrib(&prim, itri_vert, S3D_POSITION, &attr));
+  ASSERT(attr.type == S3D_FLOAT3);
+  f3_set(pos, attr.value);
 }
 
 static res_T
@@ -244,13 +296,7 @@ sdis_solve_probe
     }
   }
 
-  estimator->nrealisations = N;
-  estimator->nfailures = nrealisations - N;
-  estimator->temperature.E = weight / (double)N;
-  estimator->temperature.V =
-    sqr_weight / (double)N
-  - estimator->temperature.E * estimator->temperature.E;
-  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)N);
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
 
 exit:
   if(rngs) {
@@ -295,8 +341,8 @@ sdis_solve_probe_boundary
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
-    || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
-    || !out_estimator) {
+  || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
+  || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -366,7 +412,7 @@ sdis_solve_probe_boundary
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
 
-    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
     if(scene_is_2d(scn)) {
       res_local = boundary_realisation_2d
@@ -387,13 +433,7 @@ sdis_solve_probe_boundary
     }
   }
 
-  estimator->nrealisations = N;
-  estimator->nfailures = nrealisations - N;
-  estimator->temperature.E = weight / (double)N;
-  estimator->temperature.V =
-    sqr_weight / (double)N
-  - estimator->temperature.E * estimator->temperature.E;
-  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)N);
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
 
 exit:
   if(rngs) {
@@ -548,6 +588,151 @@ exit:
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   return (res_T)res;
 error:
+  goto exit;
+}
+
+res_T
+sdis_solve_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  struct boundary_context ctx;
+  struct sdis_estimator* estimator = NULL;
+  struct s3d_scene* s3d_scene = NULL;
+  struct s3d_shape* s3d_shape = NULL;
+  struct s3d_scene_view* s3d_view = NULL;
+  struct ssp_rng_proxy* rng_proxy = NULL;
+  struct ssp_rng** rngs = NULL;
+  struct s3d_vertex_data vdata = S3D_VERTEX_DATA_NULL;
+  size_t i;
+  size_t N = 0; /* #realisations that do not fail */
+  double weight=0, sqr_weight=0;
+  int64_t irealisation;
+  ATOMIC res = RES_OK;
+
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
+  || !sides || !nprimitives || time < 0 || fp_to_meter < 0 || Tref < 0
+  || !out_estimator) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(scene_is_2d(scn)) {
+    log_err(scn->dev, "%s: this function does not support 2D scene yet.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Create the Star-3D shape setuped of the boundary */
+  res = s3d_shape_create_mesh(scn->dev->s3d, &s3d_shape);
+  if(res != RES_OK) goto error;
+
+  /* Initialise the boundary shape with the triangles/segments of the
+   * submitted primitives  */
+  ctx.primitives = primitives;
+  ctx.s3d_view = scn->s3d_view;
+  vdata.usage = S3D_POSITION;
+  vdata.type = S3D_FLOAT;
+  vdata.get = get_position;
+  res = s3d_mesh_setup_indexed_vertices(s3d_shape, (unsigned)nprimitives,
+    get_indices, (unsigned)(nprimitives*3), &vdata, 1, &ctx);
+  if(res != RES_OK) goto error;
+
+  /* Create and setup the boundary Star-3D scene */
+  res = s3d_scene_create(scn->dev->s3d, &s3d_scene);
+  if(res != RES_OK) goto error;
+  res = s3d_scene_attach_shape(s3d_scene, s3d_shape);
+  if(res != RES_OK) goto error;
+  res = s3d_scene_view_create(s3d_scene, S3D_SAMPLE, &s3d_view);
+  if(res != RES_OK) goto error;
+
+  /* Create the proxy RNG */
+  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+    scn->dev->nthreads, &rng_proxy);
+  if(res != RES_OK) goto error;
+
+  /* Create the per thread RNG */
+  rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
+  if(!rngs) { res = RES_MEM_ERR; goto error; }
+  FOR_EACH(i, 0, scn->dev->nthreads) {
+    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Create the estimator */
+  res = estimator_create(scn->dev, &estimator);
+  if(res != RES_OK) goto error;
+
+  omp_set_num_threads((int)scn->dev->nthreads);
+  #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
+  for(irealisation=0; irealisation<(int64_t)nrealisations; ++irealisation) {
+    const int ithread = omp_get_thread_num();
+    struct s3d_primitive prim;
+    struct ssp_rng* rng = rngs[ithread];
+    enum sdis_side side;
+    size_t iprim;
+    double w = NaN;
+    double uv[2];
+    float st[2];
+    float r0, r1, r2;
+    res_T res_local = RES_OK;
+
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Sample a position onto the boundary */
+    r0 = ssp_rng_canonical_float(rng);
+    r1 = ssp_rng_canonical_float(rng);
+    r2 = ssp_rng_canonical_float(rng);
+    res_local = s3d_scene_view_sample(s3d_view, r0, r1, r2, &prim, st);
+    if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+
+    /* Map from boundary scene to sdis scene */
+    iprim = primitives[prim.prim_id];
+    side = sides[prim.prim_id];
+    d2_set_f2(uv, st);
+
+    /* Invoke the boundary realisation */
+    res_local = boundary_realisation_3d
+      (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+
+    /* Update the MC accumulators */
+    if(res_local == RES_OK) {
+      weight += w;
+      sqr_weight += w*w;
+      ++N;
+    } else if(res_local != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_local);
+      continue;
+    }
+  }
+
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
+
+exit:
+  if(s3d_scene) S3D(scene_ref_put(s3d_scene));
+  if(s3d_shape) S3D(shape_ref_put(s3d_shape));
+  if(s3d_view) S3D(scene_view_ref_put(s3d_view));
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_estimator) *out_estimator = estimator;
+  if(rngs) {
+    FOR_EACH(i, 0, scn->dev->nthreads) {if(rngs[i]) SSP(rng_ref_put(rngs[i]));}
+    MEM_RM(scn->dev->allocator, rngs);
+  }
+  return (res_T)res;
+error:
+  if(estimator) {
+    SDIS(estimator_ref_put(estimator));
+    estimator = NULL;
+  }
   goto exit;
 }
 
