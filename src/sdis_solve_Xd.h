@@ -1592,16 +1592,24 @@ XD(solve_boundary)
   struct ssp_rng** rngs = NULL;
   size_t i;
   size_t N = 0; /* #realisations that do not fail */
+  size_t view_nprims;
   double weight=0, sqr_weight=0;
   int64_t irealisation;
   ATOMIC res = RES_OK;
-  ASSERT(scene_is_2d(scn));
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
   || !sides || !nprimitives || time < 0 || fp_to_meter < 0 || Tref < 0
   || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
+  }
+
+  SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
+  FOR_EACH(i, 0, nprimitives) {
+    if(primitives[i] >= view_nprims) {
+      res = RES_BAD_ARG;
+      goto error;
+    }
   }
 
   /* Create the Star-XD shape of the boundary */
@@ -1668,10 +1676,6 @@ XD(solve_boundary)
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
-    /* Map from boundary scene to sdis scene */
-    iprim = primitives[prim.prim_id];
-    side = sides[prim.prim_id];
-
     /* Sample a position onto the boundary */
 #if DIM == 2
     res_local = s2d_scene_view_sample
@@ -1679,7 +1683,7 @@ XD(solve_boundary)
        ssp_rng_canonical_float(rng),
        ssp_rng_canonical_float(rng),
        &prim, st);
-   uv[1] = (double)st[1];
+   uv[0] = (double)st[0];
 #else
     res_local = s3d_scene_view_sample
       (view,
@@ -1690,6 +1694,11 @@ XD(solve_boundary)
     d2_set_f2(uv, st);
 #endif
     if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+
+    /* Map from boundary scene to sdis scene */
+    ASSERT(prim.prim_id < nprimitives);
+    iprim = primitives[prim.prim_id];
+    side = sides[prim.prim_id];
 
     /* Invoke the boundary realisation */
     res_local = XD(boundary_realisation)
