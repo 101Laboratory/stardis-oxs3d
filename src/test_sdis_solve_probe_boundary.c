@@ -53,14 +53,18 @@
 /*******************************************************************************
  * Media
  ******************************************************************************/
+struct fluid {
+  double temperature;
+};
+
 static double
 fluid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
-  CHK(vtx != NULL);
-  return Tf;
+  CHK(data != NULL && vtx != NULL);
+  return ((const struct fluid*)sdis_data_cget(data))->temperature;
 }
+
 
 static double
 solid_get_calorific_capacity
@@ -157,6 +161,7 @@ main(int argc, char** argv)
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
+  struct fluid* fluid_param;
   double uv[2];
   double pos[3];
   double ref;
@@ -170,8 +175,13 @@ main(int argc, char** argv)
     (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
+  CHK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  fluid_param = sdis_data_get(data);
+  fluid_param->temperature = Tf;
   fluid_shader.temperature = fluid_get_temperature;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the solid_medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -277,6 +287,11 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
+  /* The external fluid cannot have an unknown temperature */
+  fluid_param->temperature = UNKNOWN_TEMPERATURE;
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_OP);
+  fluid_param->temperature = Tf;
+
   uv[0] = 0.5;
   iprim = 3;
   CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
@@ -291,6 +306,10 @@ main(int argc, char** argv)
   CHK(nfails + nreals == N);
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, 3*T.SE));
+
+  /* The external fluid cannot have an unknown temperature */
+  fluid_param->temperature = UNKNOWN_TEMPERATURE;
+  CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_OP);
   #undef SOLVE
 
   CHK(sdis_scene_ref_put(box_scn) == RES_OK);
