@@ -243,6 +243,7 @@ sdis_solve_probe
       ++N;
     }
   }
+  if(res != RES_OK) goto error;
 
   estimator->nrealisations = N;
   estimator->nfailures = nrealisations - N;
@@ -386,6 +387,7 @@ sdis_solve_probe_boundary
       ++N;
     }
   }
+  if(res != RES_OK) goto error;
 
   estimator->nrealisations = N;
   estimator->nfailures = nrealisations - N;
