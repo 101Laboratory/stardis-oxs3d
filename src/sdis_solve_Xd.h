@@ -27,6 +27,7 @@
 #include <rsys/stretchy_array.h>
 
 #include <star/ssp.h>
+#include <omp.h>
 
 /* Define a new result code from RES_BAD_OP saying that the bad operation is
  * definitive, i.e. in the current state, the realisation will inevitably fail.
@@ -80,6 +81,25 @@ reflect_3d(float res[3], const float V[3], const float N[3])
   return res;
 }
 
+static INLINE void
+setup_estimator
+  (struct sdis_estimator* estimator,
+   const size_t nrealisations,
+   const size_t nsuccesses,
+   const double accum_weights,
+   const double accum_sqr_weights)
+{
+  ASSERT(estimator && nrealisations && nsuccesses);
+  estimator->nrealisations = nsuccesses;
+  estimator->nfailures = nrealisations - nsuccesses;
+  estimator->temperature.E = accum_weights / (double)nsuccesses;
+  estimator->temperature.V =
+    accum_sqr_weights / (double)nsuccesses
+  - estimator->temperature.E * estimator->temperature.E;
+  estimator->temperature.V = MMAX(estimator->temperature.V, 0);
+  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)nsuccesses);
+}
+
 #endif /* SDIS_SOLVE_XD_H */
 #else
 
@@ -106,7 +126,12 @@ reflect_3d(float res[3], const float V[3], const float N[3])
 #define SXD_HIT_NULL__ CONCAT(CONCAT(S, DIM), D_HIT_NULL__)
 #define SXD_POSITION CONCAT(CONCAT(S, DIM), D_POSITION)
 #define SXD_GEOMETRY_NORMAL CONCAT(CONCAT(S, DIM), D_GEOMETRY_NORMAL)
+#define SXD_VERTEX_DATA_NULL CONCAT(CONCAT(S, DIM), D_VERTEX_DATA_NULL)
 #define SXD CONCAT(CONCAT(S, DIM), D)
+#define SXD_FLOAT2 CONCAT(CONCAT(S, DIM), D_FLOAT2)
+#define SXD_FLOAT3 CONCAT(CONCAT(S, DIM), D_FLOAT3)
+#define SXD_SAMPLE CONCAT(CONCAT(S, DIM), D_SAMPLE)
+#define sXd_dev CONCAT(CONCAT(s, DIM), d)
 
 /* Vector macros generic to SDIS_SOLVE_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)
@@ -126,6 +151,14 @@ struct XD(rwalk) {
 };
 static const struct XD(rwalk) XD(RWALK_NULL) = {
   SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__, SDIS_SIDE_NULL__
+};
+
+struct XD(boundary_context) {
+  struct sXd(scene_view)* view;
+  const size_t* primitives;
+};
+static const struct XD(boundary_context) XD(BOUNDARY_CONTEXT_NULL) = {
+  NULL, NULL
 };
 
 struct XD(temperature) {
@@ -180,6 +213,38 @@ XD(radiative_temperature)
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+static INLINE void
+XD(boundary_get_indices)(const unsigned iprim, unsigned ids[DIM], void* context)
+{
+  unsigned i;
+  (void)context;
+  ASSERT(ids);
+  FOR_EACH(i, 0, DIM) ids[i] = iprim*DIM + i;
+}
+
+static INLINE void
+XD(boundary_get_position)(const unsigned ivert, float pos[DIM], void* context)
+{
+  struct XD(boundary_context)* ctx = context;
+  struct sXd(primitive) prim;
+  struct sXd(attrib) attr;
+  const unsigned iprim_id = ivert / DIM;
+  const unsigned iprim_vert = ivert % DIM;
+  unsigned iprim;
+  ASSERT(pos && context);
+
+  iprim = (unsigned)ctx->primitives[iprim_id];
+  SXD(scene_view_get_primitive(ctx->view, iprim, &prim));
+#if DIM == 2
+  SXD(segment_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr));
+  ASSERT(attr.type == SXD_FLOAT2);
+#else
+  SXD(triangle_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr));
+  ASSERT(attr.type == SXD_FLOAT3);
+#endif
+  fX(set)(pos, attr.value);
+}
+
 static FINLINE void
 XD(move_pos)(double pos[DIM], const float dir[DIM], const float delta)
 {
@@ -1504,14 +1569,186 @@ error:
 }
 #endif /* SDIS_SOLVE_DIMENSION == 3 */
 
+static res_T
+XD(solve_boundary)
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  struct XD(boundary_context) ctx = XD(BOUNDARY_CONTEXT_NULL);
+  struct sXd(vertex_data) vdata = SXD_VERTEX_DATA_NULL;
+  struct sXd(scene)* scene = NULL;
+  struct sXd(shape)* shape = NULL;
+  struct sXd(scene_view)* view = NULL;
+  struct sdis_estimator* estimator = NULL;
+  struct ssp_rng_proxy* rng_proxy = NULL;
+  struct ssp_rng** rngs = NULL;
+  size_t i;
+  size_t N = 0; /* #realisations that do not fail */
+  size_t view_nprims;
+  double weight=0, sqr_weight=0;
+  int64_t irealisation;
+  ATOMIC res = RES_OK;
+
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
+  || !sides || !nprimitives || time < 0 || fp_to_meter < 0 || Tref < 0
+  || !out_estimator) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
+  FOR_EACH(i, 0, nprimitives) {
+    if(primitives[i] >= view_nprims) {
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  }
+
+  /* Create the Star-XD shape of the boundary */
+#if DIM == 2
+  res = sXd(shape_create_line_segments)(scn->dev->sXd_dev, &shape);
+#else
+  res = sXd(shape_create_mesh)(scn->dev->sXd_dev, &shape);
+#endif
+  if(res != RES_OK) goto error;
+
+  /* Initialise the boundary shape with the triangles/segments of the
+   * submitted primitives  */
+  ctx.primitives = primitives;
+  ctx.view = scn->sXd(view);
+  vdata.usage = SXD_POSITION;
+  vdata.type = DIM == 2 ? SXD_FLOAT2 : SXD_FLOAT3;
+  vdata.get = XD(boundary_get_position);
+#if DIM == 2
+  res = sXd(line_segments_setup_indexed_vertices)(shape, (unsigned)nprimitives,
+    XD(boundary_get_indices), (unsigned)(nprimitives*DIM), &vdata, 1, &ctx);
+#else /* DIM == 3 */
+  res = sXd(mesh_setup_indexed_vertices)(shape, (unsigned)nprimitives,
+    XD(boundary_get_indices), (unsigned)(nprimitives*DIM), &vdata, 1, &ctx);
+#endif
+  if(res != RES_OK) goto error;
+
+  /* Create and setup the boundary Star-XD scene */
+  res = sXd(scene_create)(scn->dev->sXd_dev, &scene);
+  if(res != RES_OK) goto error;
+  res = sXd(scene_attach_shape)(scene, shape);
+  if(res != RES_OK) goto error;
+  res = sXd(scene_view_create)(scene, SXD_SAMPLE, &view);
+  if(res != RES_OK) goto error;
+
+  /* Create the proxy RNG */
+  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+    scn->dev->nthreads, &rng_proxy);
+  if(res != RES_OK) goto error;
+
+  /* Create the per thread RNG */
+  rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
+  if(!rngs) { res = RES_MEM_ERR; goto error; }
+  FOR_EACH(i, 0, scn->dev->nthreads) {
+    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Create the estimator */
+  res = estimator_create(scn->dev, &estimator);
+  if(res != RES_OK) goto error;
+
+  omp_set_num_threads((int)scn->dev->nthreads);
+  #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
+  for(irealisation=0; irealisation<(int64_t)nrealisations; ++irealisation) {
+    const int ithread = omp_get_thread_num();
+    struct sXd(primitive) prim;
+    struct ssp_rng* rng = rngs[ithread];
+    enum sdis_side side;
+    size_t iprim;
+    double w = NaN;
+    double uv[DIM-1];
+    float st[DIM-1];
+    res_T res_local = RES_OK;
+
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Sample a position onto the boundary */
+#if DIM == 2
+    res_local = s2d_scene_view_sample
+      (view,
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       &prim, st);
+   uv[0] = (double)st[0];
+#else
+    res_local = s3d_scene_view_sample
+      (view,
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       &prim, st);
+    d2_set_f2(uv, st);
+#endif
+    if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+
+    /* Map from boundary scene to sdis scene */
+    ASSERT(prim.prim_id < nprimitives);
+    iprim = primitives[prim.prim_id];
+    side = sides[prim.prim_id];
+
+    /* Invoke the boundary realisation */
+    res_local = XD(boundary_realisation)
+      (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+
+    /* Update the MC accumulators */
+    if(res_local == RES_OK) {
+      weight += w;
+      sqr_weight += w*w;
+      ++N;
+    } else if(res_local != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_local);
+      continue;
+    }
+  }
+
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
+
+exit:
+  if(scene) SXD(scene_ref_put(scene));
+  if(shape) SXD(shape_ref_put(shape));
+  if(view) SXD(scene_view_ref_put(view));
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_estimator) *out_estimator = estimator;
+  if(rngs) {
+    FOR_EACH(i, 0, scn->dev->nthreads) {if(rngs[i]) SSP(rng_ref_put(rngs[i]));}
+    MEM_RM(scn->dev->allocator, rngs);
+  }
+  return (res_T)res;
+error:
+  if(estimator) {
+    SDIS(estimator_ref_put(estimator));
+    estimator = NULL;
+  }
+  goto exit;
+}
+
 #undef SDIS_SOLVE_DIMENSION
 #undef DIM
 #undef sXd
+#undef sXd_dev
 #undef SXD_HIT_NONE
 #undef SXD_HIT_NULL
 #undef SXD_HIT_NULL__
 #undef SXD_POSITION
 #undef SXD_GEOMETRY_NORMAL
+#undef SXD_VERTEX_DATA_NULL
+#undef SXD_FLOAT2
+#undef SXD_FLOAT3
+#undef SXD_SAMPLE
 #undef SXD
 #undef dX
 #undef fX

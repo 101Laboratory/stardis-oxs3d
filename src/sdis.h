@@ -403,7 +403,7 @@ sdis_interface_ref_put
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
- * support of the interface between 2 mediums.
+ * support of the interface between 2 media.
  ******************************************************************************/
 /* Create a 3D scene. The geometry of the scene is defined by an indexed
  * triangular mesh: each triangle is composed of 3 indices where each index
@@ -581,6 +581,19 @@ sdis_solve_camera
    const size_t spp, /* #samples per pixel */
    sdis_write_accums_T writer,
    void* writer_data);
+
+SDIS_API res_T
+sdis_solve_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
 
 END_DECLS
 

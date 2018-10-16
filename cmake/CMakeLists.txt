@@ -29,9 +29,9 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.1.1 REQUIRED)
+find_package(Star2D 0.2 REQUIRED)
 find_package(Star3D 0.5 REQUIRED)
-find_package(StarSP 0.7 REQUIRED)
+find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc 0.2.0 REQUIRED)
 find_package(StarEnc2D 0.2.0 REQUIRED)
 find_package(RSys 0.6.1 REQUIRED)
@@ -155,7 +155,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
-  new_test(test_sdis_solve_probe_boundary)
+  new_test(test_sdis_solve_boundary)
   new_test(test_sdis_volumic_power)
 
   # Additionnal tests

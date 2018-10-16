@@ -231,8 +231,8 @@ sdis_scene_boundary_project_position
 
     /* Retrieve the segment vertices */
     S2D(scene_view_get_primitive(scn->s2d_view, (unsigned int)iprim, &prim));
-    S2D(primitive_get_attrib(&prim, S2D_POSITION, 0, &a)); d2_set_f2(V[0], a.value);
-    S2D(primitive_get_attrib(&prim, S2D_POSITION, 1, &a)); d2_set_f2(V[1], a.value);
+    S2D(segment_get_vertex_attrib(&prim, 0, S2D_POSITION, &a)); d2_set_f2(V[0], a.value);
+    S2D(segment_get_vertex_attrib(&prim, 1, S2D_POSITION, &a)); d2_set_f2(V[1], a.value);
 
     /* Compute the parametric coordinate of the project of `pos' onto the
      * segment.*/

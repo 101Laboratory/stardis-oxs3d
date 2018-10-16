@@ -45,8 +45,8 @@
 #define UNKNOWN_TEMPERATURE -1
 #define N 10000 /* #realisations */
 
-#define Tf 310
-#define Tb 300
+#define Tf 310.0
+#define Tb 300.0
 #define H 0.5
 #define LAMBDA 0.1
 
@@ -134,13 +134,37 @@ interface_get_convection_coef
 }
 
 /*******************************************************************************
+ * Helper function
+ ******************************************************************************/
+static void
+check_estimator
+  (const struct sdis_estimator* estimator,
+   const size_t nrealisations, /* #realisations */
+   const double ref)
+{
+  struct sdis_mc T = SDIS_MC_NULL;
+  size_t nreals;
+  size_t nfails;
+  CHK(estimator && nrealisations);
+
+  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  printf("%g ~ %g +/- %g\n", ref, T.E, T.SE);
+  printf("#failures = %lu/%lu\n",
+    (unsigned long)nfails, (unsigned long)nrealisations);
+  CHK(nfails + nreals == nrealisations);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, ref, 3*T.SE));
+}
+
+/*******************************************************************************
  * Test
  ******************************************************************************/
 int
 main(int argc, char** argv)
 {
   struct mem_allocator allocator;
-  struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -160,9 +184,9 @@ main(int argc, char** argv)
   double uv[2];
   double pos[3];
   double ref;
+  size_t prims[4];
+  enum sdis_side sides[4];
   size_t iprim;
-  size_t nreals;
-  size_t nfails;
   (void)argc, (void)argv;
 
   CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
@@ -248,12 +272,14 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf_Tb) == RES_OK);
   CHK(sdis_interface_ref_put(interf_H) == RES_OK);
 
+  ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
+
+  #define SOLVE sdis_solve_probe_boundary
+  #define F SDIS_FRONT
   uv[0] = 0.3;
   uv[1] = 0.3;
   iprim = 6;
 
-  #define SOLVE sdis_solve_probe_boundary
-  #define F SDIS_FRONT
   CHK(SOLVE(NULL, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
   CHK(SOLVE(box_scn, 0, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
   CHK(SOLVE(box_scn, N, 12, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
@@ -261,37 +287,79 @@ main(int argc, char** argv)
   CHK(SOLVE(box_scn, N, iprim, uv, -1, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
   CHK(SOLVE(box_scn, N, iprim, uv, INF, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
   CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, NULL) == RES_BAD_ARG);
+
   CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
-
-  ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
-
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
-  printf("Boundary temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
-    SPLIT3(pos), ref, T.E, T.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, 3*T.SE));
+  printf("Boundary temperature of the box at (%g %g %g) = ", SPLIT3(pos));
+  check_estimator(estimator, N, ref);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
   uv[0] = 0.5;
   iprim = 3;
   CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   CHK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos) == RES_OK);
-  printf("Boundary temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
-    SPLIT2(pos), ref, T.E, T.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, 3*T.SE));
+  printf("Boundary temperature of the square at (%g %g) = ", SPLIT2(pos));
+  check_estimator(estimator, N, ref);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  #undef F
   #undef SOLVE
+
+  sides[0] = SDIS_FRONT;
+  sides[1] = SDIS_FRONT;
+  sides[2] = SDIS_FRONT;
+  sides[3] = SDIS_FRONT;
+
+  #define SOLVE sdis_solve_boundary
+  prims[0] = 6;
+  prims[1] = 7;
+  CHK(SOLVE(NULL, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, 0, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, NULL, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, NULL, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, sides, 0, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, sides, 2, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, sides, 2, INF, 1.0, 0, 0, NULL) == RES_BAD_ARG);
+
+  /* Average temperature on the right side of the box */
+  CHK(SOLVE(box_scn, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_OK);
+  printf("Average temperature of the right side of the box = ");
+  check_estimator(estimator, N, ref);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+
+  /* Average temperature on the right side of the square */
+  prims[0] = 3;
+  sides[0] = SDIS_FRONT;
+  CHK(SOLVE(square_scn, N, prims, sides, 1, INF, 1.0, 0, 0, &estimator) == RES_OK);
+  printf("Average temperature of the right side of the square = ");
+  check_estimator(estimator, N, ref);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+
+  /* Check out of bound prims */
+  prims[0] = 12;
+  CHK(SOLVE(box_scn, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  prims[0] = 4;
+  CHK(SOLVE(square_scn, N, prims, sides, 1, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+
+  ref = (ref + Tb) / 2;
+
+  /* Average temperature on the left/right side of the box */
+  prims[0] = 2;
+  prims[1] = 3;
+  prims[2] = 6;
+  prims[3] = 7;
+  CHK(SOLVE(box_scn, N, prims, sides, 4, INF, 1.0, 0, 0, &estimator) == RES_OK);
+  printf("Average temperature of the right/left side of the box = ");
+  check_estimator(estimator, N, ref);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+
+  /* Average temperature on the left/right side of the square */
+  prims[0] = 1;
+  prims[1] = 3;
+  CHK(SOLVE(square_scn, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_OK);
+  printf("Average temperature of the right/left side of the square = ");
+  check_estimator(estimator, N, ref);
+  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  #undef sdis_solve_boundary
 
   CHK(sdis_scene_ref_put(box_scn) == RES_OK);
   CHK(sdis_scene_ref_put(square_scn) == RES_OK);

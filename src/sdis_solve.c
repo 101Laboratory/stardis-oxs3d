@@ -245,13 +245,7 @@ sdis_solve_probe
   }
   if(res != RES_OK) goto error;
 
-  estimator->nrealisations = N;
-  estimator->nfailures = nrealisations - N;
-  estimator->temperature.E = weight / (double)N;
-  estimator->temperature.V =
-    sqr_weight / (double)N
-  - estimator->temperature.E * estimator->temperature.E;
-  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)N);
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
 
 exit:
   if(rngs) {
@@ -296,8 +290,8 @@ sdis_solve_probe_boundary
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
-    || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
-    || !out_estimator) {
+  || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
+  || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -367,7 +361,7 @@ sdis_solve_probe_boundary
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
 
-    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
     if(scene_is_2d(scn)) {
       res_local = boundary_realisation_2d
@@ -389,13 +383,7 @@ sdis_solve_probe_boundary
   }
   if(res != RES_OK) goto error;
 
-  estimator->nrealisations = N;
-  estimator->nfailures = nrealisations - N;
-  estimator->temperature.E = weight / (double)N;
-  estimator->temperature.V =
-    sqr_weight / (double)N
-  - estimator->temperature.E * estimator->temperature.E;
-  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)N);
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
 
 exit:
   if(rngs) {
@@ -551,5 +539,30 @@ exit:
   return (res_T)res;
 error:
   goto exit;
+}
+
+res_T
+sdis_solve_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  res_T res = RES_OK;
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    res = solve_boundary_2d(scn, nrealisations, primitives, sides, nprimitives,
+      time, fp_to_meter, Tarad, Tref, out_estimator);
+  } else {
+    res = solve_boundary_3d(scn, nrealisations, primitives, sides, nprimitives,
+      time, fp_to_meter, Tarad, Tref, out_estimator);
+  }
+  return res;
 }
 
