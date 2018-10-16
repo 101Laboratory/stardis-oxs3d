@@ -67,12 +67,16 @@ get_interface(const size_t iseg, struct sdis_interface** bound, void* context)
 /*******************************************************************************
  * Media & interface
  ******************************************************************************/
+struct fluid {
+  double temperature;
+};
+
 static double
 fluid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)vtx, (void)data;
-  return 300.0;
+  CHK(data != NULL && vtx != NULL);
+  return ((const struct fluid*)sdis_data_cget(data))->temperature;
 }
 
 static double
@@ -136,11 +140,13 @@ main(int argc, char** argv)
   struct sdis_medium* fluid = NULL;
   struct sdis_interface* interf = NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
   struct context ctx;
+  struct fluid* fluid_param;
   double pos[2];
   double time;
   double ref;
@@ -154,8 +160,13 @@ main(int argc, char** argv)
     (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
 
   /* Create the fluid medium */
+  CHK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  fluid_param = sdis_data_get(data);
+  fluid_param->temperature = 300;
   fluid_shader.temperature = fluid_get_temperature;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
+  CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the solid medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -205,6 +216,10 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, T.SE));
 
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+
+  /* The external fluid cannot have an unknown temperature */
+  fluid_param->temperature = -1;
+  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);

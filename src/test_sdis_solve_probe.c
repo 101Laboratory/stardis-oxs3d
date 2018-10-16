@@ -289,11 +289,15 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
-  CHK(sdis_estimator_ref_get(NULL) ==  RES_BAD_ARG);
+  CHK(sdis_estimator_ref_get(NULL) == RES_BAD_ARG);
   CHK(sdis_estimator_ref_get(estimator) == RES_OK);
   CHK(sdis_estimator_ref_put(NULL) == RES_BAD_ARG);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+
+  /* The external fluid cannot have an unknown temperature */
+  fluid_param->temperature = -1;
+  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);
