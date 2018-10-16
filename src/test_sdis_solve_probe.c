@@ -297,7 +297,7 @@ main(int argc, char** argv)
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = -1;
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_OP);
+  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
 
   CHK(sdis_scene_ref_put(scn) == RES_OK);
   CHK(sdis_device_ref_put(dev) == RES_OK);

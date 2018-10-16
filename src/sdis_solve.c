@@ -262,7 +262,7 @@ exit:
   }
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
-  return (res_T)(res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res);
+  return (res_T)res;
 error:
   if(estimator) {
     SDIS(estimator_ref_put(estimator));
@@ -406,7 +406,7 @@ exit:
   }
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
-  return (res_T)(res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res);
+  return (res_T)res;
 error:
   if(estimator) {
     SDIS(estimator_ref_put(estimator));

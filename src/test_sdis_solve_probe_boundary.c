@@ -289,7 +289,7 @@ main(int argc, char** argv)
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_OP);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
   fluid_param->temperature = Tf;
 
   uv[0] = 0.5;
@@ -309,7 +309,7 @@ main(int argc, char** argv)
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_OP);
+  CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
   #undef SOLVE
 
   CHK(sdis_scene_ref_put(box_scn) == RES_OK);

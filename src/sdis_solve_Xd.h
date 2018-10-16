@@ -501,11 +501,12 @@ XD(fluid_temperature)
   enc = scene_get_enclosure(scn, enc_id);
   if(!enc) {
     /* The possibility for a fluid enclosure to be unregistred is that it is
-     * the external enclosure. In this situation unknown temperature is forbidden. */
+     * the external enclosure. In this situation unknown temperature is
+     * forbidden. */
     log_err(scn->dev,
 "%s: invalid enclosure. The surrounding fluid has an unset temperature.\n",
       FUNC_NAME);
-    return RES_BAD_OP_IRRECOVERABLE;
+    return RES_BAD_ARG;
   }
 
   /* The hc upper bound can be 0 is h is uniformly 0. In that case the result
@@ -1343,7 +1344,7 @@ exit:
 #ifndef NDEBUG
   sa_release(stack);
 #endif
-  return res;
+  return res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res;
 error:
   goto exit;
 }
