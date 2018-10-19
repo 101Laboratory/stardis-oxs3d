@@ -148,25 +148,24 @@ main(int argc, char** argv)
   struct context ctx;
   struct fluid* fluid_param;
   double pos[2];
-  double time;
+  double time_range[2] = { INF, INF };
   double ref;
   const size_t N = 1000;
   size_t nreals;
   size_t nfails;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   /* Create the fluid medium */
-  CHK(sdis_data_create
-    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
   fluid_param->temperature = 300;
   fluid_shader.temperature = fluid_get_temperature;
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
+  OK(sdis_data_ref_put(data));
 
   /* Create the solid medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -174,37 +173,37 @@ main(int argc, char** argv)
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
   /* Create the solid/fluid interface */
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
   interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, NULL, &interf) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interface_shader, NULL, &interf));
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
 
   /* Create the scene */
   ctx.positions = square_vertices;
   ctx.indices = square_indices;
   ctx.interf = interf;
-  CHK(sdis_scene_2d_create(dev, square_nsegments, get_indices, get_interface,
-    square_nvertices, get_position, &ctx, &scn) == RES_OK);
+  OK(sdis_scene_2d_create(dev, square_nsegments, get_indices, get_interface,
+    square_nvertices, get_position, &ctx, &scn));
 
-  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  OK(sdis_interface_ref_put(interf));
 
   /* Test the solver */
   pos[0] = 0.5;
   pos[1] = 0.5;
-  time = INF;
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  time_range[0] = time_range[1] = INF;
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
 
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  OK(sdis_estimator_get_temperature(estimator, &T));
 
   ref = 300;
   printf("Temperature at (%g, %g) = %g ~ %g +/- %g\n",
@@ -215,14 +214,15 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = -1;
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
 
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_scene_ref_put(scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

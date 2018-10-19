@@ -576,7 +576,7 @@ sdis_solve_probe
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
    const double position[3], /* Probe position */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
@@ -588,7 +588,7 @@ sdis_solve_probe_boundary
    const size_t nrealisations, /* #realisations */
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
@@ -616,7 +616,7 @@ sdis_solve_boundary
    const size_t primitives[], /* List of boundary primitives to handle */
    const enum sdis_side sides[], /* Per primitive side to consider */
    const size_t nprimitives, /* #primitives */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
@@ -629,7 +629,7 @@ sdis_solve_probe_boundary_flux
    const size_t nrealisations, /* #realisations */
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
@@ -641,7 +641,7 @@ sdis_solve_boundary_flux
    const size_t nrealisations, /* #realisations */
    const size_t primitives[], /* List of boundary primitives to handle */
    const size_t nprimitives, /* #primitives */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */

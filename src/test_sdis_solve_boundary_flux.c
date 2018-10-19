@@ -189,20 +189,20 @@ check_estimator
   size_t nfails;
   CHK(estimator && nrealisations);
 
-  CHK(sdis_estimator_get_temperature(estimator, &V) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  OK(sdis_estimator_get_temperature(estimator, &V));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
   printf("T = %g ~ %g +/- %g\n", T, V.E, V.SE);
   CHK(eq_eps(V.E, T, 3 * (V.SE ? V.SE : FLT_EPSILON)));
-  CHK(sdis_estimator_get_type(estimator, &type) == RES_OK);
+  OK(sdis_estimator_get_type(estimator, &type));
   if(type == SDIS_FLUX_ESTIMATOR) {
-    CHK(sdis_estimator_get_convective_flux(estimator, &V) == RES_OK);
+    OK(sdis_estimator_get_convective_flux(estimator, &V));
     printf("Convective flux = %g ~ %g +/- %g\n", CF, V.E, V.SE);
     CHK(eq_eps(V.E, CF, 3 * (V.SE ? V.SE : FLT_EPSILON)));
-    CHK(sdis_estimator_get_radiative_flux(estimator, &V) == RES_OK);
+    OK(sdis_estimator_get_radiative_flux(estimator, &V));
     printf("Radiative flux = %g ~ %g +/- %g\n", RF, V.E, V.SE);
     CHK(eq_eps(V.E, RF, 3 * (V.SE ? V.SE : FLT_EPSILON)));
-    CHK(sdis_estimator_get_total_flux(estimator, &V) == RES_OK);
+    OK(sdis_estimator_get_total_flux(estimator, &V));
     printf("Total flux = %g ~ %g +/- %g\n", TF, V.E, V.SE);
     CHK(eq_eps(V.E, TF, 3 * (V.SE ? V.SE : FLT_EPSILON)));
   }
@@ -239,23 +239,24 @@ main(int argc, char** argv)
   enum sdis_estimator_type type;
   double uv[2];
   double pos[3];
+  double time_range[2] = { INF, INF };
+  double tr[2];
   double analyticT, analyticCF, analyticRF, analyticTF;
   size_t prims[2];
   size_t iprim;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   /* Create the fluid medium */
-  CHK(sdis_data_create
-    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
   fluid_param->temperature = Tf;
   fluid_shader.temperature = fluid_get_temperature;
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
+  OK(sdis_data_ref_put(data));
 
   /* Create the solid_medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -263,7 +264,7 @@ main(int argc, char** argv)
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
@@ -272,42 +273,42 @@ main(int argc, char** argv)
   interf_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
 
   /* Create the adiabatic interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->hc = 0;
   interf_props->temperature = UNKNOWN_TEMPERATURE;
   interf_props->emissivity = 0;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_adiabatic) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
+  OK(sdis_data_ref_put(data));
 
   /* Create the Tb interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->hc = H;
   interf_props->temperature = Tb;
   interf_props->emissivity = EPSILON;
   interf_shader.back.emissivity = interface_get_emissivity;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_Tb) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_Tb));
   interf_shader.back.emissivity = NULL;
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_data_ref_put(data));
 
   /* Create the H interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->hc = H;
   interf_props->temperature = UNKNOWN_TEMPERATURE;
   interf_props->emissivity = EPSILON;
   interf_shader.back.emissivity = interface_get_emissivity;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_H) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_H));
   interf_shader.back.emissivity = NULL;
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_data_ref_put(data));
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
 
   /* Map the interfaces to their box triangles */
   box_interfaces[0] = box_interfaces[1] = interf_adiabatic; /* Front */
@@ -324,19 +325,19 @@ main(int argc, char** argv)
   square_interfaces[3] = interf_H; /* Right */
 
   /* Create the box scene */
-  CHK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
+  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
     box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn) == RES_OK);
+    &box_scn));
 
   /* Create the square scene */
-  CHK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
+  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
     square_get_interface, square_nvertices, square_get_position,
-    square_interfaces, &square_scn) == RES_OK);
+    square_interfaces, &square_scn));
 
   /* Release the interfaces */
-  CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_Tb) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_H) == RES_OK);
+  OK(sdis_interface_ref_put(interf_adiabatic));
+  OK(sdis_interface_ref_put(interf_Tb));
+  OK(sdis_interface_ref_put(interf_H));
 
   analyticT = (H*Tf + Hrad*Trad + LAMBDA * Tb) / (H + Hrad + LAMBDA);
   analyticCF = H * (analyticT - Tf);
@@ -348,30 +349,36 @@ main(int argc, char** argv)
   uv[1] = 0.3;
   iprim = 6;
 
-  CHK(SOLVE(NULL, N, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, 0, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, 12, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, NULL, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, -1, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, Trad, Tref, NULL) == RES_BAD_ARG);
+  BA(SOLVE(NULL, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, 0, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, 12, uv, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, iprim, NULL, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, iprim, uv, NULL, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, NULL));
+  tr[0] = tr[1] = -1;
+  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, NULL));
+  tr[0] = 1;
+  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, NULL));
+  tr[1] = 0;
+  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, NULL));
 
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_type(estimator, &type) == RES_OK);
+  OK(SOLVE(box_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
+  OK(sdis_estimator_get_type(estimator, &type));
   CHK(type == SDIS_FLUX_ESTIMATOR);
 
-  CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
+  OK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos));
   printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
 
   uv[0] = 0.5;
   iprim = 3;
-  CHK(SOLVE(square_scn, N, 4, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(square_scn, N, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
-  CHK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos) == RES_OK);
+  BA(SOLVE(square_scn, N, 4, uv, time_range, 1.0, Trad, Tref, &estimator));
+  OK(SOLVE(square_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
+  OK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos));
   printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
 
   #undef F
   #undef SOLVE
@@ -379,31 +386,37 @@ main(int argc, char** argv)
   #define SOLVE sdis_solve_boundary_flux
   prims[0] = 6;
   prims[1] = 7;
-  CHK(SOLVE(NULL, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, 0, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, NULL, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, prims, 0, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, prims, 2, -1, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, NULL) == RES_BAD_ARG);
+  BA(SOLVE(NULL, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, 0, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, NULL, 2, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, prims, 0, time_range, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, prims, 2, NULL, 1.0, Trad, Tref, &estimator));
+  BA(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, NULL));
+  tr[0] = tr[1] = -1;
+  BA(SOLVE(box_scn, N, prims, 2, tr, 1.0, Trad, Tref, NULL));
+  tr[0] = 1;
+  BA(SOLVE(box_scn, N, prims, 2, tr, 1.0, Trad, Tref, NULL));
+  tr[1] = 0;
+  BA(SOLVE(box_scn, N, prims, 2, tr, 1.0, Trad, Tref, NULL));
 
   /* Average temperature on the right side of the box */
-  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  OK(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
   printf("Average values of the right side of the box = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
 
   /* Average temperature on the right side of the square */
   prims[0] = 3;
-  CHK(SOLVE(square_scn, N, prims, 1, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  OK(SOLVE(square_scn, N, prims, 1, time_range, 1.0, Trad, Tref, &estimator));
   printf("Average values of the right side of the square = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
 
   /* Check out of bound prims */
   prims[0] = 12;
-  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  BA(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
   prims[0] = 4;
-  CHK(SOLVE(square_scn, N, prims, 1, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  BA(SOLVE(square_scn, N, prims, 1, time_range, 1.0, Trad, Tref, &estimator));
 
   /* Average temperature on the left side of the box */
   prims[0] = 2;
@@ -414,22 +427,22 @@ main(int argc, char** argv)
   analyticRF = Hrad * (analyticT - Trad);
   analyticTF = analyticCF + analyticRF;
 
-  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  OK(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
   printf("Average values of the left side of the box = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
 
   /* Average temperature on the left/right side of the square */
   prims[0] = 1;
-  CHK(SOLVE(square_scn, N, prims, 1, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  OK(SOLVE(square_scn, N, prims, 1, time_range, 1.0, Trad, Tref, &estimator));
   printf("Average values of the left side of the square = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
   #undef SOLVE
 
-  CHK(sdis_scene_ref_put(box_scn) == RES_OK);
-  CHK(sdis_scene_ref_put(square_scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_scene_ref_put(box_scn));
+  OK(sdis_scene_ref_put(square_scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

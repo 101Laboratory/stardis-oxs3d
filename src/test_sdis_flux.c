@@ -147,17 +147,17 @@ main(int argc, char** argv)
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
   double pos[3];
+  double time_range[2] = { INF, INF };
   double ref;
   size_t nreals;
   size_t nfails;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
   /* Create the dummy fluid medium */
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
 
   /* Create the solid_medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -165,42 +165,41 @@ main(int argc, char** argv)
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
   /* Setup the interface shader */
   interf_shader.front.temperature = interface_get_temperature;
   interf_shader.front.flux = interface_get_flux;
 
   /* Create the adiabatic interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->temperature = UNKNOWN_TEMPERATURE;
   interf_props->phi = 0;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_adiabatic) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
+  OK(sdis_data_ref_put(data));
 
   /* Create the T0 interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->temperature = T0;
   interf_props->phi = 0; /* Unused */
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_T0) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create(dev, solid, fluid, &interf_shader, data, &interf_T0));
+  OK(sdis_data_ref_put(data));
 
   /* Create the PHI interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->temperature = UNKNOWN_TEMPERATURE;
   interf_props->phi = PHI;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_phi) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_phi));
+  OK(sdis_data_ref_put(data));
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
 
   /* Map the interfaces to their box triangles */
   box_interfaces[0] = box_interfaces[1] = interf_adiabatic; /* Front */
@@ -217,29 +216,29 @@ main(int argc, char** argv)
   square_interfaces[3] = interf_T0;        /* Right */
 
   /* Create the box scene */
-  CHK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
+  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
     box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn) == RES_OK);
+    &box_scn));
 
   /* Create the square scene */
-  CHK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
+  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
     square_get_interface, square_nvertices, square_get_position,
-    square_interfaces, &square_scn) == RES_OK);
+    square_interfaces, &square_scn));
 
   /* Release the interfaces */
-  CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_T0) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_phi) == RES_OK);
+  OK(sdis_interface_ref_put(interf_adiabatic));
+  OK(sdis_interface_ref_put(interf_T0));
+  OK(sdis_interface_ref_put(interf_phi));
 
   d3_splat(pos, 0.25);
   ref = T0 + (1 - pos[0]) * PHI/LAMBDA;
 
   /* Solve in 3D */
-  CHK(sdis_solve_probe(box_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_ref_put(estimator));
   printf("Temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
@@ -248,11 +247,11 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, T.SE*3));
 
   /* Solve in 2D */
-  CHK(sdis_solve_probe(square_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_ref_put(estimator));
   printf("Temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
@@ -260,9 +259,9 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE*3));
 
-  CHK(sdis_scene_ref_put(box_scn) == RES_OK);
-  CHK(sdis_scene_ref_put(square_scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_scene_ref_put(box_scn));
+  OK(sdis_scene_ref_put(square_scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);
