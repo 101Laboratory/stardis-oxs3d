@@ -1627,7 +1627,7 @@ XD(probe_flux_realisation)
   /* Compute fluid temperature */
   if(compute_convective) {
     const struct sdis_interface* interf =
-      scene_get_interface(scn, (unsigned long)iprim);
+      scene_get_interface(scn, (unsigned)iprim);
     const struct sdis_medium* mdm = interface_get_medium(interf, fluid_side);
 
     RESET_WALK(fluid_side, mdm);
@@ -1685,7 +1685,6 @@ XD(interface_get_hc_epsilon)
   fX(set)(hit.normal, attr.value);
 
   hit.distance = 0;
-  hit.normal;
   hit.prim = prim;
   SET_PARAM(hit, st);
   frag.time = time;
@@ -1927,7 +1926,7 @@ static res_T
 XD(solve_boundary_flux)
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
-   const size_t primitives [], /* List of boundary primitives to handle */
+   const size_t primitives[], /* List of boundary primitives to handle */
    const size_t nprimitives, /* #primitives */
    const double time, /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
@@ -2066,7 +2065,7 @@ XD(solve_boundary_flux)
     ASSERT(prim.prim_id < nprimitives);
     iprim = primitives[prim.prim_id];
 
-    interf = scene_get_interface(scn, (unsigned long)iprim);
+    interf = scene_get_interface(scn, (unsigned)iprim);
     fmd = interface_get_medium(interf, SDIS_FRONT);
     bmd = interface_get_medium(interf, SDIS_BACK);
     if(!fmd || !bmd
@@ -2080,7 +2079,7 @@ XD(solve_boundary_flux)
     fluid_side = (fmd->type == SDIS_FLUID) ? SDIS_FRONT : SDIS_BACK;
 
     res_local = XD(interface_get_hc_epsilon)(&hc, &epsilon, scn,
-      (unsigned long)iprim, uv, time, fluid_side);
+      (unsigned)iprim, uv, time, fluid_side);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;

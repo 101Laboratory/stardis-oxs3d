@@ -638,7 +638,7 @@ sdis_solve_probe_boundary_flux
     }
   }
   /* Check medium is fluid on one side and solid on the other */
-  interf = scene_get_interface(scn, (unsigned long)iprim);
+  interf = scene_get_interface(scn, (unsigned)iprim);
   fmd = interface_get_medium(interf, SDIS_FRONT);
   bmd = interface_get_medium(interf, SDIS_BACK);
   if(!fmd || !bmd
@@ -670,10 +670,10 @@ sdis_solve_probe_boundary_flux
 
   /* Compute hr and hc */
   if(scene_is_2d(scn)) {
-    res = interface_get_hc_epsilon_2d(&hc, &epsilon, scn, (unsigned long)iprim,
+    res = interface_get_hc_epsilon_2d(&hc, &epsilon, scn, (unsigned)iprim,
       uv, time, fluid_side);
   } else {
-    res = interface_get_hc_epsilon_3d(&hc, &epsilon, scn, (unsigned long)iprim,
+    res = interface_get_hc_epsilon_3d(&hc, &epsilon, scn, (unsigned)iprim,
       uv, time, fluid_side);
   }
   hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
