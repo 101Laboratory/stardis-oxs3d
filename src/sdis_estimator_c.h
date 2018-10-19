@@ -21,12 +21,22 @@
 /* Forward declarations */
 struct sdis_device;
 struct sdis_estimator;
+enum sdis_estimator_type;
+
+enum flux_names {
+  FLUX_CONVECTIVE__,
+  FLUX_RADIATIVE__,
+  FLUX_TOTAL__,
+  FLUX_NAMES_COUNT__
+};
 
 struct sdis_estimator {
   struct sdis_mc temperature;
+  struct sdis_mc* fluxes;
   size_t nrealisations;
   size_t nfailures;
 
+  enum sdis_estimator_type type;
   ref_T ref;
   struct sdis_device* dev;
 };
@@ -37,6 +47,7 @@ struct sdis_estimator {
 extern LOCAL_SYM res_T
 estimator_create
   (struct sdis_device* dev,
+   const enum sdis_estimator_type type,
    struct sdis_estimator** estimator);
 
 #endif /* SDIS_PROBE_ESTIMATOR_C_H */

@@ -28,6 +28,8 @@ estimator_release(ref_T* ref)
   ASSERT(ref);
   estimator = CONTAINER_OF(ref, struct sdis_estimator, ref);
   dev = estimator->dev;
+  ASSERT((estimator->fluxes!=NULL) == (estimator->type==SDIS_FLUX_ESTIMATOR));
+  MEM_RM(dev->allocator, estimator->fluxes);
   MEM_RM(dev->allocator, estimator);
   SDIS(device_ref_put(dev));
 }
@@ -48,6 +50,15 @@ sdis_estimator_ref_put(struct sdis_estimator* estimator)
 {
   if(!estimator) return RES_BAD_ARG;
   ref_put(&estimator->ref, estimator_release);
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_get_type
+  (const struct sdis_estimator* estimator, enum sdis_estimator_type* type)
+{
+  if(!estimator || !type) return RES_BAD_ARG;
+  *type = estimator->type;
   return RES_OK;
 }
 
@@ -78,16 +89,54 @@ sdis_estimator_get_temperature
   return RES_OK;
 }
 
+res_T
+sdis_estimator_get_convective_flux
+  (const struct sdis_estimator* estimator, struct sdis_mc* flux)
+{
+  if(!estimator || !flux ||estimator->type != SDIS_FLUX_ESTIMATOR)
+    return RES_BAD_ARG;
+  ASSERT(estimator->fluxes);
+  *flux = estimator->fluxes[FLUX_CONVECTIVE__];
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_get_radiative_flux
+  (const struct sdis_estimator* estimator, struct sdis_mc* flux)
+{
+  if(!estimator || !flux || estimator->type != SDIS_FLUX_ESTIMATOR)
+    return RES_BAD_ARG;
+  ASSERT(estimator->fluxes);
+  *flux = estimator->fluxes[FLUX_RADIATIVE__];
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_get_total_flux
+  (const struct sdis_estimator* estimator, struct sdis_mc* flux)
+{
+  if(!estimator || !flux || estimator->type != SDIS_FLUX_ESTIMATOR)
+    return RES_BAD_ARG;
+  ASSERT(estimator->fluxes);
+  *flux = estimator->fluxes[FLUX_TOTAL__];
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
 res_T
-estimator_create(struct sdis_device* dev, struct sdis_estimator** out_estimator)
+estimator_create
+  (struct sdis_device* dev,
+   const enum sdis_estimator_type type,
+   struct sdis_estimator** out_estimator)
 {
   struct sdis_estimator* estimator = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_estimator) {
+  if(!dev || !out_estimator
+    || (type != SDIS_TEMPERATURE_ESTIMATOR && type != SDIS_FLUX_ESTIMATOR))
+  {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -97,9 +146,13 @@ estimator_create(struct sdis_device* dev, struct sdis_estimator** out_estimator)
     res = RES_MEM_ERR;
     goto error;
   }
+  estimator->type = type;
+  estimator->fluxes = (type != SDIS_FLUX_ESTIMATOR) ? NULL
+    : MEM_CALLOC(dev->allocator, FLUX_NAMES_COUNT__, sizeof(struct sdis_mc));
   ref_init(&estimator->ref);
   SDIS(device_ref_get(dev));
   estimator->dev = dev;
+  if(type == SDIS_FLUX_ESTIMATOR && !estimator->fluxes) goto error;
 
 exit:
   if(out_estimator) *out_estimator = estimator;

@@ -18,37 +18,61 @@
 
 #include <rsys/math.h>
 
-/*
- * The scene is composed of a solid cube/square whose temperature is unknown.
- * The convection coefficient with the surrounding fluid is null exepted for
- * the +X face whose value is 'H'. The Temperature of the -X face is fixed to
- * Tb. This test computes the temperature on the +X face and check that it is
- * equal to:
- *
- *    T = (H*Tf + LAMBDA/A * Tb) / (H+LAMBDA/A)
- *
- * with Tf the temperature of the surrounding fluid, lambda the conductivity of
- * the cube and A the size of the cube/square, i.e. 1.
- *
- *          3D                        2D
- *
- *       ///// (1,1,1)             ///// (1,1)
- *       +-------+                 +-------+
- *      /'      /|    _\           |       |    _\
- *     +-------+ |   / /  Tf      Tb       |   / /   Tf
- *    Tb +.....|.+   \__/          |       |   \__/
- *     |,      |/                  +-------+
- *     +-------+                 (0,0) /////
- * (0,0,0) /////
- */
+ /*
+  * The scene is composed of a solid cube/square whose temperature is unknown.
+  * The convection coefficient with the surrounding fluid is null excepted for
+  * the X faces whose value is 'H'. The Temperature T of the -X face is fixed
+  * to Tb. The ambiant radiative temperature is 0 excepted for the X faces
+  * whose value is 'Trad'.
+  * This test computes temperature and fluxes on the X faces and check that
+  * they are equal to:
+  *
+  *    T(+X) = (H*Tf + Hrad*Trad + LAMBDA/A * Tb) / (H+Hrad+LAMBDA/A)
+  *         with Hrad = 4 * BOLTZMANN_CONSTANT * Tref^3 * epsilon
+  *    T(-X) = Tb
+  *
+  *    CF = H * (T - Tf)
+  *    RF = Hrad * (T - Trad)
+  *    TF = CF + RF
+  *
+  * with Tf the temperature of the surrounding fluid, lambda the conductivity of
+  * the cube and A the size of the cube/square, i.e. 1.
+  *
+  *                                    3D
+  *
+  *                                 ///////(1,1,1)
+  *                                +-------+
+  *                               /'      /|    _\       <-----
+  *         ----->        _\     +-------+ |   / / H,Tf  <----- Trad
+  *    Trad ----->  H,Tf / /    Tb +.....|.+   \__/      <-----
+  *         ----->       \__/    |,      |/
+  *                              +-------+
+  *                        (0,0,0)///////
+  *
+  *
+  *                                    2D
+  *
+  *                                ///////(1,1)
+  *                               +-------+
+  *          ----->        _\     |       |    _\       <-----
+  *     Trad ----->  H,Tf / /    Tb       |   / / H,Tf  <----- Trad
+  *          ----->       \__/    |       |   \__/      <-----
+  *                               +-------+
+  *                           (0,0)///////
+  */
 
 #define UNKNOWN_TEMPERATURE -1
 #define N 10000 /* #realisations */
 
-#define Tf 310.0
-#define Tb 300.0
+#define Tf 300.0
+#define Tb 0.0
 #define H 0.5
+#define Trad 300.0
 #define LAMBDA 0.1
+#define EPSILON 1.0
+
+#define Tref 300.0
+#define Hrad (4 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * EPSILON)
 
 /*******************************************************************************
  * Media
@@ -70,7 +94,7 @@ static double
 solid_get_calorific_capacity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
+  (void) data;
   CHK(vtx != NULL);
   return 2.0;
 }
@@ -79,7 +103,7 @@ static double
 solid_get_thermal_conductivity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
+  (void) data;
   CHK(vtx != NULL);
   return LAMBDA;
 }
@@ -88,7 +112,7 @@ static double
 solid_get_volumic_mass
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
+  (void) data;
   CHK(vtx != NULL);
   return 25.0;
 }
@@ -97,16 +121,16 @@ static double
 solid_get_delta
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
+  (void) data;
   CHK(vtx != NULL);
-  return 1.0/20.0;
+  return 1.0 / 20.0;
 }
 
 static double
 solid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
-  (void)data;
+  (void) data;
   CHK(vtx != NULL);
   return UNKNOWN_TEMPERATURE;
 }
@@ -116,6 +140,7 @@ solid_get_temperature
  ******************************************************************************/
 struct interf {
   double temperature;
+  double emissivity;
   double hc;
 };
 
@@ -126,6 +151,15 @@ interface_get_temperature
   const struct interf* interf = sdis_data_cget(data);
   CHK(frag && data);
   return interf->temperature;
+}
+
+static double
+interface_get_emissivity
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  const struct interf* interf = sdis_data_cget(data);
+  CHK(frag && data);
+  return interf->emissivity;
 }
 
 static double
@@ -144,22 +178,38 @@ static void
 check_estimator
   (const struct sdis_estimator* estimator,
    const size_t nrealisations, /* #realisations */
-   const double ref)
+   const double T,
+   const double CF,
+   const double RF,
+   const double TF)
 {
-  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc V = SDIS_MC_NULL;
+  enum sdis_estimator_type type;
   size_t nreals;
   size_t nfails;
   CHK(estimator && nrealisations);
 
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  CHK(sdis_estimator_get_temperature(estimator, &V) == RES_OK);
   CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
   CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  printf("%g ~ %g +/- %g\n", ref, T.E, T.SE);
+  printf("T = %g ~ %g +/- %g\n", T, V.E, V.SE);
+  CHK(eq_eps(V.E, T, 3 * (V.SE ? V.SE : FLT_EPSILON)));
+  CHK(sdis_estimator_get_type(estimator, &type) == RES_OK);
+  if(type == SDIS_FLUX_ESTIMATOR) {
+    CHK(sdis_estimator_get_convective_flux(estimator, &V) == RES_OK);
+    printf("Convective flux = %g ~ %g +/- %g\n", CF, V.E, V.SE);
+    CHK(eq_eps(V.E, CF, 3 * (V.SE ? V.SE : FLT_EPSILON)));
+    CHK(sdis_estimator_get_radiative_flux(estimator, &V) == RES_OK);
+    printf("Radiative flux = %g ~ %g +/- %g\n", RF, V.E, V.SE);
+    CHK(eq_eps(V.E, RF, 3 * (V.SE ? V.SE : FLT_EPSILON)));
+    CHK(sdis_estimator_get_total_flux(estimator, &V) == RES_OK);
+    printf("Total flux = %g ~ %g +/- %g\n", TF, V.E, V.SE);
+    CHK(eq_eps(V.E, TF, 3 * (V.SE ? V.SE : FLT_EPSILON)));
+  }
   printf("#failures = %lu/%lu\n",
-    (unsigned long)nfails, (unsigned long)nrealisations);
+    (unsigned long) nfails, (unsigned long) nrealisations);
   CHK(nfails + nreals == nrealisations);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, 3*T.SE));
+  CHK(nfails < N / 1000);
 }
 
 /*******************************************************************************
@@ -186,11 +236,11 @@ main(int argc, char** argv)
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
   struct fluid* fluid_param;
+  enum sdis_estimator_type type;
   double uv[2];
   double pos[3];
-  double ref;
-  size_t prims[4];
-  enum sdis_side sides[4];
+  double analyticT, analyticCF, analyticRF, analyticTF;
+  size_t prims[2];
   size_t iprim;
   (void)argc, (void)argv;
 
@@ -218,7 +268,6 @@ main(int argc, char** argv)
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
   interf_shader.front.temperature = interface_get_temperature;
-  interf_shader.front.emissivity = NULL;
   interf_shader.front.specular_fraction = NULL;
   interf_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
 
@@ -227,6 +276,7 @@ main(int argc, char** argv)
   interf_props = sdis_data_get(data);
   interf_props->hc = 0;
   interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->emissivity = 0;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_adiabatic) == RES_OK);
   CHK(sdis_data_ref_put(data) == RES_OK);
@@ -234,10 +284,13 @@ main(int argc, char** argv)
   /* Create the Tb interface */
   CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
   interf_props = sdis_data_get(data);
-  interf_props->hc = 0;
+  interf_props->hc = H;
   interf_props->temperature = Tb;
+  interf_props->emissivity = EPSILON;
+  interf_shader.back.emissivity = interface_get_emissivity;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_Tb) == RES_OK);
+  interf_shader.back.emissivity = NULL;
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Create the H interface */
@@ -245,8 +298,11 @@ main(int argc, char** argv)
   interf_props = sdis_data_get(data);
   interf_props->hc = H;
   interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->emissivity = EPSILON;
+  interf_shader.back.emissivity = interface_get_emissivity;
   CHK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_H) == RES_OK);
+  interf_shader.back.emissivity = NULL;
   CHK(sdis_data_ref_put(data) == RES_OK);
 
   /* Release the media */
@@ -259,7 +315,7 @@ main(int argc, char** argv)
   box_interfaces[4] = box_interfaces[5] = interf_adiabatic; /* Back */
   box_interfaces[6] = box_interfaces[7] = interf_H;         /* Right */
   box_interfaces[8] = box_interfaces[9] = interf_adiabatic; /* Top */
-  box_interfaces[10]= box_interfaces[11]= interf_adiabatic; /* Bottom */
+  box_interfaces[10] = box_interfaces[11] = interf_adiabatic; /* Bottom */
 
   /* Map the interfaces to their square segments */
   square_interfaces[0] = interf_adiabatic; /* Bottom */
@@ -282,104 +338,92 @@ main(int argc, char** argv)
   CHK(sdis_interface_ref_put(interf_Tb) == RES_OK);
   CHK(sdis_interface_ref_put(interf_H) == RES_OK);
 
-  ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
+  analyticT = (H*Tf + Hrad*Trad + LAMBDA * Tb) / (H + Hrad + LAMBDA);
+  analyticCF = H * (analyticT - Tf);
+  analyticRF = Hrad * (analyticT - Trad);
+  analyticTF = analyticCF + analyticRF;
 
-  #define SOLVE sdis_solve_probe_boundary
-  #define F SDIS_FRONT
+  #define SOLVE sdis_solve_probe_boundary_flux
   uv[0] = 0.3;
   uv[1] = 0.3;
   iprim = 6;
 
-  CHK(SOLVE(NULL, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, 0, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, 12, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, NULL, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, -1, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, NULL) == RES_BAD_ARG);
+  CHK(SOLVE(NULL, N, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, 0, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, 12, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, NULL, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, -1, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, Trad, Tref, NULL) == RES_BAD_ARG);
 
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
+  CHK(SOLVE(box_scn, N, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  CHK(sdis_estimator_get_type(estimator, &type) == RES_OK);
+  CHK(type == SDIS_FLUX_ESTIMATOR);
+
   CHK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos) == RES_OK);
-  printf("Boundary temperature of the box at (%g %g %g) = ", SPLIT3(pos));
-  check_estimator(estimator, N, ref);
+  printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
+  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-
-  /* The external fluid cannot have an unknown temperature */
-  fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  CHK(SOLVE(box_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  fluid_param->temperature = Tf;
 
   uv[0] = 0.5;
   iprim = 3;
-  CHK(SOLVE(square_scn, N, 4, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_OK);
+  CHK(SOLVE(square_scn, N, 4, uv, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(square_scn, N, iprim, uv, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
   CHK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos) == RES_OK);
-  printf("Boundary temperature of the square at (%g %g) = ", SPLIT2(pos));
-  check_estimator(estimator, N, ref);
+  printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
+  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
-  /* The external fluid cannot have an unknown temperature */
-  fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  CHK(SOLVE(square_scn, N, iprim, uv, INF, F, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  fluid_param->temperature = Tf;
   #undef F
   #undef SOLVE
-
-  sides[0] = SDIS_FRONT;
-  sides[1] = SDIS_FRONT;
-  sides[2] = SDIS_FRONT;
-  sides[3] = SDIS_FRONT;
-
-  #define SOLVE sdis_solve_boundary
+  
+  #define SOLVE sdis_solve_boundary_flux
   prims[0] = 6;
   prims[1] = 7;
-  CHK(SOLVE(NULL, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, 0, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, NULL, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, prims, NULL, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, prims, sides, 0, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, prims, sides, 2, -1, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(SOLVE(box_scn, N, prims, sides, 2, INF, 1.0, 0, 0, NULL) == RES_BAD_ARG);
+  CHK(SOLVE(NULL, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, 0, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, NULL, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, 0, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, 2, -1, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, NULL) == RES_BAD_ARG);
 
   /* Average temperature on the right side of the box */
-  CHK(SOLVE(box_scn, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  printf("Average temperature of the right side of the box = ");
-  check_estimator(estimator, N, ref);
+  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  printf("Average values of the right side of the box = ");
+  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
   /* Average temperature on the right side of the square */
   prims[0] = 3;
-  sides[0] = SDIS_FRONT;
-  CHK(SOLVE(square_scn, N, prims, sides, 1, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  printf("Average temperature of the right side of the square = ");
-  check_estimator(estimator, N, ref);
+  CHK(SOLVE(square_scn, N, prims, 1, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  printf("Average values of the right side of the square = ");
+  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
   /* Check out of bound prims */
   prims[0] = 12;
-  CHK(SOLVE(box_scn, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
   prims[0] = 4;
-  CHK(SOLVE(square_scn, N, prims, sides, 1, INF, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
+  CHK(SOLVE(square_scn, N, prims, 1, INF, 1.0, Trad, Tref, &estimator) == RES_BAD_ARG);
 
-  /* Average temperature on the left+right sides of the box */
+  /* Average temperature on the left side of the box */
   prims[0] = 2;
   prims[1] = 3;
-  prims[2] = 6;
-  prims[3] = 7;
 
-  ref = (ref + Tb) / 2;
+  analyticT = Tb;
+  analyticCF = H * (analyticT - Tf);
+  analyticRF = Hrad * (analyticT - Trad);
+  analyticTF = analyticCF + analyticRF;
 
-  CHK(SOLVE(box_scn, N, prims, sides, 4, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  printf("Average temperature of the left+right sides of the box = ");
-  check_estimator(estimator, N, ref);
+  CHK(SOLVE(box_scn, N, prims, 2, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  printf("Average values of the left side of the box = ");
+  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
 
-  /* Average temperature on the left+right sides of the square */
+  /* Average temperature on the left/right side of the square */
   prims[0] = 1;
-  prims[1] = 3;
-  CHK(SOLVE(square_scn, N, prims, sides, 2, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  printf("Average temperature of the left+right sides of the square = ");
-  check_estimator(estimator, N, ref);
+  CHK(SOLVE(square_scn, N, prims, 1, INF, 1.0, Trad, Tref, &estimator) == RES_OK);
+  printf("Average values of the left side of the square = ");
+  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   CHK(sdis_estimator_ref_put(estimator) == RES_OK);
   #undef SOLVE
 
