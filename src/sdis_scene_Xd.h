@@ -564,7 +564,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
 #if DIM == 2
   vdata.type = S2D_FLOAT2;
 #else
-  vdata.type = S2D_FLOAT3;
+  vdata.type = S3D_FLOAT3;
 #endif
   vdata.get = XD(enclosure_position);
 
