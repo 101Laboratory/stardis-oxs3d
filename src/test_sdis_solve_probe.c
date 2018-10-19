@@ -174,6 +174,7 @@ main(int argc, char** argv)
 {
   struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc F = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
@@ -188,6 +189,7 @@ main(int argc, char** argv)
   struct fluid* fluid_param;
   struct solid* solid_param;
   struct interf* interface_param;
+  enum sdis_estimator_type type;
   double pos[3];
   double time;
   double ref;
@@ -267,6 +269,24 @@ main(int argc, char** argv)
   CHK(sdis_solve_probe(scn, N, pos, time, 0, 0, -1, &estimator) == RES_BAD_ARG);
   CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, NULL) == RES_BAD_ARG);
   CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
+
+  CHK(sdis_estimator_get_type(estimator, NULL) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_type(NULL, &type) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_type(estimator, &type) == RES_OK);
+  CHK(type == SDIS_TEMPERATURE_ESTIMATOR);
+
+  /* Fluxes aren't available after sdis_solve_probe */
+  CHK(sdis_estimator_get_convective_flux(estimator, NULL) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_convective_flux(NULL, &F) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_convective_flux(estimator, &F) == RES_BAD_ARG);
+
+  CHK(sdis_estimator_get_radiative_flux(estimator, NULL) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_radiative_flux(NULL, &F) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_radiative_flux(estimator, &F) == RES_BAD_ARG);
+
+  CHK(sdis_estimator_get_total_flux(estimator, NULL) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_total_flux(NULL, &F) == RES_BAD_ARG);
+  CHK(sdis_estimator_get_total_flux(estimator, &F) == RES_BAD_ARG);
 
   CHK(sdis_estimator_get_realisation_count(estimator, NULL) == RES_BAD_ARG);
   CHK(sdis_estimator_get_realisation_count(NULL, &nreals) == RES_BAD_ARG);

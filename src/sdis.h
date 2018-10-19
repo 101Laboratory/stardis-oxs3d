@@ -76,6 +76,12 @@ enum sdis_medium_type {
   SDIS_MEDIUM_TYPES_COUNT__
 };
 
+enum sdis_estimator_type {
+  SDIS_TEMPERATURE_ESTIMATOR,
+  SDIS_FLUX_ESTIMATOR,
+  SDIS_EST_TYPES_COUNT__
+};
+
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
  * random walk. */
 struct sdis_rwalk_vertex {
@@ -336,7 +342,7 @@ SDIS_API res_T
 sdis_accum_buffer_unmap
   (const struct sdis_accum_buffer* buf);
 
-/* Helper function that matches the `sdis_write_accums_T' functor type. On can
+/* Helper function that matches the `sdis_write_accums_T' functor type. One can
  * send this function directly to the sdis_solve_camera function, to fill the
  * accum buffer with the estimation of the radiative temperature that reaches
  * each pixel of an image whose definition matches the definition of the accum
@@ -527,9 +533,14 @@ sdis_estimator_ref_put
   (struct sdis_estimator* estimator);
 
 SDIS_API res_T
+sdis_estimator_get_type
+  (const struct sdis_estimator* estimator,
+   enum sdis_estimator_type* type);
+
+SDIS_API res_T
 sdis_estimator_get_realisation_count
   (const struct sdis_estimator* estimator,
-   size_t* nrealisations);
+   size_t* nrealisations); /* Succesfull ones */
 
 SDIS_API res_T
 sdis_estimator_get_failure_count
@@ -540,6 +551,22 @@ SDIS_API res_T
 sdis_estimator_get_temperature
   (const struct sdis_estimator* estimator,
    struct sdis_mc* temperature);
+
+SDIS_API res_T
+sdis_estimator_get_convective_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
+
+SDIS_API res_T
+sdis_estimator_get_radiative_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
+
+
+SDIS_API res_T
+sdis_estimator_get_total_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
 
 /*******************************************************************************
  * Miscellaneous functions
@@ -588,6 +615,31 @@ sdis_solve_boundary
    const size_t nrealisations, /* #realisations */
    const size_t primitives[], /* List of boundary primitives to handle */
    const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
+
+/* Flux solver */
+SDIS_API res_T
+sdis_solve_probe_boundary_flux
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_solve_boundary_flux
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
    const size_t nprimitives, /* #primitives */
    const double time, /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */

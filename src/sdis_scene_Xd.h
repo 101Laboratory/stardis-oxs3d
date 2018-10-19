@@ -585,11 +585,11 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
 
   /* Compute the S/V ratio */
 #if DIM == 2
-  CALL(sXd(scene_view_compute_contour_length)(enc_data->sXd(view), &S));
-  CALL(sXd(scene_view_compute_area)(enc_data->sXd(view), &V));
+  CALL(s2d_scene_view_compute_contour_length(enc_data->s2d_view, &S));
+  CALL(s2d_scene_view_compute_area(enc_data->s2d_view, &V));
 #else
-  CALL(sXd(scene_view_compute_area)(enc_data->sXd(view), &S));
-  CALL(sXd(scene_view_compute_volume)(enc_data->sXd(view), &V));
+  CALL(s3d_scene_view_compute_area(enc_data->s3d_view, &S));
+  CALL(s3d_scene_view_compute_volume(enc_data->s3d_view, &V));
 #endif
   /* The volume of the enclosure is actually negative since Star-Enc ensures
    * that the normal of its primitives point outward the enclosure. Take its
@@ -607,11 +607,11 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   if(res != RES_OK) goto error;
   FOR_EACH(iprim, 0, nprims) {
 #if DIM == 2
-    SENCXD(enclosure_get_segment_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim));
+    senc2d_enclosure_get_segment_global_id
+      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
 #else
-    SENCXD(enclosure_get_triangle_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim));
+    senc_enclosure_get_triangle_global_id
+      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
 #endif
   }
 

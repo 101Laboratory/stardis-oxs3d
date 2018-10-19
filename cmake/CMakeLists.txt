@@ -156,6 +156,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
   new_test(test_sdis_solve_boundary)
+  new_test(test_sdis_solve_boundary_flux)
   new_test(test_sdis_volumic_power)
 
   # Additionnal tests

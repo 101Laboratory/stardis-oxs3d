@@ -97,7 +97,26 @@ setup_estimator
     accum_sqr_weights / (double)nsuccesses
   - estimator->temperature.E * estimator->temperature.E;
   estimator->temperature.V = MMAX(estimator->temperature.V, 0);
-  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)nsuccesses);
+  estimator->temperature.SE =
+    sqrt(estimator->temperature.V / (double)nsuccesses);
+}
+
+static INLINE void
+setup_estimator_flux
+  (struct sdis_estimator* estimator,
+   const enum flux_names name,
+   const double accum_weights,
+   const double accum_sqr_weights)
+{
+  ASSERT(estimator && (unsigned)name < FLUX_NAMES_COUNT__ && estimator->fluxes);
+  ASSERT(estimator->nrealisations);
+  estimator->fluxes[name].E = accum_weights / (double)estimator->nrealisations;
+  estimator->fluxes[name].V =
+    accum_sqr_weights / (double)estimator->nrealisations
+    - estimator->fluxes[name].E * estimator->fluxes[name].E;
+  estimator->fluxes[name].V = MMAX(estimator->fluxes[name].V, 0);
+  estimator->fluxes[name].SE =
+    sqrt(estimator->fluxes[name].V / (double)estimator->nrealisations);
 }
 
 #endif /* SDIS_SOLVE_XD_H */
@@ -125,6 +144,7 @@ setup_estimator
 #define SXD_HIT_NULL CONCAT(CONCAT(S,DIM), D_HIT_NULL)
 #define SXD_HIT_NULL__ CONCAT(CONCAT(S, DIM), D_HIT_NULL__)
 #define SXD_POSITION CONCAT(CONCAT(S, DIM), D_POSITION)
+#define SXD_GEOMETRY_NORMAL CONCAT(CONCAT(S, DIM), D_GEOMETRY_NORMAL)
 #define SXD_GEOMETRY_NORMAL CONCAT(CONCAT(S, DIM), D_GEOMETRY_NORMAL)
 #define SXD_VERTEX_DATA_NULL CONCAT(CONCAT(S, DIM), D_VERTEX_DATA_NULL)
 #define SXD CONCAT(CONCAT(S, DIM), D)
@@ -236,11 +256,11 @@ XD(boundary_get_position)(const unsigned ivert, float pos[DIM], void* context)
   iprim = (unsigned)ctx->primitives[iprim_id];
   SXD(scene_view_get_primitive(ctx->view, iprim, &prim));
 #if DIM == 2
-  SXD(segment_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr));
-  ASSERT(attr.type == SXD_FLOAT2);
+  s2d_segment_get_vertex_attrib(&prim, iprim_vert, S2D_POSITION, &attr);
+  ASSERT(attr.type == S2D_FLOAT2);
 #else
-  SXD(triangle_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr));
-  ASSERT(attr.type == SXD_FLOAT3);
+  s3d_triangle_get_vertex_attrib(&prim, iprim_vert, S3D_POSITION, &attr);
+  ASSERT(attr.type == S3D_FLOAT3);
 #endif
   fX(set)(pos, attr.value);
 }
@@ -1273,7 +1293,7 @@ XD(solid_temperature)
           tmp += (power*delta_s_in_meter*delta_s_in_meter)/(6*lambda) * tmp1;
 #endif
 
-        } else if (h == delta_solid) {
+        } else if(h == delta_solid) {
           tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0*DIM*lambda);
         }
         T->value += tmp;
@@ -1461,7 +1481,7 @@ XD(boundary_realisation)
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const size_t iprim,
-   const double uv[DIM],
+   const double uv[2],
    const double time,
    const enum sdis_side side,
    const double fp_to_meter,
@@ -1479,7 +1499,7 @@ XD(boundary_realisation)
   float st[2];
 #endif
   res_T res = RES_OK;
-  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0);
+  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0 && Tref >= 0);
 
   T.func = XD(boundary_temperature);
 
@@ -1522,6 +1542,163 @@ XD(boundary_realisation)
   return RES_OK;
 }
 
+static res_T
+XD(probe_flux_realisation)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const size_t iprim,
+   const double uv[DIM],
+   const double time,
+   const enum sdis_side solid_side,
+   const double fp_to_meter,
+   const double Tarad,
+   const double Tref,
+   const char compute_radiative,
+   const char compute_convective,
+   double weight[3])
+{
+  struct rwalk_context ctx;
+  struct XD(rwalk) rwalk;
+  struct XD(temperature) T;
+  struct sXd(attrib) attr;
+  struct sXd(primitive) prim;
+#if SDIS_SOLVE_DIMENSION == 2
+  float st;
+#else
+  float st[2];
+#endif
+  double P[SDIS_SOLVE_DIMENSION];
+  float N[SDIS_SOLVE_DIMENSION];
+  const double Tr3 = Tref * Tref * Tref;
+  const enum sdis_side fluid_side =
+    (solid_side == SDIS_FRONT) ? SDIS_BACK : SDIS_FRONT;
+  res_T res = RES_OK;
+  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0 && Tref >= 0);
+
+#if SDIS_SOLVE_DIMENSION == 2
+  #define SET_PARAM(Dest, Src) (Dest).u = (Src);
+  st = (float)uv[0];
+#else
+  #define SET_PARAM(Dest, Src) f2_set((Dest).uv, (Src));
+  f2_set_d2(st, uv);
+#endif
+
+  /* Fetch the primitive */
+  SXD(scene_view_get_primitive(scn->sXd(view), (unsigned int)iprim, &prim));
+
+  /* Retrieve the world space position of the probe onto the primitive */
+  SXD(primitive_get_attrib(&prim, SXD_POSITION, st, &attr));
+  dX_set_fX(P, attr.value);
+
+  /* Retrieve the primitive normal */
+  SXD(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, st, &attr));
+  fX(set)(N, attr.value);
+
+  #define RESET_WALK(Side, Mdm) \
+  rwalk = XD(RWALK_NULL); \
+  rwalk.hit_side = (Side); \
+  rwalk.hit.distance = 0; \
+  rwalk.vtx.time = time; \
+  rwalk.mdm = (Mdm); \
+  SET_PARAM(rwalk.hit, st); \
+  ctx.Tarad = Tarad; \
+  ctx.Tref3 = Tr3; \
+  rwalk.hit.prim = prim; \
+  dX(set)(rwalk.vtx.P, P); \
+  fX(set)(rwalk.hit.normal, N); \
+  T = XD(TEMPERATURE_NULL);
+
+  /* Compute boundary temperature */
+  RESET_WALK(solid_side, NULL);
+  T.func = XD(boundary_temperature);
+  res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+  if(res != RES_OK) return res;
+  weight[0] = T.value;
+
+  /* Compute radiative temperature */
+  if(compute_radiative) {
+    RESET_WALK(fluid_side, NULL);
+    T.func = XD(radiative_temperature);
+    res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+    if(res != RES_OK) return res;
+    weight[1] = T.value;
+  }
+
+  /* Compute fluid temperature */
+  if(compute_convective) {
+    const struct sdis_interface* interf =
+      scene_get_interface(scn, (unsigned long)iprim);
+    const struct sdis_medium* mdm = interface_get_medium(interf, fluid_side);
+
+    RESET_WALK(fluid_side, mdm);
+    T.func = XD(fluid_temperature);
+    res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+    if(res != RES_OK) return res;
+    weight[2] = T.value;
+  }
+
+  #undef SET_PARAM
+  #undef RESET_WALK
+
+  return RES_OK;
+}
+
+static res_T
+XD(interface_get_hc_epsilon)
+  (double *hc,
+   double* epsilon,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double* uv,
+   const double time,
+   const enum sdis_side fluid_side)
+{
+  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  struct sXd(attrib) attr;
+  struct sXd(primitive) prim;
+  struct sXd(hit) hit;
+  struct sdis_rwalk_vertex vtx;
+  const struct sdis_interface* interf;
+#if SDIS_SOLVE_DIMENSION == 2
+  float st;
+#else
+  float st[2];
+#endif
+  res_T res = RES_OK;
+
+  ASSERT(fluid_side == SDIS_FRONT || fluid_side == SDIS_BACK);
+
+#if SDIS_SOLVE_DIMENSION == 2
+  #define SET_PARAM(Dest, Src) (Dest).u = (Src);
+  st = (float) uv[0];
+#else
+  #define SET_PARAM(Dest, Src) f2_set((Dest).uv, (Src));
+  f2_set_d2(st, uv);
+#endif
+  res = sXd(scene_view_get_primitive(scn->sXd(view), iprim, &prim));
+  if(res != RES_OK) return res;
+  res = sXd(primitive_get_attrib(&prim, SXD_POSITION, st, &attr));
+  if(res != RES_OK) return res;
+  dX_set_fX(vtx.P, attr.value);
+  res = sXd(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, st, &attr));
+  if(res != RES_OK) return res;
+  fX(set)(hit.normal, attr.value);
+
+  hit.distance = 0;
+  hit.normal;
+  hit.prim = prim;
+  SET_PARAM(hit, st);
+  frag.time = time;
+  XD(setup_interface_fragment)(&frag, &vtx, &hit, fluid_side);
+  interf = scene_get_interface(scn, iprim);
+  ASSERT(interf);
+  *epsilon = interface_side_get_emissivity(interf, &frag);
+  #undef SET_PARAM
+  *hc = interface_get_convection_coef(interf, &frag);
+
+  return res;
+}
+
 #if SDIS_SOLVE_DIMENSION == 3
 static res_T
 XD(ray_realisation)
@@ -1541,7 +1718,8 @@ XD(ray_realisation)
   struct XD(temperature) T = XD(TEMPERATURE_NULL);
   float dir[3];
   res_T res = RES_OK;
-  ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight);
+  ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight
+    && Tref >= 0);
   ASSERT(medium && medium->type == SDIS_FLUID);
 
   dX(set)(rwalk.vtx.P, position);
@@ -1610,6 +1788,11 @@ XD(solve_boundary)
   SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
   FOR_EACH(i, 0, nprimitives) {
     if(primitives[i] >= view_nprims) {
+      log_err(scn->dev,
+        "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
+        FUNC_NAME,
+        (unsigned long)primitives[i],
+        (unsigned long)scene_get_primitives_count(scn)-1);
       res = RES_BAD_ARG;
       goto error;
     }
@@ -1617,9 +1800,9 @@ XD(solve_boundary)
 
   /* Create the Star-XD shape of the boundary */
 #if DIM == 2
-  res = sXd(shape_create_line_segments)(scn->dev->sXd_dev, &shape);
+  res = s2d_shape_create_line_segments(scn->dev->sXd_dev, &shape);
 #else
-  res = sXd(shape_create_mesh)(scn->dev->sXd_dev, &shape);
+  res = s3d_shape_create_mesh(scn->dev->sXd_dev, &shape);
 #endif
   if(res != RES_OK) goto error;
 
@@ -1628,14 +1811,15 @@ XD(solve_boundary)
   ctx.primitives = primitives;
   ctx.view = scn->sXd(view);
   vdata.usage = SXD_POSITION;
-  vdata.type = DIM == 2 ? SXD_FLOAT2 : SXD_FLOAT3;
   vdata.get = XD(boundary_get_position);
 #if DIM == 2
-  res = sXd(line_segments_setup_indexed_vertices)(shape, (unsigned)nprimitives,
-    XD(boundary_get_indices), (unsigned)(nprimitives*DIM), &vdata, 1, &ctx);
+  vdata.type = S2D_FLOAT2;
+  res = s2d_line_segments_setup_indexed_vertices(shape, (unsigned)nprimitives,
+    boundary_get_indices_2d, (unsigned)(nprimitives*2), &vdata, 1, &ctx);
 #else /* DIM == 3 */
-  res = sXd(mesh_setup_indexed_vertices)(shape, (unsigned)nprimitives,
-    XD(boundary_get_indices), (unsigned)(nprimitives*DIM), &vdata, 1, &ctx);
+  vdata.type = S3D_FLOAT3;
+  res = s3d_mesh_setup_indexed_vertices(shape, (unsigned)nprimitives,
+    boundary_get_indices_3d, (unsigned)(nprimitives*3), &vdata, 1, &ctx);
 #endif
   if(res != RES_OK) goto error;
 
@@ -1661,7 +1845,7 @@ XD(solve_boundary)
   }
 
   /* Create the estimator */
-  res = estimator_create(scn->dev, &estimator);
+  res = estimator_create(scn->dev, SDIS_TEMPERATURE_ESTIMATOR, &estimator);
   if(res != RES_OK) goto error;
 
   omp_set_num_threads((int)scn->dev->nthreads);
@@ -1728,6 +1912,222 @@ exit:
   if(out_estimator) *out_estimator = estimator;
   if(rngs) {
     FOR_EACH(i, 0, scn->dev->nthreads) {if(rngs[i]) SSP(rng_ref_put(rngs[i]));}
+    MEM_RM(scn->dev->allocator, rngs);
+  }
+  return (res_T)res;
+error:
+  if(estimator) {
+    SDIS(estimator_ref_put(estimator));
+    estimator = NULL;
+  }
+  goto exit;
+}
+
+static res_T
+XD(solve_boundary_flux)
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives [], /* List of boundary primitives to handle */
+   const size_t nprimitives, /* #primitives */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  struct XD(boundary_context) ctx = XD(BOUNDARY_CONTEXT_NULL);
+  struct sXd(vertex_data) vdata = SXD_VERTEX_DATA_NULL;
+  struct sXd(scene)* scene = NULL;
+  struct sXd(shape)* shape = NULL;
+  struct sXd(scene_view)* view = NULL;
+  struct sdis_estimator* estimator = NULL;
+  struct ssp_rng_proxy* rng_proxy = NULL;
+  struct ssp_rng** rngs = NULL;
+  double weight_t = 0, sqr_weight_t = 0;
+  double weight_fc = 0, sqr_weight_fc = 0;
+  double weight_fr = 0, sqr_weight_fr = 0;
+  double weight_f = 0, sqr_weight_f = 0;
+  size_t i;
+  size_t N = 0; /* #realisations that do not fail */
+  size_t view_nprims;
+  int64_t irealisation;
+  ATOMIC res = RES_OK;
+
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
+    || !nprimitives || time < 0 || fp_to_meter < 0 || Tref < 0
+    || !out_estimator) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
+  FOR_EACH(i, 0, nprimitives) {
+    if(primitives[i] >= view_nprims) {
+      log_err(scn->dev,
+        "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
+        FUNC_NAME,
+        (unsigned long)primitives[i],
+        (unsigned long)scene_get_primitives_count(scn)-1);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  }
+
+  /* Create the Star-XD shape of the boundary */
+#if DIM == 2
+  res = s2d_shape_create_line_segments(scn->dev->s2d, &shape);
+#else
+  res = s3d_shape_create_mesh(scn->dev->s3d, &shape);
+#endif
+  if(res != RES_OK) goto error;
+
+  /* Initialise the boundary shape with the triangles/segments of the
+   * submitted primitives  */
+  ctx.primitives = primitives;
+  ctx.view = scn->sXd(view);
+  vdata.get = XD(boundary_get_position);
+#if DIM == 2
+  vdata.usage = S2D_POSITION;
+  vdata.type = S2D_FLOAT2;
+  res = s2d_line_segments_setup_indexed_vertices(shape, (unsigned)nprimitives,
+    boundary_get_indices_2d, (unsigned)(nprimitives*2), &vdata, 1, &ctx);
+#else /* DIM == 3 */
+  vdata.usage = S3D_POSITION;
+  vdata.type = S3D_FLOAT3;
+  res = s3d_mesh_setup_indexed_vertices(shape, (unsigned)nprimitives,
+    boundary_get_indices_3d, (unsigned)(nprimitives*3), &vdata, 1, &ctx);
+#endif
+  if(res != RES_OK) goto error;
+
+  /* Create and setup the boundary Star-XD scene */
+  res = sXd(scene_create)(scn->dev->sXd_dev, &scene);
+  if(res != RES_OK) goto error;
+  res = sXd(scene_attach_shape)(scene, shape);
+  if(res != RES_OK) goto error;
+  res = sXd(scene_view_create)(scene, SXD_SAMPLE, &view);
+  if(res != RES_OK) goto error;
+
+  /* Create the proxy RNG */
+  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+    scn->dev->nthreads, &rng_proxy);
+  if(res != RES_OK) goto error;
+
+  /* Create the per thread RNG */
+  rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
+  if(!rngs) { res = RES_MEM_ERR; goto error; }
+  FOR_EACH(i, 0, scn->dev->nthreads) {
+    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs + i);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Create the estimator */
+  res = estimator_create(scn->dev, SDIS_FLUX_ESTIMATOR, &estimator);
+  if(res != RES_OK) goto error;
+
+  omp_set_num_threads((int)scn->dev->nthreads);
+  #pragma omp parallel for schedule(static) reduction(+:weight_t,sqr_weight_t,\
+     weight_fc,sqr_weight_fc,weight_fr,sqr_weight_fr,weight_f,sqr_weight_f,N)
+  for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    const int ithread = omp_get_thread_num();
+    struct sXd(primitive) prim;
+    struct ssp_rng* rng = rngs[ithread];
+    const struct sdis_interface* interf;
+    const struct sdis_medium *fmd, *bmd;
+    enum sdis_side solid_side, fluid_side;
+    double T_brf[3] = { 0, 0, 0 };
+    double epsilon, hc, hr;
+    size_t iprim;
+    double uv[DIM - 1];
+    float st[DIM - 1];
+    res_T res_local = RES_OK;
+
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Sample a position onto the boundary */
+#if DIM == 2
+    res_local = s2d_scene_view_sample
+      (view,
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       &prim, st);
+    uv[0] = (double)st[0];
+#else
+    res_local = s3d_scene_view_sample
+      (view,
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       &prim, st);
+    d2_set_f2(uv, st);
+#endif
+    if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+
+    /* Map from boundary scene to sdis scene */
+    ASSERT(prim.prim_id < nprimitives);
+    iprim = primitives[prim.prim_id];
+
+    interf = scene_get_interface(scn, (unsigned long)iprim);
+    fmd = interface_get_medium(interf, SDIS_FRONT);
+    bmd = interface_get_medium(interf, SDIS_BACK);
+    if(!fmd || !bmd
+      || (!(fmd->type == SDIS_FLUID && bmd->type == SDIS_SOLID)
+        && !(fmd->type == SDIS_SOLID && bmd->type == SDIS_FLUID)))
+    {
+      ATOMIC_SET(&res, RES_BAD_ARG);
+      continue;
+    }
+    solid_side = (fmd->type == SDIS_SOLID) ? SDIS_FRONT : SDIS_BACK;
+    fluid_side = (fmd->type == SDIS_FLUID) ? SDIS_FRONT : SDIS_BACK;
+
+    res_local = XD(interface_get_hc_epsilon)(&hc, &epsilon, scn,
+      (unsigned long)iprim, uv, time, fluid_side);
+    if(res_local != RES_OK) {
+      ATOMIC_SET(&res, res_local);
+      continue;
+    }
+    hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
+
+    /* Fluid, Radiative and Solid temperatures */
+    res_local = XD(probe_flux_realisation)(scn, rng, iprim, uv, time,
+      solid_side, fp_to_meter, Tarad, Tref, hr > 0, hc > 0, T_brf);
+    if(res_local != RES_OK) {
+      if(res_local != RES_BAD_OP) {
+        ATOMIC_SET(&res, res_local);
+        continue;
+      }
+    } else {
+      const double Tboundary = T_brf[0];
+      const double Tradiative = T_brf[1];
+      const double Tfluid = T_brf[2];
+      const double w_conv = hc * (Tboundary - Tfluid);
+      const double w_rad = hr * (Tboundary - Tradiative);
+      const double w_total = w_conv + w_rad;
+      weight_t += Tboundary;
+      sqr_weight_t += Tboundary * Tboundary;
+      weight_fc += w_conv;
+      sqr_weight_fc += w_conv * w_conv;
+      weight_fr += w_rad;
+      sqr_weight_fr += w_rad * w_rad;
+      weight_f += w_total;
+      sqr_weight_f += w_total * w_total;
+      ++N;
+    }
+  }
+  if (res != RES_OK) goto error;
+
+  setup_estimator(estimator, nrealisations, N, weight_t, sqr_weight_t);
+  setup_estimator_flux(estimator, FLUX_CONVECTIVE__, weight_fc, sqr_weight_fc);
+  setup_estimator_flux(estimator, FLUX_RADIATIVE__, weight_fr, sqr_weight_fr);
+  setup_estimator_flux(estimator, FLUX_TOTAL__, weight_f, sqr_weight_f);
+
+exit:
+  if(scene) SXD(scene_ref_put(scene));
+  if(shape) SXD(shape_ref_put(shape));
+  if(view) SXD(scene_view_ref_put(view));
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_estimator) *out_estimator = estimator;
+  if(rngs) {
+    FOR_EACH(i, 0, scn->dev->nthreads) { if(rngs[i]) SSP(rng_ref_put(rngs[i])); }
     MEM_RM(scn->dev->allocator, rngs);
   }
   return (res_T)res;
