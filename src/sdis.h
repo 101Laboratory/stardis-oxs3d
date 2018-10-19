@@ -41,7 +41,7 @@
  * as CPU cores */
 #define SDIS_NTHREADS_DEFAULT (~0u)
 
-#define SDIS_VOLUMIC_POWER_NONE DBL_MAX /* <=> No volumic power */
+#define SDIS_VOLUMIC_POWER_NONE 0 /* <=> No volumic power */
 #define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
 
 /* Forward declaration of external opaque data types */
