@@ -28,78 +28,76 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
-  CHK(sdis_fluid_create(NULL, NULL, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_fluid_create(dev, NULL, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_fluid_create(NULL, &fluid_shader, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, NULL) == RES_BAD_ARG);
-  CHK(sdis_fluid_create(NULL, NULL, NULL, &fluid) == RES_BAD_ARG);
-  CHK(sdis_fluid_create(dev, NULL, NULL, &fluid) == RES_BAD_ARG);
-  CHK(sdis_fluid_create(NULL, &fluid_shader, NULL, &fluid) == RES_BAD_ARG);
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  BA(sdis_fluid_create(NULL, NULL, NULL, NULL));
+  BA(sdis_fluid_create(dev, NULL, NULL, NULL));
+  BA(sdis_fluid_create(NULL, &fluid_shader, NULL, NULL));
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, NULL));
+  BA(sdis_fluid_create(NULL, NULL, NULL, &fluid));
+  BA(sdis_fluid_create(dev, NULL, NULL, &fluid));
+  BA(sdis_fluid_create(NULL, &fluid_shader, NULL, &fluid));
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
 
   CHK(sdis_medium_get_type(fluid) == SDIS_FLUID);
   CHK(sdis_medium_get_data(fluid) == NULL);
 
-  CHK(sdis_medium_ref_get(NULL) == RES_BAD_ARG);
-  CHK(sdis_medium_ref_get(fluid) == RES_OK);
-  CHK(sdis_medium_ref_put(NULL) == RES_BAD_ARG);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  BA(sdis_medium_ref_get(NULL));
+  OK(sdis_medium_ref_get(fluid));
+  BA(sdis_medium_ref_put(NULL));
+  OK(sdis_medium_ref_put(fluid));
+  OK(sdis_medium_ref_put(fluid));
 
   fluid_shader.calorific_capacity = NULL;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_BAD_ARG);
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   fluid_shader.calorific_capacity = DUMMY_FLUID_SHADER.calorific_capacity;
 
   fluid_shader.volumic_mass = NULL;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_BAD_ARG);
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   fluid_shader.volumic_mass = DUMMY_FLUID_SHADER.volumic_mass;
 
   fluid_shader.temperature = NULL;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_BAD_ARG);
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   fluid_shader.temperature = DUMMY_FLUID_SHADER.temperature;
 
-  CHK(sdis_fluid_create
-    (dev, &SDIS_FLUID_SHADER_NULL, NULL, &fluid) == RES_BAD_ARG);
+  BA(sdis_fluid_create(dev, &SDIS_FLUID_SHADER_NULL, NULL, &fluid));
 
-  CHK(sdis_data_create(dev, 4, 16, NULL, &data) == RES_OK);
-  CHK(sdis_solid_create(NULL, NULL, data, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, NULL, data, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(NULL, &solid_shader, data, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, &solid_shader, data, NULL) == RES_BAD_ARG);
-  CHK(sdis_solid_create(NULL, NULL, data, &solid) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, NULL, data, &solid) == RES_BAD_ARG);
-  CHK(sdis_solid_create(NULL, &solid_shader, data, &solid) == RES_BAD_ARG);
-  CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
+  OK(sdis_data_create(dev, 4, 16, NULL, &data));
+  BA(sdis_solid_create(NULL, NULL, data, NULL));
+  BA(sdis_solid_create(dev, NULL, data, NULL));
+  BA(sdis_solid_create(NULL, &solid_shader, data, NULL));
+  BA(sdis_solid_create(dev, &solid_shader, data, NULL));
+  BA(sdis_solid_create(NULL, NULL, data, &solid));
+  BA(sdis_solid_create(dev, NULL, data, &solid));
+  BA(sdis_solid_create(NULL, &solid_shader, data, &solid));
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   CHK(sdis_medium_get_type(solid) == SDIS_SOLID);
   CHK(sdis_medium_get_data(solid) == data);
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_data_ref_put(data));
 
   solid_shader.calorific_capacity = NULL;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
+  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.calorific_capacity = DUMMY_SOLID_SHADER.calorific_capacity;
 
   solid_shader.thermal_conductivity = NULL;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
+  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.thermal_conductivity = DUMMY_SOLID_SHADER.thermal_conductivity;
 
   solid_shader.volumic_mass = NULL;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
+  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.volumic_mass = DUMMY_SOLID_SHADER.volumic_mass;
 
   solid_shader.delta_solid = NULL;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
+  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.delta_solid = DUMMY_SOLID_SHADER.delta_solid;
 
   solid_shader.temperature = NULL;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_BAD_ARG);
+  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.temperature = DUMMY_SOLID_SHADER.temperature;
 
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

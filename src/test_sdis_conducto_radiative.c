@@ -241,12 +241,12 @@ create_interface
   }
   shader.convection_coef_upper_bound = MMAX(0, interf->convection_coef);
 
-  CHK(sdis_data_create(dev, sizeof(struct interfac), ALIGNOF(struct interfac),
-    NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interfac), ALIGNOF(struct interfac),
+    NULL, &data));
   *((struct interfac*)sdis_data_get(data)) = *interf;
 
-  CHK(sdis_interface_create(dev, front, back, &shader, data, out_interf) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create(dev, front, back, &shader, data, out_interf));
+  OK(sdis_data_ref_put(data));
 }
 
 /*******************************************************************************
@@ -280,37 +280,36 @@ main(int argc, char** argv)
   double Ts0, Ts1, hr, tmp;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
 
   /* Create the solid medium */
-  CHK(sdis_data_create(dev, sizeof(struct solid), ALIGNOF(struct solid),
-    NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct solid), ALIGNOF(struct solid),
+    NULL, &data));
   ((struct solid*)sdis_data_get(data))->lambda = lambda;
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = temperature_unknown;
-  CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid));
+  OK(sdis_data_ref_put(data));
 
   /* Create the surrounding solid medium */
-  CHK(sdis_data_create(dev, sizeof(struct solid), ALIGNOF(struct solid),
-    NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct solid), ALIGNOF(struct solid),
+    NULL, &data));
   ((struct solid*)sdis_data_get(data))->lambda = 0;
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = temperature_unknown;
-  CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid2));
+  OK(sdis_data_ref_put(data));
 
   /* Create the interface that forces to keep in conduction */
   interf.temperature = UNKNOWN_TEMPERATURE;
@@ -373,8 +372,8 @@ main(int argc, char** argv)
   geom.positions = vertices;
   geom.indices = indices;
   geom.interfaces = prim_interfaces;
-  CHK(sdis_scene_create(dev, ntriangles, get_indices, get_interface, nvertices,
-    get_position, &geom, &scn) == RES_OK);
+  OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface, nvertices,
+    get_position, &geom, &scn));
 
   hr = 4.0 * BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;
   tmp = lambda/(2*lambda + thickness*hr) * (T1 - T0);
@@ -382,11 +381,12 @@ main(int argc, char** argv)
   Ts1 = T1 - tmp;
 
   /* Run the simulations */
-  CHK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng) == RES_OK);
+  OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
     struct sdis_estimator* estimator;
     double pos[3];
+    double time_range[2] = { INF, INF };
     double ref, u;
     size_t nreals = 0;
     size_t nfails = 0;
@@ -396,10 +396,10 @@ main(int argc, char** argv)
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[2] = ssp_rng_uniform_double(rng, -0.9, 0.9);
 
-    CHK(sdis_solve_probe(scn, N, pos, INF, 1, -1, Tref, &estimator) == RES_OK);
-    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-    CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+    OK(sdis_solve_probe(scn, N, pos, time_range, 1, -1, Tref, &estimator));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
 
     u = (pos[0] + 1) / thickness;
     ref = u * Ts1 + (1-u) * Ts0;
@@ -411,21 +411,21 @@ main(int argc, char** argv)
     CHK(nfails < N/1000);
     CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
 
-    CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+    OK(sdis_estimator_ref_put(estimator));
   }
 
   /* Release memory */
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
-  CHK(sdis_interface_ref_put(interfaces[0]) == RES_OK);
-  CHK(sdis_interface_ref_put(interfaces[1]) == RES_OK);
-  CHK(sdis_interface_ref_put(interfaces[2]) == RES_OK);
-  CHK(sdis_interface_ref_put(interfaces[3]) == RES_OK);
-  CHK(sdis_interface_ref_put(interfaces[4]) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(solid2) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
-  CHK(ssp_rng_ref_put(rng) == RES_OK);
+  OK(sdis_scene_ref_put(scn));
+  OK(sdis_interface_ref_put(interfaces[0]));
+  OK(sdis_interface_ref_put(interfaces[1]));
+  OK(sdis_interface_ref_put(interfaces[2]));
+  OK(sdis_interface_ref_put(interfaces[3]));
+  OK(sdis_interface_ref_put(interfaces[4]));
+  OK(sdis_medium_ref_put(fluid));
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(solid2));
+  OK(sdis_device_ref_put(dev));
+  OK(ssp_rng_ref_put(rng));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

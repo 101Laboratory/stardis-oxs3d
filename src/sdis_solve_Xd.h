@@ -233,6 +233,20 @@ XD(radiative_temperature)
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+#ifndef SAMPLE_TIME_DEFINED
+static INLINE double
+sample_time
+  (const double time_range[2],
+   struct ssp_rng* rng)
+{
+  ASSERT(time_range && time_range[0] >= 0 && time_range[1] >= time_range[0]
+    && rng);
+  if (time_range[0] == time_range[1]) return time_range[0];
+  return ssp_rng_uniform_double(rng, time_range[0], time_range[1]);
+}
+#define SAMPLE_TIME_DEFINED
+#endif
+
 static INLINE void
 XD(boundary_get_indices)(const unsigned iprim, unsigned ids[DIM], void* context)
 {
@@ -1440,7 +1454,7 @@ XD(probe_realisation)
    struct ssp_rng* rng,
    const struct sdis_medium* medium,
    const double position[],
-   const double time,
+   const double time_range[2],
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double ambient_radiative_temperature,
    const double reference_temperature,
@@ -1450,7 +1464,7 @@ XD(probe_realisation)
   struct XD(rwalk) rwalk = XD(RWALK_NULL);
   struct XD(temperature) T = XD(TEMPERATURE_NULL);
   res_T res = RES_OK;
-  ASSERT(medium && position && fp_to_meter > 0 && weight && time >= 0);
+  ASSERT(medium && position && fp_to_meter > 0 && weight);
 
   switch(medium->type) {
     case SDIS_FLUID: T.func = XD(fluid_temperature); break;
@@ -1459,7 +1473,8 @@ XD(probe_realisation)
   }
 
   dX(set)(rwalk.vtx.P, position);
-  rwalk.vtx.time = time;
+  /* Sample a time */
+  rwalk.vtx.time = sample_time(time_range, rng);
   rwalk.hit = SXD_HIT_NULL;
   rwalk.mdm = medium;
 
@@ -1482,7 +1497,7 @@ XD(boundary_realisation)
    struct ssp_rng* rng,
    const size_t iprim,
    const double uv[2],
-   const double time,
+   const double time_range[2],
    const enum sdis_side side,
    const double fp_to_meter,
    const double Tarad,
@@ -1499,13 +1514,14 @@ XD(boundary_realisation)
   float st[2];
 #endif
   res_T res = RES_OK;
-  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0 && Tref >= 0);
+  ASSERT(uv && fp_to_meter > 0 && weight && Tref >= 0
+     && time_range && time_range[0] >= 0 && time_range[1] >= time_range[0]);
 
   T.func = XD(boundary_temperature);
-
   rwalk.hit_side = side;
   rwalk.hit.distance = 0;
-  rwalk.vtx.time = time;
+  /* Sample a time */
+  rwalk.vtx.time = sample_time(time_range, rng);
   rwalk.mdm = NULL; /* The random walk is at an interface between 2 media */
 
 #if SDIS_SOLVE_DIMENSION == 2
@@ -1643,6 +1659,55 @@ XD(probe_flux_realisation)
   return RES_OK;
 }
 
+static INLINE res_T
+XD(interface_prebuild_fragment)
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double* uv,
+   const enum sdis_side fluid_side)
+{  struct sXd(attrib) attr;
+  struct sXd(primitive) prim;
+  struct sXd(hit) hit;
+  struct sdis_rwalk_vertex vtx;
+#if SDIS_SOLVE_DIMENSION == 2
+  float st;
+#else
+  float st[2];
+#endif
+  res_T res = RES_OK;
+
+  ASSERT(frag && scn && uv);
+  ASSERT(fluid_side == SDIS_FRONT || fluid_side == SDIS_BACK);
+
+  *frag = SDIS_INTERFACE_FRAGMENT_NULL;
+
+#if SDIS_SOLVE_DIMENSION == 2
+#define SET_PARAM(Dest, Src) (Dest).u = (Src);
+  st = (float) uv[0];
+#else
+#define SET_PARAM(Dest, Src) f2_set((Dest).uv, (Src));
+  f2_set_d2(st, uv);
+#endif
+  res = sXd(scene_view_get_primitive(scn->sXd(view), iprim, &prim));
+  if (res != RES_OK) return res;
+  res = sXd(primitive_get_attrib(&prim, SXD_POSITION, st, &attr));
+  if (res != RES_OK) return res;
+  dX_set_fX(vtx.P, attr.value);
+  res = sXd(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, st, &attr));
+  if (res != RES_OK) return res;
+  fX(set)(hit.normal, attr.value);
+
+  hit.distance = 0;
+  hit.prim = prim;
+  vtx.time = NaN;
+  SET_PARAM(hit, st);
+  #undef SET_PARAM
+  XD(setup_interface_fragment)(frag, &vtx, &hit, fluid_side);
+
+  return res;
+}
+
 static res_T
 XD(interface_get_hc_epsilon)
   (double *hc,
@@ -1653,46 +1718,15 @@ XD(interface_get_hc_epsilon)
    const double time,
    const enum sdis_side fluid_side)
 {
-  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-  struct sXd(attrib) attr;
-  struct sXd(primitive) prim;
-  struct sXd(hit) hit;
-  struct sdis_rwalk_vertex vtx;
+  struct sdis_interface_fragment frag;
   const struct sdis_interface* interf;
-#if SDIS_SOLVE_DIMENSION == 2
-  float st;
-#else
-  float st[2];
-#endif
   res_T res = RES_OK;
 
-  ASSERT(fluid_side == SDIS_FRONT || fluid_side == SDIS_BACK);
-
-#if SDIS_SOLVE_DIMENSION == 2
-  #define SET_PARAM(Dest, Src) (Dest).u = (Src);
-  st = (float) uv[0];
-#else
-  #define SET_PARAM(Dest, Src) f2_set((Dest).uv, (Src));
-  f2_set_d2(st, uv);
-#endif
-  res = sXd(scene_view_get_primitive(scn->sXd(view), iprim, &prim));
-  if(res != RES_OK) return res;
-  res = sXd(primitive_get_attrib(&prim, SXD_POSITION, st, &attr));
-  if(res != RES_OK) return res;
-  dX_set_fX(vtx.P, attr.value);
-  res = sXd(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, st, &attr));
-  if(res != RES_OK) return res;
-  fX(set)(hit.normal, attr.value);
-
-  hit.distance = 0;
-  hit.prim = prim;
-  SET_PARAM(hit, st);
+  res = XD(interface_prebuild_fragment)(&frag, scn, iprim, uv, fluid_side);
   frag.time = time;
-  XD(setup_interface_fragment)(&frag, &vtx, &hit, fluid_side);
   interf = scene_get_interface(scn, iprim);
   ASSERT(interf);
   *epsilon = interface_side_get_emissivity(interf, &frag);
-  #undef SET_PARAM
   *hc = interface_get_convection_coef(interf, &frag);
 
   return res;
@@ -1756,7 +1790,7 @@ XD(solve_boundary)
    const size_t primitives[], /* List of boundary primitives to handle */
    const enum sdis_side sides[], /* Per primitive side to consider */
    const size_t nprimitives, /* #primitives */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -1778,8 +1812,9 @@ XD(solve_boundary)
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
-  || !sides || !nprimitives || time < 0 || fp_to_meter < 0 || Tref < 0
-  || !out_estimator) {
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || !sides || !nprimitives || fp_to_meter < 0 || Tref < 0
+    || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -1858,6 +1893,7 @@ XD(solve_boundary)
     double w = NaN;
     double uv[DIM-1];
     float st[DIM-1];
+    double time;
     res_T res_local = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
@@ -1886,9 +1922,12 @@ XD(solve_boundary)
     iprim = primitives[prim.prim_id];
     side = sides[prim.prim_id];
 
+    /* Sample a time */
+    time = sample_time(time_range, rng);
+
     /* Invoke the boundary realisation */
     res_local = XD(boundary_realisation)
-      (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+      (scn, rng, iprim, uv, time_range, side, fp_to_meter, Tarad, Tref, &w);
 
     /* Update the MC accumulators */
     if(res_local == RES_OK) {
@@ -1928,7 +1967,7 @@ XD(solve_boundary_flux)
    const size_t nrealisations, /* #realisations */
    const size_t primitives[], /* List of boundary primitives to handle */
    const size_t nprimitives, /* #primitives */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -1953,7 +1992,8 @@ XD(solve_boundary_flux)
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
-    || !nprimitives || time < 0 || fp_to_meter < 0 || Tref < 0
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || !nprimitives || fp_to_meter < 0 || Tref < 0
     || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
@@ -2038,9 +2078,13 @@ XD(solve_boundary_flux)
     size_t iprim;
     double uv[DIM - 1];
     float st[DIM - 1];
+    double time;
     res_T res_local = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Sample a time */
+    time = sample_time(time_range, rng);
 
     /* Sample a position onto the boundary */
 #if DIM == 2

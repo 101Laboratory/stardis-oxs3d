@@ -289,8 +289,8 @@ create_solid
   CHK(solid != NULL);
 
   /* Copy the solid parameters into the Stardis memory space */
-  CHK(sdis_data_create
-    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
   solid_param = sdis_data_get(data);
   memcpy(solid_param, param, sizeof(struct solid));
 
@@ -303,11 +303,11 @@ create_solid
   solid_shader.temperature = solid_get_temperature;
 
   /* Create the solid medium */
-  CHK(sdis_solid_create(dev, &solid_shader, data, solid) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, data, solid));
 
   /* Release the ownership onto the Stardis memory space storing the solid
    * parameters */
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_data_ref_put(data));
 }
 
 static void
@@ -324,8 +324,8 @@ create_fluid
   CHK(fluid != NULL);
 
   /* Copy the fluid parameters into the Stardis memory space */
-  CHK(sdis_data_create
-    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
   memcpy(fluid_param, param, sizeof(struct fluid));
 
@@ -335,11 +335,11 @@ create_fluid
   fluid_shader.temperature = fluid_get_temperature;
 
   /* Create the fluid medium */
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, fluid) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, data, fluid));
 
   /* Release the ownership onto the Stardis memory space storing the fluid
    * parameters */
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_data_ref_put(data));
 }
 
 static void
@@ -360,8 +360,8 @@ create_interface
   CHK(interf != NULL);
 
   /* Copy the interface parameters into the Stardis memory space */
-  CHK(sdis_data_create
-   (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+   (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data));
   interface_param = sdis_data_get(data);
   memcpy(interface_param, param, sizeof(struct interf));
 
@@ -378,12 +378,12 @@ create_interface
     interface_shader.back.specular_fraction = interface_get_specular_fraction;
   }
   /* Create the interface */
-  CHK(sdis_interface_create
-    (dev, mdm_front, mdm_back, &interface_shader, data, interf) == RES_OK);
+  OK(sdis_interface_create
+    (dev, mdm_front, mdm_back, &interface_shader, data, interf));
 
   /* Release the ownership onto the Stardis memory space storing the interface
    * parameters */
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_data_ref_put(data));
 }
 
 static void
@@ -445,12 +445,12 @@ dump_image(const struct sdis_accum_buffer* buf)
   size_t i, ix, iy;
 
   CHK(buf != NULL);
-  CHK(sdis_accum_buffer_get_layout(buf, &layout) == RES_OK);
+  OK(sdis_accum_buffer_get_layout(buf, &layout));
 
   temps = mem_alloc(layout.width*layout.height*sizeof(double));
   CHK(temps != NULL);
 
-  CHK(sdis_accum_buffer_map(buf, &accums) == RES_OK);
+  OK(sdis_accum_buffer_map(buf, &accums));
 
   /* Check the results validity */
   FOR_EACH(i, 0, layout.height * layout.width) {
@@ -478,9 +478,8 @@ dump_image(const struct sdis_accum_buffer* buf)
   }
 
   /* Allocate the image memory space */
-  CHK(image_init(NULL, &img) == RES_OK);
-  CHK(image_setup(&img, IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*3, IMAGE_RGB8, NULL)
-    == RES_OK);
+  OK(image_init(NULL, &img));
+  OK(image_setup(&img, IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*3, IMAGE_RGB8, NULL));
 
   FOR_EACH(iy, 0, layout.height) {
     const double* src_row = temps + iy*layout.width;
@@ -495,7 +494,7 @@ dump_image(const struct sdis_accum_buffer* buf)
       pixels[2] = T;
     }
   }
-  CHK(image_write_ppm_stream(&img, 0/*binary?*/, stdout) == RES_OK);
+  OK(image_write_ppm_stream(&img, 0/*binary?*/, stdout));
   image_release(&img);
   mem_rm(temps);
 }
@@ -528,9 +527,8 @@ main(int argc, char** argv)
   double up[3];
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   /* Create the fluid0 */
   fluid_param.temperature = 350;
@@ -567,43 +565,42 @@ main(int argc, char** argv)
   create_interface(dev, fluid1, solid, &interface_param, &interf1);
 
   /* Release the ownership onto the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid0) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid1) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid0));
+  OK(sdis_medium_ref_put(fluid1));
 
   /* Setup the cube geometry  */
-  CHK(s3dut_create_cuboid(&allocator, 2, 2, 2, &msh) == RES_OK);
-  CHK(s3dut_mesh_get_data(msh, &msh_data) == RES_OK);
+  OK(s3dut_create_cuboid(&allocator, 2, 2, 2, &msh));
+  OK(s3dut_mesh_get_data(msh, &msh_data));
   geometry_add_shape(&geom, msh_data.positions, msh_data.nvertices,
     msh_data.indices, msh_data.nprimitives, NULL, interf1);
-  CHK(s3dut_mesh_ref_put(msh) == RES_OK);
+  OK(s3dut_mesh_ref_put(msh));
 
   /* Setup the sphere geometry */
-  CHK(s3dut_create_sphere(&allocator, 0.5, 32, 16, &msh) == RES_OK);
-  CHK(s3dut_mesh_get_data(msh, &msh_data) == RES_OK);
+  OK(s3dut_create_sphere(&allocator, 0.5, 32, 16, &msh));
+  OK(s3dut_mesh_get_data(msh, &msh_data));
   geometry_add_shape(&geom, msh_data.positions, msh_data.nvertices,
     msh_data.indices, msh_data.nprimitives, NULL, interf0);
-  CHK(s3dut_mesh_ref_put(msh) == RES_OK);
+  OK(s3dut_mesh_ref_put(msh));
 
   /* Setup the scene */
   ntris = sa_size(geom.indices) / 3; /* #primitives */
   npos = sa_size(geom.positions) / 3; /* #positions */
-  CHK(sdis_scene_create(dev, ntris, geometry_get_indices,
+  OK(sdis_scene_create(dev, ntris, geometry_get_indices,
     geometry_get_interface, npos, geometry_get_position,
-    &geom, &scn) == RES_OK);
+    &geom, &scn));
 
   /* Setup the camera */
   d3(pos, 3, 3, 3);
   d3(tgt, 0, 0, 0);
   d3(up,  0, 0, 1);
-  CHK(sdis_camera_create(dev, &cam) == RES_OK);
-  CHK(sdis_camera_set_proj_ratio
-    (cam, (double)IMG_WIDTH/(double)IMG_HEIGHT) == RES_OK);
-  CHK(sdis_camera_set_fov(cam, MDEG2RAD(70)) == RES_OK);
-  CHK(sdis_camera_look_at(cam, pos, tgt, up) == RES_OK);
+  OK(sdis_camera_create(dev, &cam));
+  OK(sdis_camera_set_proj_ratio(cam, (double)IMG_WIDTH/(double)IMG_HEIGHT));
+  OK(sdis_camera_set_fov(cam, MDEG2RAD(70)));
+  OK(sdis_camera_look_at(cam, pos, tgt, up));
 
   /* Create the accum buffer */
-  CHK(sdis_accum_buffer_create(dev, IMG_WIDTH, IMG_HEIGHT, &buf) == RES_OK);
+  OK(sdis_accum_buffer_create(dev, IMG_WIDTH, IMG_HEIGHT, &buf));
 
 #if 0
   dump_mesh(stdout, geom.positions, npos, geom.indices, ntris);
@@ -611,19 +608,19 @@ main(int argc, char** argv)
 #endif
 
   /* Launch the simulation */
-  CHK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    sdis_accum_buffer_write, buf) == RES_OK);
+  OK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
+    sdis_accum_buffer_write, buf));
 
   /* Write the image */
   dump_image(buf);
 
   /* Release memory */
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
-  CHK(sdis_camera_ref_put(cam) == RES_OK);
-  CHK(sdis_interface_ref_put(interf0) == RES_OK);
-  CHK(sdis_interface_ref_put(interf1) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
-  CHK(sdis_accum_buffer_ref_put(buf) == RES_OK);
+  OK(sdis_scene_ref_put(scn));
+  OK(sdis_camera_ref_put(cam));
+  OK(sdis_interface_ref_put(interf0));
+  OK(sdis_interface_ref_put(interf1));
+  OK(sdis_device_ref_put(dev));
+  OK(sdis_accum_buffer_ref_put(buf));
   geometry_release(&geom);
 
   check_memory_allocator(&allocator);

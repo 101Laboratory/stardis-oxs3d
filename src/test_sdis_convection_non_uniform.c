@@ -155,14 +155,13 @@ create_interface
   struct sdis_interface* interf;
   struct interf* interf_props;
 
-  CHK(sdis_data_create
-    (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->temperature = temperature;
   interf_props->hc = hc;
-  CHK(sdis_interface_create
-    (dev, front, back, interf_shader, data, &interf) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create(dev, front, back, interf_shader, data, &interf));
+  OK(sdis_data_ref_put(data));
   return interf;
 }
 
@@ -200,18 +199,17 @@ main(int argc, char** argv)
   int i;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;
   fluid_shader.calorific_capacity = fluid_get_calorific_capacity;
   fluid_shader.volumic_mass = fluid_get_volumic_mass;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
 
   /* Create the solid_medium */
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
@@ -234,8 +232,8 @@ main(int argc, char** argv)
   interf_T5 = create_interface(dev, fluid, solid, &interf_shader, T5, HC5);
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
 
   /* Map the interfaces to their box triangles */
   box_interfaces[0] = box_interfaces[1] = interf_T5; /* Front */
@@ -252,22 +250,22 @@ main(int argc, char** argv)
   square_interfaces[3] = interf_T1; /* Right */
 
   /* Create the box scene */
-  CHK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
+  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
     box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn) == RES_OK);
+    &box_scn));
 
   /* Create the square scene */
-  CHK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
+  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
     square_get_interface, square_nvertices, square_get_position,
-    square_interfaces, &square_scn) == RES_OK);
+    square_interfaces, &square_scn));
 
   /* Release the interfaces */
-  CHK(sdis_interface_ref_put(interf_T0) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_T1) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_T2) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_T3) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_T4) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_T5) == RES_OK);
+  OK(sdis_interface_ref_put(interf_T0));
+  OK(sdis_interface_ref_put(interf_T1));
+  OK(sdis_interface_ref_put(interf_T2));
+  OK(sdis_interface_ref_put(interf_T3));
+  OK(sdis_interface_ref_put(interf_T4));
+  OK(sdis_interface_ref_put(interf_T5));
 
   d3_splat(pos, 0.25);
 
@@ -278,15 +276,16 @@ main(int argc, char** argv)
   printf("Temperature of the box at (%g %g %g)\n", SPLIT3(pos));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double) i / nu : INF;
+    double time_range[2] = { time, time };
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
 
     /* Solve in 3D */
-    CHK(sdis_solve_probe(box_scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
-    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+    OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
-    CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-    CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_ref_put(estimator));
     printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
     if(nfails)
       printf("#failures = %lu/%lu\n", (unsigned long)nfails,(unsigned long)N);
@@ -299,23 +298,24 @@ main(int argc, char** argv)
   printf("Temperature of the square at (%g %g)\n", SPLIT2(pos));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double) i / nu : INF;
+    double time_range[2] = { time, time };
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
 
-    CHK(sdis_solve_probe(square_scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
-    CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-    CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+    OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
-    CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-    CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_ref_put(estimator));
     printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
     if (nfails)
       printf("#failures = %lu/%lu\n", (unsigned long)nfails,(unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
   }
 
-  CHK(sdis_scene_ref_put(box_scn) == RES_OK);
-  CHK(sdis_scene_ref_put(square_scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_scene_ref_put(box_scn));
+  OK(sdis_scene_ref_put(square_scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

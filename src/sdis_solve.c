@@ -166,7 +166,7 @@ sdis_solve_probe
   (struct sdis_scene* scn,
    const size_t nrealisations,
    const double position[3],
-   const double time,
+   const double time_range[2],
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
@@ -185,7 +185,8 @@ sdis_solve_probe
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !position
-    || time < 0 || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -228,10 +229,10 @@ sdis_solve_probe
 
     if(scene_is_2d(scn)) {
       res_local = probe_realisation_2d
-        (scn, rng, medium, position, time, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, medium, position, time_range, fp_to_meter, Tarad, Tref, &w);
     } else {
       res_local = probe_realisation_3d
-        (scn, rng, medium, position, time, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, medium, position, time_range, fp_to_meter, Tarad, Tref, &w);
     }
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) {
@@ -272,7 +273,7 @@ sdis_solve_probe_boundary
    const size_t nrealisations, /* #realisations */
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
@@ -290,9 +291,10 @@ sdis_solve_probe_boundary
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
-  || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
-  || !out_estimator) {
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
+    || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -366,10 +368,10 @@ sdis_solve_probe_boundary
 
     if(scene_is_2d(scn)) {
       res_local = boundary_realisation_2d
-        (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, iprim, uv, time_range, side, fp_to_meter, Tarad, Tref, &w);
     } else {
       res_local = boundary_realisation_3d
-        (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, iprim, uv, time_range, side, fp_to_meter, Tarad, Tref, &w);
     }
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) {
@@ -549,7 +551,7 @@ sdis_solve_boundary
    const size_t primitives[], /* List of boundary primitives to handle */
    const enum sdis_side sides[], /* Per primitive side to consider */
    const size_t nprimitives, /* #primitives */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -559,10 +561,10 @@ sdis_solve_boundary
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     res = solve_boundary_2d(scn, nrealisations, primitives, sides, nprimitives,
-      time, fp_to_meter, Tarad, Tref, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
   } else {
     res = solve_boundary_3d(scn, nrealisations, primitives, sides, nprimitives,
-      time, fp_to_meter, Tarad, Tref, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
   }
   return res;
 }
@@ -573,7 +575,7 @@ sdis_solve_probe_boundary_flux
    const size_t nrealisations, /* #realisations */
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -585,18 +587,19 @@ sdis_solve_probe_boundary_flux
   const struct sdis_interface* interf;
   const struct sdis_medium *fmd, *bmd;
   enum sdis_side solid_side, fluid_side;
+  struct sdis_interface_fragment frag;
   double weight_t = 0, sqr_weight_t = 0;
   double weight_fc = 0, sqr_weight_fc = 0;
   double weight_fr = 0, sqr_weight_fr = 0;
   double weight_f= 0, sqr_weight_f = 0;
-  double epsilon, hc, hr;
   const int64_t rcount = (int64_t)nrealisations;
   int64_t irealisation = 0;
   size_t N = 0; /* #realisations that do not fail */
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
     || fp_to_meter <= 0 || Tref < 0
     || !out_estimator) {
     res = RES_BAD_ARG;
@@ -668,15 +671,14 @@ sdis_solve_probe_boundary_flux
     if(res != RES_OK) goto error;
   }
 
-  /* Compute hr and hc */
+  /* Prebuild the interface fragment */
   if(scene_is_2d(scn)) {
-    res = interface_get_hc_epsilon_2d(&hc, &epsilon, scn, (unsigned)iprim,
-      uv, time, fluid_side);
+    res = interface_prebuild_fragment_2d(&frag, scn, (unsigned)iprim,
+      uv, fluid_side);
   } else {
-    res = interface_get_hc_epsilon_3d(&hc, &epsilon, scn, (unsigned)iprim,
-      uv, time, fluid_side);
+    res = interface_prebuild_fragment_3d(&frag, scn, (unsigned)iprim,
+      uv,  fluid_side);
   }
-  hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
 
   /* Create the estimator */
   res = estimator_create(scn->dev, SDIS_FLUX_ESTIMATOR, &estimator);
@@ -691,8 +693,18 @@ sdis_solve_probe_boundary_flux
     double T_brf[3] = { 0, 0, 0 };
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
+    double time, epsilon, hc, hr;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Sample a time */
+    time = sample_time(time_range, rng);
+
+    /* Compute hr and hc */
+    frag.time = time;
+    epsilon = interface_side_get_emissivity(interf, &frag);
+    hc = interface_get_convection_coef(interf, &frag);
+    hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
 
     /* Fluid, Radiative and Solid temperatures */
     if(scene_is_2d(scn)) {
@@ -754,9 +766,9 @@ res_T
 sdis_solve_boundary_flux
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
-   const size_t primitives [], /* List of boundary primitives to handle */
+   const size_t primitives[], /* List of boundary primitives to handle */
    const size_t nprimitives, /* #primitives */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -766,10 +778,10 @@ sdis_solve_boundary_flux
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     res = solve_boundary_flux_2d(scn, nrealisations, primitives, nprimitives,
-      time, fp_to_meter, Tarad, Tref, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
   } else {
     res = solve_boundary_flux_3d(scn, nrealisations, primitives, nprimitives,
-      time, fp_to_meter, Tarad, Tref, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
   }
   return res;
 }
