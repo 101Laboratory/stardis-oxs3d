@@ -50,8 +50,9 @@ check_interface_shader
   && type[1] == SDIS_SOLID
   && shader->convection_coef) {
     log_warn(dev,
-      "%s: a solid/solid interface can't have a convection coefficient. This "
-      "function of the interface shader should be NULL.\n", caller_name);
+      "%s: a solid/solid interface can't have a convection coefficient. The "
+      " shader's pointer function for this attribute should be NULL.\n",
+      caller_name);
   }
 
   if(shader->convection_coef_upper_bound < 0) {
@@ -66,16 +67,17 @@ check_interface_shader
       case SDIS_SOLID:
         if(shaders[i]->emissivity || shaders[i]->specular_fraction) {
           log_warn(dev,
-            "%s: the interface side toward a solid can't have the emissivity "
-            "and specular_fraction properties. The shader functions that return "
-            "these attributes should be NULL.\n", caller_name);
+            "%s: the interface side toward a solid can neither have the "
+            "emissivity nor the specular_fraction properties. The shader's "
+            " pointer functions for these attributes should be NULL.\n",
+            caller_name);
         }
         break;
       case SDIS_FLUID:
         if(shaders[i]->flux) {
           log_warn(dev,
             "%s: the interface side toward a fluid can't have a flux property. "
-            "The shader function that returns this attribute should be NULL.\n",
+            "The shader's pointer function for this attribute should be NULL.\n",
             caller_name);
         }
         break;
