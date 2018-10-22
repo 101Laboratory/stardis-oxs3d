@@ -91,6 +91,8 @@ if(MSVC)
   ### disable verbose warnings:
   # warning C4127: conditional expression is constant
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4127")
+  # warning C4204: nonstandard extension used : non-constant aggregate initializer
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4204")
   # warning C4938: Floating point reduction variable may cause inconsistent
   # results under /fp:strict or #pragma fenv_access
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4938")
