@@ -186,6 +186,7 @@ sdis_solve_probe
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !position
     || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
     || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
@@ -293,6 +294,7 @@ sdis_solve_probe_boundary
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
     || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
     || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
     || !out_estimator) {
     res = RES_BAD_ARG;
@@ -600,6 +602,7 @@ sdis_solve_probe_boundary_flux
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
     || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
     || fp_to_meter <= 0 || Tref < 0
     || !out_estimator) {
     res = RES_BAD_ARG;

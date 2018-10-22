@@ -356,11 +356,13 @@ main(int argc, char** argv)
   BA(SOLVE(box_scn, N, iprim, uv, NULL, 1.0, Trad, Tref, &estimator));
   BA(SOLVE(box_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, NULL));
   tr[0] = tr[1] = -1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, NULL));
+  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
   tr[0] = 1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, NULL));
+  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
   tr[1] = 0;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, NULL));
+  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
+  tr[1] = INF;
+  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
 
   OK(SOLVE(box_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
   OK(sdis_estimator_get_type(estimator, &type));

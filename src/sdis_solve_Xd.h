@@ -1813,6 +1813,7 @@ XD(solve_boundary)
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
     || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
     || !sides || !nprimitives || fp_to_meter < 0 || Tref < 0
     || !out_estimator) {
     res = RES_BAD_ARG;
@@ -1993,6 +1994,7 @@ XD(solve_boundary_flux)
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
     || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
     || !nprimitives || fp_to_meter < 0 || Tref < 0
     || !out_estimator) {
     res = RES_BAD_ARG;
