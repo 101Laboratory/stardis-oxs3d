@@ -1186,6 +1186,20 @@ XD(boundary_temperature)
   return RES_OK;
 }
 
+#ifdef COMPILER_CL
+#pragma warning(push)
+#pragma warning(disable : 4701)
+/* potentially uninitialized local variable 'info' used
+ *
+ * For warning numbers in the range 4700-4999, which are the ones associated
+ * with code generation, the state of the warning in effect when the compiler
+ * encounters the open curly brace of a function will be in effect for the rest
+ * of the function. Using the warning pragma in the function to change the
+ * state of a warning that has a number larger than 4699 will only take effect
+ * after the end of the function. The following example shows the correct
+ * placement of warning pragmas to disable a code-generation warning message,
+ * and then to restore it. */
+#endif
 res_T
 XD(solid_temperature)
   (struct sdis_scene* scn,
@@ -1393,6 +1407,9 @@ XD(solid_temperature)
   rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
   return RES_OK;
 }
+#ifdef COMPILER_CL
+#pragma warning(pop)
+#endif
 
 static res_T
 XD(compute_temperature)
@@ -1894,7 +1911,6 @@ XD(solve_boundary)
     double w = NaN;
     double uv[DIM-1];
     float st[DIM-1];
-    double time;
     res_T res_local = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
@@ -1922,9 +1938,6 @@ XD(solve_boundary)
     ASSERT(prim.prim_id < nprimitives);
     iprim = primitives[prim.prim_id];
     side = sides[prim.prim_id];
-
-    /* Sample a time */
-    time = sample_time(time_range, rng);
 
     /* Invoke the boundary realisation */
     res_local = XD(boundary_realisation)
