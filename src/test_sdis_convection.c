@@ -260,7 +260,7 @@ main(int argc, char** argv)
   Tinf = (H*(T0 + T1 + T2 + T3 + T4 + T5)) / (6 * H);
   printf("Temperature of the box at (%g %g %g)\n", SPLIT3(pos));
   FOR_EACH(i, 0, 5) {
-    double time = i ? (double) i / nu : INF;
+    double time = i ? (double)i / nu : INF;
     double time_range[2];
     time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
@@ -283,7 +283,7 @@ main(int argc, char** argv)
   Tinf = (H * (T0 + T1 + T2 + T3)) / (4 * H);
   printf("Temperature of the square at (%g %g)\n", SPLIT2(pos));
   FOR_EACH(i, 0, 5) {
-    double time = i ? (double) i / nu : INF;
+    double time = i ? (double)i / nu : INF;
     double time_range[2];
     time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));

@@ -275,7 +275,7 @@ main(int argc, char** argv)
     / (HC0 + HC1 + HC2 + HC3 + HC4 + HC5);
   printf("Temperature of the box at (%g %g %g)\n", SPLIT3(pos));
   FOR_EACH(i, 0, 5) {
-    double time = i ? (double) i / nu : INF;
+    double time = i ? (double)i / nu : INF;
     double time_range[2];
     time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
@@ -298,7 +298,7 @@ main(int argc, char** argv)
   Tinf = (HC0 * T0 + HC1 * T1 + HC2 * T2 + HC3 * T3) / (HC0 + HC1 + HC2 + HC3);
   printf("Temperature of the square at (%g %g)\n", SPLIT2(pos));
   FOR_EACH(i, 0, 5) {
-    double time = i ? (double) i / nu : INF;
+    double time = i ? (double)i / nu : INF;
     double time_range[2];
     time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
@@ -310,7 +310,7 @@ main(int argc, char** argv)
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_ref_put(estimator));
     printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
-    if (nfails)
+    if(nfails)
       printf("#failures = %lu/%lu\n", (unsigned long)nfails,(unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
   }

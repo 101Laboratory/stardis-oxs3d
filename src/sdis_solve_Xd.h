@@ -241,7 +241,7 @@ sample_time
 {
   ASSERT(time_range && time_range[0] >= 0 && time_range[1] >= time_range[0]
     && rng);
-  if (time_range[0] == time_range[1]) return time_range[0];
+  if(time_range[0] == time_range[1]) return time_range[0];
   return ssp_rng_uniform_double(rng, time_range[0], time_range[1]);
 }
 #define SAMPLE_TIME_DEFINED
@@ -1701,18 +1701,18 @@ XD(interface_prebuild_fragment)
 
 #if SDIS_SOLVE_DIMENSION == 2
 #define SET_PARAM(Dest, Src) (Dest).u = (Src);
-  st = (float) uv[0];
+  st = (float)uv[0];
 #else
 #define SET_PARAM(Dest, Src) f2_set((Dest).uv, (Src));
   f2_set_d2(st, uv);
 #endif
   res = sXd(scene_view_get_primitive(scn->sXd(view), iprim, &prim));
-  if (res != RES_OK) return res;
+  if(res != RES_OK) return res;
   res = sXd(primitive_get_attrib(&prim, SXD_POSITION, st, &attr));
-  if (res != RES_OK) return res;
+  if(res != RES_OK) return res;
   dX_set_fX(vtx.P, attr.value);
   res = sXd(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, st, &attr));
-  if (res != RES_OK) return res;
+  if(res != RES_OK) return res;
   fX(set)(hit.normal, attr.value);
 
   hit.distance = 0;
@@ -2171,7 +2171,7 @@ XD(solve_boundary_flux)
       ++N;
     }
   }
-  if (res != RES_OK) goto error;
+  if(res != RES_OK) goto error;
 
   setup_estimator(estimator, nrealisations, N, weight_t, sqr_weight_t);
   setup_estimator_flux(estimator, FLUX_CONVECTIVE__, weight_fc, sqr_weight_fc);
