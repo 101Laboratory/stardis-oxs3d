@@ -539,8 +539,6 @@ XD(fluid_temperature)
   double rho; /* Volumic mass */
   double hc; /* Convection coef */
   double cp; /* Calorific capacity */
-  double mu;
-  double tau;
   double tmp;
   double r;
 #if DIM == 2
@@ -656,9 +654,12 @@ XD(fluid_temperature)
     rho = fluid_get_volumic_mass(rwalk->mdm, &rwalk->vtx);
 
     /* Sample the time using the upper bound. */
-    mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
-    tau = ssp_ran_exp(rng, mu);
-    rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
+    if(rwalk->vtx.time != INF) {
+      double mu, tau;
+      mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
+      tau = ssp_ran_exp(rng, mu);
+      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
+    }
 
     /* Check the initial condition. */
     tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
@@ -1161,7 +1162,7 @@ XD(boundary_temperature)
     return RES_OK;
   }
 
-  /* Check if the boundary flux is known. Note that actually, only solid media
+  /* Check if the boundary flux is known. Note that currently, only solid media
    * can have a flux as limit condition */
   mdm = interface_get_medium(interf, frag.side);
   if(sdis_medium_get_type(mdm) == SDIS_SOLID ) {
@@ -1232,7 +1233,6 @@ XD(solid_temperature)
     double lambda; /* Thermal conductivity */
     double rho; /* Volumic mass */
     double cp; /* Calorific capacity */
-    double tau, mu;
     double tmp;
     double power;
     float delta, delta_solid; /* Random walk numerical parameter */
@@ -1329,9 +1329,12 @@ XD(solid_temperature)
     }
 
     /* Sample the time */
-    mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
-    tau = ssp_ran_exp(rng, mu);
-    rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
+    if(rwalk->vtx.time != INF) {
+      double tau, mu;
+      mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
+      tau = ssp_ran_exp(rng, mu);
+      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
+    }
 
     /* Check the initial condition */
     tmp = solid_get_temperature(mdm, &rwalk->vtx);
@@ -1341,8 +1344,8 @@ XD(solid_temperature)
       return RES_OK;
     }
 
-    /* The initial condition should be reached */
-    if(rwalk->vtx.time <=0) {
+    if(rwalk->vtx.time <= 0) {
+      /* The initial condition should have been reached */
       log_err(scn->dev,
         "%s: undefined initial condition. "
         "The time is null but the temperature remains unknown.\n",
