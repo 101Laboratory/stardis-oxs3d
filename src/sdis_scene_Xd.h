@@ -649,6 +649,30 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     /* As paths don't go in infinite enclosures we can accept models are broken
      * there. But nowhere else. */
     if(header.enclosed_media_count != 1 && !header.is_infinite) {
+#ifndef NDEBUG
+      /* Dump the problematic enclosure. */
+      unsigned i;
+      FOR_EACH(i, 0, header.vertices_count) {
+        double tmp[3];
+        SENCXD(enclosure_get_vertex(enc, i, tmp));
+        printf("v %g %g %g\n", SPLIT3(tmp));
+      }
+#if DIM == 2
+      FOR_EACH(i, 0, header.segment_count) {
+        unsigned indices[2];
+        SENCXD(enclosure_get_segment(enc, i, indices));
+        printf("f %lu %lu\n", (unsigned long)(1 + indices[0]),
+          (unsigned long)(1 + indices[1]));
+      }
+#else
+      FOR_EACH(i, 0, header.triangle_count) {
+        unsigned indices[3];
+        SENCXD(enclosure_get_triangle(enc, i, indices));
+        printf("f %lu %lu %lu\n", (unsigned long) (1 + indices[0]),
+          (unsigned long) (1 + indices[1]), (unsigned long) (1 + indices[2]));
+      }
+#endif
+#endif
       res = RES_BAD_ARG;
       goto error;
     }
