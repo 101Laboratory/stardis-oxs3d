@@ -28,7 +28,8 @@ check_fluid_shader(const struct sdis_fluid_shader* shader)
   ASSERT(shader);
   return shader->calorific_capacity
       && shader->volumic_mass
-      && shader->temperature;
+      && shader->temperature
+      && 0 <= shader->t0 && shader->t0 < INF;
 }
 
 static int
@@ -39,7 +40,8 @@ check_solid_shader(const struct sdis_solid_shader* shader)
       && shader->thermal_conductivity
       && shader->volumic_mass
       && shader->delta_solid
-      && shader->temperature;
+      && shader->temperature
+      && 0 <= shader->t0 && shader->t0 < INF;
 }
 
 static res_T

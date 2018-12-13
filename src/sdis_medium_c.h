@@ -18,6 +18,8 @@
 
 #include "sdis.h"
 
+#include <rsys/math.h>
+
 struct sdis_medium {
   enum sdis_medium_type type;
   union {
@@ -63,7 +65,17 @@ fluid_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   ASSERT(mdm && mdm->type == SDIS_FLUID);
+  ASSERT(vtx->time >= mdm->shader.fluid.t0);
   return mdm->shader.fluid.temperature(vtx, mdm->data);
+}
+
+static INLINE double
+  fluid_get_t0
+(const struct sdis_medium* mdm)
+{
+  ASSERT(mdm && mdm->type == SDIS_FLUID);
+  ASSERT(0 <= mdm->shader.fluid.t0 && mdm->shader.fluid.t0 < INF);
+  return mdm->shader.fluid.t0;
 }
 
 /*******************************************************************************
@@ -116,7 +128,17 @@ solid_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   ASSERT(mdm && mdm->type == SDIS_SOLID);
+  ASSERT(vtx->time >= mdm->shader.solid.t0);
   return mdm->shader.solid.temperature(vtx, mdm->data);
+}
+
+static INLINE double
+  solid_get_t0
+(const struct sdis_medium* mdm)
+{
+  ASSERT(mdm && mdm->type == SDIS_SOLID);
+  ASSERT(0 <= mdm->shader.solid.t0 && mdm->shader.solid.t0 < INF);
+  return mdm->shader.solid.t0;
 }
 
 #endif /* SDIS_MEDIUM_C_H */

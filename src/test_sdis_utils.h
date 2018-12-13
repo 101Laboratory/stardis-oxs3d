@@ -168,13 +168,15 @@ static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
   dummy_medium_getter,
   dummy_medium_getter,
   dummy_medium_getter,
-  dummy_medium_getter
+  dummy_medium_getter,
+  0
 };
 
 static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
   dummy_medium_getter,
   dummy_medium_getter,
-  dummy_medium_getter
+  dummy_medium_getter,
+  0
 };
 
 

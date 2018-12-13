@@ -16,6 +16,8 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <rsys/math.h>
+
 int
 main(int argc, char** argv)
 {
@@ -61,6 +63,12 @@ main(int argc, char** argv)
   BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   fluid_shader.temperature = DUMMY_FLUID_SHADER.temperature;
 
+  fluid_shader.t0 = -1;
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &solid));
+  fluid_shader.t0 = INF;
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &solid));
+  fluid_shader.t0 = DUMMY_FLUID_SHADER.t0;
+
   BA(sdis_fluid_create(dev, &SDIS_FLUID_SHADER_NULL, NULL, &fluid));
 
   OK(sdis_data_create(dev, 4, 16, NULL, &data));
@@ -96,6 +104,12 @@ main(int argc, char** argv)
   solid_shader.temperature = NULL;
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.temperature = DUMMY_SOLID_SHADER.temperature;
+
+  solid_shader.t0 = -1;
+  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+  solid_shader.t0 = INF;
+  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+  solid_shader.t0 = DUMMY_SOLID_SHADER.t0;
 
   OK(sdis_device_ref_put(dev));
 

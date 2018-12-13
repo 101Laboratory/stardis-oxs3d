@@ -151,11 +151,15 @@ struct sdis_solid_shader {
    * submitted position and time */
   sdis_medium_getter_T volumic_power;  /* In W.m^-3 */
 
-  /* Initial condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted random walk vertex. */
+  /* Initial/limit condition. A temperature < 0 means that the temperature is
+   * unknown for the submitted random walk vertex.
+   * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
+  /* The time until the initial condition is maintained for this solid;
+   * can neither be negative nor infinity, default is 0. */
+  double t0;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, 0}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
@@ -165,11 +169,15 @@ struct sdis_fluid_shader {
   sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
 
-  /* Initial condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted position and time. */
+  /* Initial/limit condition. A temperature < 0 means that the temperature is
+   * unknown for the submitted random walk vertex.
+   * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
+  /* The time until the initial condition is maintained for this fluid;
+   * can neither be negative nor infinity, default is 0. */
+  double t0;
 };
-#define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL}
+#define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL, 0}
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 

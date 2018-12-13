@@ -606,12 +606,12 @@ XD(fluid_temperature)
     return RES_BAD_ARG;
   }
 
-  /* The hc upper bound can be 0 is h is uniformly 0. In that case the result
+  /* The hc upper bound can be 0 if h is uniformly 0. In that case the result
    * is the initial condition. */
   if(enc->hc_upper_bound == 0) {
     /* Cannot be in the fluid without starting there. */
     ASSERT(SXD_HIT_NONE(&rwalk->hit));
-    rwalk->vtx.time = 0;
+    rwalk->vtx.time = fluid_get_t0(rwalk->mdm);
     tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
     if(tmp >= 0) {
       T->value += tmp;
@@ -621,8 +621,8 @@ XD(fluid_temperature)
 
     /* At t=0, the initial condition should have been reached. */
     log_err(scn->dev,
-"%s: undefined initial condition. "
-"Time is 0 but the temperature remains unknown.\n",
+      "%s: undefined initial condition. "
+      "Time is 0 but the temperature remains unknown.\n",
       FUNC_NAME);
     return RES_BAD_OP;
   }
@@ -655,27 +655,26 @@ XD(fluid_temperature)
 
     /* Sample the time using the upper bound. */
     if(rwalk->vtx.time != INF) {
-      double mu, tau;
+      double mu, tau, t0;
       mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
       tau = ssp_ran_exp(rng, mu);
-      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
-    }
-
-    /* Check the initial condition. */
-    tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
-    if(tmp >= 0) {
-      T->value += tmp;
-      T->done = 1;
-      return RES_OK;
-    }
-
-    if(rwalk->vtx.time <= 0) {
-      /* The initial condition should have been reached. */
-      log_err(scn->dev,
-"%s: undefined initial condition. "
-"Time is 0 but the temperature remains unknown.\n",
-        FUNC_NAME);
-      return RES_BAD_OP;
+      t0 = fluid_get_t0(rwalk->mdm);
+      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
+      if(rwalk->vtx.time == t0) {
+        /* Check the initial condition. */
+        tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
+        if(tmp >= 0) {
+          T->value += tmp;
+          T->done = 1;
+          return RES_OK;
+        }
+        /* The initial condition should have been reached. */
+        log_err(scn->dev,
+          "%s: undefined initial condition. "
+          "Time is %g but the temperature remains unknown.\n",
+          FUNC_NAME, t0);
+        return RES_BAD_OP;
+      }
     }
 
     /* Uniformly sample the enclosure. */
@@ -1330,27 +1329,26 @@ XD(solid_temperature)
 
     /* Sample the time */
     if(rwalk->vtx.time != INF) {
-      double tau, mu;
+      double tau, mu, t0;
       mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
       tau = ssp_ran_exp(rng, mu);
-      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, 0);
-    }
-
-    /* Check the initial condition */
-    tmp = solid_get_temperature(mdm, &rwalk->vtx);
-    if(tmp >= 0) {
-      T->value += tmp;
-      T->done = 1;
-      return RES_OK;
-    }
-
-    if(rwalk->vtx.time <= 0) {
-      /* The initial condition should have been reached */
-      log_err(scn->dev,
-        "%s: undefined initial condition. "
-        "The time is null but the temperature remains unknown.\n",
-        FUNC_NAME);
-      return RES_BAD_OP;
+      t0 = solid_get_t0(rwalk->mdm);
+      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
+      if(rwalk->vtx.time == t0) {
+        /* Check the initial condition */
+        tmp = solid_get_temperature(mdm, &rwalk->vtx);
+        if(tmp >= 0) {
+          T->value += tmp;
+          T->done = 1;
+          return RES_OK;
+        }
+        /* The initial condition should have been reached */
+        log_err(scn->dev,
+          "%s: undefined initial condition. "
+          "The time is %f but the temperature remains unknown.\n",
+          FUNC_NAME, t0);
+        return RES_BAD_OP;
+      }
     }
 
     /* Define if the random walk hits something along dir0 */
@@ -1483,18 +1481,46 @@ XD(probe_realisation)
   struct rwalk_context ctx;
   struct XD(rwalk) rwalk = XD(RWALK_NULL);
   struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  double (*get_initial_temperature)
+    (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx);
+  double t0;
   res_T res = RES_OK;
   ASSERT(medium && position && fp_to_meter > 0 && weight);
 
   switch(medium->type) {
-    case SDIS_FLUID: T.func = XD(fluid_temperature); break;
-    case SDIS_SOLID: T.func = XD(solid_temperature); break;
+    case SDIS_FLUID:
+      T.func = XD(fluid_temperature);
+      get_initial_temperature = fluid_get_temperature;
+      t0 = fluid_get_t0(medium);
+      break;
+    case SDIS_SOLID:
+      T.func = XD(solid_temperature);
+      get_initial_temperature = solid_get_temperature;
+      t0 = solid_get_t0(medium);
+      break;
     default: FATAL("Unreachable code\n"); break;
   }
 
   dX(set)(rwalk.vtx.P, position);
   /* Sample a time */
   rwalk.vtx.time = sample_time(time_range, rng);
+  if(t0 >= rwalk.vtx.time) {
+    double tmp;
+    /* Check the initial condition. */
+    rwalk.vtx.time = t0;
+    tmp = get_initial_temperature(medium, &rwalk.vtx);
+    if(tmp >= 0) {
+      *weight = tmp;
+      return RES_OK;
+    }
+    /* The initial condition should have been reached */
+    log_err(scn->dev,
+      "%s: undefined initial condition. "
+      "The time is %f but the temperature remains unknown.\n",
+      FUNC_NAME, t0);
+    return RES_BAD_OP;
+  }
+
   rwalk.hit = SXD_HIT_NULL;
   rwalk.mdm = medium;
 
