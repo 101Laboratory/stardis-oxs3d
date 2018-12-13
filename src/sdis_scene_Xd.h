@@ -591,10 +591,8 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   CALL(s3d_scene_view_compute_area(enc_data->s3d_view, &S));
   CALL(s3d_scene_view_compute_volume(enc_data->s3d_view, &V));
 #endif
-  /* The volume of the enclosure is actually negative since Star-Enc ensures
-   * that the normal of its primitives point outward the enclosure. Take its
-   * absolute value in order to ensure a postive value. */
-  enc_data->S_over_V = S/absf(V);
+  enc_data->S_over_V = S / V;
+  ASSERT(enc_data->S_over_V >= 0);
   #undef CALL
 
   /* Set enclosure hc upper bound regardless of its media being a fluid */
