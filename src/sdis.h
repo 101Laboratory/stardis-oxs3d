@@ -151,7 +151,7 @@ struct sdis_solid_shader {
    * submitted position and time */
   sdis_medium_getter_T volumic_power;  /* In W.m^-3 */
 
-  /* Initial/limit condition. A temperature < 0 means that the temperature is
+  /* Initial condition. A temperature < 0 means that the temperature is
    * unknown for the submitted random walk vertex. */
   sdis_medium_getter_T temperature;
 };
@@ -165,7 +165,7 @@ struct sdis_fluid_shader {
   sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
 
-  /* Initial/limit condition. A temperature < 0 means that the temperature is
+  /* Initial condition. A temperature < 0 means that the temperature is
    * unknown for the submitted position and time. */
   sdis_medium_getter_T temperature;
 };
