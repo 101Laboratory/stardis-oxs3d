@@ -365,6 +365,7 @@ XD(trace_radiative_path)
    const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
+   const int outside,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
@@ -462,10 +463,17 @@ XD(trace_radiative_path)
     }
 
     if(chk_mdm != rwalk->mdm) {
-      log_err(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
-        FUNC_NAME, SPLIT3(rwalk->vtx.P));
-      res = RES_BAD_OP;
-      goto error;
+      /* To ease the setting of models, the external enclosure is allowed to be
+       * incoherent regarding media.
+       * Here a radiative path is allowed to join 2 different fluids. */
+      if(outside && chk_mdm->type == SDIS_FLUID) {
+        rwalk->mdm = chk_mdm;
+      } else {
+        log_err(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
+          FUNC_NAME, SPLIT3(rwalk->vtx.P));
+        res = RES_BAD_OP;
+        goto error;
+      }
     }
     alpha = interface_side_get_specular_fraction(interf, &frag);
     r = ssp_rng_canonical(rng);
@@ -495,6 +503,7 @@ XD(radiative_temperature)
    * assumed to be extruded to the infinty along the Z dimension. */
   float N[3] = {0, 0, 0};
   float dir[3] = {0, 0, 0};
+  int outside;
   res_T res = RES_OK;
 
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
@@ -512,7 +521,10 @@ XD(radiative_temperature)
   ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
 
   /* Launch the radiative random walk */
-  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, ctx, rwalk, rng, T);
+  outside =
+    scene_is_outside(scn, rwalk->hit_side, rwalk->hit.prim.prim_id);
+  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, ctx, rwalk, outside,
+    rng, T);
   if(res != RES_OK) goto error;
 
 exit:
@@ -1812,7 +1824,8 @@ XD(ray_realisation)
 
   f3_set_d3(dir, direction);
 
-  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, &ctx, &rwalk, rng, &T);
+  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, &ctx, &rwalk, 0, rng,
+    &T);
   if(res != RES_OK) goto error;
 
   if(!T.done) {

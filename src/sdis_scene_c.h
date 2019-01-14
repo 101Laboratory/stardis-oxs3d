@@ -175,6 +175,7 @@ struct sdis_scene {
 
   struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */
+  unsigned outer_enclosure_id;
 
   double ambient_radiative_temperature; /* In Kelvin */
 
@@ -211,6 +212,18 @@ scene_get_enclosure_ids
   ASSERT(encs);
   encs[0] = darray_prim_prop_cdata_get(&scn->prim_props)[iprim].front_enclosure;
   encs[1] = darray_prim_prop_cdata_get(&scn->prim_props)[iprim].back_enclosure;
+}
+
+static INLINE int
+scene_is_outside
+  (const struct sdis_scene* scn,
+   const enum sdis_side side,
+   const unsigned iprim)
+{
+  unsigned encs[2];
+  ASSERT(scn && scn->outer_enclosure_id != UINT_MAX);
+  scene_get_enclosure_ids(scn, iprim, encs);
+  return (encs[side] == scn->outer_enclosure_id);
 }
 
 static INLINE const struct enclosure*

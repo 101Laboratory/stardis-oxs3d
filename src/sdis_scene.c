@@ -296,4 +296,3 @@ scene_get_medium
     ? scene_get_medium_2d(scn, pos, info, out_medium)
     : scene_get_medium_3d(scn, pos, info, out_medium);
 }
-

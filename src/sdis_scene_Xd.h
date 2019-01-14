@@ -631,6 +631,7 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
   struct sencXd(enclosure)* enc = NULL;
   unsigned ienc, nencs;
   unsigned enclosed_medium;
+  int outer_found = 0;
   res_T res = RES_OK;
   ASSERT(scn && desc);
 
@@ -645,6 +646,12 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 
     SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
+
+    if(header.is_infinite) {
+      ASSERT(!outer_found);
+      outer_found = 1;
+      scn->outer_enclosure_id = ienc;
+    }
 
     /* As paths don't go in infinite enclosures we can accept models are broken
      * there. But nowhere else. */
@@ -733,6 +740,7 @@ XD(scene_create)
   SDIS(device_ref_get(dev));
   scn->dev = dev;
   scn->ambient_radiative_temperature = -1;
+  scn->outer_enclosure_id = UINT_MAX;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_medium_init(dev->allocator, &scn->media);
   darray_prim_prop_init(dev->allocator, &scn->prim_props);
