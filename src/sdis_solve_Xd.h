@@ -638,6 +638,7 @@ XD(fluid_temperature)
 
   /* Sample time until init condition is reached or a true convection occurs. */
   for(;;) {
+    struct sXd(primitive) prim;
     /* Setup the fragment of the interface. */
     XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 
@@ -686,22 +687,24 @@ XD(fluid_temperature)
     /* Uniformly sample the enclosure. */
 #if DIM == 2
     SXD(scene_view_sample
-    (enc->sXd(view),
-      ssp_rng_canonical_float(rng),
-      ssp_rng_canonical_float(rng),
-      &rwalk->hit.prim,
-      &rwalk->hit.u));
+      (enc->sXd(view),
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       &prim, &rwalk->hit.u));
     st = rwalk->hit.u;
 #else
     SXD(scene_view_sample
-    (enc->sXd(view),
-      ssp_rng_canonical_float(rng),
-      ssp_rng_canonical_float(rng),
-      ssp_rng_canonical_float(rng),
-      &rwalk->hit.prim,
-      rwalk->hit.uv));
+      (enc->sXd(view),
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       ssp_rng_canonical_float(rng),
+       &prim, rwalk->hit.uv));
     f2_set(st, rwalk->hit.uv);
 #endif
+    /* Map the sampled primitive id from the enclosure space to the scene
+     * space. Note that the overall scene has only one shape. As a consequence
+     * neither the geom_id nor the inst_id needs to be updated */
+    rwalk->hit.prim.prim_id = enclosure_local2global_prim_id(enc, prim.prim_id);
 
     SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_POSITION, st, &attr_P));
     SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_GEOMETRY_NORMAL, st, &attr_N));
@@ -710,6 +713,13 @@ XD(fluid_temperature)
 
     /* Fetch the interface of the sampled point. */
     interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+    if(rwalk->mdm == interf->medium_front) {
+      rwalk->hit_side = SDIS_FRONT;
+    } else if(rwalk->mdm == interf->medium_back) {
+      rwalk->hit_side = SDIS_BACK;
+    } else {
+      FATAL("Unexpected fluid interface.\n");
+    }
 
     /* Renew r for next loop. */
     r = ssp_rng_canonical_float(rng);
