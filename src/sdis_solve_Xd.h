@@ -436,7 +436,7 @@ XD(trace_radiative_path)
       log_err(scn->dev,
         "%s: invalid overall emissivity `%g' at position `%g %g %g'.\n",
         FUNC_NAME, epsilon, SPLIT3(rwalk->vtx.P));
-      res = RES_BAD_ARG;
+      res = RES_BAD_OP;
       goto error;
     }
 
