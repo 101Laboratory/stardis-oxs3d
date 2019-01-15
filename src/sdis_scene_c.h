@@ -132,6 +132,15 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
   return RES_OK;
 }
 
+static INLINE unsigned
+enclosure_local2global_prim_id
+  (const struct enclosure* enc,
+   const size_t local_prim_id)
+{
+  ASSERT(enc && local_prim_id < darray_uint_size_get(&enc->local2global));
+  return darray_uint_cdata_get(&enc->local2global)[local_prim_id];
+}
+
 /* Declare the array of interfaces */
 #define DARRAY_NAME interf
 #define DARRAY_DATA struct sdis_interface*
