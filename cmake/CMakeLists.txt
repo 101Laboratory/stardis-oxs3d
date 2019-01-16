@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2018 |Meso|Star>
+# Copyright (C) 2016-2019 |Meso|Star>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,9 +29,9 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.1.1 REQUIRED)
+find_package(Star2D 0.2 REQUIRED)
 find_package(Star3D 0.5 REQUIRED)
-find_package(StarSP 0.7 REQUIRED)
+find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc 0.2.0 REQUIRED)
 find_package(StarEnc2D 0.2.0 REQUIRED)
 find_package(RSys 0.6.1 REQUIRED)
@@ -47,7 +47,7 @@ rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 # Configure and define targets
 ################################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 5)
+set(VERSION_MINOR 6)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
@@ -91,6 +91,8 @@ if(MSVC)
   ### disable verbose warnings:
   # warning C4127: conditional expression is constant
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4127")
+  # warning C4204: nonstandard extension used : non-constant aggregate initializer
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4204")
   # warning C4938: Floating point reduction variable may cause inconsistent
   # results under /fp:strict or #pragma fenv_access
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4938")
@@ -155,7 +157,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
-  new_test(test_sdis_solve_probe_boundary)
+  new_test(test_sdis_solve_boundary)
+  new_test(test_sdis_solve_boundary_flux)
   new_test(test_sdis_volumic_power)
 
   # Additionnal tests

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -221,33 +221,33 @@ main(int argc, char** argv)
   struct sdis_mc T = SDIS_MC_NULL;
   size_t nreals, nfails;
   double pos[2];
+  double time_range[2] = { INF, INF };
   double Tref;
   double a, b, x;
   double L;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;
   fluid_shader.calorific_capacity = dummy_medium_getter;
   fluid_shader.volumic_mass = dummy_medium_getter;
 
-  CHK(sdis_data_create
-    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
   fluid_param->temperature = Tf1;
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid1) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid1));
+  OK(sdis_data_ref_put(data));
 
-  CHK(sdis_data_create
-    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
   fluid_param->temperature = Tf2;
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid2) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid2));
+  OK(sdis_data_ref_put(data));
 
   /* Setup the solid shader */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -258,8 +258,8 @@ main(int argc, char** argv)
   solid_shader.volumic_power = solid_get_volumic_power;
 
   /* Create the solid medium */
-  CHK(sdis_data_create
-    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
   solid_param = sdis_data_get(data);
   solid_param->cp = 500000;
   solid_param->rho = 1000;
@@ -267,47 +267,47 @@ main(int argc, char** argv)
   solid_param->delta = DELTA;
   solid_param->volumic_power = Power;
   solid_param->temperature = -1;
-  CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid));
+  OK(sdis_data_ref_put(data));
 
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
   interf_shader.front.temperature = interface_get_temperature;
 
   /* Create the adiabatic interface */
-  CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
-    NULL, &data) == RES_OK);
+  OK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data));
   interf_param = sdis_data_get(data);
   interf_param->h = 0;
   interf_param->temperature = -1;
-  CHK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
-    &interf_adiabatic) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
+    &interf_adiabatic));
+  OK(sdis_data_ref_put(data));
 
   /* Create the solid fluid1 interface */
-  CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
-    NULL, &data) == RES_OK);
+  OK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data));
   interf_param = sdis_data_get(data);
   interf_param->h = H1;
   interf_param->temperature = -1;
-  CHK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
-    &interf_solid_fluid1) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
+    &interf_solid_fluid1));
+  OK(sdis_data_ref_put(data));
 
   /* Create the solid fluid2 interface */
-  CHK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
-    NULL, &data) == RES_OK);
+  OK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data));
   interf_param = sdis_data_get(data);
   interf_param->h = H2;
   interf_param->temperature = -1;
-  CHK(sdis_interface_create(dev, solid, fluid2, &interf_shader, data,
-    &interf_solid_fluid2) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create(dev, solid, fluid2, &interf_shader, data,
+    &interf_solid_fluid2));
+  OK(sdis_data_ref_put(data));
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(fluid1) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid2) == RES_OK);
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
+  OK(sdis_medium_ref_put(fluid1));
+  OK(sdis_medium_ref_put(fluid2));
+  OK(sdis_medium_ref_put(solid));
 
   /* Map the interfaces to their square segments */
   interfaces[0] = interf_adiabatic;
@@ -321,13 +321,13 @@ main(int argc, char** argv)
 #endif
 
   /* Create the scene */
-  CHK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn) == RES_OK);
+  OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
+    nvertices, get_position, interfaces, &scn));
 
   /* Release the interfaces */
-  CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_solid_fluid1) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_solid_fluid2) == RES_OK);
+  OK(sdis_interface_ref_put(interf_adiabatic));
+  OK(sdis_interface_ref_put(interf_solid_fluid1));
+  OK(sdis_interface_ref_put(interf_solid_fluid2));
 
   pos[0] = 0;
   pos[1] = 0.25;
@@ -348,20 +348,20 @@ main(int argc, char** argv)
   Tref = T2 + (T1-T2)/L * (pos[1]  + vertices[3]);
 #endif
 
-  CHK(sdis_solve_probe(scn, N, pos, INF, 1.f, -1, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
   printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g %g]\n",
     SPLIT2(pos), Tref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
   CHK(nfails + nreals == N);
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, Tref, T.SE*3));
 
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_scene_ref_put(scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

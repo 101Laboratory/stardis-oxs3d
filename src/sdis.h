@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@
  * as CPU cores */
 #define SDIS_NTHREADS_DEFAULT (~0u)
 
-#define SDIS_VOLUMIC_POWER_NONE DBL_MAX /* <=> No volumic power */
+#define SDIS_VOLUMIC_POWER_NONE 0 /* <=> No volumic power */
 #define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
 
 /* Forward declaration of external opaque data types */
@@ -74,6 +74,12 @@ enum sdis_medium_type {
   SDIS_FLUID,
   SDIS_SOLID,
   SDIS_MEDIUM_TYPES_COUNT__
+};
+
+enum sdis_estimator_type {
+  SDIS_TEMPERATURE_ESTIMATOR,
+  SDIS_FLUX_ESTIMATOR,
+  SDIS_EST_TYPES_COUNT__
 };
 
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
@@ -146,10 +152,14 @@ struct sdis_solid_shader {
   sdis_medium_getter_T volumic_power;  /* In W.m^-3 */
 
   /* Initial/limit condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted random walk vertex. */
+   * unknown for the submitted random walk vertex.
+   * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
+  /* The time until the initial condition is maintained for this solid;
+   * can neither be negative nor infinity, default is 0. */
+  double t0;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, 0}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
@@ -160,10 +170,14 @@ struct sdis_fluid_shader {
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
 
   /* Initial/limit condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted position and time. */
+   * unknown for the submitted random walk vertex.
+   * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
+  /* The time until the initial condition is maintained for this fluid;
+   * can neither be negative nor infinity, default is 0. */
+  double t0;
 };
-#define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL}
+#define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL, 0}
 static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
   SDIS_FLUID_SHADER_NULL__;
 
@@ -336,7 +350,7 @@ SDIS_API res_T
 sdis_accum_buffer_unmap
   (const struct sdis_accum_buffer* buf);
 
-/* Helper function that matches the `sdis_write_accums_T' functor type. On can
+/* Helper function that matches the `sdis_write_accums_T' functor type. One can
  * send this function directly to the sdis_solve_camera function, to fill the
  * accum buffer with the estimation of the radiative temperature that reaches
  * each pixel of an image whose definition matches the definition of the accum
@@ -403,7 +417,7 @@ sdis_interface_ref_put
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
- * support of the interface between 2 mediums.
+ * support of the interface between 2 media.
  ******************************************************************************/
 /* Create a 3D scene. The geometry of the scene is defined by an indexed
  * triangular mesh: each triangle is composed of 3 indices where each index
@@ -527,9 +541,14 @@ sdis_estimator_ref_put
   (struct sdis_estimator* estimator);
 
 SDIS_API res_T
+sdis_estimator_get_type
+  (const struct sdis_estimator* estimator,
+   enum sdis_estimator_type* type);
+
+SDIS_API res_T
 sdis_estimator_get_realisation_count
   (const struct sdis_estimator* estimator,
-   size_t* nrealisations);
+   size_t* nrealisations); /* Succesfull ones */
 
 SDIS_API res_T
 sdis_estimator_get_failure_count
@@ -541,6 +560,22 @@ sdis_estimator_get_temperature
   (const struct sdis_estimator* estimator,
    struct sdis_mc* temperature);
 
+SDIS_API res_T
+sdis_estimator_get_convective_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
+
+SDIS_API res_T
+sdis_estimator_get_radiative_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
+
+
+SDIS_API res_T
+sdis_estimator_get_total_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
+
 /*******************************************************************************
  * Miscellaneous functions
  ******************************************************************************/
@@ -549,7 +584,7 @@ sdis_solve_probe
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
    const double position[3], /* Probe position */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
@@ -561,7 +596,7 @@ sdis_solve_probe_boundary
    const size_t nrealisations, /* #realisations */
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
@@ -581,6 +616,44 @@ sdis_solve_camera
    const size_t spp, /* #samples per pixel */
    sdis_write_accums_T writer,
    void* writer_data);
+
+SDIS_API res_T
+sdis_solve_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
+
+/* Flux solver */
+SDIS_API res_T
+sdis_solve_probe_boundary_flux
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_solve_boundary_flux
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const size_t nprimitives, /* #primitives */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
 
 END_DECLS
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -231,8 +231,8 @@ sdis_scene_boundary_project_position
 
     /* Retrieve the segment vertices */
     S2D(scene_view_get_primitive(scn->s2d_view, (unsigned int)iprim, &prim));
-    S2D(primitive_get_attrib(&prim, S2D_POSITION, 0, &a)); d2_set_f2(V[0], a.value);
-    S2D(primitive_get_attrib(&prim, S2D_POSITION, 1, &a)); d2_set_f2(V[1], a.value);
+    S2D(segment_get_vertex_attrib(&prim, 0, S2D_POSITION, &a)); d2_set_f2(V[0], a.value);
+    S2D(segment_get_vertex_attrib(&prim, 1, S2D_POSITION, &a)); d2_set_f2(V[1], a.value);
 
     /* Compute the parametric coordinate of the project of `pos' onto the
      * segment.*/
@@ -296,4 +296,3 @@ scene_get_medium
     ? scene_get_medium_2d(scn, pos, info, out_medium)
     : scene_get_medium_3d(scn, pos, info, out_medium);
 }
-

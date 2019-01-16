@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -564,7 +564,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
 #if DIM == 2
   vdata.type = S2D_FLOAT2;
 #else
-  vdata.type = S2D_FLOAT3;
+  vdata.type = S3D_FLOAT3;
 #endif
   vdata.get = XD(enclosure_position);
 
@@ -585,16 +585,14 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
 
   /* Compute the S/V ratio */
 #if DIM == 2
-  CALL(sXd(scene_view_compute_contour_length)(enc_data->sXd(view), &S));
-  CALL(sXd(scene_view_compute_area)(enc_data->sXd(view), &V));
+  CALL(s2d_scene_view_compute_contour_length(enc_data->s2d_view, &S));
+  CALL(s2d_scene_view_compute_area(enc_data->s2d_view, &V));
 #else
-  CALL(sXd(scene_view_compute_area)(enc_data->sXd(view), &S));
-  CALL(sXd(scene_view_compute_volume)(enc_data->sXd(view), &V));
+  CALL(s3d_scene_view_compute_area(enc_data->s3d_view, &S));
+  CALL(s3d_scene_view_compute_volume(enc_data->s3d_view, &V));
 #endif
-  /* The volume of the enclosure is actually negative since Star-Enc ensures
-   * that the normal of its primitives point outward the enclosure. Take its
-   * absolute value in order to ensure a postive value. */
-  enc_data->S_over_V = S/absf(V);
+  enc_data->S_over_V = S / V;
+  ASSERT(enc_data->S_over_V >= 0);
   #undef CALL
 
   /* Set enclosure hc upper bound regardless of its media being a fluid */
@@ -607,11 +605,11 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   if(res != RES_OK) goto error;
   FOR_EACH(iprim, 0, nprims) {
 #if DIM == 2
-    SENCXD(enclosure_get_segment_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim));
+    senc2d_enclosure_get_segment_global_id
+      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
 #else
-    SENCXD(enclosure_get_triangle_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim));
+    senc_enclosure_get_triangle_global_id
+      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
 #endif
   }
 
@@ -633,8 +631,10 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
   struct sencXd(enclosure)* enc = NULL;
   unsigned ienc, nencs;
   unsigned enclosed_medium;
+  int outer_found = 0;
   res_T res = RES_OK;
   ASSERT(scn && desc);
+  (void)outer_found;
 
   SENCXD(descriptor_get_enclosure_count(desc, &nencs));
   FOR_EACH(ienc, 0, nencs) {
@@ -648,9 +648,39 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
 
+    if(header.is_infinite) {
+      ASSERT(!outer_found);
+      outer_found = 1;
+      scn->outer_enclosure_id = ienc;
+    }
+
     /* As paths don't go in infinite enclosures we can accept models are broken
      * there. But nowhere else. */
     if(header.enclosed_media_count != 1 && !header.is_infinite) {
+#ifndef NDEBUG
+      /* Dump the problematic enclosure. */
+      unsigned i;
+      FOR_EACH(i, 0, header.vertices_count) {
+        double tmp[3];
+        SENCXD(enclosure_get_vertex(enc, i, tmp));
+        printf("v %g %g %g\n", SPLIT3(tmp));
+      }
+#if DIM == 2
+      FOR_EACH(i, 0, header.segment_count) {
+        unsigned indices[2];
+        SENCXD(enclosure_get_segment(enc, i, indices));
+        printf("f %lu %lu\n", (unsigned long)(1 + indices[0]),
+          (unsigned long)(1 + indices[1]));
+      }
+#else
+      FOR_EACH(i, 0, header.triangle_count) {
+        unsigned indices[3];
+        SENCXD(enclosure_get_triangle(enc, i, indices));
+        printf("f %lu %lu %lu\n", (unsigned long) (1 + indices[0]),
+          (unsigned long) (1 + indices[1]), (unsigned long) (1 + indices[2]));
+      }
+#endif
+#endif
       res = RES_BAD_ARG;
       goto error;
     }
@@ -711,6 +741,7 @@ XD(scene_create)
   SDIS(device_ref_get(dev));
   scn->dev = dev;
   scn->ambient_radiative_temperature = -1;
+  scn->outer_enclosure_id = UINT_MAX;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_medium_init(dev->allocator, &scn->media);
   darray_prim_prop_init(dev->allocator, &scn->prim_props);

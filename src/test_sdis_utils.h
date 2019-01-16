@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,9 @@
 #include <stdio.h>
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
+
+#define OK(Cond) CHK((Cond) == RES_OK)
+#define BA(Cond) CHK((Cond) == RES_BAD_ARG)
 
 /*******************************************************************************
  * Box geometry
@@ -165,13 +168,15 @@ static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
   dummy_medium_getter,
   dummy_medium_getter,
   dummy_medium_getter,
-  dummy_medium_getter
+  dummy_medium_getter,
+  0
 };
 
 static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
   dummy_medium_getter,
   dummy_medium_getter,
-  dummy_medium_getter
+  dummy_medium_getter,
+  0
 };
 
 

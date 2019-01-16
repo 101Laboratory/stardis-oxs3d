@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -174,6 +174,7 @@ main(int argc, char** argv)
 {
   struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc F = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
@@ -188,30 +189,30 @@ main(int argc, char** argv)
   struct fluid* fluid_param;
   struct solid* solid_param;
   struct interf* interface_param;
+  enum sdis_estimator_type type;
   double pos[3];
-  double time;
+  double time_range[2];
   double ref;
   const size_t N = 1000;
   size_t nreals;
   size_t nfails;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   /* Create the fluid medium */
-  CHK(sdis_data_create
-    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
   fluid_param->temperature = 300;
   fluid_shader.temperature = fluid_get_temperature;
-  CHK(sdis_fluid_create(dev, &fluid_shader, data, &fluid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
+  OK(sdis_data_ref_put(data));
 
   /* Create the solid medium */
-  CHK(sdis_data_create
-    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data) == RES_OK);
+  OK(sdis_data_create
+    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
   solid_param = sdis_data_get(data);
   solid_param->cp = 1.0;
   solid_param->lambda = 0.1;
@@ -223,12 +224,12 @@ main(int argc, char** argv)
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
-  CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid));
+  OK(sdis_data_ref_put(data));
 
   /* Create the solid/fluid interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf),
-    ALIGNOF(struct interf), NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf),
+    ALIGNOF(struct interf), NULL, &data));
   interface_param = sdis_data_get(data);
   interface_param->hc = 0.5;
   interface_param->epsilon = 0;
@@ -238,47 +239,65 @@ main(int argc, char** argv)
   interface_shader.back.temperature = NULL;
   interface_shader.back.emissivity = interface_get_emissivity;
   interface_shader.back.specular_fraction = interface_get_specular_fraction;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, data, &interf) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interface_shader, data, &interf));
+  OK(sdis_data_ref_put(data));
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
 
   /* Create the scene */
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
   ctx.interf = interf;
-  CHK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, &ctx, &scn) == RES_OK);
+  OK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
+    box_nvertices, get_position, &ctx, &scn));
 
-  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  OK(sdis_interface_ref_put(interf));
 
   /* Test the solver */
   pos[0] = 0.5;
   pos[1] = 0.5;
   pos[2] = 0.5;
-  time = INF;
-  CHK(sdis_solve_probe(NULL, N, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, 0, pos, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, NULL, time, 1.0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 0, 0, 0, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 0, 0, -1, &estimator) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, NULL) == RES_BAD_ARG);
-  CHK(sdis_solve_probe(scn, N, pos, time, 1.0, 0, 0, &estimator) == RES_OK);
+  time_range[0] = time_range[1] = INF;
+  BA(sdis_solve_probe(NULL, N, pos, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, 0, pos, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, NULL, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, -1, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
 
-  CHK(sdis_estimator_get_realisation_count(estimator, NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_realisation_count(NULL, &nreals) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
+  BA(sdis_estimator_get_type(estimator, NULL));
+  BA(sdis_estimator_get_type(NULL, &type));
+  OK(sdis_estimator_get_type(estimator, &type));
+  CHK(type == SDIS_TEMPERATURE_ESTIMATOR);
 
-  CHK(sdis_estimator_get_failure_count(estimator, NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_failure_count(NULL, &nfails) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  /* Fluxes aren't available after sdis_solve_probe */
+  BA(sdis_estimator_get_convective_flux(estimator, NULL));
+  BA(sdis_estimator_get_convective_flux(NULL, &F));
+  BA(sdis_estimator_get_convective_flux(estimator, &F));
 
-  CHK(sdis_estimator_get_temperature(estimator, NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_temperature(NULL, &T) == RES_BAD_ARG);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  BA(sdis_estimator_get_radiative_flux(estimator, NULL));
+  BA(sdis_estimator_get_radiative_flux(NULL, &F));
+  BA(sdis_estimator_get_radiative_flux(estimator, &F));
+
+  BA(sdis_estimator_get_total_flux(estimator, NULL));
+  BA(sdis_estimator_get_total_flux(NULL, &F));
+  BA(sdis_estimator_get_total_flux(estimator, &F));
+
+  BA(sdis_estimator_get_realisation_count(estimator, NULL));
+  BA(sdis_estimator_get_realisation_count(NULL, &nreals));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+
+  BA(sdis_estimator_get_failure_count(estimator, NULL));
+  BA(sdis_estimator_get_failure_count(NULL, &nfails));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+
+  BA(sdis_estimator_get_temperature(estimator, NULL));
+  BA(sdis_estimator_get_temperature(NULL, &T));
+  OK(sdis_estimator_get_temperature(estimator, &T));
 
   ref = 300;
   printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
@@ -289,14 +308,18 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
-  CHK(sdis_estimator_ref_get(NULL) ==  RES_BAD_ARG);
-  CHK(sdis_estimator_ref_get(estimator) == RES_OK);
-  CHK(sdis_estimator_ref_put(NULL) == RES_BAD_ARG);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  BA(sdis_estimator_ref_get(NULL));
+  OK(sdis_estimator_ref_get(estimator));
+  BA(sdis_estimator_ref_put(NULL));
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator));
 
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  /* The external fluid cannot have an unknown temperature */
+  fluid_param->temperature = -1;
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+
+  OK(sdis_scene_ref_put(scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

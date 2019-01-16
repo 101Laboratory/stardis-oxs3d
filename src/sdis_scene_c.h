@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -132,6 +132,15 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
   return RES_OK;
 }
 
+static INLINE unsigned
+enclosure_local2global_prim_id
+  (const struct enclosure* enc,
+   const size_t local_prim_id)
+{
+  ASSERT(enc && local_prim_id < darray_uint_size_get(&enc->local2global));
+  return darray_uint_cdata_get(&enc->local2global)[local_prim_id];
+}
+
 /* Declare the array of interfaces */
 #define DARRAY_NAME interf
 #define DARRAY_DATA struct sdis_interface*
@@ -175,6 +184,7 @@ struct sdis_scene {
 
   struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */
+  unsigned outer_enclosure_id;
 
   double ambient_radiative_temperature; /* In Kelvin */
 
@@ -211,6 +221,18 @@ scene_get_enclosure_ids
   ASSERT(encs);
   encs[0] = darray_prim_prop_cdata_get(&scn->prim_props)[iprim].front_enclosure;
   encs[1] = darray_prim_prop_cdata_get(&scn->prim_props)[iprim].back_enclosure;
+}
+
+static INLINE int
+scene_is_outside
+  (const struct sdis_scene* scn,
+   const enum sdis_side side,
+   const unsigned iprim)
+{
+  unsigned encs[2];
+  ASSERT(scn && scn->outer_enclosure_id != UINT_MAX);
+  scene_get_enclosure_ids(scn, iprim, encs);
+  return (encs[side] == scn->outer_enclosure_id);
 }
 
 static INLINE const struct enclosure*

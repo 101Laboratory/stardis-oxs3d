@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,34 +27,33 @@ main(int argc, char** argv)
   struct sdis_accum* accums_tmp = NULL;
   (void)argc, (void)argv;
   
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
-  CHK(sdis_accum_buffer_create(NULL, 4 ,4, &buf) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_create(dev, 0 ,4, &buf) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_create(dev, 4 ,0, &buf) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_create(dev, 4 ,0, NULL) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_create(dev, 4 ,4, &buf) == RES_OK);
+  BA(sdis_accum_buffer_create(NULL, 4 ,4, &buf));
+  BA(sdis_accum_buffer_create(dev, 0 ,4, &buf));
+  BA(sdis_accum_buffer_create(dev, 4 ,0, &buf));
+  BA(sdis_accum_buffer_create(dev, 4 ,0, NULL));
+  OK(sdis_accum_buffer_create(dev, 4 ,4, &buf));
 
-  CHK(sdis_accum_buffer_ref_get(NULL) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_ref_get(buf) == RES_OK);
-  CHK(sdis_accum_buffer_ref_put(NULL) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_ref_put(buf) == RES_OK);
-  CHK(sdis_accum_buffer_ref_put(buf) == RES_OK);
+  BA(sdis_accum_buffer_ref_get(NULL));
+  OK(sdis_accum_buffer_ref_get(buf));
+  BA(sdis_accum_buffer_ref_put(NULL));
+  OK(sdis_accum_buffer_ref_put(buf));
+  OK(sdis_accum_buffer_ref_put(buf));
 
-  CHK(sdis_accum_buffer_create(dev, 16, 8, &buf) == RES_OK);
+  OK(sdis_accum_buffer_create(dev, 16, 8, &buf));
 
-  CHK(sdis_accum_buffer_get_layout(NULL, &layout) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_get_layout(buf, NULL) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_get_layout(buf, &layout) == RES_OK);
+  BA(sdis_accum_buffer_get_layout(NULL, &layout));
+  BA(sdis_accum_buffer_get_layout(buf, NULL));
+  OK(sdis_accum_buffer_get_layout(buf, &layout));
 
   CHK(layout.width == 16);
   CHK(layout.height == 8);
 
-  CHK(sdis_accum_buffer_map(NULL, &accums) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_map(buf, NULL) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_map(buf, &accums) == RES_OK);
+  BA(sdis_accum_buffer_map(NULL, &accums));
+  BA(sdis_accum_buffer_map(buf, NULL));
+  OK(sdis_accum_buffer_map(buf, &accums));
 
   /* Check the accessibility to the mapped data */
   accums_tmp = MEM_CALLOC
@@ -64,11 +63,11 @@ main(int argc, char** argv)
     layout.width*layout.height*sizeof(struct sdis_accum));
   MEM_RM(&allocator, accums_tmp);
 
-  CHK(sdis_accum_buffer_unmap(NULL) == RES_BAD_ARG);
-  CHK(sdis_accum_buffer_unmap(buf) == RES_OK);
+  BA(sdis_accum_buffer_unmap(NULL));
+  OK(sdis_accum_buffer_unmap(buf));
 
-  CHK(sdis_accum_buffer_ref_put(buf) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_accum_buffer_ref_put(buf));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

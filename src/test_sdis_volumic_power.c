@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -170,18 +170,18 @@ main(int argc, char** argv)
   struct interf* interf_props = NULL;
   struct solid* solid_props = NULL;
   double pos[3];
+  double time_range[2] = { INF, INF };
   double x;
   double ref;
   size_t nreals;
   size_t nfails;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   fluid_shader.temperature = fluid_get_temperature;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
 
   /* Setup the solid shader */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -192,48 +192,48 @@ main(int argc, char** argv)
   solid_shader.volumic_power = solid_get_volumic_power;
 
   /* Create the solid medium */
-  CHK(sdis_data_create(dev, sizeof(struct solid), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct solid), 16, NULL, &data));
   solid_props = sdis_data_get(data);
   solid_props->lambda = LAMBDA;
   solid_props->cp = 2;
   solid_props->rho = 25;
   solid_props->delta = DELTA;
-  CHK(sdis_solid_create(dev, &solid_shader, data, &solid) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid));
+  OK(sdis_data_ref_put(data));
 
-  CHK(sdis_data_create(dev, sizeof(struct solid), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct solid), 16, NULL, &data));
   solid_props = sdis_data_get(data);
   solid_props->lambda = 0;
   solid_props->cp = 0;
   solid_props->rho = 0;
   solid_props->delta = DELTA/4;
-  CHK(sdis_solid_create(dev, &solid_shader, data, &solid2) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid2));
+  OK(sdis_data_ref_put(data));
 
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
   interf_shader.front.temperature = interface_get_temperature;
 
   /* Create the adiabatic interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->temperature = UNKNOWN_TEMPERATURE;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_adiabatic) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
+  OK(sdis_data_ref_put(data));
 
   /* Create the T0 interface */
-  CHK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->temperature = T0;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_T0) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interf_shader, data, &interf_T0));
+  OK(sdis_data_ref_put(data));
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(solid2) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(solid2));
+  OK(sdis_medium_ref_put(fluid));
 
   /* Map the interfaces to their box triangles */
   box_interfaces[0] = box_interfaces[1] = interf_adiabatic; /* Front */
@@ -250,30 +250,30 @@ main(int argc, char** argv)
   square_interfaces[3] = interf_T0;        /* Right */
 
   /* Create the box scene */
-  CHK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
+  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
     box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn) == RES_OK);
+    &box_scn));
 
   /* Create the square scene */
-  CHK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
+  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
     square_get_interface, square_nvertices, square_get_position,
-    square_interfaces, &square_scn) == RES_OK);
+    square_interfaces, &square_scn));
 
   /* Release the interfaces */
-  CHK(sdis_interface_ref_put(interf_adiabatic) == RES_OK);
-  CHK(sdis_interface_ref_put(interf_T0) == RES_OK);
+  OK(sdis_interface_ref_put(interf_adiabatic));
+  OK(sdis_interface_ref_put(interf_T0));
 
   d3_splat(pos, 0.25);
   x = pos[0] - 0.5;
   ref = P0 / (2*LAMBDA) * (1.0/4.0 - x*x) + T0;
 
   /* Solve in 3D */
-  CHK(sdis_solve_probe(box_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
+  OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
   CHK(nfails + nreals == N);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_ref_put(estimator));
   printf("Temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
@@ -282,11 +282,11 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
   /* Solve in 2D */
-  CHK(sdis_solve_probe(square_scn, N, pos, INF, 1.0, 0, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
+  OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_ref_put(estimator));
   printf("Temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
     SPLIT2(pos), ref, T.E, T.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
@@ -294,9 +294,9 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
-  CHK(sdis_scene_ref_put(box_scn) == RES_OK);
-  CHK(sdis_scene_ref_put(square_scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_scene_ref_put(box_scn));
+  OK(sdis_scene_ref_put(square_scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

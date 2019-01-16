@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 #include "sdis_camera.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_interface_c.h"
 #include "sdis_solve_Xd.h"
 
 /* Generate the 2D solver */
@@ -64,7 +65,7 @@ solve_pixel
   size_t N = 0; /* #realisations that do not fail */
   size_t irealisation;
   res_T res = RES_OK;
-  ASSERT(scn && mdm && rng && cam && ipix && nrealisations);
+  ASSERT(scn && mdm && rng && cam && ipix && nrealisations && Tref >= 0);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
 
   FOR_EACH(irealisation, 0, nrealisations) {
@@ -125,7 +126,7 @@ solve_tile
   size_t mcode; /* Morton code of the tile pixel */
   size_t npixels;
   res_T res = RES_OK;
-  ASSERT(scn && rng && mdm && cam && spp && origin && accums);
+  ASSERT(scn && rng && mdm && cam && spp && origin && accums && Tref >= 0);
   ASSERT(size &&size[0] && size[1]);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
 
@@ -165,7 +166,7 @@ sdis_solve_probe
   (struct sdis_scene* scn,
    const size_t nrealisations,
    const double position[3],
-   const double time,
+   const double time_range[2],
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
@@ -184,7 +185,9 @@ sdis_solve_probe
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !position
-    || time < 0 || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
+    || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -207,7 +210,7 @@ sdis_solve_probe
   }
 
   /* Create the estimator */
-  res = estimator_create(scn->dev, &estimator);
+  res = estimator_create(scn->dev, SDIS_TEMPERATURE_ESTIMATOR, &estimator);
   if(res != RES_OK) goto error;
 
   /* Retrieve the medium in which the submitted position lies */
@@ -227,10 +230,10 @@ sdis_solve_probe
 
     if(scene_is_2d(scn)) {
       res_local = probe_realisation_2d
-        (scn, rng, medium, position, time, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, medium, position, time_range, fp_to_meter, Tarad, Tref, &w);
     } else {
       res_local = probe_realisation_3d
-        (scn, rng, medium, position, time, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, medium, position, time_range, fp_to_meter, Tarad, Tref, &w);
     }
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) {
@@ -243,14 +246,9 @@ sdis_solve_probe
       ++N;
     }
   }
+  if(res != RES_OK) goto error;
 
-  estimator->nrealisations = N;
-  estimator->nfailures = nrealisations - N;
-  estimator->temperature.E = weight / (double)N;
-  estimator->temperature.V =
-    sqr_weight / (double)N
-  - estimator->temperature.E * estimator->temperature.E;
-  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)N);
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
 
 exit:
   if(rngs) {
@@ -276,7 +274,7 @@ sdis_solve_probe_boundary
    const size_t nrealisations, /* #realisations */
    const size_t iprim, /* Identifier of the primitive on which the probe lies */
    const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
@@ -294,7 +292,9 @@ sdis_solve_probe_boundary
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv || time < 0
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
     || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)
     || !out_estimator) {
     res = RES_BAD_ARG;
@@ -304,10 +304,10 @@ sdis_solve_probe_boundary
   /* Check the primitive identifier */
   if(iprim >= scene_get_primitives_count(scn)) {
     log_err(scn->dev,
-"%s: invalid primitive identifier `%lu'. It must be less than %lu.\n",
+"%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
       FUNC_NAME,
       (unsigned long)iprim,
-      (unsigned long)scene_get_primitives_count(scn));
+      (unsigned long)scene_get_primitives_count(scn)-1);
     res = RES_BAD_ARG;
     goto error;
   }
@@ -354,7 +354,7 @@ sdis_solve_probe_boundary
   }
 
   /* Create the estimator */
-  res = estimator_create(scn->dev, &estimator);
+  res = estimator_create(scn->dev, SDIS_TEMPERATURE_ESTIMATOR, &estimator);
   if(res != RES_OK) goto error;
 
   /* Here we go! Launch the Monte Carlo estimation */
@@ -366,14 +366,14 @@ sdis_solve_probe_boundary
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
 
-    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
     if(scene_is_2d(scn)) {
       res_local = boundary_realisation_2d
-        (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, iprim, uv, time_range, side, fp_to_meter, Tarad, Tref, &w);
     } else {
       res_local = boundary_realisation_3d
-        (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+        (scn, rng, iprim, uv, time_range, side, fp_to_meter, Tarad, Tref, &w);
     }
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) {
@@ -386,14 +386,9 @@ sdis_solve_probe_boundary
       ++N;
     }
   }
+  if(res != RES_OK) goto error;
 
-  estimator->nrealisations = N;
-  estimator->nfailures = nrealisations - N;
-  estimator->temperature.E = weight / (double)N;
-  estimator->temperature.V =
-    sqr_weight / (double)N
-  - estimator->temperature.E * estimator->temperature.E;
-  estimator->temperature.SE = sqrt(estimator->temperature.V / (double)N);
+  setup_estimator(estimator, nrealisations, N, weight, sqr_weight);
 
 exit:
   if(rngs) {
@@ -551,3 +546,245 @@ error:
   goto exit;
 }
 
+res_T
+sdis_solve_boundary
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  res_T res = RES_OK;
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    res = solve_boundary_2d(scn, nrealisations, primitives, sides, nprimitives,
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+  } else {
+    res = solve_boundary_3d(scn, nrealisations, primitives, sides, nprimitives,
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+  }
+  return res;
+}
+
+res_T
+sdis_solve_probe_boundary_flux
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  struct sdis_estimator* estimator = NULL;
+  struct ssp_rng_proxy* rng_proxy = NULL;
+  struct ssp_rng** rngs = NULL;
+  const struct sdis_interface* interf;
+  const struct sdis_medium *fmd, *bmd;
+  enum sdis_side solid_side, fluid_side;
+  struct sdis_interface_fragment frag;
+  double weight_t = 0, sqr_weight_t = 0;
+  double weight_fc = 0, sqr_weight_fc = 0;
+  double weight_fr = 0, sqr_weight_fr = 0;
+  double weight_f= 0, sqr_weight_f = 0;
+  const int64_t rcount = (int64_t)nrealisations;
+  int64_t irealisation = 0;
+  size_t N = 0; /* #realisations that do not fail */
+  size_t i;
+  ATOMIC res = RES_OK;
+
+  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
+    || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
+    || fp_to_meter <= 0 || Tref < 0
+    || !out_estimator) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Check the primitive identifier */
+  if(iprim >= scene_get_primitives_count(scn)) {
+    log_err(scn->dev,
+      "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
+      FUNC_NAME,
+      (unsigned long)iprim,
+      (unsigned long)scene_get_primitives_count(scn)-1);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Check parametric coordinates */
+  if(scene_is_2d(scn)) {
+    const double v = CLAMP(1.0 - uv[0], 0, 1);
+    if(uv[0] < 0 || uv[0] > 1 || !eq_eps(uv[0] + v, 1, 1.e-6)) {
+      log_err(scn->dev,
+        "%s: invalid parametric coordinates %g.\n"
+        "u + (1-u) must be equal to 1 with u [0, 1].\n",
+        FUNC_NAME, uv[0]);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  } else {
+    const double w = CLAMP(1 - uv[0] - uv[1], 0, 1);
+    if(uv[0] < 0 || uv[1] < 0 || uv[0] > 1 || uv[1] > 1
+      || !eq_eps(w + uv[0] + uv[1], 1, 1.e-6)) {
+      log_err(scn->dev,
+        "%s: invalid parametric coordinates [%g, %g].\n"
+        "u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
+        FUNC_NAME, uv[0], uv[1]);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  }
+  /* Check medium is fluid on one side and solid on the other */
+  interf = scene_get_interface(scn, (unsigned)iprim);
+  fmd = interface_get_medium(interf, SDIS_FRONT);
+  bmd = interface_get_medium(interf, SDIS_BACK);
+  if(!fmd || !bmd
+    || (!(fmd->type == SDIS_FLUID && bmd->type == SDIS_SOLID)
+       && !(fmd->type == SDIS_SOLID && bmd->type == SDIS_FLUID)))
+  {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+  solid_side = (fmd->type == SDIS_SOLID) ? SDIS_FRONT : SDIS_BACK;
+  fluid_side = (fmd->type == SDIS_FLUID) ? SDIS_FRONT : SDIS_BACK;
+
+  /* Create the proxy RNG */
+  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+    scn->dev->nthreads, &rng_proxy);
+  if(res != RES_OK) goto error;
+
+  /* Create the per thread RNG */
+  rngs = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(struct ssp_rng*));
+  if(!rngs) {
+    res = RES_MEM_ERR;
+    goto error;
+  }
+  FOR_EACH(i, 0, scn->dev->nthreads) {
+    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs + i);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Prebuild the interface fragment */
+  if(scene_is_2d(scn)) {
+    res = interface_prebuild_fragment_2d(&frag, scn, (unsigned)iprim,
+      uv, fluid_side);
+  } else {
+    res = interface_prebuild_fragment_3d(&frag, scn, (unsigned)iprim,
+      uv,  fluid_side);
+  }
+
+  /* Create the estimator */
+  res = estimator_create(scn->dev, SDIS_FLUX_ESTIMATOR, &estimator);
+  if(res != RES_OK) goto error;
+
+  /* Here we go! Launch the Monte Carlo estimation */
+  omp_set_num_threads((int)scn->dev->nthreads);
+  #pragma omp parallel for schedule(static) reduction(+:weight_t,sqr_weight_t,\
+     weight_fc,sqr_weight_fc,weight_fr,sqr_weight_fr,weight_f,sqr_weight_f,N)
+  for(irealisation = 0; irealisation < rcount; ++irealisation) {
+    res_T res_local;
+    double T_brf[3] = { 0, 0, 0 };
+    const int ithread = omp_get_thread_num();
+    struct ssp_rng* rng = rngs[ithread];
+    double time, epsilon, hc, hr;
+
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Sample a time */
+    time = sample_time(time_range, rng);
+
+    /* Compute hr and hc */
+    frag.time = time;
+    epsilon = interface_side_get_emissivity(interf, &frag);
+    hc = interface_get_convection_coef(interf, &frag);
+    hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
+
+    /* Fluid, Radiative and Solid temperatures */
+    if(scene_is_2d(scn)) {
+      res_local = probe_flux_realisation_2d(scn, rng, iprim, uv, time,
+        solid_side, fp_to_meter, Tarad, Tref, hr>0, hc>0, T_brf);
+    } else {
+      res_local = probe_flux_realisation_3d(scn, rng, iprim, uv, time,
+        solid_side, fp_to_meter, Tarad, Tref, hr>0, hc>0, T_brf);
+    }
+    if(res_local != RES_OK) {
+      if(res_local != RES_BAD_OP) {
+        ATOMIC_SET(&res, res_local);
+        continue;
+      }
+    } else {
+      const double Tboundary = T_brf[0];
+      const double Tradiative = T_brf[1];
+      const double Tfluid = T_brf[2];
+      const double w_conv = hc * (Tboundary - Tfluid);
+      const double w_rad = hr * (Tboundary - Tradiative);
+      const double w_total = w_conv + w_rad;
+      weight_t += Tboundary;
+      sqr_weight_t += Tboundary * Tboundary;
+      weight_fc += w_conv;
+      sqr_weight_fc += w_conv * w_conv;
+      weight_fr += w_rad;
+      sqr_weight_fr += w_rad * w_rad;
+      weight_f += w_total;
+      sqr_weight_f += w_total * w_total;
+      ++N;
+    }
+  }
+  if(res != RES_OK) goto error;
+
+  setup_estimator(estimator, nrealisations, N, weight_t, sqr_weight_t);
+  setup_estimator_flux(estimator, FLUX_CONVECTIVE__, weight_fc, sqr_weight_fc);
+  setup_estimator_flux(estimator, FLUX_RADIATIVE__, weight_fr, sqr_weight_fr);
+  setup_estimator_flux(estimator, FLUX_TOTAL__, weight_f, sqr_weight_f);
+
+exit:
+  if(rngs) {
+    FOR_EACH(i, 0, scn->dev->nthreads) {
+      if(rngs[i]) SSP(rng_ref_put(rngs[i]));
+    }
+    MEM_RM(scn->dev->allocator, rngs);
+  }
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_estimator) *out_estimator = estimator;
+  return (res_T)res;
+error:
+  if(estimator) {
+    SDIS(estimator_ref_put(estimator));
+    estimator = NULL;
+  }
+  goto exit;
+}
+
+res_T
+sdis_solve_boundary_flux
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const size_t nprimitives, /* #primitives */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_estimator** out_estimator)
+{
+  res_T res = RES_OK;
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    res = solve_boundary_flux_2d(scn, nrealisations, primitives, nprimitives,
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+  } else {
+    res = solve_boundary_flux_3d(scn, nrealisations, primitives, nprimitives,
+      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+  }
+  return res;
+}

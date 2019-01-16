@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -181,7 +181,7 @@ main(int argc, char** argv)
   struct context ctx = CONTEXT_NULL;
   struct interf* interface_param = NULL;
   double pos[2];
-  double time;
+  double time_range[2];
   double ref;
   const size_t N = 10000;
   size_t nsegs;
@@ -191,13 +191,12 @@ main(int argc, char** argv)
   size_t i;
   (void)argc, (void)argv;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create
-    (NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
 
   /* Create the solid medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -205,45 +204,45 @@ main(int argc, char** argv)
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = temperature_unknown;
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
   /* Create the fluid/solid interface with no limit conidition */
   interface_shader = SDIS_INTERFACE_SHADER_NULL;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, NULL, &Tnone) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interface_shader, NULL, &Tnone));
 
   /* Create the fluid/solid interface with a fixed temperature of 300K */
-  CHK(sdis_data_create(dev, sizeof(struct interf),
-    ALIGNOF(struct interf), NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf),
+    ALIGNOF(struct interf), NULL, &data));
   interface_param = sdis_data_get(data);
   interface_param->temperature = 300;
   interface_shader.convection_coef = null_interface_value;
   interface_shader.front.temperature = interface_get_temperature;
   interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, data, &T300) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interface_shader, data, &T300));
+  OK(sdis_data_ref_put(data));
 
   /* Create the fluid/solid interface with a fixed temperature of 350K */
-  CHK(sdis_data_create(dev, sizeof(struct interf),
-    ALIGNOF(struct interf), NULL, &data) == RES_OK);
+  OK(sdis_data_create(dev, sizeof(struct interf),
+    ALIGNOF(struct interf), NULL, &data));
   interface_param = sdis_data_get(data);
   interface_param->temperature = 350;
   interface_shader.convection_coef = null_interface_value;
   interface_shader.front.temperature = interface_get_temperature;
   interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, data, &T350) == RES_OK);
-  CHK(sdis_data_ref_put(data) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interface_shader, data, &T350));
+  OK(sdis_data_ref_put(data));
 
   /* Create the solid/solid interface */
   interface_shader = SDIS_INTERFACE_SHADER_NULL;
-  CHK(sdis_interface_create
-    (dev, solid, solid, &interface_shader, NULL, &solid_solid) == RES_OK);
+  OK(sdis_interface_create
+    (dev, solid, solid, &interface_shader, NULL, &solid_solid));
 
   /* Release the media */
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
 
   /* Register the square geometry */
   FOR_EACH(i, 0, square_nvertices) {
@@ -275,25 +274,25 @@ main(int argc, char** argv)
   ctx.solid_solid = solid_solid;
   nverts = sa_size(ctx.positions) / 2;
   nsegs = sa_size(ctx.indices) / 2;
-  CHK(sdis_scene_2d_create(dev, nsegs, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn) == RES_OK);
+  OK(sdis_scene_2d_create(dev, nsegs, get_indices, get_interface, nverts,
+    get_position, &ctx, &scn));
 
   /* Release the scene data */
-  CHK(sdis_interface_ref_put(Tnone) == RES_OK);
-  CHK(sdis_interface_ref_put(T300) == RES_OK);
-  CHK(sdis_interface_ref_put(T350) == RES_OK);
-  CHK(sdis_interface_ref_put(solid_solid) == RES_OK);
+  OK(sdis_interface_ref_put(Tnone));
+  OK(sdis_interface_ref_put(T300));
+  OK(sdis_interface_ref_put(T350));
+  OK(sdis_interface_ref_put(solid_solid));
   sa_release(ctx.positions);
   sa_release(ctx.indices);
 
   /* Launch the solver */
   pos[0] = 0.5;
   pos[1] = 0.5;
-  time = INF;
-  CHK(sdis_solve_probe( scn, N, pos, time, 1.0, -1, 0, &estimator) == RES_OK);
-  CHK(sdis_estimator_get_realisation_count(estimator, &nreals) == RES_OK);
-  CHK(sdis_estimator_get_failure_count(estimator, &nfails) == RES_OK);
-  CHK(sdis_estimator_get_temperature(estimator, &T) == RES_OK);
+  time_range[0] = time_range[1] = INF;
+  OK(sdis_solve_probe( scn, N, pos, time_range, 1.0, -1, 0, &estimator));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
 
   /* Print the estimation results */
   ref = 350 * pos[0] + (1-pos[0]) * 300;
@@ -307,9 +306,9 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
   /* Release data */
-  CHK(sdis_estimator_ref_put(estimator) == RES_OK);
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_scene_ref_put(scn));
+  OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

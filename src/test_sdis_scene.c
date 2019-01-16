@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,23 +105,23 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   #define POS get_position_3d
   #define IFA get_interface
 
-  CHK(CREATE(NULL, 0, NULL, NULL, 0, NULL, &ctx, NULL) == RES_BAD_ARG);
-  CHK(CREATE(dev, 0, IDS, IFA, npos, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, ntris, NULL, IFA, npos, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, ntris, IDS, NULL, npos, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, ntris, IDS, IFA, 0, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, ntris, IDS, IFA, npos, NULL, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, ntris, IDS, IFA, npos, POS, &ctx, &scn) == RES_OK);
+  BA(CREATE(NULL, 0, NULL, NULL, 0, NULL, &ctx, NULL));
+  BA(CREATE(dev, 0, IDS, IFA, npos, POS, &ctx, &scn));
+  BA(CREATE(dev, ntris, NULL, IFA, npos, POS, &ctx, &scn));
+  BA(CREATE(dev, ntris, IDS, NULL, npos, POS, &ctx, &scn));
+  BA(CREATE(dev, ntris, IDS, IFA, 0, POS, &ctx, &scn));
+  BA(CREATE(dev, ntris, IDS, IFA, npos, NULL, &ctx, &scn));
+  OK(CREATE(dev, ntris, IDS, IFA, npos, POS, &ctx, &scn));
 
   #undef CREATE
   #undef IDS
   #undef POS
   #undef IFA
 
-  CHK(sdis_scene_get_aabb(NULL, lower, upper) == RES_BAD_ARG);
-  CHK(sdis_scene_get_aabb(scn, NULL, upper) == RES_BAD_ARG);
-  CHK(sdis_scene_get_aabb(scn, lower, NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_get_aabb(scn, lower, upper) == RES_OK);
+  BA(sdis_scene_get_aabb(NULL, lower, upper));
+  BA(sdis_scene_get_aabb(scn, NULL, upper));
+  BA(sdis_scene_get_aabb(scn, lower, NULL));
+  OK(sdis_scene_get_aabb(scn, lower, upper));
   CHK(eq_eps(lower[0], 0, 1.e-6));
   CHK(eq_eps(lower[1], 0, 1.e-6));
   CHK(eq_eps(lower[2], 0, 1.e-6));
@@ -132,17 +132,17 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   uv0[0] = 0.3;
   uv0[1] = 0.3;
 
-  CHK(sdis_scene_get_boundary_position(NULL, 6, uv0, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 12, uv0, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 6, NULL, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 6, uv0, NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 6, uv0, pos) == RES_OK);
+  BA(sdis_scene_get_boundary_position(NULL, 6, uv0, pos));
+  BA(sdis_scene_get_boundary_position(scn, 12, uv0, pos));
+  BA(sdis_scene_get_boundary_position(scn, 6, NULL, pos));
+  BA(sdis_scene_get_boundary_position(scn, 6, uv0, NULL));
+  OK(sdis_scene_get_boundary_position(scn, 6, uv0, pos) );
 
-  CHK(sdis_scene_boundary_project_position(NULL, 6, pos, uv1) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 12, pos, uv1) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 6, NULL, uv1) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 6, pos, NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 6, pos, uv1) == RES_OK);
+  BA(sdis_scene_boundary_project_position(NULL, 6, pos, uv1));
+  BA(sdis_scene_boundary_project_position(scn, 12, pos, uv1));
+  BA(sdis_scene_boundary_project_position(scn, 6, NULL, uv1));
+  BA(sdis_scene_boundary_project_position(scn, 6, pos, NULL));
+  OK(sdis_scene_boundary_project_position(scn, 6, pos, uv1));
 
   CHK(d2_eq_eps(uv0, uv1, 1.e-6));
 
@@ -150,23 +150,23 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
     uv0[0] = rand_canonic();
     uv0[1] = rand_canonic() * (1 - uv0[0]);
 
-    CHK(sdis_scene_get_boundary_position(scn, 4, uv0, pos) == RES_OK);
-    CHK(sdis_scene_boundary_project_position(scn, 4, pos, uv1) == RES_OK);
+    OK(sdis_scene_get_boundary_position(scn, 4, uv0, pos));
+    OK(sdis_scene_boundary_project_position(scn, 4, pos, uv1));
     CHK(d2_eq_eps(uv0, uv1, 1.e-6));
   }
 
   pos[0] = 10;
   pos[1] = 0.1;
   pos[2] = 0.5;
-  CHK(sdis_scene_boundary_project_position(scn, 6, pos, uv1) == RES_OK);
-  CHK(sdis_scene_get_boundary_position(scn, 6, uv1, pos1) == RES_OK);
+  OK(sdis_scene_boundary_project_position(scn, 6, pos, uv1));
+  OK(sdis_scene_get_boundary_position(scn, 6, uv1, pos1));
   CHK(!d3_eq_eps(pos1, pos, 1.e-6));
 
-  CHK(sdis_scene_ref_get(NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_ref_get(scn) == RES_OK);
-  CHK(sdis_scene_ref_put(NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
+  BA(sdis_scene_ref_get(NULL));
+  OK(sdis_scene_ref_get(scn));
+  BA(sdis_scene_ref_put(NULL));
+  OK(sdis_scene_ref_put(scn));
+  OK(sdis_scene_ref_put(scn));
 }
 
 static void
@@ -190,23 +190,23 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   #define POS get_position_2d
   #define IFA get_interface
 
-  CHK(CREATE(NULL, 0, NULL, NULL, 0, NULL, &ctx, NULL) == RES_BAD_ARG);
-  CHK(CREATE(dev, 0, IDS, IFA, npos, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, nsegs, NULL, IFA, npos, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, nsegs, IDS, NULL, npos, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, nsegs, IDS, IFA, 0, POS, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, nsegs, IDS, IFA, npos, NULL, &ctx, &scn) == RES_BAD_ARG);
-  CHK(CREATE(dev, nsegs, IDS, IFA, npos, POS, &ctx, &scn) == RES_OK);
+  BA(CREATE(NULL, 0, NULL, NULL, 0, NULL, &ctx, NULL));
+  BA(CREATE(dev, 0, IDS, IFA, npos, POS, &ctx, &scn));
+  BA(CREATE(dev, nsegs, NULL, IFA, npos, POS, &ctx, &scn));
+  BA(CREATE(dev, nsegs, IDS, NULL, npos, POS, &ctx, &scn));
+  BA(CREATE(dev, nsegs, IDS, IFA, 0, POS, &ctx, &scn));
+  BA(CREATE(dev, nsegs, IDS, IFA, npos, NULL, &ctx, &scn));
+  OK(CREATE(dev, nsegs, IDS, IFA, npos, POS, &ctx, &scn));
 
   #undef CREATE
   #undef IDS
   #undef POS
   #undef IFA
 
-  CHK(sdis_scene_get_aabb(NULL, lower, upper) == RES_BAD_ARG);
-  CHK(sdis_scene_get_aabb(scn, NULL, upper) == RES_BAD_ARG);
-  CHK(sdis_scene_get_aabb(scn, lower, NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_get_aabb(scn, lower, upper) == RES_OK);
+  BA(sdis_scene_get_aabb(NULL, lower, upper));
+  BA(sdis_scene_get_aabb(scn, NULL, upper));
+  BA(sdis_scene_get_aabb(scn, lower, NULL));
+  OK(sdis_scene_get_aabb(scn, lower, upper));
   CHK(eq_eps(lower[0], 0, 1.e-6));
   CHK(eq_eps(lower[1], 0, 1.e-6));
   CHK(eq_eps(upper[0], 1, 1.e-6));
@@ -214,41 +214,41 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 
   u0 = 0.5;
 
-  CHK(sdis_scene_get_boundary_position(NULL, 1, &u0, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 4, &u0, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 1, NULL, pos) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 1, &u0, NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_get_boundary_position(scn, 1, &u0, pos) == RES_OK);
+  BA(sdis_scene_get_boundary_position(NULL, 1, &u0, pos));
+  BA(sdis_scene_get_boundary_position(scn, 4, &u0, pos));
+  BA(sdis_scene_get_boundary_position(scn, 1, NULL, pos));
+  BA(sdis_scene_get_boundary_position(scn, 1, &u0, NULL));
+  OK(sdis_scene_get_boundary_position(scn, 1, &u0, pos));
 
-  CHK(sdis_scene_boundary_project_position(NULL, 1, pos, &u1) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 4, pos, &u1) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 1, NULL, &u1) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 1, pos, NULL) == RES_BAD_ARG);
-  CHK(sdis_scene_boundary_project_position(scn, 1, pos, &u1) == RES_OK);
+  BA(sdis_scene_boundary_project_position(NULL, 1, pos, &u1));
+  BA(sdis_scene_boundary_project_position(scn, 4, pos, &u1));
+  BA(sdis_scene_boundary_project_position(scn, 1, NULL, &u1));
+  BA(sdis_scene_boundary_project_position(scn, 1, pos, NULL));
+  OK(sdis_scene_boundary_project_position(scn, 1, pos, &u1));
 
   CHK(eq_eps(u0, u1, 1.e-6));
 
   FOR_EACH(i, 0, 64) {
     u0 = rand_canonic();
 
-    CHK(sdis_scene_get_boundary_position(scn, 2, &u0, pos) == RES_OK);
-    CHK(sdis_scene_boundary_project_position(scn, 2, pos, &u1) == RES_OK);
+    OK(sdis_scene_get_boundary_position(scn, 2, &u0, pos));
+    OK(sdis_scene_boundary_project_position(scn, 2, pos, &u1));
     CHK(eq_eps(u0, u1, 1.e-6));
   }
 
   d2(pos, 5, 0.5);
-  CHK(sdis_scene_boundary_project_position(scn, 3, pos, &u0) == RES_OK);
+  OK(sdis_scene_boundary_project_position(scn, 3, pos, &u0));
   CHK(eq_eps(u0, 0.5, 1.e-6));
 
   d2(pos, 1, 2);
-  CHK(sdis_scene_boundary_project_position(scn, 3, pos, &u0) == RES_OK);
+  OK(sdis_scene_boundary_project_position(scn, 3, pos, &u0));
   CHK(eq_eps(u0, 0, 1.e-6));
 
   d2(pos, 1, -1);
-  CHK(sdis_scene_boundary_project_position(scn, 3, pos, &u0) == RES_OK);
+  OK(sdis_scene_boundary_project_position(scn, 3, pos, &u0));
   CHK(eq_eps(u0, 1, 1.e-6));
 
-  CHK(sdis_scene_ref_put(scn) == RES_OK);
+  OK(sdis_scene_ref_put(scn));
 }
 
 int
@@ -266,22 +266,22 @@ main(int argc, char** argv)
 
   interface_shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
-  CHK(sdis_device_create(NULL, &allocator, 1, 0, &dev) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
+  OK(sdis_device_create(NULL, &allocator, 1, 0, &dev));
 
-  CHK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid) == RES_OK);
-  CHK(sdis_solid_create(dev, &solid_shader, NULL, &solid) == RES_OK);
-  CHK(sdis_interface_create
-    (dev, solid, fluid, &interface_shader, NULL, &interf) == RES_OK);
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+  OK(sdis_interface_create
+    (dev, solid, fluid, &interface_shader, NULL, &interf));
 
-  CHK(sdis_medium_ref_put(solid) == RES_OK);
-  CHK(sdis_medium_ref_put(fluid) == RES_OK);
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
 
   test_scene_3d(dev, interf);
   test_scene_2d(dev, interf);
 
-  CHK(sdis_device_ref_put(dev) == RES_OK);
-  CHK(sdis_interface_ref_put(interf) == RES_OK);
+  OK(sdis_device_ref_put(dev));
+  OK(sdis_interface_ref_put(interf));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

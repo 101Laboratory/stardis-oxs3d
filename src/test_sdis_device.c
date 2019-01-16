@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,39 +34,38 @@ main(int argc, char** argv)
   struct sdis_device* dev;
   (void)argc, (void)argv;
 
-  CHK(sdis_device_create(NULL, NULL, 0, 0, NULL) == RES_BAD_ARG);
-  CHK(sdis_device_create(NULL, NULL, 0, 0, &dev) == RES_BAD_ARG);
-  CHK(sdis_device_create(NULL, NULL, 1, 0, &dev) == RES_OK);
-  CHK(sdis_device_ref_get(NULL) == RES_BAD_ARG);
-  CHK(sdis_device_ref_get(dev) == RES_OK);
-  CHK(sdis_device_ref_put(NULL) == RES_BAD_ARG);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  BA(sdis_device_create(NULL, NULL, 0, 0, NULL));
+  BA(sdis_device_create(NULL, NULL, 0, 0, &dev));
+  OK(sdis_device_create(NULL, NULL, 1, 0, &dev));
+  BA(sdis_device_ref_get(NULL));
+  OK(sdis_device_ref_get(dev));
+  BA(sdis_device_ref_put(NULL));
+  OK(sdis_device_ref_put(dev));
+  OK(sdis_device_ref_put(dev));
 
-  CHK(mem_init_proxy_allocator(&allocator, &mem_default_allocator) == RES_OK);
+  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
 
   CHK(MEM_ALLOCATED_SIZE(&allocator) == 0);
-  CHK(sdis_device_create(NULL, &allocator, 1, 0, NULL) == RES_BAD_ARG);
-  CHK(sdis_device_create(NULL, &allocator, 1, 0, &dev) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  BA(sdis_device_create(NULL, &allocator, 1, 0, NULL));
+  OK(sdis_device_create(NULL, &allocator, 1, 0, &dev));
+  OK(sdis_device_ref_put(dev));
   CHK(MEM_ALLOCATED_SIZE(&allocator) == 0);
 
-  CHK(logger_init(&allocator, &logger) == RES_OK);
+  OK(logger_init(&allocator, &logger));
   logger_set_stream(&logger, LOG_OUTPUT, log_stream, NULL);
   logger_set_stream(&logger, LOG_ERROR, log_stream, NULL);
   logger_set_stream(&logger, LOG_WARNING, log_stream, NULL);
 
-  CHK(sdis_device_create(&logger, NULL, 1, 0, NULL) == RES_BAD_ARG);
-  CHK(sdis_device_create(&logger, NULL, 1, 0, &dev) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  BA(sdis_device_create(&logger, NULL, 1, 0, NULL));
+  OK(sdis_device_create(&logger, NULL, 1, 0, &dev));
+  OK(sdis_device_ref_put(dev));
 
-  CHK(sdis_device_create(&logger, &allocator, 1, 0, NULL) == RES_BAD_ARG);
-  CHK(sdis_device_create(&logger, &allocator, 1, 0, &dev) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  BA(sdis_device_create(&logger, &allocator, 1, 0, NULL));
+  OK(sdis_device_create(&logger, &allocator, 1, 0, &dev));
+  OK(sdis_device_ref_put(dev));
 
-  CHK(sdis_device_create
-    (&logger, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev) == RES_OK);
-  CHK(sdis_device_ref_put(dev) == RES_OK);
+  OK(sdis_device_create(&logger, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+  OK(sdis_device_ref_put(dev));
 
   logger_release(&logger);
   check_memory_allocator(&allocator);
