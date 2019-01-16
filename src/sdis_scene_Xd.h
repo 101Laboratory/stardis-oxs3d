@@ -634,6 +634,7 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
   int outer_found = 0;
   res_T res = RES_OK;
   ASSERT(scn && desc);
+  (void)outer_found;
 
   SENCXD(descriptor_get_enclosure_count(desc, &nencs));
   FOR_EACH(ienc, 0, nencs) {
