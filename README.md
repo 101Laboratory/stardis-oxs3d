@@ -10,9 +10,11 @@ Stardis relies on the [CMake](http://www.cmake.org) and the
 It also depends on the
 [RSys](https://gitlab.com/vaplv/rsys/),
 [Star-2D](https://gitlab.com/meso-star/star-2d/),
-[Star-3D](https://gitlab.com/meso-star/star-3d/) and
+[Star-3D](https://gitlab.com/meso-star/star-3d/),
+[Star-Enclosures](https://gitlab.com/meso-star/star-enclosures/),
+[Star-Enclosures2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
 [Star-SP](https://gitlab.com/meso-star/star-sp/) libraries as well as on the
-[OpenMP](http://www.openmp.org) 1.2 specification to parallelize its
+[OpenMP](http://www.openmp.org) 2.0 specification to parallelize its
 computations.
 
 First ensure that CMake and a compiler that implements the OpenMP 1.2
@@ -22,6 +24,21 @@ the `cmake/CMakeLists.txt` file by appending to the `CMAKE_PREFIX_PATH`
 variable the install directories of its dependencies.
 
 ## Release notes
+
+### Version 0.6
+
+- Add the `sdis_solve_boundary` function: it computes the average temperature
+  on a subset of geometric primitives.
+- Add flux solvers: the new `sdis_solve_probe_boundary_flux` and
+  `sdis_solve_boundary_flux` functions estimate the convective and radiative
+  fluxes at a given surface position or for a sub-set of geometric primitives,
+  respectively.
+- Add support of time integration: almost all solvers can estimate the average
+  temperature on a given time range. Only the `sdis_solve_camera` function does
+  not support time integration, yet.
+- Add support of an explicit initial time `t0` for the fluid.
+- Fix a bug in the estimation of unknown fluid temperatures: the associativity
+  between the internal Stardis data and the user defined data was wrong.
 
 ### Version 0.5
 
