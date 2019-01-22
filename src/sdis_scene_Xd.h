@@ -660,26 +660,37 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 #ifndef NDEBUG
       /* Dump the problematic enclosure. */
       unsigned i;
+#if DIM == 2
+#define VEC_STR "%g %g"
+#define VEC_SPLIT SPLIT2
+#define UVEC_STR "%u %u"
+#define UVEC_SPLIT(A) 1 + (A)[0], 1 + (A)[1]
+#define PRIM_COUNT segment_count
+#define GET_PRIM senc2d_enclosure_get_segment
+#else
+#define VEC_STR "%g %g %g"
+#define VEC_SPLIT SPLIT3
+#define UVEC_STR "%u %u %u"
+#define UVEC_SPLIT(A) 1 + (A)[0], 1 + (A)[1], 1 + (A)[2]
+#define PRIM_COUNT triangle_count
+#define GET_PRIM senc_enclosure_get_triangle
+#endif
       FOR_EACH(i, 0, header.vertices_count) {
         double tmp[3];
         SENCXD(enclosure_get_vertex(enc, i, tmp));
-        printf("v %g %g %g\n", SPLIT3(tmp));
+        log_warn(scn->dev, "v "VEC_STR"\n", VEC_SPLIT(tmp));
       }
-#if DIM == 2
-      FOR_EACH(i, 0, header.segment_count) {
-        unsigned indices[2];
-        SENCXD(enclosure_get_segment(enc, i, indices));
-        printf("f %lu %lu\n", (unsigned long)(1 + indices[0]),
-          (unsigned long)(1 + indices[1]));
-      }
-#else
-      FOR_EACH(i, 0, header.triangle_count) {
+      FOR_EACH(i, 0, header.PRIM_COUNT) {
         unsigned indices[3];
-        SENCXD(enclosure_get_triangle(enc, i, indices));
-        printf("f %lu %lu %lu\n", (unsigned long) (1 + indices[0]),
-          (unsigned long) (1 + indices[1]), (unsigned long) (1 + indices[2]));
+        ASSERT(GET_PRIM(enc, i, indices) == RES_OK);
+        log_warn(scn->dev, "f "UVEC_STR"\n", UVEC_SPLIT(indices));
       }
-#endif
+#undef VEC_STR
+#undef VEC_SPLIT
+#undef UVEC_STR
+#undef UVEC_SPLIT
+#undef PRIM_COUNT
+#undef GET_PRIM
 #endif
       res = RES_BAD_ARG;
       goto error;

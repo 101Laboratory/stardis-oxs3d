@@ -29,11 +29,11 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.2 REQUIRED)
-find_package(Star3D 0.5 REQUIRED)
+find_package(Star2D 0.3 REQUIRED)
+find_package(Star3D 0.6 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
-find_package(StarEnc 0.2.0 REQUIRED)
-find_package(StarEnc2D 0.2.0 REQUIRED)
+find_package(StarEnc 0.2.2 REQUIRED)
+find_package(StarEnc2D 0.2.2 REQUIRED)
 find_package(RSys 0.6.1 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
@@ -48,7 +48,7 @@ rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 ################################################################################
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 6)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 1)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC

@@ -25,6 +25,13 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.6.1
+
+- Bump version of the Star-Enclosures[2D] dependencies: the new versions fix
+  issues in the construction of fluid enclosures.
+- Bump version of the Star-<2D|3D> dependencies: the new versions rely on Embree3
+  rather than on Embree2 for their ray-tracing back-end.
+
 ### Version 0.6
 
 - Add the `sdis_solve_boundary` function: it computes the average temperature
