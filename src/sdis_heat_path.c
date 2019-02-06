@@ -16,26 +16,26 @@
 #include "sdis_heat_path.h"
 
 /* Generate the radiative paths */
-#define SDIS_SOLVE_DIMENSION 2
+#define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_radiative_Xd.h"
-#define SDIS_SOLVE_DIMENSION 3
+#define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_radiative_Xd.h"
 
 /* Generate the convective paths */
-#define SDIS_SOLVE_DIMENSION 2
+#define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_convective_Xd.h"
-#define SDIS_SOLVE_DIMENSION 3
+#define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_convective_Xd.h"
 
 /* Generate the conductive paths */
-#define SDIS_SOLVE_DIMENSION 2
+#define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_conductive_Xd.h"
-#define SDIS_SOLVE_DIMENSION 3
+#define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_conductive_Xd.h"
 
 /* Generate the boundary paths */
-#define SDIS_SOLVE_DIMENSION 2
+#define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_boundary_Xd.h"
-#define SDIS_SOLVE_DIMENSION 3
+#define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_boundary_Xd.h"
 

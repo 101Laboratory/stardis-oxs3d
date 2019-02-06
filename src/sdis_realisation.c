@@ -16,9 +16,9 @@
 #include "sdis_realisation.h"
 
 /* Generate the generic realisations */
-#define SDIS_SOLVE_DIMENSION 2
+#define SDIS_XD_DIMENSION 2
 #include "sdis_realisation_Xd.h"
-#define SDIS_SOLVE_DIMENSION 3
+#define SDIS_XD_DIMENSION 3
 #include "sdis_realisation_Xd.h"
 
 res_T

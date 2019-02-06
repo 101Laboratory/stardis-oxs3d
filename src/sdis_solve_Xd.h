@@ -95,7 +95,7 @@ XD(interface_prebuild_fragment)
   struct sXd(primitive) prim;
   struct sXd(hit) hit;
   struct sdis_rwalk_vertex vtx;
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   float st;
 #else
   float st[2];
@@ -107,7 +107,7 @@ XD(interface_prebuild_fragment)
 
   *frag = SDIS_INTERFACE_FRAGMENT_NULL;
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
 #define SET_PARAM(Dest, Src) (Dest).u = (Src);
   st = (float)uv[0];
 #else
@@ -192,7 +192,7 @@ XD(solve_probe)
     goto error;
   }
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
 #else
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
@@ -307,7 +307,7 @@ XD(solve_probe_boundary)
     goto error;
   }
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
 #else
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
@@ -458,7 +458,7 @@ XD(solve_boundary)
     goto error;
   }
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
 #else
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
@@ -478,7 +478,7 @@ XD(solve_boundary)
   }
 
   /* Create the Star-XD shape of the boundary */
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   res = s2d_shape_create_line_segments(scn->dev->sXd_dev, &shape);
 #else
   res = s3d_shape_create_mesh(scn->dev->sXd_dev, &shape);
@@ -491,7 +491,7 @@ XD(solve_boundary)
   ctx.view = scn->sXd(view);
   vdata.usage = SXD_POSITION;
   vdata.get = XD(boundary_get_position);
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   vdata.type = S2D_FLOAT2;
   res = s2d_line_segments_setup_indexed_vertices(shape, (unsigned)nprimitives,
     boundary_get_indices_2d, (unsigned)(nprimitives*2), &vdata, 1, &ctx);
@@ -542,7 +542,7 @@ XD(solve_boundary)
     time = sample_time(rng, time_range);
 
     /* Sample a position onto the boundary */
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
     res_local = s2d_scene_view_sample
       (view,
        ssp_rng_canonical_float(rng),
@@ -645,7 +645,7 @@ XD(solve_probe_boundary_flux)
     goto error;
   }
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
 #else
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
@@ -836,7 +836,7 @@ XD(solve_boundary_flux)
     goto error;
   }
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
 #else
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
@@ -856,7 +856,7 @@ XD(solve_boundary_flux)
   }
 
   /* Create the Star-XD shape of the boundary */
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   res = s2d_shape_create_line_segments(scn->dev->s2d, &shape);
 #else
   res = s3d_shape_create_mesh(scn->dev->s3d, &shape);
@@ -868,7 +868,7 @@ XD(solve_boundary_flux)
   ctx.primitives = primitives;
   ctx.view = scn->sXd(view);
   vdata.get = XD(boundary_get_position);
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   vdata.usage = S2D_POSITION;
   vdata.type = S2D_FLOAT2;
   res = s2d_line_segments_setup_indexed_vertices(shape, (unsigned)nprimitives,
@@ -925,7 +925,7 @@ XD(solve_boundary_flux)
     time = sample_time(rng, time_range);
 
     /* Sample a position onto the boundary */
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
     res_local = s2d_scene_view_sample
       (view,
        ssp_rng_canonical_float(rng),

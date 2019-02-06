@@ -13,8 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#define SDIS_SOLVE_DIMENSION 2
+#define SDIS_XD_DIMENSION 2
 #include "sdis_solve_Xd_radiative.h"
 
-#define SDIS_SOLVE_DIMENSION 3
+#define SDIS_XD_DIMENSION 3
 #include "sdis_solve_Xd_radiative.h"

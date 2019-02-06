@@ -20,9 +20,9 @@
 #include "sdis_interface_c.h"
 
 /* Generate the solvers */
-#define SDIS_SOLVE_DIMENSION 2
+#define SDIS_XD_DIMENSION 2
 #include "sdis_solve_Xd.h"
-#define SDIS_SOLVE_DIMENSION 3
+#define SDIS_XD_DIMENSION 3
 #include "sdis_solve_Xd.h"
 
 #include <star/ssp.h>

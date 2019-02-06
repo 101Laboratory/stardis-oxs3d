@@ -92,7 +92,7 @@ XD(check_rwalk_fragment_consistency)
       || eq_eps(rwalk->vtx.time, frag->time,  1.e-6))) {
     return 0;
   }
-#if (SDIS_SOLVE_DIMENSION == 2)
+#if (SDIS_XD_DIMENSION == 2)
   uv[0] = rwalk->hit.u;
 #else
   d2_set_f2(uv, rwalk->hit.uv);

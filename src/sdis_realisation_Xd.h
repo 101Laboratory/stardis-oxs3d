@@ -174,7 +174,7 @@ XD(boundary_realisation)
   struct XD(rwalk) rwalk = XD(RWALK_NULL);
   struct XD(temperature) T = XD(TEMPERATURE_NULL);
   struct sXd(attrib) attr;
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   float st;
 #else
   float st[2];
@@ -188,7 +188,7 @@ XD(boundary_realisation)
   rwalk.vtx.time = time;
   rwalk.mdm = NULL; /* The random walk is at an interface between 2 media */
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   st = (float)uv[0];
 #else
   f2_set_d2(st, uv);
@@ -206,7 +206,7 @@ XD(boundary_realisation)
   SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_GEOMETRY_NORMAL, st, &attr));
   fX(set)(rwalk.hit.normal, attr.value);
 
-#if SDIS_SOLVE_DIMENSION==2
+#if SDIS_XD_DIMENSION==2
   rwalk.hit.u = st;
 #else
   f2_set(rwalk.hit.uv, st);
@@ -242,20 +242,20 @@ XD(boundary_flux_realisation)
   struct XD(temperature) T;
   struct sXd(attrib) attr;
   struct sXd(primitive) prim;
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   float st;
 #else
   float st[2];
 #endif
-  double P[SDIS_SOLVE_DIMENSION];
-  float N[SDIS_SOLVE_DIMENSION];
+  double P[SDIS_XD_DIMENSION];
+  float N[SDIS_XD_DIMENSION];
   const double Tr3 = Tref * Tref * Tref;
   const enum sdis_side fluid_side =
     (solid_side == SDIS_FRONT) ? SDIS_BACK : SDIS_FRONT;
   res_T res = RES_OK;
   ASSERT(uv && fp_to_meter > 0 && weight && time >= 0 && Tref >= 0);
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   #define SET_PARAM(Dest, Src) (Dest).u = (Src);
   st = (float)uv[0];
 #else

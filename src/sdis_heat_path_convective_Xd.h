@@ -42,7 +42,7 @@ XD(convective_path)
   double cp; /* Calorific capacity */
   double tmp;
   double r;
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   float st;
 #else
   float st[2];

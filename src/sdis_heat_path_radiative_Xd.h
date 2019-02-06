@@ -62,7 +62,7 @@ XD(trace_radiative_path)
     fX_set_dX(pos, rwalk->vtx.P);
 
     /* Trace the radiative ray */
-#if (SDIS_SOLVE_DIMENSION == 2)
+#if (SDIS_XD_DIMENSION == 2)
     SXD(scene_view_trace_ray_3d
       (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
 #else

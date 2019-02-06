@@ -26,15 +26,15 @@ struct rwalk_context {
 #endif /* SDIS_XD_BEGIN_H */
 
 /* Check prerequisite */
-#ifndef SDIS_SOLVE_DIMENSION
-  #error "The SDIS_SOLVE_DIMENSION macro must be defined."
+#ifndef SDIS_XD_DIMENSION
+  #error "The SDIS_XD_DIMENSION macro must be defined."
 #endif
 
-#if SDIS_SOLVE_DIMENSION == 2
+#if SDIS_XD_DIMENSION == 2
   #include <rsys/double2.h>
   #include <rsys/float2.h>
   #include <star/s2d.h>
-#elif SDIS_SOLVE_DIMENSION == 3
+#elif SDIS_XD_DIMENSION == 3
   #include <rsys/double3.h>
   #include <rsys/float3.h>
   #include <star/s3d.h>
@@ -43,9 +43,9 @@ struct rwalk_context {
 #endif
 
 /* Syntactic sugar */
-#define DIM SDIS_SOLVE_DIMENSION
+#define DIM SDIS_XD_DIMENSION
 
-/* Star-XD macros generic to SDIS_SOLVE_DIMENSION */
+/* Star-XD macros generic to SDIS_XD_DIMENSION */
 #define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
 #define sXd_dev CONCAT(CONCAT(s, DIM), d)
 #define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
@@ -59,19 +59,19 @@ struct rwalk_context {
 #define SXD_FLOAT3 CONCAT(CONCAT(S, DIM), D_FLOAT3)
 #define SXD_SAMPLE CONCAT(CONCAT(S, DIM), D_SAMPLE)
 
-/* Vector macros generic to SDIS_SOLVE_DIMENSION */
+/* Vector macros generic to SDIS_XD_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
 #define dX_set_fX CONCAT(CONCAT(CONCAT(d, DIM), _set_f), DIM)
 
-/* Macro making generic its submitted nae to SDIS_SOLVE_DIMENSION */
+/* Macro making generic its submitted nae to SDIS_XD_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
 /* Generate the generic data structures and constants */
-#if (SDIS_SOLVE_DIMENSION == 2 && !defined(SDIS_2D_H)) \
-||  (SDIS_SOLVE_DIMENSION == 3 && !defined(SDIS_3D_H))
-  #if SDIS_SOLVE_DIMENSION == 2
+#if (SDIS_XD_DIMENSION == 2 && !defined(SDIS_2D_H)) \
+||  (SDIS_XD_DIMENSION == 3 && !defined(SDIS_3D_H))
+  #if SDIS_XD_DIMENSION == 2
     #define SDIS_2D_H
   #else
     #define SDIS_3D_H
