@@ -101,5 +101,5 @@ struct XD(temperature) {
 };
 static const struct XD(temperature) XD(TEMPERATURE_NULL) = { NULL, 0, 0 };
 
-#endif /* SDIX_XD_H */
+#endif /* SDIX_<2|3>D_H */
 

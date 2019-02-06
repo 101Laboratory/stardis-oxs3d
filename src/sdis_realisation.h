@@ -24,6 +24,12 @@
 struct sdis_scene;
 struct ssp_rng;
 
+enum flux_flag {
+  FLUX_FLAG_CONVECTIVE = BIT(FLUX_CONVECTIVE),
+  FLUX_FLAG_RADIATIVE = BIT(FLUX_RADIATIVE),
+  FLUX_FLAGS_ALL = FLUX_FLAG_CONVECTIVE | FLUX_FLAG_RADIATIVE
+};
+
 /*******************************************************************************
  * Realisation at a given position and time IN a medium
  ******************************************************************************/
@@ -91,8 +97,7 @@ boundary_flux_realisation_2d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
-   const char compute_radiative,
-   const char compute_convective,
+   const int flux_mask, /* Combination of enum flux_flag */
    double weight[FLUX_NAMES_COUNT__]);
 
 extern LOCAL_SYM res_T
@@ -106,8 +111,7 @@ boundary_flux_realisation_3d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
-   const char compute_radiative,
-   const char compute_convective,
+   const int flux_mask, /* Combination of enum flux_flag */
    double weight[FLUX_NAMES_COUNT__]);
 
 /*******************************************************************************

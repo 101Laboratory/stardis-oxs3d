@@ -233,8 +233,7 @@ XD(boundary_flux_realisation)
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
-   const char compute_radiative,
-   const char compute_convective,
+   const int flux_mask,
    double weight[3])
 {
   struct rwalk_context ctx;
@@ -253,6 +252,8 @@ XD(boundary_flux_realisation)
   const enum sdis_side fluid_side =
     (solid_side == SDIS_FRONT) ? SDIS_BACK : SDIS_FRONT;
   res_T res = RES_OK;
+  const char compute_radiative = (flux_mask & FLUX_FLAG_RADIATIVE) != 0;
+  const char compute_convective = (flux_mask & FLUX_FLAG_CONVECTIVE) != 0;
   ASSERT(uv && fp_to_meter > 0 && weight && time >= 0 && Tref >= 0);
 
 #if SDIS_XD_DIMENSION == 2

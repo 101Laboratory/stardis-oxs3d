@@ -730,6 +730,7 @@ XD(solve_probe_boundary_flux)
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
     double time, epsilon, hc, hr;
+    int flux_mask = 0;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
@@ -742,8 +743,11 @@ XD(solve_probe_boundary_flux)
     hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
 
     /* Fluid, Radiative and Solid temperatures */
+    flux_mask = 0;
+    if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
+    if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
     res_local = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
-      solid_side, fp_to_meter, Tarad, Tref, hr>0, hc>0, T_brf);
+      solid_side, fp_to_meter, Tarad, Tref, flux_mask, T_brf);
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) {
         ATOMIC_SET(&res, res_local);
@@ -918,6 +922,7 @@ XD(solve_boundary_flux)
     double uv[DIM - 1];
     float st[DIM - 1];
     double time;
+    int flux_mask = 0;
     res_T res_local = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
@@ -969,8 +974,11 @@ XD(solve_boundary_flux)
     hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
 
     /* Fluid, Radiative and Solid temperatures */
+    flux_mask = 0;
+    if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
+    if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
     res_local = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
-      solid_side, fp_to_meter, Tarad, Tref, hr > 0, hc > 0, T_brf);
+      solid_side, fp_to_meter, Tarad, Tref, flux_mask, T_brf);
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) {
         ATOMIC_SET(&res, res_local);
