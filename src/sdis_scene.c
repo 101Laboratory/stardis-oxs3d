@@ -15,11 +15,9 @@
 
 #include "sdis_scene_Xd.h"
 
-/* Generate the 2D functions of the scene */
+/* Generate the Generic functions of the scene */
 #define SDIS_SCENE_DIMENSION 2
 #include "sdis_scene_Xd.h"
-
-/* Generate the 3D functions of the scene */
 #define SDIS_SCENE_DIMENSION 3
 #include "sdis_scene_Xd.h"
 

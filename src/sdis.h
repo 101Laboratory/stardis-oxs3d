@@ -77,9 +77,9 @@ enum sdis_medium_type {
 };
 
 enum sdis_estimator_type {
-  SDIS_TEMPERATURE_ESTIMATOR,
-  SDIS_FLUX_ESTIMATOR,
-  SDIS_EST_TYPES_COUNT__
+  SDIS_ESTIMATOR_TEMPERATURE,
+  SDIS_ESTIMATOR_FLUX,
+  SDIS_ESTIMATOR_TYPES_COUNT__
 };
 
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
@@ -604,20 +604,6 @@ sdis_solve_probe_boundary
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
-sdis_solve_camera
-  (struct sdis_scene* scn,
-   const struct sdis_camera* cam, /* Point of view */
-   const double time, /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const size_t width, /* Image definition in in X */
-   const size_t height, /* Image definition in Y */
-   const size_t spp, /* #samples per pixel */
-   sdis_write_accums_T writer,
-   void* writer_data);
-
-SDIS_API res_T
 sdis_solve_boundary
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
@@ -630,7 +616,6 @@ sdis_solve_boundary
    const double reference_temperature, /* In Kelvin */
    struct sdis_estimator** estimator);
 
-/* Flux solver */
 SDIS_API res_T
 sdis_solve_probe_boundary_flux
   (struct sdis_scene* scn,
@@ -654,6 +639,20 @@ sdis_solve_boundary_flux
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
    struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_solve_camera
+  (struct sdis_scene* scn,
+   const struct sdis_camera* cam, /* Point of view */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   const size_t width, /* Image definition in in X */
+   const size_t height, /* Image definition in Y */
+   const size_t spp, /* #samples per pixel */
+   sdis_write_accums_T writer,
+   void* writer_data);
 
 END_DECLS
 

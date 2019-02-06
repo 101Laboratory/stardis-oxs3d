@@ -272,7 +272,7 @@ main(int argc, char** argv)
   BA(sdis_estimator_get_type(estimator, NULL));
   BA(sdis_estimator_get_type(NULL, &type));
   OK(sdis_estimator_get_type(estimator, &type));
-  CHK(type == SDIS_TEMPERATURE_ESTIMATOR);
+  CHK(type == SDIS_ESTIMATOR_TEMPERATURE);
 
   /* Fluxes aren't available after sdis_solve_probe */
   BA(sdis_estimator_get_convective_flux(estimator, NULL));

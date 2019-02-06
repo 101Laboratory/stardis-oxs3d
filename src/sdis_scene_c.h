@@ -41,6 +41,10 @@ struct get_medium_info {
   struct s2d_hit hit_2d;
   struct s3d_hit hit_3d;
 };
+#define GET_MEDIUM_INFO_NULL__ \
+  {{0,0,0}, {0,0,0}, {0,0,0}, S2D_HIT_NULL__, S3D_HIT_NULL__}
+static const struct get_medium_info GET_MEDIUM_INFO_NULL =
+  GET_MEDIUM_INFO_NULL__;
 
 static INLINE void
 prim_prop_init(struct mem_allocator* allocator, struct prim_prop* prim)
@@ -147,13 +151,13 @@ enclosure_local2global_prim_id
 #define DARRAY_FUNCTOR_INIT interface_init
 #include <rsys/dynamic_array.h>
 
-/* Declare the array of medium */
+/* Declare the array of media */
 #define DARRAY_NAME medium
 #define DARRAY_DATA struct sdis_medium*
 #define DARRAY_FUNCTOR_INIT medium_init
 #include <rsys/dynamic_array.h>
 
-/* Declare the array of primitive */
+/* Declare the array of primitives */
 #define DARRAY_NAME prim_prop
 #define DARRAY_DATA struct prim_prop
 #define DARRAY_FUNCTOR_INIT prim_prop_init
@@ -169,7 +173,7 @@ enclosure_local2global_prim_id
 #define HTABLE_DATA_FUNCTOR_COPY_AND_RELEASE enclosure_copy_and_release
 #include <rsys/hash_table.h>
 
-/* Declare the hash table that maps an enclosure id to its data */
+/* Declare the hash table that maps an enclosure id to hc upper bound */
 #define HTABLE_NAME d
 #define HTABLE_KEY unsigned
 #define HTABLE_DATA double

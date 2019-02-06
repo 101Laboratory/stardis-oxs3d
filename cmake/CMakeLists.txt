@@ -57,8 +57,10 @@ set(SDIS_FILES_SRC
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
+  sdis_heat_path.c
   sdis_interface.c
   sdis_medium.c
+  sdis_realisation.c
   sdis_scene.c
   sdis_solve.c)
 
@@ -69,11 +71,20 @@ set(SDIS_FILES_INC
   sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
+  sdis_heat_path.h
+  sdis_heat_path_boundary_Xd.h
+  sdis_heat_path_conductive_Xd.h
+  sdis_heat_path_convective_Xd.h
+  sdis_heat_path_radiative_Xd.h
   sdis_interface_c.h
   sdis_medium_c.h
+  sdis_realisation.h
+  sdis_realisation_Xd.h
   sdis_scene_c.h
   sdis_scene_Xd.h
-  sdis_solve_Xd.h)
+  sdis_solve_Xd.h
+  sdis_Xd_begin.h
+  sdis_Xd_end.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
 
