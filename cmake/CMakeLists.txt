@@ -57,6 +57,7 @@ set(SDIS_FILES_SRC
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
+  sdis_green.c
   sdis_heat_path.c
   sdis_interface.c
   sdis_medium.c
@@ -71,6 +72,7 @@ set(SDIS_FILES_INC
   sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
+  sdis_green.h
   sdis_heat_path.h
   sdis_heat_path_boundary_Xd.h
   sdis_heat_path_conductive_Xd.h

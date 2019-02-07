@@ -201,13 +201,6 @@ interface_get_medium
   return mdm;
 }
 
-unsigned
-interface_get_id(const struct sdis_interface* interf)
-{
-  ASSERT(interf);
-  return interf->id.index;
-}
-
 void
 setup_interface_fragment_2d
   (struct sdis_interface_fragment* frag,

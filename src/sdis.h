@@ -60,6 +60,7 @@ struct sdis_camera;
 struct sdis_data;
 struct sdis_device;
 struct sdis_estimator;
+struct sdis_green_function;
 struct sdis_interface;
 struct sdis_medium;
 struct sdis_scene;
