@@ -19,13 +19,14 @@
 #include "sdis_interface_c.h"
 
 #include <rsys/dynamic_array.h>
+#include <rsys/hash_table.h>
 #include <rsys/mem_allocator.h>
 #include <rsys/ref_count.h>
 
-#include "sdis_scene_c.h" /* struct darray_<medium|interface> */
-
 #include <rsys/dynamic_array.h>
 #include <rsys/ref_count.h>
+
+#include <limits.h>
 
 struct green_vertex {
   double pos[3]; /* Position */
@@ -128,15 +129,22 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
 #define DARRAY_FUNCTOR_COPY_AND_RELEASE green_path_copy_and_release
 #include <rsys/dynamic_array.h>
 
-struct sdis_green_function {
-  struct darray_medium media; /* List of registered media */
-  struct darray_interf interfaces; /* List of registered interfaces */
-  struct darray_green_path paths; /* List of paths used to estimate the green */
+/* Generate the hash table that maps and id to an interface */
+#define HTABLE_NAME interf
+#define HTABLE_KEY unsigned
+#define HTABLE_DATA struct sdis_interface*
+#include <rsys/hash_table.h>
 
-  /* Indices of the last accessed medium/interface used to speed up the access
-   * to the medium/interface. */
-  size_t ilast_medium;
-  size_t ilast_interf;
+/* Generate the hash table that maps and id to a medium */
+#define HTABLE_NAME medium
+#define HTABLE_KEY unsigned
+#define HTABLE_DATA struct sdis_medium*
+#include <rsys/hash_table.h>
+
+struct sdis_green_function {
+  struct htable_medium media;
+  struct htable_interf interfaces;
+  struct darray_green_path paths; /* List of paths used to estimate the green */
 
   ref_T ref;
   struct sdis_device* dev;
@@ -150,28 +158,17 @@ ensure_medium_registration
   (struct sdis_green_function* green,
    struct sdis_medium* mdm)
 {
-  size_t i;
+  unsigned id;
   res_T res = RES_OK;
   ASSERT(green && mdm);
 
-  /* Early find */
-  if(green->ilast_medium < darray_medium_size_get(&green->media)
-  && darray_medium_cdata_get(&green->media)[green->ilast_medium] == mdm)
-    goto exit;
+  id = medium_get_id(mdm);
+  if(htable_medium_find(&green->media, &id)) goto exit;
 
-  /* Linear search of the submitted medium */
-  FOR_EACH(i, 0, darray_medium_size_get(&green->media)) {
-    if(darray_medium_cdata_get(&green->media)[i] == mdm) break;
-  }
+  res = htable_medium_set(&green->media, &id, &mdm);
+  if(res != RES_OK) goto error;
 
-  /* Register the medium if it is not already registered */
-  if(i >= darray_medium_size_get(&green->media)) {
-    SDIS(medium_ref_get(mdm));
-    res = darray_medium_push_back(&green->media, &mdm);
-    if(res != RES_OK) goto error;
-  }
-
-  green->ilast_medium = i;
+  SDIS(medium_ref_get(mdm));
 
 exit:
   return res;
@@ -184,28 +181,17 @@ ensure_interface_registration
   (struct sdis_green_function* green,
    struct sdis_interface* interf)
 {
-  size_t i;
+  unsigned id;
   res_T res = RES_OK;
   ASSERT(green && interf);
 
-  /* Early find */
-  if(green->ilast_interf < darray_interf_size_get(&green->interfaces)
-  && darray_interf_cdata_get(&green->interfaces)[green->ilast_interf] == interf)
-    goto exit;
+  id = interface_get_id(interf);
+  if(htable_interf_find(&green->interfaces, &id)) goto exit;
 
-  /* Linear search of the submitted interface */
-  FOR_EACH(i, 0, darray_interf_size_get(&green->interfaces)) {
-    if(darray_interf_cdata_get(&green->interfaces)[i] == interf) break;
-  }
+  res = htable_interf_set(&green->interfaces, &id, &interf);
+  if(res != RES_OK) goto error;
 
-  /* Register the interface if it is not already registered */
-  if(i >= darray_interf_size_get(&green->interfaces)) {
-    SDIS(interface_ref_get(interf));
-    res = darray_interf_push_back(&green->interfaces, &interf);
-    if(res != RES_OK) goto error;
-  }
-
-  green->ilast_interf = i;
+  SDIS(interface_ref_get(interf));
 
 exit:
   return res;
@@ -216,19 +202,31 @@ error:
 static void
 green_function_clear(struct sdis_green_function* green)
 {
-  size_t i;
+  struct htable_medium_iterator it_medium, end_medium;
+  struct htable_interf_iterator it_interf, end_interf;
   ASSERT(green);
 
-  FOR_EACH(i, 0, darray_medium_size_get(&green->media)) {
-    SDIS(medium_ref_put(darray_medium_data_get(&green->media)[i]));
+  /* Clean up medium hash table */
+  htable_medium_begin(&green->media, &it_medium);
+  htable_medium_end(&green->media, &end_medium);
+  while(!htable_medium_iterator_eq(&it_medium, &end_medium)) {
+    struct sdis_medium* medium;
+    medium = *htable_medium_iterator_data_get(&it_medium);
+    SDIS(medium_ref_put(medium));
   }
-  darray_medium_clear(&green->media);
+  htable_medium_clear(&green->media);
 
-  FOR_EACH(i, 0, darray_interf_size_get(&green->interfaces)) {
-    SDIS(interface_ref_put(darray_interf_data_get(&green->interfaces)[i]));
+  /* Clean up the interface hash table */
+  htable_interf_begin(&green->interfaces, &it_interf);
+  htable_interf_end(&green->interfaces, &end_interf);
+  while(!htable_interf_iterator_eq(&it_interf, &end_interf)) {
+    struct sdis_interface* interf;
+    interf = *htable_interf_iterator_data_get(&it_interf);
+    SDIS(interface_ref_put(interf));
   }
-  darray_interf_clear(&green->interfaces);
+  htable_interf_clear(&green->interfaces);
 
+  /* Clean up the registered paths */
   darray_green_path_clear(&green->paths);
 }
 
@@ -241,8 +239,8 @@ green_function_release(ref_T* ref)
   green = CONTAINER_OF(ref, struct sdis_green_function, ref);
   dev = green->dev;
   green_function_clear(green);
-  darray_medium_release(&green->media);
-  darray_interf_release(&green->interfaces);
+  htable_medium_release(&green->media);
+  htable_interf_release(&green->interfaces);
   darray_green_path_release(&green->paths);
   MEM_RM(dev->allocator, green);
   SDIS(device_ref_put(dev));
@@ -267,11 +265,9 @@ green_function_create
   ref_init(&green->ref);
   SDIS(device_ref_get(dev));
   green->dev = dev;
-  darray_medium_init(dev->allocator, &green->media);
-  darray_interf_init(dev->allocator, &green->interfaces);
+  htable_medium_init(dev->allocator, &green->media);
+  htable_interf_init(dev->allocator, &green->interfaces);
   darray_green_path_init(dev->allocator, &green->paths);
-  green->ilast_medium = SIZE_MAX;
-  green->ilast_interf = SIZE_MAX;
 
 exit:
   *out_green = green;
@@ -317,7 +313,7 @@ green_function_create_path
 }
 
 res_T
-green_path_add_medium_limit_vertex
+green_path_set_medium_limit_vertex
   (struct green_path_handle* handle,
    struct sdis_medium* mdm,
    const double pos[3],
@@ -337,7 +333,7 @@ green_path_add_medium_limit_vertex
 }
 
 res_T
-green_path_add_interface_limit_vertex
+green_path_set_interface_limit_vertex
   (struct green_path_handle* handle,
    struct sdis_interface* interf,
    const double pos[3],

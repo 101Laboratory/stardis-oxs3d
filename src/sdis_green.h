@@ -46,14 +46,14 @@ green_function_create_path
    struct green_path_handle* handle);
 
 extern LOCAL_SYM res_T
-green_path_add_medium_limit_vertex
+green_path_set_medium_limit_vertex
   (struct green_path_handle* path,
    struct sdis_medium* mdm,
    const double pos[3],
    const double delta_time);
 
 extern LOCAL_SYM res_T
-green_path_add_interface_limit_vertex
+green_path_set_interface_limit_vertex
   (struct green_path_handle* path,
    struct sdis_interface* interf,
    const double pos[3],
@@ -70,6 +70,7 @@ green_path_add_flux_term
   (struct green_path_handle* path,
    struct sdis_interface* interf,
    const double term);
+
 
 #endif /* SDIS_GREEN_H */
 
