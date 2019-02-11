@@ -14,6 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis_device_c.h"
+#include "sdis_green.h"
 #include "sdis_heat_path.h"
 #include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
@@ -47,6 +48,7 @@ XD(convective_path)
 #else
   float st[2];
 #endif
+  res_T res = RES_OK;
   (void)rng, (void)fp_to_meter, (void)ctx;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_FLUID);
@@ -55,7 +57,20 @@ XD(convective_path)
   if(tmp >= 0) { /* T is known. */
     T->value += tmp;
     T->done = 1;
-    return RES_OK;
+
+    if(ctx->green_path) {
+      double pos[3] = {0,0,0};
+      dX(set)(pos, rwalk->vtx.P);
+      res = green_path_set_medium_limit_vertex
+        (ctx->green_path, rwalk->mdm, pos, rwalk->vtx.time);
+      if(res != RES_OK) {
+        log_err(scn->dev,
+          "%s: could not register the limit vertex of a sampled path "
+          "against the green function.\n", FUNC_NAME);
+         goto error;
+      }
+    }
+    goto exit;
   }
 
   if(SXD_HIT_NONE(&rwalk->hit)) { /* The path begins in the fluid */
@@ -75,7 +90,8 @@ XD(convective_path)
       log_err(scn->dev,
 "%s: the position %g %g %g lies in the surrounding fluid whose temperature must \n"
 "be known.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
-      return RES_BAD_OP;
+      res = RES_BAD_OP;
+      goto error;
     }
   }
 
@@ -103,7 +119,8 @@ XD(convective_path)
     log_err(scn->dev,
 "%s: invalid enclosure. The surrounding fluid has an unset temperature.\n",
       FUNC_NAME);
-    return RES_BAD_ARG;
+    res = RES_BAD_ARG;
+    goto error;
   }
 
   /* The hc upper bound can be 0 if h is uniformly 0. In that case the result
@@ -111,12 +128,22 @@ XD(convective_path)
   if(enc->hc_upper_bound == 0) {
     /* Cannot be in the fluid without starting there. */
     ASSERT(SXD_HIT_NONE(&rwalk->hit));
+
+    if(ctx->green_path) {
+      log_err(scn->dev,
+        "%s: the upper bound of the convection cannot of an enclosure cannot be "
+        "null when registering the green function; initial condition is not "
+        "supported.\n", FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
     rwalk->vtx.time = fluid_get_t0(rwalk->mdm);
     tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
     if(tmp >= 0) {
       T->value += tmp;
       T->done = 1;
-      return RES_OK;
+      goto exit;
     }
 
     /* At t=0, the initial condition should have been reached. */
@@ -124,10 +151,12 @@ XD(convective_path)
       "%s: undefined initial condition. "
       "Time is 0 but the temperature remains unknown.\n",
       FUNC_NAME);
-    return RES_BAD_OP;
+    res = RES_BAD_OP;
+    goto error;
   }
 
-  /* A trick to force first r test result. */
+  /* A trick to force first r test result.
+   * TODO fix this workaround that seems useless */
   r = 1;
 
   /* Sample time until init condition is reached or a true convection occurs. */
@@ -142,7 +171,8 @@ XD(convective_path)
       log_err(scn->dev,
         "%s: hc (%g) exceeds its provided upper bound (%g) at %g %g %g.\n",
         FUNC_NAME, hc, enc->hc_upper_bound, SPLIT3(rwalk->vtx.P));
-      return RES_BAD_OP;
+      res = RES_BAD_OP;
+      goto error;
     }
 
     if(r < hc / enc->hc_upper_bound) {
@@ -159,7 +189,7 @@ XD(convective_path)
       double mu, tau, t0;
       mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
       tau = ssp_ran_exp(rng, mu);
-      t0 = fluid_get_t0(rwalk->mdm);
+      t0 = ctx->green_path ? -INF : fluid_get_t0(rwalk->mdm);
       rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
       if(rwalk->vtx.time == t0) {
         /* Check the initial condition. */
@@ -167,14 +197,15 @@ XD(convective_path)
         if(tmp >= 0) {
           T->value += tmp;
           T->done = 1;
-          return RES_OK;
+          goto exit;
         }
         /* The initial condition should have been reached. */
         log_err(scn->dev,
           "%s: undefined initial condition. "
           "Time is %g but the temperature remains unknown.\n",
           FUNC_NAME, t0);
-        return RES_BAD_OP;
+        res = RES_BAD_OP;
+        goto error;
       }
     }
 
@@ -222,7 +253,11 @@ XD(convective_path)
   rwalk->hit.distance = 0;
   T->func = XD(boundary_path);
   rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
-  return RES_OK;
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 #include "sdis_Xd_end.h"

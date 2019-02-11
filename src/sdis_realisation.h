@@ -21,6 +21,8 @@
 
 #include <rsys/rsys.h>
 
+/* Forward declarations */
+struct green_path_handle;
 struct sdis_scene;
 struct ssp_rng;
 
@@ -37,24 +39,26 @@ extern LOCAL_SYM res_T
 probe_realisation_2d
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct sdis_medium* medium,
+   struct sdis_medium* medium,
    const double position[2],
    const double time,
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct green_path_handle* green_path,
    double* weight);
 
 extern LOCAL_SYM res_T
 probe_realisation_3d
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct sdis_medium* medium,
+   struct sdis_medium* medium,
    const double position[3],
    const double time,
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct green_path_handle* green_path,
    double* weight);
 
 /*******************************************************************************
@@ -121,7 +125,7 @@ extern LOCAL_SYM res_T
 ray_realisation_3d
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct sdis_medium* medium,
+   struct sdis_medium* medium,
    const double position[3],
    const double direction[3],
    const double time,

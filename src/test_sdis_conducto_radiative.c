@@ -396,7 +396,7 @@ main(int argc, char** argv)
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[2] = ssp_rng_uniform_double(rng, -0.9, 0.9);
 
-    OK(sdis_solve_probe(scn, N, pos, time_range, 1, -1, Tref, &estimator));
+    OK(sdis_solve_probe(scn, N, pos, time_range, 1, -1, Tref, NULL, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     OK(sdis_estimator_get_temperature(estimator, &T));

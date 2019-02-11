@@ -266,7 +266,7 @@ main(int argc, char** argv)
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
 
     /* Solve in 3D */
-    OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+    OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
@@ -289,7 +289,7 @@ main(int argc, char** argv)
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
 
     /* Solve in 2D */
-    OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+    OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);

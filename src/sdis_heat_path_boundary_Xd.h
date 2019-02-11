@@ -14,6 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis_device_c.h"
+#include "sdis_green.h"
 #include "sdis_heat_path.h"
 #include "sdis_interface_c.h"
 #include "sdis_medium_c.h"
@@ -100,7 +101,7 @@ XD(check_rwalk_fragment_consistency)
   return d2_eq_eps(uv, frag->uv, 1.e-6);
 }
 
-static void
+static res_T
 XD(solid_solid_boundary_path)
   (const struct sdis_scene* scn,
    const double fp_to_meter,
@@ -112,10 +113,10 @@ XD(solid_solid_boundary_path)
 {
   struct sXd(hit) hit0, hit1, hit2, hit3;
   struct sXd(hit)* hit;
-  const struct sdis_interface* interf = NULL;
-  const struct sdis_medium* solid_front = NULL;
-  const struct sdis_medium* solid_back = NULL;
-  const struct sdis_medium* mdm;
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* solid_front = NULL;
+  struct sdis_medium* solid_back = NULL;
+  struct sdis_medium* mdm;
   double lambda_front, lambda_back;
   double delta_front, delta_back;
   double delta_boundary_front, delta_boundary_back;
@@ -131,6 +132,7 @@ XD(solid_solid_boundary_path)
   float* dir;
   float pos[DIM];
   int dim = DIM;
+  res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && ctx && frag && rwalk && rng && T);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)frag, (void)ctx;
@@ -227,8 +229,13 @@ XD(solid_solid_boundary_path)
   if(power != SDIS_VOLUMIC_POWER_NONE) {
     const double delta_in_meter = reinject_dst * fp_to_meter;
     const double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-    tmp = power * delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
-    T->value += tmp;
+    tmp = delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
+    T->value += power * tmp;
+
+    if(ctx->green_path) {
+      res = green_path_add_power_term(ctx->green_path, mdm, tmp);
+      if(res != RES_OK) goto error;
+    }
   }
 
   /* Reinject */
@@ -244,9 +251,14 @@ XD(solid_solid_boundary_path)
     rwalk->hit = SXD_HIT_NULL;
     rwalk->hit_side = SDIS_SIDE_NULL__;
   }
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
-static void
+static res_T
 XD(solid_fluid_boundary_path)
   (const struct sdis_scene* scn,
    const double fp_to_meter,
@@ -256,11 +268,11 @@ XD(solid_fluid_boundary_path)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  const struct sdis_interface* interf = NULL;
-  const struct sdis_medium* mdm_front = NULL;
-  const struct sdis_medium* mdm_back = NULL;
-  const struct sdis_medium* solid = NULL;
-  const struct sdis_medium* fluid = NULL;
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* mdm_front = NULL;
+  struct sdis_medium* mdm_back = NULL;
+  struct sdis_medium* solid = NULL;
+  struct sdis_medium* fluid = NULL;
   struct sXd(hit) hit0 = SXD_HIT_NULL;
   struct sXd(hit) hit1 = SXD_HIT_NULL;
   struct sdis_interface_fragment frag_fluid;
@@ -278,7 +290,7 @@ XD(solid_fluid_boundary_path)
   float dir0[DIM], dir1[DIM];
   float range[2];
   int dim = DIM;
-
+  res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T && ctx);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
 
@@ -377,8 +389,13 @@ XD(solid_fluid_boundary_path)
     const double power = solid_get_volumic_power(solid, &rwalk->vtx);
     if(power != SDIS_VOLUMIC_POWER_NONE) {
       const double delta_in_meter = delta_boundary * fp_to_meter;
-      tmp = power * delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
-      T->value += tmp;
+      tmp = delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
+      T->value += power * tmp;
+
+      if(ctx->green_path) {
+        res = green_path_add_power_term(ctx->green_path, solid, tmp);
+        if(res != RES_OK) goto error;
+      }
     }
 
     /* Reinject */
@@ -395,9 +412,14 @@ XD(solid_fluid_boundary_path)
       rwalk->hit_side = SDIS_SIDE_NULL__;
     }
   }
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
-static void
+static res_T
 XD(solid_boundary_with_flux_path)
   (const struct sdis_scene* scn,
    const double fp_to_meter,
@@ -408,8 +430,8 @@ XD(solid_boundary_with_flux_path)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  const struct sdis_interface* interf = NULL;
-  const struct sdis_medium* mdm = NULL;
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* mdm = NULL;
   double lambda;
   double delta;
   double delta_boundary;
@@ -423,6 +445,7 @@ XD(solid_boundary_with_flux_path)
   float dir1[DIM];
   float range[2];
   int dim = DIM;
+  res_T res = RES_OK;
   ASSERT(frag && phi != SDIS_FLUX_NONE);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)ctx;
@@ -487,14 +510,23 @@ XD(solid_boundary_with_flux_path)
 
   /* Handle the flux */
   delta_in_meter = delta*fp_to_meter;
-  T->value += phi * delta_in_meter / lambda;
+  tmp = delta_in_meter / lambda;
+  T->value += phi * tmp;
+  if(ctx->green_path) {
+    res = green_path_add_flux_term(ctx->green_path, interf, tmp);
+    if(res != RES_OK) goto error;
+  }
 
   /* Handle the volumic power */
   power = solid_get_volumic_power(mdm, &rwalk->vtx);
   if(power != SDIS_VOLUMIC_POWER_NONE) {
     delta_in_meter = delta_boundary * fp_to_meter;
-    tmp = power * delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
-    T->value += tmp;
+    tmp = delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
+    T->value += power * tmp;
+    if(ctx->green_path) {
+      res = green_path_add_power_term(ctx->green_path, mdm, tmp);
+      if(res != RES_OK) goto error;
+    }
   }
 
   /* Reinject into the solid */
@@ -510,6 +542,11 @@ XD(solid_boundary_with_flux_path)
     rwalk->hit = SXD_HIT_NULL;
     rwalk->hit_side = SDIS_SIDE_NULL__;
   }
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 /*******************************************************************************
@@ -525,11 +562,12 @@ XD(boundary_path)
    struct XD(temperature)* T)
 {
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-  const struct sdis_interface* interf = NULL;
-  const struct sdis_medium* mdm_front = NULL;
-  const struct sdis_medium* mdm_back = NULL;
-  const struct sdis_medium* mdm = NULL;
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* mdm_front = NULL;
+  struct sdis_medium* mdm_back = NULL;
+  struct sdis_medium* mdm = NULL;
   double tmp;
+  res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm == NULL);
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
@@ -546,7 +584,15 @@ XD(boundary_path)
   if(tmp >= 0) {
     T->value += tmp;
     T->done = 1;
-    return RES_OK;
+
+    if(ctx->green_path) {
+      double pos[3] = {0,0,0};
+      dX(set)(pos, rwalk->vtx.P);
+      res = green_path_set_interface_limit_vertex
+        (ctx->green_path, interf, pos, rwalk->vtx.time);
+      if(res != RES_OK) goto error;
+    }
+    goto exit;
   }
 
   /* Check if the boundary flux is known. Note that currently, only solid media
@@ -555,9 +601,11 @@ XD(boundary_path)
   if(sdis_medium_get_type(mdm) == SDIS_SOLID ) {
     const double phi = interface_side_get_flux(interf, &frag);
     if(phi != SDIS_FLUX_NONE) {
-      XD(solid_boundary_with_flux_path)
+      res = XD(solid_boundary_with_flux_path)
         (scn, fp_to_meter, ctx, &frag, phi, rwalk, rng, T);
-      return RES_OK;
+      if(res != RES_OK) goto error;
+
+      goto exit;
     }
   }
 
@@ -565,13 +613,18 @@ XD(boundary_path)
   mdm_back = interface_get_medium(interf, SDIS_BACK);
 
   if(mdm_front->type == mdm_back->type) {
-    XD(solid_solid_boundary_path)
+    res = XD(solid_solid_boundary_path)
       (scn, fp_to_meter, ctx, &frag, rwalk, rng, T);
   } else {
-    XD(solid_fluid_boundary_path)
+    res = XD(solid_fluid_boundary_path)
       (scn, fp_to_meter, ctx, &frag, rwalk, rng, T);
   }
-  return RES_OK;
+  if(res != RES_OK) goto error;
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 #include "sdis_Xd_end.h"

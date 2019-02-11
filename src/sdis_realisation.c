@@ -25,7 +25,7 @@ res_T
 ray_realisation_3d
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct sdis_medium* medium,
+   struct sdis_medium* medium,
    const double position[],
    const double direction[],
    const double time,
@@ -34,7 +34,7 @@ ray_realisation_3d
    const double Tref,
    double* weight)
 {
-  struct rwalk_context ctx;
+  struct rwalk_context ctx = RWALK_CONTEXT_NULL;
   struct rwalk_3d rwalk = RWALK_NULL_3d;
   struct temperature_3d T = TEMPERATURE_NULL_3d;
   float dir[3];

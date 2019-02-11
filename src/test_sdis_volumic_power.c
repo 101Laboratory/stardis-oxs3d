@@ -268,7 +268,7 @@ main(int argc, char** argv)
   ref = P0 / (2*LAMBDA) * (1.0/4.0 - x*x) + T0;
 
   /* Solve in 3D */
-  OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   CHK(nfails + nreals == N);
@@ -282,7 +282,7 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
   /* Solve in 2D */
-  OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));

@@ -242,7 +242,7 @@ check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
     pos[1] = refs[i].pos[1];
     pos[2] = refs[i].pos[2];
 
-    OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, &estimator));
+    OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, NULL, &estimator));
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));

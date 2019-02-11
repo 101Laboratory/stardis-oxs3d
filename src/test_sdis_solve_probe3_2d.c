@@ -289,7 +289,7 @@ main(int argc, char** argv)
   pos[0] = 0.5;
   pos[1] = 0.5;
   time_range[0] = time_range[1] = INF;
-  OK(sdis_solve_probe( scn, N, pos, time_range, 1.0, -1, 0, &estimator));
+  OK(sdis_solve_probe( scn, N, pos, time_range, 1.0, -1, 0, NULL, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));

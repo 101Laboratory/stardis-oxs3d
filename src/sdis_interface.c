@@ -187,7 +187,7 @@ sdis_interface_ref_put(struct sdis_interface* interf)
 /*******************************************************************************
  * Local function
  ******************************************************************************/
-const struct sdis_medium*
+struct sdis_medium*
 interface_get_medium
   (const struct sdis_interface* interf, const enum sdis_side side)
 {

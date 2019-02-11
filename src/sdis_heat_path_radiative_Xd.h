@@ -14,6 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis_device_c.h"
+#include "sdis_green.h"
 #include "sdis_heat_path.h"
 #include "sdis_interface_c.h"
 #include "sdis_medium_c.h"
@@ -52,7 +53,7 @@ XD(trace_radiative_path)
   for(;;) {
     const struct sdis_interface* interf = NULL;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-    const struct sdis_medium* chk_mdm = NULL;
+    struct sdis_medium* chk_mdm = NULL;
     double alpha;
     double epsilon;
     double r;
@@ -74,6 +75,13 @@ XD(trace_radiative_path)
       if(ctx->Tarad >= 0) {
         T->value += ctx->Tarad;
         T->done = 1;
+
+        if(ctx->green_path) {
+          const double inf_pos[3] = {INF,INF,INF};
+          res = green_path_set_medium_limit_vertex
+            (ctx->green_path, rwalk->mdm, inf_pos, rwalk->vtx.time);
+          if(res != RES_OK) goto error;
+        }
         break;
       } else {
         log_err(scn->dev,

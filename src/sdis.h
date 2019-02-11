@@ -571,11 +571,21 @@ sdis_estimator_get_radiative_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);
 
-
 SDIS_API res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);
+
+/*******************************************************************************
+ * The green function saves the estimation of the propagator
+ ******************************************************************************/
+SDIS_API res_T
+sdis_green_function_ref_get
+  (struct sdis_green_function* green);
+
+SDIS_API res_T
+sdis_green_function_ref_put
+  (struct sdis_green_function* green);
 
 /*******************************************************************************
  * Miscellaneous functions
@@ -589,6 +599,7 @@ sdis_solve_probe
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green, /* NULL <=> no green registration */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T

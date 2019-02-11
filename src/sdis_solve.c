@@ -46,7 +46,7 @@ static res_T
 solve_pixel
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct sdis_medium* mdm,
+   struct sdis_medium* mdm,
    const struct sdis_camera* cam,
    const double time, /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
@@ -108,7 +108,7 @@ static res_T
 solve_tile
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct sdis_medium* mdm,
+   struct sdis_medium* mdm,
    const struct sdis_camera* cam,
    const double time,
    const double fp_to_meter,
@@ -167,15 +167,16 @@ sdis_solve_probe
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
+   struct sdis_green_function** out_green, /* May be NULL<=>Do not store green */
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_probe_2d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, out_estimator);
+      fp_to_meter, Tarad, Tref, out_green, out_estimator);
   } else {
     return solve_probe_3d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, out_estimator);
+      fp_to_meter, Tarad, Tref, out_green, out_estimator);
   }
 }
 
@@ -288,7 +289,7 @@ sdis_solve_camera
   #define TILE_SIZE 32 /* definition in X & Y of a tile */
   STATIC_ASSERT(IS_POW2(TILE_SIZE), TILE_SIZE_must_be_a_power_of_2);
 
-  const struct sdis_medium* medium = NULL;
+  struct sdis_medium* medium = NULL;
   struct darray_accum* tiles = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;

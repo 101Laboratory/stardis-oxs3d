@@ -14,6 +14,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis_device_c.h"
+#include "sdis_green.h"
 #include "sdis_heat_path.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
@@ -33,7 +34,8 @@ XD(conductive_path)
    struct XD(temperature)* T)
 {
   double position_start[DIM];
-  const struct sdis_medium* mdm;
+  struct sdis_medium* mdm;
+  res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_SOLID);
   (void)ctx;
@@ -43,7 +45,8 @@ XD(conductive_path)
   if(mdm != rwalk->mdm) {
     log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
-    return RES_BAD_OP_IRRECOVERABLE;
+    res = RES_BAD_OP_IRRECOVERABLE;
+    goto error;
   }
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
@@ -55,6 +58,7 @@ XD(conductive_path)
     double rho; /* Volumic mass */
     double cp; /* Calorific capacity */
     double tmp;
+    double power_factor;
     double power;
     float delta, delta_solid; /* Random walk numerical parameter */
     float range[2];
@@ -66,7 +70,15 @@ XD(conductive_path)
     if(tmp >= 0) {
       T->value += tmp;
       T->done = 1;
-      return RES_OK;
+
+      if(ctx->green_path) {
+        double pos[3] = {0,0,0};
+        dX(set)(pos, rwalk->vtx.P);
+        res = green_path_set_medium_limit_vertex
+          (ctx->green_path, rwalk->mdm, pos, rwalk->vtx.time);
+        if(res != RES_OK) goto error;
+      }
+      goto exit;
     }
 
     /* Fetch solid properties */
@@ -100,8 +112,8 @@ XD(conductive_path)
       /* Add the volumic power density to the measured temperature */
       if(power != SDIS_VOLUMIC_POWER_NONE) {
         const double delta_in_meter = delta * fp_to_meter;
-        tmp = power * delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
-        T->value += tmp;
+        power_factor = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+        T->value += power * power_factor;
       }
     } else {
       /* Hit something: move along dir0 of the minimum hit distance */
@@ -128,7 +140,7 @@ XD(conductive_path)
         h_in_meter = h * fp_to_meter;
 
         /* The regular power term at wall */
-        tmp = power * h_in_meter * h_in_meter / (2.0 * lambda);
+        tmp = h_in_meter * h_in_meter / (2.0 * lambda);
 
         /* Add the power corrective term */
         if(h < delta_solid) {
@@ -136,17 +148,24 @@ XD(conductive_path)
 #if DIM==2
           /* tmp1 = sin(2a) / (PI - 2*a) */
           const double tmp1 = sin_a * sqrt(1 - sin_a*sin_a)/acos(sin_a);
-          tmp += -(power*delta_s_in_meter*delta_s_in_meter)/(4.0*lambda) * tmp1;
+          tmp += -(delta_s_in_meter * delta_s_in_meter)/(4.0*lambda) * tmp1;
 #else
           const double tmp1 = (sin_a*sin_a*sin_a - sin_a)/ (1-sin_a);
-          tmp += (power*delta_s_in_meter*delta_s_in_meter)/(6*lambda) * tmp1;
+          tmp += (delta_s_in_meter * delta_s_in_meter)/(6.0*lambda) * tmp1;
 #endif
 
         } else if(h == delta_solid) {
-          tmp += -(delta_s_in_meter*delta_s_in_meter*power)/(2.0*DIM*lambda);
+          tmp += -(delta_s_in_meter * delta_s_in_meter)/(2.0*DIM*lambda);
         }
-        T->value += tmp;
+        power_factor = tmp;
+        T->value += power * power_factor;
       }
+    }
+
+    /* Register the power term against the green function */
+    if(ctx->green_path && power != SDIS_VOLUMIC_POWER_NONE) {
+      res = green_path_add_power_term(ctx->green_path, mdm, power_factor);
+      if(res != RES_OK) goto error;
     }
 
     /* Sample the time */
@@ -154,7 +173,7 @@ XD(conductive_path)
       double tau, mu, t0;
       mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
       tau = ssp_ran_exp(rng, mu);
-      t0 = solid_get_t0(rwalk->mdm);
+      t0 = ctx->green_path ? -INF : solid_get_t0(rwalk->mdm);
       rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
       if(rwalk->vtx.time == t0) {
         /* Check the initial condition */
@@ -162,14 +181,15 @@ XD(conductive_path)
         if(tmp >= 0) {
           T->value += tmp;
           T->done = 1;
-          return RES_OK;
+          goto exit;
         }
         /* The initial condition should have been reached */
         log_err(scn->dev,
           "%s: undefined initial condition. "
           "The time is %f but the temperature remains unknown.\n",
           FUNC_NAME, t0);
-        return RES_BAD_OP;
+        res = RES_BAD_OP;
+        goto error;
       }
     }
 
@@ -220,7 +240,8 @@ XD(conductive_path)
       }
 #undef VEC_STR
 #undef VEC_SPLIT
-      return RES_BAD_OP;
+      res = RES_BAD_OP;
+      goto error;
     }
 
   /* Keep going while the solid random walk does not hit an interface */
@@ -228,7 +249,11 @@ XD(conductive_path)
 
   T->func = XD(boundary_path);
   rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
-  return RES_OK;
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 #include "sdis_Xd_end.h"

@@ -36,7 +36,7 @@ struct sdis_interface {
   struct sdis_device* dev;
 };
 
-extern LOCAL_SYM const struct sdis_medium*
+extern LOCAL_SYM struct sdis_medium*
 interface_get_medium
   (const struct sdis_interface* interf,
    const enum sdis_side side);

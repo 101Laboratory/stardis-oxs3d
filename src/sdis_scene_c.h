@@ -203,7 +203,7 @@ scene_get_primitives_count(const struct sdis_scene* scn)
   return darray_prim_prop_size_get(&scn->prim_props);
 }
 
-extern LOCAL_SYM const struct sdis_interface*
+extern LOCAL_SYM struct sdis_interface*
 scene_get_interface
   (const struct sdis_scene* scene,
    const unsigned iprim);
@@ -213,7 +213,7 @@ scene_get_medium
   (const struct sdis_scene* scene,
    const double position[],
    struct get_medium_info* info, /* May be NULL */
-   const struct sdis_medium** medium);
+   struct sdis_medium** medium);
 
 static INLINE void
 scene_get_enclosure_ids

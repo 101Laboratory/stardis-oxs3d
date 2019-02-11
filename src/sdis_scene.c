@@ -276,7 +276,7 @@ sdis_scene_boundary_project_position
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
-const struct sdis_interface*
+struct sdis_interface*
 scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 {
   ASSERT(scn && iprim < darray_prim_prop_size_get(&scn->prim_props));
@@ -288,7 +288,7 @@ scene_get_medium
   (const struct sdis_scene* scn,
    const double pos[],
    struct get_medium_info* info,
-   const struct sdis_medium** out_medium)
+   struct sdis_medium** out_medium)
 {
   return scene_is_2d(scn)
     ? scene_get_medium_2d(scn, pos, info, out_medium)

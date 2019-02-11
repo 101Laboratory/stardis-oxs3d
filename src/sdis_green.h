@@ -26,19 +26,20 @@ struct green_path_handle {
   struct sdis_green_function* green;
   struct green_path* path;
 };
+#define GREEN_PATH_HANDLE_NULL__ {NULL, NULL}
+static const struct green_path_handle GREEN_PATH_HANDLE_NULL =
+  GREEN_PATH_HANDLE_NULL__;
 
 extern LOCAL_SYM res_T
 green_function_create
   (struct sdis_device* dev,
    struct sdis_green_function** green);
 
-extern LOCAL_SYM void
-green_function_ref_get
-  (struct sdis_green_function* greeN);
-
-extern LOCAL_SYM void
-green_function_ref_put
-  (struct sdis_green_function* green);
+/* Merge `src' into `dst' an clear `src' */
+extern LOCAL_SYM res_T
+green_function_merge_and_clear
+  (struct sdis_green_function* dst,
+   struct sdis_green_function* src);
 
 extern LOCAL_SYM res_T
 green_function_create_path

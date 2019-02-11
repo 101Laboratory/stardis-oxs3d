@@ -90,15 +90,16 @@ res_T
 XD(probe_realisation)
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct sdis_medium* medium,
+   struct sdis_medium* medium,
    const double position[],
    const double time,
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct green_path_handle* green_path,
    double* weight)
 {
-  struct rwalk_context ctx;
+  struct rwalk_context ctx = RWALK_CONTEXT_NULL;
   struct XD(rwalk) rwalk = XD(RWALK_NULL);
   struct XD(temperature) T = XD(TEMPERATURE_NULL);
   double t0;
@@ -124,7 +125,8 @@ XD(probe_realisation)
 
   dX(set)(rwalk.vtx.P, position);
   rwalk.vtx.time = time;
-  if(t0 >= rwalk.vtx.time) {
+  /* No initial condition with green */
+  if(!green_path && t0 >= rwalk.vtx.time) {
     double tmp;
     /* Check the initial condition. */
     rwalk.vtx.time = t0;
@@ -144,6 +146,7 @@ XD(probe_realisation)
   rwalk.hit = SXD_HIT_NULL;
   rwalk.mdm = medium;
 
+  ctx.green_path = green_path;
   ctx.Tarad = ambient_radiative_temperature;
   ctx.Tref3 =
     reference_temperature
@@ -170,7 +173,7 @@ XD(boundary_realisation)
    const double Tref,
    double* weight)
 {
-  struct rwalk_context ctx;
+  struct rwalk_context ctx = RWALK_CONTEXT_NULL;
   struct XD(rwalk) rwalk = XD(RWALK_NULL);
   struct XD(temperature) T = XD(TEMPERATURE_NULL);
   struct sXd(attrib) attr;
@@ -236,7 +239,7 @@ XD(boundary_flux_realisation)
    const int flux_mask,
    double weight[3])
 {
-  struct rwalk_context ctx;
+  struct rwalk_context ctx = RWALK_CONTEXT_NULL;
   struct XD(rwalk) rwalk;
   struct XD(temperature) T;
   struct sXd(attrib) attr;
@@ -308,9 +311,8 @@ XD(boundary_flux_realisation)
 
   /* Compute fluid temperature */
   if(compute_convective) {
-    const struct sdis_interface* interf =
-      scene_get_interface(scn, (unsigned)iprim);
-    const struct sdis_medium* mdm = interface_get_medium(interf, fluid_side);
+    struct sdis_interface* interf = scene_get_interface(scn, (unsigned)iprim);
+    struct sdis_medium* mdm = interface_get_medium(interf, fluid_side);
 
     RESET_WALK(fluid_side, mdm);
     T.func = XD(convective_path);

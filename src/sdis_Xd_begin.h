@@ -18,10 +18,16 @@
 
 #include <rsys/rsys.h>
 
+/* Forward declaration */
+struct green_path_handle;
+
 struct rwalk_context {
+  struct green_path_handle* green_path;
   double Tarad; /* Ambient radiative temperature */
   double Tref3; /* Reference temperature ^ 3 */
 };
+#define RWALK_CONTEXT_NULL__ {NULL, 0, 0}
+static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
 
 #endif /* SDIS_XD_BEGIN_H */
 
@@ -80,7 +86,7 @@ struct rwalk_context {
 /* Current state of the random walk */
 struct XD(rwalk) {
   struct sdis_rwalk_vertex vtx; /* Position and time of the Random walk */
-  const struct sdis_medium* mdm; /* Medium in which the random walk lies */
+  struct sdis_medium* mdm; /* Medium in which the random walk lies */
   struct sXd(hit) hit; /* Hit of the random walk */
   enum sdis_side hit_side;
 };

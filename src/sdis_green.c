@@ -105,6 +105,24 @@ green_path_copy(struct green_path* dst, const struct green_path* src)
 }
 
 static INLINE res_T
+green_path_copy_and_clear(struct green_path* dst, struct green_path* src)
+{
+  res_T res = RES_OK;
+  ASSERT(dst && src);
+
+  dst->limit_vertex = src->limit_vertex;
+  dst->end_on_interface = src->end_on_interface;
+  dst->ilast_medium = src->ilast_medium;
+  dst->ilast_interf = src->ilast_interf;
+  res = darray_green_term_copy_and_clear(&dst->flux_terms, &src->flux_terms);
+  if(res != RES_OK) return res;
+  res = darray_green_term_copy_and_clear(&dst->power_terms, &src->power_terms);
+  if(res != RES_OK) return res;
+  return RES_OK;
+
+}
+
+static INLINE res_T
 green_path_copy_and_release(struct green_path* dst, struct green_path* src)
 {
   res_T res = RES_OK;
@@ -247,6 +265,25 @@ green_function_release(ref_T* ref)
 }
 
 /*******************************************************************************
+ * Exported functions
+ ******************************************************************************/
+res_T
+sdis_green_function_ref_get(struct sdis_green_function* green)
+{
+  if(!green) return RES_BAD_ARG;
+  ref_get(&green->ref);
+  return RES_OK;
+}
+
+res_T
+sdis_green_function_ref_put(struct sdis_green_function* green)
+{
+  if(!green) return RES_BAD_ARG;
+  ref_put(&green->ref, green_function_release);
+  return RES_OK;
+}
+
+/*******************************************************************************
  * Local functions
  ******************************************************************************/
 res_T
@@ -274,24 +311,70 @@ exit:
   return res;
 error:
   if(green) {
-    green_function_ref_put(green);
+    SDIS(green_function_ref_put(green));
     green = NULL;
   }
   goto exit;
 }
 
-void
-green_function_ref_get(struct sdis_green_function* green)
+res_T
+green_function_merge_and_clear
+  (struct sdis_green_function* dst, struct sdis_green_function* src)
 {
-  ASSERT(green);
-  ref_get(&green->ref);
-}
+  struct htable_medium_iterator it_medium, end_medium;
+  struct htable_interf_iterator it_interf, end_interf;
+  struct green_path* paths_src;
+  struct green_path* paths_dst;
+  size_t npaths_src;
+  size_t npaths_dst;
+  size_t npaths;
+  size_t i;
+  unsigned id;
+  res_T res = RES_OK;
+  ASSERT(dst && src);
 
-void
-green_function_ref_put(struct sdis_green_function* green)
-{
-  ASSERT(green);
-  ref_put(&green->ref, green_function_release);
+  if(dst == src) goto exit;
+
+  npaths_src = darray_green_path_size_get(&src->paths);
+  npaths_dst = darray_green_path_size_get(&dst->paths);
+  npaths = npaths_src + npaths_dst;
+
+  res = darray_green_path_resize(&dst->paths, npaths);
+  if(res != RES_OK) goto error;
+
+  paths_src = darray_green_path_data_get(&src->paths);
+  paths_dst = darray_green_path_data_get(&dst->paths) + npaths_dst;
+
+  FOR_EACH(i, 0, darray_green_path_size_get(&src->paths)) {
+    res = green_path_copy_and_clear(&paths_dst[i], &paths_src[i]);
+    if(res != RES_OK) goto error;
+  }
+
+  htable_medium_begin(&src->media, &it_medium);
+  htable_medium_end(&src->media, &end_medium);
+  while(!htable_medium_iterator_eq(&it_medium, &end_medium)) {
+    struct sdis_medium* medium;
+    medium = *htable_medium_iterator_data_get(&it_medium);
+    id = medium_get_id(medium);
+    res = htable_medium_set(&dst->media, &id, &medium);
+    if(res != RES_OK) goto error;
+  }
+
+  htable_interf_begin(&src->interfaces, &it_interf);
+  htable_interf_end(&src->interfaces, &end_interf);
+  while(!htable_interf_iterator_eq(&it_interf, &end_interf)) {
+    struct sdis_interface* interf;
+    interf = *htable_interf_iterator_data_get(&it_interf);
+    id = interface_get_id(interf);
+    res = htable_interf_set(&dst->interfaces, &id, &interf);
+    if(res != RES_OK) goto error;
+  }
+
+  green_function_clear(src);
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 res_T

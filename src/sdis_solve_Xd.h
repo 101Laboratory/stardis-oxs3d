@@ -15,6 +15,7 @@
 
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_green.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_realisation.h"
@@ -170,10 +171,13 @@ XD(solve_probe)
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
+   struct sdis_green_function** out_green, /* May be NULL <=> No green func */
    struct sdis_estimator** out_estimator)
 {
-  const struct sdis_medium* medium = NULL;
+  struct sdis_medium* medium = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_green_function* green = NULL;
+  struct sdis_green_function** greens = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   double weight = 0;
@@ -204,12 +208,8 @@ XD(solve_probe)
   if(res != RES_OK) goto error;
 
   /* Create the per thread RNG */
-  rngs = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(struct ssp_rng*));
-  if(!rngs) {
-    res = RES_MEM_ERR;
-    goto error;
-  }
+  rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
+  if(!rngs) { res = RES_MEM_ERR; goto error; }
   FOR_EACH(i, 0, scn->dev->nthreads) {
     res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
     if(res != RES_OK) goto error;
@@ -218,6 +218,17 @@ XD(solve_probe)
   /* Retrieve the medium in which the submitted position lies */
   res = scene_get_medium(scn, position, NULL, &medium);
   if(res != RES_OK) goto error;
+
+  if(out_green) {
+    /* Create the per thread green function */
+    greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
+    if(!greens) { res = RES_MEM_ERR; goto error; }
+    FOR_EACH(i, 0, scn->dev->nthreads) {
+      res = green_function_create(scn->dev, &greens[i]);
+      if(res != RES_OK) goto error;
+    }
+
+  }
 
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
@@ -228,18 +239,27 @@ XD(solve_probe)
     double time;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
+    struct green_path_handle* pgreen_path = NULL;
+    struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
 
-    time = sample_time(rng, time_range);
+    if(!out_green) {
+      time = sample_time(rng, time_range);
+    } else {
+      /* Do not take care of the submitted time when registering the green
+       * function. Simply takes 0 as relative time */
+      time = 0;
+      res_local = green_function_create_path(greens[ithread], &green_path);
+      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
 
-    res_local = XD(probe_realisation)
-      (scn, rng, medium, position, time, fp_to_meter, Tarad, Tref, &w);
+      pgreen_path = &green_path;
+    }
+
+    res_local = XD(probe_realisation)(scn, rng, medium, position, time,
+      fp_to_meter, Tarad, Tref, pgreen_path, &w);
     if(res_local != RES_OK) {
-      if(res_local != RES_BAD_OP) {
-        ATOMIC_SET(&res, res_local);
-        continue;
-      }
+      if(res_local != RES_BAD_OP) { ATOMIC_SET(&res, res_local); continue; }
     } else {
       weight += w;
       sqr_weight += w*w;
@@ -256,6 +276,15 @@ XD(solve_probe)
   /* Setup the estimated temperature */
   estimator_setup_temperature(estimator, weight, sqr_weight);
 
+  if(out_green) {
+    green = greens[0]; /* Return the green of the 1st thread */
+    greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
+    FOR_EACH(i, 1, scn->dev->nthreads) { /* Merge the per thread green */
+      res = green_function_merge_and_clear(green, greens[i]);
+      if(res != RES_OK) goto error;
+    }
+  }
+
 exit:
   if(rngs) {
     FOR_EACH(i, 0, scn->dev->nthreads)  {
@@ -263,10 +292,21 @@ exit:
     }
     MEM_RM(scn->dev->allocator, rngs);
   }
+  if(greens) {
+    FOR_EACH(i, 0, scn->dev->nthreads) {
+      if(greens[i]) SDIS(green_function_ref_put(greens[i]));
+    }
+    MEM_RM(scn->dev->allocator, greens);
+  }
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;
 error:
+  if(green) {
+    SDIS(green_function_ref_put(green));
+    green = NULL;
+  }
   if(estimator) {
     SDIS(estimator_ref_put(estimator));
     estimator = NULL;
