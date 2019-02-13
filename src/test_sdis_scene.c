@@ -19,6 +19,8 @@
 #include <rsys/double2.h>
 #include <rsys/double3.h>
 #include <rsys/math.h>
+#include<star/senc.h>
+#include<star/senc2d.h>
 
 struct context {
   const double* positions;
@@ -91,6 +93,8 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   double lower[3], upper[3];
   double uv0[2], uv1[2], pos[3], pos1[3];
   struct context ctx;
+  struct senc_descriptor* descriptor;
+  struct senc2d_descriptor* descriptor2d;
   size_t ntris, npos;
   size_t i;
 
@@ -162,6 +166,13 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_get_boundary_position(scn, 6, uv1, pos1));
   CHK(!d3_eq_eps(pos1, pos, 1.e-6));
 
+  BA(sdis_get_geometry_analyze(NULL, NULL));
+  BA(sdis_get_geometry_analyze(scn, NULL));
+  BA(sdis_get_geometry_analyze(NULL, &descriptor));
+  OK(sdis_get_geometry_analyze(scn, &descriptor));
+  OK(senc_descriptor_ref_put(descriptor));
+  BA(sdis_get_geometry2d_analyze(scn, &descriptor2d));
+
   BA(sdis_scene_ref_get(NULL));
   OK(sdis_scene_ref_get(scn));
   BA(sdis_scene_ref_put(NULL));
@@ -176,6 +187,8 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   double lower[2], upper[2];
   double u0, u1, pos[2];
   struct context ctx;
+  struct senc2d_descriptor* descriptor;
+  struct senc_descriptor* descriptor3d;
   size_t nsegs, npos;
   size_t i;
 
@@ -247,6 +260,13 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   d2(pos, 1, -1);
   OK(sdis_scene_boundary_project_position(scn, 3, pos, &u0));
   CHK(eq_eps(u0, 1, 1.e-6));
+
+  BA(sdis_get_geometry2d_analyze(NULL, NULL));
+  BA(sdis_get_geometry2d_analyze(scn, NULL));
+  BA(sdis_get_geometry2d_analyze(NULL, &descriptor));
+  OK(sdis_get_geometry2d_analyze(scn, &descriptor));
+  OK(senc2d_descriptor_ref_put(descriptor));
+  BA(sdis_get_geometry_analyze(scn, &descriptor3d));
 
   OK(sdis_scene_ref_put(scn));
 }

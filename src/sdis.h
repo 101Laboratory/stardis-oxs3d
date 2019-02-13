@@ -47,6 +47,8 @@
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
+struct senc2d_descriptor;
+struct senc_descriptor;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
  * ref counted. Once created with the appropriated `sdis_<TYPE>_create'
@@ -528,6 +530,17 @@ sdis_scene_boundary_project_position
    const size_t iprim,
    const double pos[3],
    double uv[]);
+
+/* Get the descriptor of the scene's enclosures */
+SDIS_API res_T
+sdis_get_geometry2d_analyze
+  (struct sdis_scene* scn,
+   struct senc2d_descriptor** descriptor);
+
+SDIS_API res_T
+sdis_get_geometry_analyze
+  (struct sdis_scene* scn,
+   struct senc_descriptor** descriptor);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation

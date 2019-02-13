@@ -181,6 +181,8 @@ struct sdis_scene {
   struct darray_prim_prop prim_props; /* Per primitive properties */
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
+  struct senc_descriptor* senc_descriptor;
+  struct senc2d_descriptor* senc2d_descriptor;
 
   struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */

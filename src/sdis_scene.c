@@ -106,6 +106,8 @@ scene_release(ref_T * ref)
   htable_d_release(&scn->tmp_hc_ub);
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
+  if(scn->senc_descriptor) SENC(descriptor_ref_put(scn->senc_descriptor));
+  if(scn->senc2d_descriptor) SENC2D(descriptor_ref_put(scn->senc2d_descriptor));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }
@@ -272,6 +274,30 @@ sdis_scene_boundary_project_position
     uv[0] = uvw[2];
     uv[1] = uvw[0];
   }
+  return RES_OK;
+}
+
+res_T
+sdis_get_geometry2d_analyze
+  (struct sdis_scene* scn,
+   struct senc2d_descriptor** descriptor)
+{
+  if(!scn || !descriptor) return RES_BAD_ARG;
+  if(! scn->senc2d_descriptor) return RES_BAD_ARG; /* Scene is 3D */
+  SENC2D(descriptor_ref_get(scn->senc2d_descriptor));
+  *descriptor = scn->senc2d_descriptor;
+  return RES_OK;
+}
+
+res_T
+sdis_get_geometry_analyze
+(struct sdis_scene* scn,
+  struct senc_descriptor** descriptor)
+{
+  if(!scn || !descriptor) return RES_BAD_ARG;
+  if(!scn->senc_descriptor) return RES_BAD_ARG; /* Scene is 2D */
+  SENC(descriptor_ref_get(scn->senc_descriptor));
+  *descriptor = scn->senc_descriptor;
   return RES_OK;
 }
 

@@ -780,10 +780,14 @@ XD(scene_create)
     log_err(dev, "%s: could not setup the enclosures.\n", FUNC_NAME);
     goto error;
   }
+#if DIM==2
+  scn->senc2d_descriptor = desc;
+#else
+  scn->senc_descriptor = desc;
+#endif
 
 exit:
   if(out_scn) *out_scn = scn;
-  if(desc) SENCXD(descriptor_ref_put(desc));
   return res;
 error:
   if(scn) {
