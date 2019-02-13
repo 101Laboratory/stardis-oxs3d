@@ -587,6 +587,12 @@ SDIS_API res_T
 sdis_green_function_ref_put
   (struct sdis_green_function* green);
 
+SDIS_API res_T
+sdis_green_function_solve
+  (struct sdis_green_function* green,
+   const double time_range[2], /* Observation time */
+   struct sdis_estimator** estimator);
+
 /*******************************************************************************
  * Miscellaneous functions
  ******************************************************************************/

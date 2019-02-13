@@ -72,10 +72,7 @@ XD(conductive_path)
       T->done = 1;
 
       if(ctx->green_path) {
-        double pos[3] = {0,0,0};
-        dX(set)(pos, rwalk->vtx.P);
-        res = green_path_set_medium_limit_vertex
-          (ctx->green_path, rwalk->mdm, pos, rwalk->vtx.time);
+        res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &rwalk->vtx);
         if(res != RES_OK) goto error;
       }
       goto exit;
@@ -164,7 +161,8 @@ XD(conductive_path)
 
     /* Register the power term against the green function */
     if(ctx->green_path && power != SDIS_VOLUMIC_POWER_NONE) {
-      res = green_path_add_power_term(ctx->green_path, mdm, power_factor);
+      res = green_path_add_power_term
+        (ctx->green_path, mdm, &rwalk->vtx, power_factor);
       if(res != RES_OK) goto error;
     }
 

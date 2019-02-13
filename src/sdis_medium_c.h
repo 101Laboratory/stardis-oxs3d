@@ -70,8 +70,7 @@ fluid_get_temperature
 }
 
 static INLINE double
-  fluid_get_t0
-(const struct sdis_medium* mdm)
+fluid_get_t0(const struct sdis_medium* mdm)
 {
   ASSERT(mdm && mdm->type == SDIS_FLUID);
   ASSERT(0 <= mdm->shader.fluid.t0 && mdm->shader.fluid.t0 < INF);
@@ -133,12 +132,28 @@ solid_get_temperature
 }
 
 static INLINE double
-  solid_get_t0
-(const struct sdis_medium* mdm)
+solid_get_t0(const struct sdis_medium* mdm)
 {
   ASSERT(mdm && mdm->type == SDIS_SOLID);
   ASSERT(0 <= mdm->shader.solid.t0 && mdm->shader.solid.t0 < INF);
   return mdm->shader.solid.t0;
+}
+
+/*******************************************************************************
+ * Generic functions
+ ******************************************************************************/
+static FINLINE double
+medium_get_temerature
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+{
+  double temp;
+  ASSERT(mdm);
+  switch(mdm->type) {
+    case SDIS_FLUID: temp = fluid_get_temperature(mdm, vtx); break;
+    case SDIS_SOLID: temp = solid_get_temperature(mdm, vtx); break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return temp;
 }
 
 #endif /* SDIS_MEDIUM_C_H */

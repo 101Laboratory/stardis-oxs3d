@@ -233,7 +233,7 @@ XD(solid_solid_boundary_path)
     T->value += power * tmp;
 
     if(ctx->green_path) {
-      res = green_path_add_power_term(ctx->green_path, mdm, tmp);
+      res = green_path_add_power_term(ctx->green_path, mdm, &rwalk->vtx, tmp);
       if(res != RES_OK) goto error;
     }
   }
@@ -393,7 +393,7 @@ XD(solid_fluid_boundary_path)
       T->value += power * tmp;
 
       if(ctx->green_path) {
-        res = green_path_add_power_term(ctx->green_path, solid, tmp);
+        res = green_path_add_power_term(ctx->green_path, solid, &rwalk->vtx, tmp);
         if(res != RES_OK) goto error;
       }
     }
@@ -513,7 +513,7 @@ XD(solid_boundary_with_flux_path)
   tmp = delta_in_meter / lambda;
   T->value += phi * tmp;
   if(ctx->green_path) {
-    res = green_path_add_flux_term(ctx->green_path, interf, tmp);
+    res = green_path_add_flux_term(ctx->green_path, interf, frag, tmp);
     if(res != RES_OK) goto error;
   }
 
@@ -524,7 +524,7 @@ XD(solid_boundary_with_flux_path)
     tmp = delta_in_meter * delta_in_meter / (2.0 * dim * lambda);
     T->value += power * tmp;
     if(ctx->green_path) {
-      res = green_path_add_power_term(ctx->green_path, mdm, tmp);
+      res = green_path_add_power_term(ctx->green_path, mdm, &rwalk->vtx, tmp);
       if(res != RES_OK) goto error;
     }
   }
@@ -586,10 +586,8 @@ XD(boundary_path)
     T->done = 1;
 
     if(ctx->green_path) {
-      double pos[3] = {0,0,0};
-      dX(set)(pos, rwalk->vtx.P);
-      res = green_path_set_interface_limit_vertex
-        (ctx->green_path, interf, pos, rwalk->vtx.time);
+      res = green_path_set_limit_interface_fragment
+        (ctx->green_path, interf, &frag);
       if(res != RES_OK) goto error;
     }
     goto exit;

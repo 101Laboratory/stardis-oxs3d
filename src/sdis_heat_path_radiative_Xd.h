@@ -77,9 +77,10 @@ XD(trace_radiative_path)
         T->done = 1;
 
         if(ctx->green_path) {
-          const double inf_pos[3] = {INF,INF,INF};
-          res = green_path_set_medium_limit_vertex
-            (ctx->green_path, rwalk->mdm, inf_pos, rwalk->vtx.time);
+          struct sdis_rwalk_vertex vtx;
+          d3_splat(vtx.P, INF);
+          vtx.time = rwalk->vtx.time;
+          res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &vtx);
           if(res != RES_OK) goto error;
         }
         break;

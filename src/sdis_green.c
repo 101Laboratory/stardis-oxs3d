@@ -14,9 +14,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis_device_c.h"
+#include "sdis_estimator_c.h"
 #include "sdis_green.h"
 #include "sdis_medium_c.h"
+#include "sdis_misc.h"
 #include "sdis_interface_c.h"
+
+#include <star/ssp.h>
 
 #include <rsys/dynamic_array.h>
 #include <rsys/hash_table.h>
@@ -28,39 +32,58 @@
 
 #include <limits.h>
 
-struct green_vertex {
-  double pos[3]; /* Position */
-  double delta_time; /* Time "spent" into the system */
-  unsigned id; /* Id of the medium/interface onto wich the vertex lies */
-};
-#define GREEN_VERTEX_NULL__ {{INF,INF,INF}, INF, UINT_MAX}
-static const struct green_vertex GREEN_VERTEX_NULL = GREEN_VERTEX_NULL__;
+enum limit_type { LIMIT_FRAGMENT, LIMIT_VERTEX };
 
-struct green_term {
-  double term; /* Term computed during green estimation */
-  unsigned id; /* Identifier of the medium/interface of the term */
+struct power_term {
+  double term; /* Power term computed during green estimation */
+  unsigned id; /* Identifier of the medium of the term */
 };
-#define GREEN_TERM_NULL__ {INF, UINT_MAX}
-static const struct green_term GREEN_TERM_NULL = GREEN_TERM_NULL__;
+#define POWER_TERM_NULL__ {INF, UINT_MAX}
+static const struct power_term POWER_TERM_NULL = POWER_TERM_NULL__;
 
 static INLINE void
-green_term_init(struct mem_allocator* allocator, struct green_term* term)
+power_term_init(struct mem_allocator* allocator, struct power_term* term)
 {
   ASSERT(term); (void)allocator;
-  *term = GREEN_TERM_NULL;
+  *term = POWER_TERM_NULL;
 }
 
-/* Generate the dynamic array of green vertices */
-#define DARRAY_NAME green_term
-#define DARRAY_DATA struct green_term
-#define DARRAY_FUNCTOR_INIT green_term_init
+/* Generate the dynamic array of power terms */
+#define DARRAY_NAME power_term
+#define DARRAY_DATA struct power_term
+#define DARRAY_FUNCTOR_INIT power_term_init
+#include <rsys/dynamic_array.h>
+
+struct flux_term {
+  double term;
+  unsigned id; /* Id of the interface of the flux term */
+  enum sdis_side side;
+};
+#define FLUX_TERM_NULL__ {INF, UINT_MAX, SDIS_SIDE_NULL__}
+static const struct flux_term FLUX_TERM_NULL = FLUX_TERM_NULL__;
+
+static INLINE void
+flux_term_init(struct mem_allocator* allocator, struct flux_term* term)
+{
+  ASSERT(term); (void)allocator;
+  *term = FLUX_TERM_NULL;
+}
+
+/* Generate the dynamic array of flux terms */
+#define DARRAY_NAME flux_term
+#define DARRAY_DATA struct flux_term
+#define DARRAY_FUNCTOR_INIT flux_term_init
 #include <rsys/dynamic_array.h>
 
 struct green_path {
-  struct darray_green_term flux_terms; /* List of flux terms */
-  struct darray_green_term power_terms; /* List of volumic power terms */
-  struct green_vertex limit_vertex; /* End vertex of the path */
-  int end_on_interface; /* Define if the limit vertex lies on an interface */
+  struct darray_flux_term flux_terms; /* List of flux terms */
+  struct darray_power_term power_terms; /* List of volumic power terms */
+  union {
+    struct sdis_rwalk_vertex vertex;
+    struct sdis_interface_fragment fragment;
+  } limit;
+  unsigned limit_id; /* Identifier of the limit medium/interface */
+  enum limit_type limit_type;
 
   /* Indices of the last accessed medium/interface. Used to speed up the access
    * to the medium/interface. */
@@ -72,10 +95,11 @@ static INLINE void
 green_path_init(struct mem_allocator* allocator, struct green_path* path)
 {
   ASSERT(path);
-  darray_green_term_init(allocator, &path->flux_terms);
-  darray_green_term_init(allocator, &path->power_terms);
-  path->limit_vertex = GREEN_VERTEX_NULL;
-  path->end_on_interface = 0;
+  darray_flux_term_init(allocator, &path->flux_terms);
+  darray_power_term_init(allocator, &path->power_terms);
+  path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
+  path->limit_id = UINT_MAX;
+  path->limit_type = LIMIT_VERTEX;
   path->ilast_medium = UINT16_MAX;
   path->ilast_interf = UINT16_MAX;
 }
@@ -84,8 +108,8 @@ static INLINE void
 green_path_release(struct green_path* path)
 {
   ASSERT(path);
-  darray_green_term_release(&path->flux_terms);
-  darray_green_term_release(&path->power_terms);
+  darray_flux_term_release(&path->flux_terms);
+  darray_power_term_release(&path->power_terms);
 }
 
 static INLINE res_T
@@ -93,13 +117,14 @@ green_path_copy(struct green_path* dst, const struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
-  dst->limit_vertex = src->limit_vertex;
-  dst->end_on_interface = src->end_on_interface;
+  dst->limit = src->limit;
+  dst->limit_id = src->limit_id;
+  dst->limit_type = src->limit_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
-  res = darray_green_term_copy(&dst->flux_terms, &src->flux_terms);
+  res = darray_flux_term_copy(&dst->flux_terms, &src->flux_terms);
   if(res != RES_OK) return res;
-  res = darray_green_term_copy(&dst->power_terms, &src->power_terms);
+  res = darray_power_term_copy(&dst->power_terms, &src->power_terms);
   if(res != RES_OK) return res;
   return RES_OK;
 }
@@ -109,14 +134,14 @@ green_path_copy_and_clear(struct green_path* dst, struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
-
-  dst->limit_vertex = src->limit_vertex;
-  dst->end_on_interface = src->end_on_interface;
+  dst->limit = src->limit;
+  dst->limit_id = src->limit_id;
+  dst->limit_type = src->limit_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
-  res = darray_green_term_copy_and_clear(&dst->flux_terms, &src->flux_terms);
+  res = darray_flux_term_copy_and_clear(&dst->flux_terms, &src->flux_terms);
   if(res != RES_OK) return res;
-  res = darray_green_term_copy_and_clear(&dst->power_terms, &src->power_terms);
+  res = darray_power_term_copy_and_clear(&dst->power_terms, &src->power_terms);
   if(res != RES_OK) return res;
   return RES_OK;
 
@@ -127,13 +152,14 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
-  dst->limit_vertex = src->limit_vertex;
-  dst->end_on_interface = src->end_on_interface;
+  dst->limit = src->limit;
+  dst->limit_id = src->limit_id;
+  dst->limit_type = src->limit_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
-  res = darray_green_term_copy_and_release(&dst->flux_terms, &src->flux_terms);
+  res = darray_flux_term_copy_and_release(&dst->flux_terms, &src->flux_terms);
   if(res != RES_OK) return res;
-  res = darray_green_term_copy_and_release(&dst->power_terms, &src->power_terms);
+  res = darray_power_term_copy_and_release(&dst->power_terms, &src->power_terms);
   if(res != RES_OK) return res;
   return RES_OK;
 }
@@ -217,6 +243,114 @@ error:
   goto exit;
 }
 
+static FINLINE const struct sdis_medium*
+green_function_fetch_medium
+  (struct sdis_green_function* green, const unsigned medium_id)
+{
+  struct sdis_medium* const* pmdm = NULL;
+  ASSERT(green);
+  pmdm = htable_medium_find(&green->media, &medium_id);
+  ASSERT(pmdm);
+  return *pmdm;
+}
+
+static FINLINE const struct sdis_interface*
+green_function_fetch_interf
+  (struct sdis_green_function* green, const unsigned interf_id)
+{
+  struct sdis_interface* const* pinterf = NULL;
+  ASSERT(green);
+  pinterf = htable_interf_find(&green->interfaces, &interf_id);
+  ASSERT(pinterf);
+  return *pinterf;
+}
+
+static res_T
+green_function_solve_path
+  (struct sdis_green_function* green,
+   const double time, /* Sampled time */
+   const size_t ipath,
+   double* weight)
+{
+  const struct power_term* power_terms = NULL;
+  const struct flux_term* flux_terms = NULL;
+  const struct green_path* path = NULL;
+  const struct sdis_medium* medium = NULL;
+  const struct sdis_interface* interf = NULL;
+  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  double power;
+  double flux;
+  double temperature;
+  double time_curr;
+  size_t i, n;
+  res_T res = RES_OK;
+  ASSERT(green && ipath < darray_green_path_size_get(&green->paths) && weight);
+
+  path = darray_green_path_cdata_get(&green->paths) + ipath;
+
+  /* Compute medium power terms */
+  power = 0;
+  n = darray_power_term_size_get(&path->power_terms);
+  power_terms = darray_power_term_cdata_get(&path->power_terms);
+  FOR_EACH(i, 0, n) {
+    vtx.time = INF;
+    medium = green_function_fetch_medium(green, power_terms[i].id);
+    power += power_terms[i].term * solid_get_volumic_power(medium, &vtx);
+  }
+
+  /* Compute interface fluxes */
+  flux = 0;
+  n = darray_flux_term_size_get(&path->flux_terms);
+  flux_terms = darray_flux_term_cdata_get(&path->flux_terms);
+  FOR_EACH(i, 0, n) {
+    frag.time = INF;
+    frag.side = flux_terms[i].side;
+    interf = green_function_fetch_interf(green, flux_terms[i].id);
+    flux += flux_terms[i].term * interface_side_get_flux(interf, &frag);
+  }
+
+  /* Setup time. TODO handle t0 of the media */
+  switch(path->limit_type) {
+    case LIMIT_FRAGMENT: time_curr = time + path->limit.fragment.time; break;
+    case LIMIT_VERTEX: time_curr = time + path->limit.vertex.time; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  if(time_curr <= 0) {
+    log_err(green->dev,
+      "%s: invalid observation time \"%g\": the initial condition is reached "
+      "while instationary system are not supported by the green function.\n",
+      FUNC_NAME, time);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Compute limit condition */
+  switch(path->limit_type) {
+    case LIMIT_FRAGMENT:
+      frag = path->limit.fragment;
+      frag.time = time_curr;
+      interf = green_function_fetch_interf(green, path->limit_id);
+      temperature = interface_side_get_temperature(interf, &frag);
+      break;
+    case LIMIT_VERTEX:
+      vtx = path->limit.vertex;
+      vtx.time = time_curr;
+      medium = green_function_fetch_medium(green, path->limit_id);
+      temperature = medium_get_temerature(medium, &vtx);
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+
+  /* Compute the path weight */
+  *weight = power + flux + temperature;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 static void
 green_function_clear(struct sdis_green_function* green)
 {
@@ -281,6 +415,62 @@ sdis_green_function_ref_put(struct sdis_green_function* green)
   if(!green) return RES_BAD_ARG;
   ref_put(&green->ref, green_function_release);
   return RES_OK;
+}
+
+res_T
+sdis_green_function_solve
+  (struct sdis_green_function* green,
+   const double time_range[2],
+   struct sdis_estimator** out_estimator)
+{
+  struct sdis_estimator* estimator = NULL;
+  struct ssp_rng* rng = NULL;
+  size_t npaths;
+  size_t ipath;
+  double accum = 0;
+  double accum2 = 0;
+  res_T res = RES_OK;
+
+  if(!green || !time_range || time_range[0] < 0
+  || time_range[1] < time_range[0] || !out_estimator) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = ssp_rng_create(green->dev->allocator, &ssp_rng_mt19937_64, &rng);
+  if(res != RES_OK) goto error;
+
+  npaths = darray_green_path_size_get(&green->paths);
+
+  /* Create the estimator */
+  res = estimator_create
+    (green->dev, SDIS_ESTIMATOR_TEMPERATURE, npaths, npaths, &estimator);
+  if(res != RES_OK) goto error;
+
+  /* Solve the green function */
+  FOR_EACH(ipath, 0, npaths) { /* TODO add multi-threading */
+    const double time = sample_time(rng, time_range);
+    double w;
+
+    res = green_function_solve_path(green, time, ipath, &w);
+    if(res != RES_OK) goto error;
+    accum += w;
+    accum2 += w*w;
+  }
+
+  /* Setup the estimated temperature */
+  estimator_setup_temperature(estimator, accum, accum2);
+
+exit:
+  if(rng) SSP(rng_ref_put(rng));
+  if(out_estimator) *out_estimator = estimator;
+  return res;
+error:
+  if(estimator) {
+    SDIS(estimator_ref_put(estimator));
+    estimator = NULL;
+  }
+  goto exit;
 }
 
 /*******************************************************************************
@@ -396,42 +586,34 @@ green_function_create_path
 }
 
 res_T
-green_path_set_medium_limit_vertex
+green_path_set_limit_interface_fragment
   (struct green_path_handle* handle,
-   struct sdis_medium* mdm,
-   const double pos[3],
-   const double delta_time)
+   struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
 {
   res_T res = RES_OK;
-  ASSERT(handle && mdm && pos);
-  res = ensure_medium_registration(handle->green, mdm);
+  ASSERT(handle && interf && frag);
+  res = ensure_interface_registration(handle->green, interf);
   if(res != RES_OK) return res;
-  handle->path->limit_vertex.pos[0] = pos[0];
-  handle->path->limit_vertex.pos[1] = pos[1];
-  handle->path->limit_vertex.pos[2] = pos[2];
-  handle->path->limit_vertex.delta_time = delta_time;
-  handle->path->limit_vertex.id = medium_get_id(mdm);
-  handle->path->end_on_interface = 0;
+  handle->path->limit.fragment = *frag;
+  handle->path->limit_id = interface_get_id(interf);
+  handle->path->limit_type = LIMIT_FRAGMENT;
   return RES_OK;
 }
 
 res_T
-green_path_set_interface_limit_vertex
+green_path_set_limit_vertex
   (struct green_path_handle* handle,
-   struct sdis_interface* interf,
-   const double pos[3],
-   const double delta_time)
+   struct sdis_medium* mdm,
+   const struct sdis_rwalk_vertex* vert)
 {
   res_T res = RES_OK;
-  ASSERT(handle && interf && pos);
-  res = ensure_interface_registration(handle->green, interf);
+  ASSERT(handle && mdm && vert);
+  res = ensure_medium_registration(handle->green, mdm);
   if(res != RES_OK) return res;
-  handle->path->limit_vertex.pos[0] = pos[0];
-  handle->path->limit_vertex.pos[1] = pos[1];
-  handle->path->limit_vertex.pos[2] = pos[2];
-  handle->path->limit_vertex.delta_time = delta_time;
-  handle->path->limit_vertex.id = interface_get_id(interf);
-  handle->path->end_on_interface = 1;
+  handle->path->limit.vertex = *vert;
+  handle->path->limit_id = medium_get_id(mdm);
+  handle->path->limit_type = LIMIT_VERTEX;
   return RES_OK;
 }
 
@@ -439,22 +621,27 @@ res_T
 green_path_add_power_term
   (struct green_path_handle* handle,
    struct sdis_medium* mdm,
-   const double term)
+   const struct sdis_rwalk_vertex* vtx,
+   const double val)
 {
   struct green_path* path;
-  struct green_term* terms;
+  struct power_term* terms;
   size_t nterms;
   size_t iterm;
   unsigned id;
   res_T res = RES_OK;
-  ASSERT(handle && mdm && term >= 0);
+  ASSERT(handle && mdm && vtx && val >= 0);
+
+  /* Unused position and time: the current implementation of the green function
+   * assumes that the power is constant in space and time per medium. */
+  (void)vtx;
 
   res = ensure_medium_registration(handle->green, mdm);
   if(res != RES_OK) goto error;
 
   path = handle->path;
-  terms = darray_green_term_data_get(&path->power_terms);
-  nterms = darray_green_term_size_get(&path->power_terms);
+  terms = darray_power_term_data_get(&path->power_terms);
+  nterms = darray_power_term_size_get(&path->power_terms);
   id = medium_get_id(mdm);
   iterm = SIZE_MAX;
 
@@ -468,12 +655,12 @@ green_path_add_power_term
 
   /* Add the power term to the path wrt the submitted medium */
   if(iterm < nterms) {
-    terms[iterm].term += term;
+    terms[iterm].term += val;
   } else {
-    struct green_term gterm = GREEN_TERM_NULL;
-    gterm.term = term;
-    gterm.id = id;
-    res = darray_green_term_push_back(&handle->path->power_terms, &gterm);
+    struct power_term term = POWER_TERM_NULL;
+    term.term = val;
+    term.id = id;
+    res = darray_power_term_push_back(&handle->path->power_terms, &term);
     if(res != RES_OK) goto error;
   }
 
@@ -491,41 +678,49 @@ res_T
 green_path_add_flux_term
   (struct green_path_handle* handle,
    struct sdis_interface* interf,
-   const double term)
+   const struct sdis_interface_fragment* frag,
+   const double val)
 {
   struct green_path* path;
-  struct green_term* terms;
+  struct flux_term* terms;
   size_t nterms;
   size_t iterm;
   unsigned id;
   res_T res = RES_OK;
-  ASSERT(handle && interf && term >= 0);
+  ASSERT(handle && interf && frag && val >= 0);
 
   res = ensure_interface_registration(handle->green, interf);
   if(res != RES_OK) goto error;
 
   path = handle->path;
-  terms = darray_green_term_data_get(&path->flux_terms);
-  nterms = darray_green_term_size_get(&path->flux_terms);
+  terms = darray_flux_term_data_get(&path->flux_terms);
+  nterms = darray_flux_term_size_get(&path->flux_terms);
   id = interface_get_id(interf);
   iterm = SIZE_MAX;
 
   /* Early find */
-  if(path->ilast_interf < nterms && terms[path->ilast_interf].id == id) {
+  if(path->ilast_interf < nterms
+  && terms[path->ilast_interf].id == id
+  && terms[path->ilast_interf].side == frag->side) {
     iterm = path->ilast_interf;
   } else {
     /* Linear search of the submitted interface */
-    FOR_EACH(iterm, 0, nterms) if(terms[iterm].id == id) break;
+    FOR_EACH(iterm, 0, nterms) {
+      if(terms[iterm].id == id && terms[iterm].side == frag->side) {
+        break;
+      }
+    }
   }
 
   /* Add the flux term to the path wrt the submitted interface */
   if(iterm < nterms) {
-    terms[iterm].term += term;
+    terms[iterm].term += val;
   } else {
-    struct green_term gterm = GREEN_TERM_NULL;
-    gterm.term = term;
-    gterm.id = id;
-    res = darray_green_term_push_back(&handle->path->flux_terms, &gterm);
+    struct flux_term term = FLUX_TERM_NULL;
+    term.term = val;
+    term.id = id;
+    term.side = frag->side;
+    res = darray_flux_term_push_back(&handle->path->flux_terms, &term);
     if(res != RES_OK) goto error;
   }
 

@@ -34,20 +34,6 @@ static const struct XD(boundary_context) XD(BOUNDARY_CONTEXT_NULL) = {
   NULL, NULL
 };
 
-#ifndef SDIS_SOLVE_XD_H
-#define SDIS_SOLVE_XD_H
-
-static INLINE double
-sample_time(struct ssp_rng* rng, const double time_range[2])
-{
-  ASSERT(time_range && time_range[0] >= 0 && time_range[1] >= time_range[0]);
-  ASSERT(rng);
-  if(time_range[0] == time_range[1]) return time_range[0];
-  return ssp_rng_uniform_double(rng, time_range[0], time_range[1]);
-}
-
-#endif /* SDIS_SOLVE_XD_H */
-
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/

@@ -18,6 +18,7 @@
 
 #include <rsys/float2.h>
 #include <rsys/float3.h>
+#include <star/ssp.h>
 
 /* Empirical scale factor to apply to the upper bound of the ray range in order
  * to handle numerical imprecisions */
@@ -75,6 +76,15 @@ move_pos_3d(double pos[3], const float dir[3], const float delta)
   pos[1] += dir[1] * delta;
   pos[2] += dir[2] * delta;
   return pos;
+}
+
+static INLINE double
+sample_time(struct ssp_rng* rng, const double time_range[2])
+{
+  ASSERT(time_range && time_range[0] >= 0 && time_range[1] >= time_range[0]);
+  ASSERT(rng);
+  if(time_range[0] == time_range[1]) return time_range[0];
+  return ssp_rng_uniform_double(rng, time_range[0], time_range[1]);
 }
 
 #endif /* SDIS_MISC_H */
