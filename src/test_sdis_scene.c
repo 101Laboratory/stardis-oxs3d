@@ -166,12 +166,19 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_get_boundary_position(scn, 6, uv1, pos1));
   CHK(!d3_eq_eps(pos1, pos, 1.e-6));
 
-  BA(sdis_get_geometry_analyze(NULL, NULL));
-  BA(sdis_get_geometry_analyze(scn, NULL));
-  BA(sdis_get_geometry_analyze(NULL, &descriptor));
-  OK(sdis_get_geometry_analyze(scn, &descriptor));
+  BA(sdis_get_scene_analyze(NULL, NULL));
+  BA(sdis_get_scene_analyze(scn, NULL));
+  BA(sdis_get_scene_analyze(NULL, &descriptor));
+  OK(sdis_get_scene_analyze(scn, &descriptor));
   OK(senc_descriptor_ref_put(descriptor));
-  BA(sdis_get_geometry2d_analyze(scn, &descriptor2d));
+  /* No 2D available */
+  BA(sdis_get_scene_2d_analyze(scn, &descriptor2d));
+  BA(sdis_release_scene_analyze(NULL));
+  OK(sdis_release_scene_analyze(scn));
+  /* Allready released */
+  BA(sdis_release_scene_analyze(scn));
+  /* Descriptor released: cannot get it anymore */
+  BA(sdis_get_scene_analyze(scn, &descriptor));
 
   BA(sdis_scene_ref_get(NULL));
   OK(sdis_scene_ref_get(scn));
@@ -261,12 +268,19 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_boundary_project_position(scn, 3, pos, &u0));
   CHK(eq_eps(u0, 1, 1.e-6));
 
-  BA(sdis_get_geometry2d_analyze(NULL, NULL));
-  BA(sdis_get_geometry2d_analyze(scn, NULL));
-  BA(sdis_get_geometry2d_analyze(NULL, &descriptor));
-  OK(sdis_get_geometry2d_analyze(scn, &descriptor));
+  BA(sdis_get_scene_2d_analyze(NULL, NULL));
+  BA(sdis_get_scene_2d_analyze(scn, NULL));
+  BA(sdis_get_scene_2d_analyze(NULL, &descriptor));
+  OK(sdis_get_scene_2d_analyze(scn, &descriptor));
   OK(senc2d_descriptor_ref_put(descriptor));
-  BA(sdis_get_geometry_analyze(scn, &descriptor3d));
+  /* No 3D available */
+  BA(sdis_get_scene_analyze(scn, &descriptor3d));
+  BA(sdis_release_scene_analyze(NULL));
+  OK(sdis_release_scene_analyze(scn));
+  /* Allready released */
+  BA(sdis_release_scene_analyze(scn));
+  /* Descriptor released: cannot get it anymore */
+  BA(sdis_get_scene_2d_analyze(scn, &descriptor));
 
   OK(sdis_scene_ref_put(scn));
 }

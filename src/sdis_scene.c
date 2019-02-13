@@ -278,7 +278,7 @@ sdis_scene_boundary_project_position
 }
 
 res_T
-sdis_get_geometry2d_analyze
+sdis_get_scene_2d_analyze
   (struct sdis_scene* scn,
    struct senc2d_descriptor** descriptor)
 {
@@ -290,7 +290,7 @@ sdis_get_geometry2d_analyze
 }
 
 res_T
-sdis_get_geometry_analyze
+sdis_get_scene_analyze
 (struct sdis_scene* scn,
   struct senc_descriptor** descriptor)
 {
@@ -298,6 +298,19 @@ sdis_get_geometry_analyze
   if(!scn->senc_descriptor) return RES_BAD_ARG; /* Scene is 2D */
   SENC(descriptor_ref_get(scn->senc_descriptor));
   *descriptor = scn->senc_descriptor;
+  return RES_OK;
+}
+
+res_T
+sdis_release_scene_analyze(struct sdis_scene* scn)
+{
+  if (!scn) return RES_BAD_ARG;
+  if(scn->senc2d_descriptor)
+    SENC2D(descriptor_ref_put(scn->senc2d_descriptor));
+  if(scn->senc_descriptor)
+    SENC(descriptor_ref_put(scn->senc_descriptor));
+  scn->senc_descriptor = NULL;
+  scn->senc2d_descriptor = NULL;
   return RES_OK;
 }
 

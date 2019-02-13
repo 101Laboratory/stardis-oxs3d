@@ -531,16 +531,23 @@ sdis_scene_boundary_project_position
    const double pos[3],
    double uv[]);
 
-/* Get the descriptor of the scene's enclosures */
+/* Get the descriptor of the 2D scene's enclosures */
 SDIS_API res_T
-sdis_get_geometry2d_analyze
+sdis_get_scene_2d_analyze
   (struct sdis_scene* scn,
    struct senc2d_descriptor** descriptor);
 
+/* Get the descriptor of the 3D scene's enclosures */
 SDIS_API res_T
-sdis_get_geometry_analyze
+sdis_get_scene_analyze
   (struct sdis_scene* scn,
    struct senc_descriptor** descriptor);
+
+/* Release the descriptor of the scene's enclosures;
+ * subsequent attempts to get it will fail. */
+SDIS_API res_T
+sdis_release_scene_analyze
+  (struct sdis_scene* scn);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
