@@ -182,6 +182,8 @@ main(int argc, char** argv)
   struct sdis_scene* scn = NULL;
   struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
+  struct sdis_green_function* green = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -261,13 +263,13 @@ main(int argc, char** argv)
   pos[1] = 0.5;
   pos[2] = 0.5;
   time_range[0] = time_range[1] = INF;
-  BA(sdis_solve_probe(NULL, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
-  BA(sdis_solve_probe(scn, 0, pos, time_range, 1.0, 0, 0, NULL, &estimator));
-  BA(sdis_solve_probe(scn, N, NULL, time_range, 1.0, 0, 0, NULL, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, 0, NULL, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, -1, NULL, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL, NULL));
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
+  BA(sdis_solve_probe(NULL, N, pos, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, 0, pos, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, NULL, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, -1, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
 
   BA(sdis_estimator_get_type(estimator, NULL));
   BA(sdis_estimator_get_type(NULL, &type));
@@ -316,7 +318,34 @@ main(int argc, char** argv)
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = -1;
-  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+
+  fluid_param->temperature = 300;
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+
+  BA(sdis_solve_probe_green_function(NULL, N, pos, 1.0, 0, 0, &green));
+  BA(sdis_solve_probe_green_function(scn, 0, pos, 1.0, 0, 0, &green));
+  BA(sdis_solve_probe_green_function(scn, N, NULL, 1.0, 0, 0, &green));
+  BA(sdis_solve_probe_green_function(scn, N, pos, 0.0, 0, 0, &green));
+  BA(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, -1, &green));
+  BA(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, NULL));
+  OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, &green));
+
+  BA(sdis_green_function_solve(NULL, time_range, &estimator2));
+  BA(sdis_green_function_solve(green, NULL, &estimator2));
+  BA(sdis_green_function_solve(green, time_range, NULL));
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+
+  check_estimator_eq(estimator, estimator2);
+
+  BA(sdis_green_function_ref_get(NULL));
+  OK(sdis_green_function_ref_get(green));
+  BA(sdis_green_function_ref_put(NULL));
+  OK(sdis_green_function_ref_put(green));
+  OK(sdis_green_function_ref_put(green));
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
 
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));

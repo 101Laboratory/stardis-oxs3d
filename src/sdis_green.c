@@ -32,7 +32,7 @@
 
 #include <limits.h>
 
-enum limit_type { LIMIT_FRAGMENT, LIMIT_VERTEX };
+enum limit_type { LIMIT_FRAGMENT, LIMIT_VERTEX, LIMIT_NONE };
 
 struct power_term {
   double term; /* Power term computed during green estimation */
@@ -99,7 +99,7 @@ green_path_init(struct mem_allocator* allocator, struct green_path* path)
   darray_power_term_init(allocator, &path->power_terms);
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
   path->limit_id = UINT_MAX;
-  path->limit_type = LIMIT_VERTEX;
+  path->limit_type = LIMIT_NONE;
   path->ilast_medium = UINT16_MAX;
   path->ilast_interf = UINT16_MAX;
 }
@@ -288,6 +288,10 @@ green_function_solve_path
   ASSERT(green && ipath < darray_green_path_size_get(&green->paths) && weight);
 
   path = darray_green_path_cdata_get(&green->paths) + ipath;
+  if(path->limit_type == LIMIT_NONE) { /* Rejected path */
+    res = RES_BAD_OP;
+    goto error;
+  }
 
   /* Compute medium power terms */
   power = 0;
@@ -365,6 +369,7 @@ green_function_clear(struct sdis_green_function* green)
     struct sdis_medium* medium;
     medium = *htable_medium_iterator_data_get(&it_medium);
     SDIS(medium_ref_put(medium));
+    htable_medium_iterator_next(&it_medium);
   }
   htable_medium_clear(&green->media);
 
@@ -375,6 +380,7 @@ green_function_clear(struct sdis_green_function* green)
     struct sdis_interface* interf;
     interf = *htable_interf_iterator_data_get(&it_interf);
     SDIS(interface_ref_put(interf));
+    htable_interf_iterator_next(&it_interf);
   }
   htable_interf_clear(&green->interfaces);
 
@@ -427,6 +433,7 @@ sdis_green_function_solve
   struct ssp_rng* rng = NULL;
   size_t npaths;
   size_t ipath;
+  size_t N = 0; /* #realisations */
   double accum = 0;
   double accum2 = 0;
   res_T res = RES_OK;
@@ -442,21 +449,24 @@ sdis_green_function_solve
 
   npaths = darray_green_path_size_get(&green->paths);
 
-  /* Create the estimator */
-  res = estimator_create
-    (green->dev, SDIS_ESTIMATOR_TEMPERATURE, npaths, npaths, &estimator);
-  if(res != RES_OK) goto error;
-
   /* Solve the green function */
   FOR_EACH(ipath, 0, npaths) { /* TODO add multi-threading */
     const double time = sample_time(rng, time_range);
     double w;
 
     res = green_function_solve_path(green, time, ipath, &w);
+    if(res == RES_BAD_OP) continue;
     if(res != RES_OK) goto error;
+
     accum += w;
     accum2 += w*w;
+    ++N;
   }
+
+  /* Create the estimator */
+  res = estimator_create
+    (green->dev, SDIS_ESTIMATOR_TEMPERATURE, npaths, N, &estimator);
+  if(res != RES_OK) goto error;
 
   /* Setup the estimated temperature */
   estimator_setup_temperature(estimator, accum, accum2);
@@ -548,6 +558,7 @@ green_function_merge_and_clear
     id = medium_get_id(medium);
     res = htable_medium_set(&dst->media, &id, &medium);
     if(res != RES_OK) goto error;
+    htable_medium_iterator_next(&it_medium);
   }
 
   htable_interf_begin(&src->interfaces, &it_interf);
@@ -558,6 +569,7 @@ green_function_merge_and_clear
     id = interface_get_id(interf);
     res = htable_interf_set(&dst->interfaces, &id, &interf);
     if(res != RES_OK) goto error;
+    htable_interf_iterator_next(&it_interf);
   }
 
   green_function_clear(src);
@@ -592,7 +604,7 @@ green_path_set_limit_interface_fragment
    const struct sdis_interface_fragment* frag)
 {
   res_T res = RES_OK;
-  ASSERT(handle && interf && frag);
+  ASSERT(handle && interf && frag && handle->path->limit_type == LIMIT_NONE);
   res = ensure_interface_registration(handle->green, interf);
   if(res != RES_OK) return res;
   handle->path->limit.fragment = *frag;
@@ -608,7 +620,7 @@ green_path_set_limit_vertex
    const struct sdis_rwalk_vertex* vert)
 {
   res_T res = RES_OK;
-  ASSERT(handle && mdm && vert);
+  ASSERT(handle && mdm && vert && handle->path->limit_type == LIMIT_NONE);
   res = ensure_medium_registration(handle->green, mdm);
   if(res != RES_OK) return res;
   handle->path->limit.vertex = *vert;

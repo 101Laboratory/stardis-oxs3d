@@ -594,7 +594,7 @@ sdis_green_function_solve
    struct sdis_estimator** estimator);
 
 /*******************************************************************************
- * Miscellaneous functions
+ * Solvers
  ******************************************************************************/
 SDIS_API res_T
 sdis_solve_probe
@@ -605,7 +605,6 @@ sdis_solve_probe
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
-   struct sdis_green_function** green, /* NULL <=> no green registration */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -671,6 +670,26 @@ sdis_solve_camera
    const size_t spp, /* #samples per pixel */
    sdis_write_accums_T writer,
    void* writer_data);
+
+/*******************************************************************************
+ * Green solvers.
+ *
+ * The caller should ensure that green solvers are invoked on scenes whose data
+ * do not depend on time. Indeed, on green estimation, the time parameter along
+ * the random walks registers the relative time spent in the system, not an
+ * absolute time. As a consequence, on green estimation, the media/interfaces
+ * parameters cannot use this parameter to vary in time. If these data vary in
+ * time, the behavior of the estimated green function is undefined.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_solve_probe_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const double position[3], /* Probe position */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
 
 END_DECLS
 

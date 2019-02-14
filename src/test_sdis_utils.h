@@ -240,6 +240,50 @@ dump_segments
 }
 
 static INLINE void
+check_estimator_eq
+  (const struct sdis_estimator* e1, const struct sdis_estimator* e2)
+{
+  struct sdis_mc mc1, mc2;
+  size_t n1, n2;
+  enum sdis_estimator_type type1, type2;
+  ASSERT(e1 && e2);
+
+  OK(sdis_estimator_get_type(e1, &type1));
+  OK(sdis_estimator_get_type(e2, &type2));
+  CHK(type1 == type2);
+
+  OK(sdis_estimator_get_realisation_count(e1, &n1));
+  OK(sdis_estimator_get_realisation_count(e2, &n2));
+  CHK(n1 == n2);
+
+  OK(sdis_estimator_get_failure_count(e1, &n1));
+  OK(sdis_estimator_get_failure_count(e2, &n2));
+  CHK(n1 == n2);
+
+  OK(sdis_estimator_get_temperature(e1, &mc1));
+  OK(sdis_estimator_get_temperature(e2, &mc2));
+  CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
+  CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+
+  if(type1 == SDIS_ESTIMATOR_FLUX) {
+    OK(sdis_estimator_get_convective_flux(e1, &mc1));
+    OK(sdis_estimator_get_convective_flux(e2, &mc2));
+    CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
+    CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+
+    OK(sdis_estimator_get_radiative_flux(e1, &mc1));
+    OK(sdis_estimator_get_radiative_flux(e2, &mc2));
+    CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
+    CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+
+    OK(sdis_estimator_get_total_flux(e1, &mc1));
+    OK(sdis_estimator_get_total_flux(e2, &mc2));
+    CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
+    CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+  }
+}
+
+static INLINE void
 check_memory_allocator(struct mem_allocator* allocator)
 {
   if(MEM_ALLOCATED_SIZE(allocator)) {

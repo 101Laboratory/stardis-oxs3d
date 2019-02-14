@@ -142,6 +142,8 @@ main(int argc, char** argv)
   struct sdis_scene* scn = NULL;
   struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
+  struct sdis_green_function* green = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
@@ -199,7 +201,7 @@ main(int argc, char** argv)
   pos[0] = 0.5;
   pos[1] = 0.5;
   time_range[0] = time_range[1] = INF;
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
 
@@ -214,12 +216,18 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
+  OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, &green));
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator_eq(estimator, estimator2);
+
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  OK(sdis_green_function_ref_put(green));
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = -1;
   
-  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
 
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));

@@ -167,16 +167,35 @@ sdis_solve_probe
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
-   struct sdis_green_function** out_green, /* May be NULL<=>Do not store green */
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_probe_2d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, out_green, out_estimator);
+      fp_to_meter, Tarad, Tref, NULL, out_estimator);
   } else {
     return solve_probe_3d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, out_green, out_estimator);
+      fp_to_meter, Tarad, Tref, NULL, out_estimator);
+  }
+}
+
+res_T
+sdis_solve_probe_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations,
+   const double position[3],
+   const double fp_to_meter,/* Scale factor from floating point unit to meter */
+   const double Tarad, /* Ambient radiative temperature */
+   const double Tref, /* Reference temperature */
+   struct sdis_green_function** out_green)
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return solve_probe_2d(scn, nrealisations, position, NULL,
+      fp_to_meter, Tarad, Tref, out_green, NULL);
+  } else {
+    return solve_probe_3d(scn, nrealisations, position, NULL,
+      fp_to_meter, Tarad, Tref, out_green, NULL);
   }
 }
 

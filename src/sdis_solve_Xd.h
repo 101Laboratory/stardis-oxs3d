@@ -175,13 +175,22 @@ XD(solve_probe)
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !position
-  || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-  || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
-  || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
+  || fp_to_meter <= 0 || Tref < 0) {
     res = RES_BAD_ARG;
     goto error;
   }
-
+  if(!out_estimator && !out_green) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+  if(out_estimator) {
+    if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+      res = RES_BAD_ARG;
+      goto error;
+    }
+  }
+  
 #if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
 #else
@@ -254,13 +263,15 @@ XD(solve_probe)
   }
   if(res != RES_OK) goto error;
 
-  /* Create the estimator */
-  res = estimator_create
-    (scn->dev, SDIS_ESTIMATOR_TEMPERATURE, nrealisations, N, &estimator);
-  if(res != RES_OK) goto error;
+  if(out_estimator) {
+    /* Create the estimator */
+    res = estimator_create
+      (scn->dev, SDIS_ESTIMATOR_TEMPERATURE, nrealisations, N, &estimator);
+    if(res != RES_OK) goto error;
 
-  /* Setup the estimated temperature */
-  estimator_setup_temperature(estimator, weight, sqr_weight);
+    /* Setup the estimated temperature */
+    estimator_setup_temperature(estimator, weight, sqr_weight);
+  }
 
   if(out_green) {
     green = greens[0]; /* Return the green of the 1st thread */

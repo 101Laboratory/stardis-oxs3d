@@ -69,27 +69,30 @@
  ******************************************************************************/
 static double
 fluid_get_temperature
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
+  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* is_stationary)
 {
-  (void)data;
   CHK(vtx != NULL);
-  return vtx->time <= 0 ? Tf_0 : UNKNOWN_TEMPERATURE;
+  if(*((int*)sdis_data_cget(is_stationary))) {
+    return UNKNOWN_TEMPERATURE;
+  } else {
+    return vtx->time <= 0 ? Tf_0 : UNKNOWN_TEMPERATURE;
+  }
 }
 
 static double
 fluid_get_volumic_mass
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
+  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* is_stationary)
 {
-  (void)data;
+  (void)is_stationary;
   CHK(vtx != NULL);
   return RHO;
 }
 
 static double
 fluid_get_calorific_capacity
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
+  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* is_stationary)
 {
-  (void)data;
+  (void)is_stationary;
   CHK(vtx != NULL);
   return CP;
 }
@@ -167,6 +170,7 @@ main(int argc, char** argv)
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
+  struct sdis_data* is_stationary = NULL;
   struct sdis_interface* interf_T0 = NULL;
   struct sdis_interface* interf_T1 = NULL;
   struct sdis_interface* interf_T2 = NULL;
@@ -176,6 +180,8 @@ main(int argc, char** argv)
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
+  struct sdis_green_function* green = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = DUMMY_INTERFACE_SHADER;
@@ -194,10 +200,12 @@ main(int argc, char** argv)
   OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
   /* Create the fluid medium */
+  OK(sdis_data_create(dev, sizeof(int), ALIGNOF(int), NULL, &is_stationary));
+  *((int*)sdis_data_get(is_stationary)) = 0;
   fluid_shader.temperature = fluid_get_temperature;
   fluid_shader.calorific_capacity = fluid_get_calorific_capacity;
   fluid_shader.volumic_mass = fluid_get_volumic_mass;
-  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+  OK(sdis_fluid_create(dev, &fluid_shader, is_stationary, &fluid));
 
   /* Create the solid_medium */
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
@@ -265,17 +273,29 @@ main(int argc, char** argv)
     time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
 
+    /* Setup stationary state */
+    *((int*)sdis_data_get(is_stationary)) = IS_INF(time);
+
     /* Solve in 3D */
-    OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
+    OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+    OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
-    OK(sdis_estimator_get_temperature(estimator, &T));
-    OK(sdis_estimator_ref_put(estimator));
     printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
     if(nfails)
       printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
+
+    if(IS_INF(time)) { /* Check green function */
+      OK(sdis_solve_probe_green_function(box_scn, N, pos, 1.0, 0, 0, &green));
+      OK(sdis_green_function_solve(green, time_range, &estimator2));
+      check_estimator_eq(estimator, estimator2);
+      OK(sdis_estimator_ref_put(estimator2));
+      OK(sdis_green_function_ref_put(green));
+    }
+
+    OK(sdis_estimator_ref_put(estimator));
   }
 
   /* Test in 2D for various time values. */
@@ -288,22 +308,35 @@ main(int argc, char** argv)
     time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
 
+    /* Setup stationnary state */
+    *((int*)sdis_data_get(is_stationary)) = IS_INF(time);
+
     /* Solve in 2D */
-    OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, NULL, &estimator));
+    OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
     OK(sdis_estimator_get_temperature(estimator, &T));
-    OK(sdis_estimator_ref_put(estimator));
     printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
     if(nfails)
       printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
+
+    if(IS_INF(time)) { /* Check green function */
+      OK(sdis_solve_probe_green_function(square_scn, N, pos, 1.0, 0, 0, &green));
+      OK(sdis_green_function_solve(green, time_range, &estimator2));
+      check_estimator_eq(estimator, estimator2);
+      OK(sdis_estimator_ref_put(estimator2));
+      OK(sdis_green_function_ref_put(green));
+    }
+
+    OK(sdis_estimator_ref_put(estimator));
   }
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
   OK(sdis_device_ref_put(dev));
+  OK(sdis_data_ref_put(is_stationary));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);
