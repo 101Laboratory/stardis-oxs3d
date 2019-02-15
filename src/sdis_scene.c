@@ -273,6 +273,15 @@ sdis_scene_boundary_project_position
   return RES_OK;
 }
 
+res_T
+sdis_scene_get_dimension
+  (const struct sdis_scene* scn,  enum sdis_scene_dimension* dim)
+{
+  if(!scn || !dim) return RES_BAD_ARG;
+  *dim = scene_is_2d(scn) ? SDIS_SCENE_2D : SDIS_SCENE_3D;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/

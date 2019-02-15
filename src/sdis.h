@@ -83,6 +83,11 @@ enum sdis_estimator_type {
   SDIS_ESTIMATOR_TYPES_COUNT__
 };
 
+enum sdis_scene_dimension {
+  SDIS_SCENE_2D,
+  SDIS_SCENE_3D
+};
+
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
  * random walk. */
 struct sdis_rwalk_vertex {
@@ -529,6 +534,11 @@ sdis_scene_boundary_project_position
    const size_t iprim,
    const double pos[3],
    double uv[]);
+
+SDIS_API res_T
+sdis_scene_get_dimension
+  (const struct sdis_scene* scn,
+   enum sdis_scene_dimension* dim);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
