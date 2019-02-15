@@ -642,7 +642,7 @@ green_path_add_power_term
   size_t iterm;
   unsigned id;
   res_T res = RES_OK;
-  ASSERT(handle && mdm && vtx && val >= 0);
+  ASSERT(handle && mdm && vtx);
 
   /* Unused position and time: the current implementation of the green function
    * assumes that the power is constant in space and time per medium. */

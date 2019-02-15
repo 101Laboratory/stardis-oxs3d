@@ -244,21 +244,12 @@ check_estimator_eq
   (const struct sdis_estimator* e1, const struct sdis_estimator* e2)
 {
   struct sdis_mc mc1, mc2;
-  size_t n1, n2;
   enum sdis_estimator_type type1, type2;
   ASSERT(e1 && e2);
 
   OK(sdis_estimator_get_type(e1, &type1));
   OK(sdis_estimator_get_type(e2, &type2));
   CHK(type1 == type2);
-
-  OK(sdis_estimator_get_realisation_count(e1, &n1));
-  OK(sdis_estimator_get_realisation_count(e2, &n2));
-  CHK(n1 == n2);
-
-  OK(sdis_estimator_get_failure_count(e1, &n1));
-  OK(sdis_estimator_get_failure_count(e2, &n2));
-  CHK(n1 == n2);
 
   OK(sdis_estimator_get_temperature(e1, &mc1));
   OK(sdis_estimator_get_temperature(e2, &mc2));

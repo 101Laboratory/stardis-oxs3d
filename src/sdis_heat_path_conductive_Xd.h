@@ -34,6 +34,8 @@ XD(conductive_path)
    struct XD(temperature)* T)
 {
   double position_start[DIM];
+  double green_power_factor = 0;
+  double power_ref = SDIS_VOLUMIC_POWER_NONE;
   struct sdis_medium* mdm;
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
@@ -50,6 +52,12 @@ XD(conductive_path)
   }
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
+
+  if(ctx->green_path) {
+    /* Retrieve the power of the medium. Use it to check that it is effectively
+     * constant along the random walk */
+    power_ref = solid_get_volumic_power(mdm, &rwalk->vtx);
+  }
 
   do { /* Solid random walk */
     struct get_medium_info info = GET_MEDIUM_INFO_NULL;
@@ -75,7 +83,7 @@ XD(conductive_path)
         res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &rwalk->vtx);
         if(res != RES_OK) goto error;
       }
-      goto exit;
+      break;
     }
 
     /* Fetch solid properties */
@@ -84,6 +92,15 @@ XD(conductive_path)
     rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
     cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
     power = solid_get_volumic_power(mdm, &rwalk->vtx);
+
+    if(ctx->green_path && power_ref != power) {
+      log_err(scn->dev,
+        "%s: invalid non constant volumic power term. Expecting a constant "
+        "volumic power in time and space on green function estimation.\n",
+        FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
 
 #if DIM == 2
     /* Sample a direction around 2PI */
@@ -159,11 +176,9 @@ XD(conductive_path)
       }
     }
 
-    /* Register the power term against the green function */
+    /* Register the power term for the green function */
     if(ctx->green_path && power != SDIS_VOLUMIC_POWER_NONE) {
-      res = green_path_add_power_term
-        (ctx->green_path, mdm, &rwalk->vtx, power_factor);
-      if(res != RES_OK) goto error;
+      green_power_factor += power_factor;
     }
 
     /* Sample the time */
@@ -179,7 +194,7 @@ XD(conductive_path)
         if(tmp >= 0) {
           T->value += tmp;
           T->done = 1;
-          goto exit;
+          break;
         }
         /* The initial condition should have been reached */
         log_err(scn->dev,
@@ -244,6 +259,13 @@ XD(conductive_path)
 
   /* Keep going while the solid random walk does not hit an interface */
   } while(SXD_HIT_NONE(&rwalk->hit));
+
+  /* Register the power term for the green function */
+  if(ctx->green_path && power_ref != SDIS_VOLUMIC_POWER_NONE) {
+    res = green_path_add_power_term
+      (ctx->green_path, mdm, &rwalk->vtx, green_power_factor);
+    if(res != RES_OK) goto error;
+  }
 
   T->func = XD(boundary_path);
   rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */

@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <rsys/clock_time.h>
 #include <rsys/double3.h>
 
 /*
@@ -123,13 +124,98 @@ interface_get_flux
 }
 
 /*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static void
+solve(struct sdis_scene* scn, const double pos[])
+{
+  char dump[128];
+  struct time t0, t1, t2;
+  struct sdis_estimator* estimator;
+  struct sdis_estimator* estimator2;
+  struct sdis_green_function* green;
+  struct sdis_mc T;
+  size_t nreals;
+  size_t nfails;
+  double ref;
+  const double time_range[2] = {INF, INF};
+  enum sdis_scene_dimension dim;
+  ASSERT(scn && pos);
+
+  ref = T0 + (1 - pos[0]) * PHI/LAMBDA;
+
+  time_current(&t0);
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  time_sub(&t0, time_current(&t1), &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+
+  OK(sdis_scene_get_dimension(scn, &dim));
+
+  switch(dim) {
+    case SDIS_SCENE_2D:
+      printf("Temperature at (%g %g) = %g ~ %g +/- %g\n",
+        SPLIT2(pos), ref, T.E, T.SE);
+      break;
+    case SDIS_SCENE_3D:
+      printf("Temperature at (%g %g %g) = %g ~ %g +/- %g\n",
+        SPLIT3(pos), ref, T.E, T.SE);
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  printf("Elapsed time = %s\n\n", dump);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, ref, T.SE*3));
+
+  time_current(&t0);
+  OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, &green));
+  time_current(&t1);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  time_current(&t2);
+
+  OK(sdis_estimator_get_realisation_count(estimator2, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator2, &nfails));
+  OK(sdis_estimator_get_temperature(estimator2, &T));
+
+  switch(dim) {
+    case SDIS_SCENE_2D:
+      printf("Green temperature at (%g %g) = %g ~ %g +/- %g\n",
+        SPLIT2(pos), ref, T.E, T.SE);
+      break;
+    case SDIS_SCENE_3D:
+      printf("Green temperature at (%g %g %g) = %g ~ %g +/- %g\n",
+        SPLIT3(pos), ref, T.E, T.SE);
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  time_sub(&t0, &t1, &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+  printf("Green estimation time = %s\n", dump);
+  time_sub(&t1, &t2, &t1);
+  time_dump(&t1, TIME_ALL, NULL, dump, sizeof(dump));
+  printf("Green solve time = %s\n\n", dump);
+
+  check_estimator_eq(estimator, estimator2);
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  OK(sdis_green_function_ref_put(green));
+}
+
+/*******************************************************************************
  * Test
  ******************************************************************************/
 int
 main(int argc, char** argv)
 {
   struct mem_allocator allocator;
-  struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -139,7 +225,6 @@ main(int argc, char** argv)
   struct sdis_interface* interf_phi = NULL;
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
-  struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -147,10 +232,6 @@ main(int argc, char** argv)
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
   double pos[3];
-  double time_range[2] = { INF, INF };
-  double ref;
-  size_t nreals;
-  size_t nfails;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -230,34 +311,12 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_T0));
   OK(sdis_interface_ref_put(interf_phi));
 
+  /* Solve */
   d3_splat(pos, 0.25);
-  ref = T0 + (1 - pos[0]) * PHI/LAMBDA;
-
-  /* Solve in 3D */
-  OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_ref_put(estimator));
-  printf("Temperature of the box at (%g %g %g) = %g ~ %g +/- %g\n",
-    SPLIT3(pos), ref, T.E, T.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, T.SE*3));
-
-  /* Solve in 2D */
-  OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, &estimator));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_ref_put(estimator));
-  printf("Temperature of the square at (%g %g) = %g ~ %g +/- %g\n",
-    SPLIT2(pos), ref, T.E, T.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, T.SE*3));
+  printf(">> Box scene\n");
+  solve(box_scn, pos);
+  printf(">> Square Scene\n");
+  solve(square_scn, pos);
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
@@ -267,5 +326,4 @@ main(int argc, char** argv)
   mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
-
 }
