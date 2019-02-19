@@ -143,7 +143,7 @@ solid_get_t0(const struct sdis_medium* mdm)
  * Generic functions
  ******************************************************************************/
 static FINLINE double
-medium_get_temerature
+medium_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   double temp;
@@ -154,6 +154,19 @@ medium_get_temerature
     default: FATAL("Unreachable code.\n"); break;
   }
   return temp;
+}
+
+static FINLINE double
+medium_get_t0(const struct sdis_medium* mdm)
+{
+  double t0;
+  ASSERT(mdm);
+  switch(mdm->type) {
+    case SDIS_FLUID: t0 = fluid_get_t0(mdm); break;
+    case SDIS_SOLID: t0 = solid_get_t0(mdm); break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return t0;
 }
 
 #endif /* SDIS_MEDIUM_C_H */

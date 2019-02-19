@@ -314,13 +314,21 @@ green_function_solve_path
     flux += flux_terms[i].term * interface_side_get_flux(interf, &frag);
   }
 
-  /* Setup time. TODO handle t0 of the media */
+  /* Setup time. */
   switch(path->limit_type) {
-    case LIMIT_FRAGMENT: time_curr = time + path->limit.fragment.time; break;
-    case LIMIT_VERTEX: time_curr = time + path->limit.vertex.time; break;
+    case LIMIT_FRAGMENT:
+      time_curr = time + path->limit.fragment.time;
+      interf = green_function_fetch_interf(green, path->limit_id);
+      break;
+    case LIMIT_VERTEX:
+      time_curr = time + path->limit.vertex.time;
+      medium = green_function_fetch_medium(green, path->limit_id);
+      break;
     default: FATAL("Unreachable code.\n"); break;
   }
-  if(time_curr <= 0) {
+
+  if(time_curr <= 0 
+  || (path->limit_type == LIMIT_VERTEX && time_curr <= medium_get_t0(medium))) {
     log_err(green->dev,
       "%s: invalid observation time \"%g\": the initial condition is reached "
       "while instationary system are not supported by the green function.\n",
@@ -334,14 +342,12 @@ green_function_solve_path
     case LIMIT_FRAGMENT:
       frag = path->limit.fragment;
       frag.time = time_curr;
-      interf = green_function_fetch_interf(green, path->limit_id);
       temperature = interface_side_get_temperature(interf, &frag);
       break;
     case LIMIT_VERTEX:
       vtx = path->limit.vertex;
       vtx.time = time_curr;
-      medium = green_function_fetch_medium(green, path->limit_id);
-      temperature = medium_get_temerature(medium, &vtx);
+      temperature = medium_get_temperature(medium, &vtx);
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
@@ -450,7 +456,7 @@ sdis_green_function_solve
   npaths = darray_green_path_size_get(&green->paths);
 
   /* Solve the green function */
-  FOR_EACH(ipath, 0, npaths) { /* TODO add multi-threading */
+  FOR_EACH(ipath, 0, npaths) { /* TODO add multi-threading (?) */
     const double time = sample_time(rng, time_range);
     double w;
 
