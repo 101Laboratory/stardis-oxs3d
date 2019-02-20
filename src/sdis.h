@@ -236,6 +236,57 @@ typedef res_T
    const size_t naccums[2], /* #accumulations in X and Y */
    const struct sdis_accum* accums); /* List of row ordered accumulations */
 
+enum sdis_point_type {
+  SDIS_FRAGMENT,
+  SDIS_VERTEX,
+  SDIS_POINT_TYPES_COUNT__,
+  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
+};
+
+struct sdis_green_path {
+  /* Internal data. Should not be accessed */ 
+  void* green__;
+  size_t id__;
+};
+#define SDIS_GREEN_PATH_NULL__ {NULL, 0}
+static const struct sdis_green_path SDIS_GREEN_PATH_NULL = 
+  SDIS_GREEN_PATH_NULL__;
+
+struct sdis_point {
+  union {
+    struct { 
+      struct sdis_medium* medium;
+      struct sdis_rwalk_vertex vertex;
+    } mdmvert;
+    struct {
+      struct sdis_interface* interface;
+      struct sdis_interface_fragment fragment;
+    } itfrag;
+  } data;
+  enum sdis_point_type type;
+};
+#define SDIS_POINT_NULL__ {{{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
+static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
+
+/* Functor use to process the limit points of the green function */
+typedef res_T
+(*sdis_process_green_path_T)
+  (const struct sdis_green_path* path,
+   void* context);
+
+typedef res_T
+(*sdis_process_medium_power_term_T)
+  (struct sdis_medium* medium,
+   const double power_term,
+   void* context);
+
+typedef res_T
+(*sdis_process_interface_flux_term_T)
+  (struct sdis_interface* interf,
+   const enum sdis_side side,
+   const double flux_term,
+   void* context);
+
 BEGIN_DECLS
 
 /*******************************************************************************
@@ -602,6 +653,29 @@ sdis_green_function_solve
   (struct sdis_green_function* green,
    const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_green_function_for_each_path
+  (struct sdis_green_function* green,
+   sdis_process_green_path_T func,
+   void* context);
+
+SDIS_API res_T
+sdis_green_path_get_limit_point
+  (struct sdis_green_path* path,
+   struct sdis_point* pt);
+
+SDIS_API res_T
+sdis_green_path_for_each_power_term
+  (struct sdis_green_path* path,
+   sdis_process_medium_power_term_T func,
+   void* context);
+
+SDIS_API res_T
+sdis_green_path_for_each_flux_term
+  (struct sdis_green_path* path,
+   sdis_process_interface_flux_term_T func,
+   void* context);
 
 /*******************************************************************************
  * Solvers
