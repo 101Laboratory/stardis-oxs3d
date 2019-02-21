@@ -619,22 +619,22 @@ sdis_scene_boundary_project_position
    const double pos[3],
    double uv[]);
 
-/* Get the descriptor of the 2D scene's enclosures */
-SDIS_API res_T
-sdis_get_scene_2d_analyze
-  (struct sdis_scene* scn,
-   struct senc2d_descriptor** descriptor);
-
 /* Get the descriptor of the 3D scene's enclosures */
 SDIS_API res_T
-sdis_get_scene_analyze
+sdis_scene_get_analysis
   (struct sdis_scene* scn,
    struct senc_descriptor** descriptor);
+
+/* Get the descriptor of the 2D scene's enclosures */
+SDIS_API res_T
+sdis_scene_2d_get_analysis
+  (struct sdis_scene* scn,
+   struct senc2d_descriptor** descriptor);
 
 /* Release the descriptor of the scene's enclosures; subsequent attempts to get
  * it will fail. */
 SDIS_API res_T
-sdis_release_scene_analyze
+sdis_scene_release_analysis
   (struct sdis_scene* scn);
 
 SDIS_API res_T
