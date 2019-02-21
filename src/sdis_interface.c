@@ -201,6 +201,13 @@ sdis_interface_get_data(struct sdis_interface* interf)
   return interf->data;
 }
 
+unsigned
+sdis_interface_get_id(const struct sdis_interface* interf)
+{
+  ASSERT(interf);
+  return interf->id.index;
+}
+
 /*******************************************************************************
  * Local function
  ******************************************************************************/

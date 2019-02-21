@@ -194,4 +194,3 @@ check_green_function(struct sdis_green_function* green)
   OK(sdis_estimator_ref_put(estimator));
 }
 
-

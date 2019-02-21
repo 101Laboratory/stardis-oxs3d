@@ -117,6 +117,8 @@ main(int argc, char** argv)
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
+  CHK(sdis_medium_get_id(fluid) != sdis_medium_get_id(solid));
+
   BA(sdis_fluid_get_shader(NULL, &fluid_shader2));
   BA(sdis_fluid_get_shader(fluid, NULL));
   BA(sdis_fluid_get_shader(solid, &fluid_shader2));

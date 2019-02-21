@@ -25,6 +25,7 @@ main(int argc, char** argv)
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_interface* interf = NULL;
+  struct sdis_interface* interf2 = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader shader = DUMMY_INTERFACE_SHADER;
@@ -112,7 +113,11 @@ main(int argc, char** argv)
 
   OK(sdis_data_create(dev, 4, 16, NULL, &data));
   OK(CREATE(dev, solid, fluid, &shader, data, &interf));
+  OK(CREATE(dev, solid, fluid, &shader, NULL, &interf2));
+
   CHK(sdis_interface_get_data(interf) == data);
+  CHK(sdis_interface_get_data(interf2) == NULL);
+  CHK(sdis_interface_get_id(interf) != sdis_interface_get_id(interf2));
 
   BA(sdis_interface_get_shader(NULL, &shader2));
   BA(sdis_interface_get_shader(interf, NULL));
@@ -130,6 +135,7 @@ main(int argc, char** argv)
   CHK(shader.back.specular_fraction == shader2.back.specular_fraction);
 
   OK(sdis_interface_ref_put(interf));
+  OK(sdis_interface_ref_put(interf2));
   OK(sdis_data_ref_put(data));
 
   #undef CREATE

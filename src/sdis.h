@@ -466,6 +466,10 @@ SDIS_API struct sdis_data*
 sdis_medium_get_data
   (struct sdis_medium* medium);
 
+SDIS_API unsigned
+sdis_medium_get_id
+  (const struct sdis_medium* medium);
+
 /*******************************************************************************
  * An interface is the boundary between 2 media.
  ******************************************************************************/
@@ -494,6 +498,10 @@ sdis_interface_get_shader
 SDIS_API struct sdis_data*
 sdis_interface_get_data
   (struct sdis_interface* interface);
+
+SDIS_API unsigned
+sdis_interface_get_id
+  (const struct sdis_interface* interface);
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
