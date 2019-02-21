@@ -65,13 +65,12 @@ fluid_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   ASSERT(mdm && mdm->type == SDIS_FLUID);
-  ASSERT(vtx->time >= mdm->shader.fluid.t0);
+  /*ASSERT(vtx->time >= mdm->shader.fluid.t0);*/
   return mdm->shader.fluid.temperature(vtx, mdm->data);
 }
 
 static INLINE double
-  fluid_get_t0
-(const struct sdis_medium* mdm)
+fluid_get_t0(const struct sdis_medium* mdm)
 {
   ASSERT(mdm && mdm->type == SDIS_FLUID);
   ASSERT(0 <= mdm->shader.fluid.t0 && mdm->shader.fluid.t0 < INF);
@@ -128,17 +127,46 @@ solid_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
   ASSERT(mdm && mdm->type == SDIS_SOLID);
-  ASSERT(vtx->time >= mdm->shader.solid.t0);
+  /*ASSERT(vtx->time >= mdm->shader.solid.t0);*/
   return mdm->shader.solid.temperature(vtx, mdm->data);
 }
 
 static INLINE double
-  solid_get_t0
-(const struct sdis_medium* mdm)
+solid_get_t0(const struct sdis_medium* mdm)
 {
   ASSERT(mdm && mdm->type == SDIS_SOLID);
   ASSERT(0 <= mdm->shader.solid.t0 && mdm->shader.solid.t0 < INF);
   return mdm->shader.solid.t0;
+}
+
+/*******************************************************************************
+ * Generic functions
+ ******************************************************************************/
+static FINLINE double
+medium_get_temperature
+  (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
+{
+  double temp;
+  ASSERT(mdm);
+  switch(mdm->type) {
+    case SDIS_FLUID: temp = fluid_get_temperature(mdm, vtx); break;
+    case SDIS_SOLID: temp = solid_get_temperature(mdm, vtx); break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return temp;
+}
+
+static FINLINE double
+medium_get_t0(const struct sdis_medium* mdm)
+{
+  double t0;
+  ASSERT(mdm);
+  switch(mdm->type) {
+    case SDIS_FLUID: t0 = fluid_get_t0(mdm); break;
+    case SDIS_SOLID: t0 = solid_get_t0(mdm); break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return t0;
 }
 
 #endif /* SDIS_MEDIUM_C_H */

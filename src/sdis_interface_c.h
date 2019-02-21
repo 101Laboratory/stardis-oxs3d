@@ -36,14 +36,17 @@ struct sdis_interface {
   struct sdis_device* dev;
 };
 
-extern LOCAL_SYM const struct sdis_medium*
+extern LOCAL_SYM struct sdis_medium*
 interface_get_medium
   (const struct sdis_interface* interf,
    const enum sdis_side side);
 
-extern LOCAL_SYM unsigned
-interface_get_id
-  (const struct sdis_interface* interf);
+static FINLINE unsigned
+interface_get_id(const struct sdis_interface* interf)
+{
+  ASSERT(interf);
+  return interf->id.index;
+}
 
 extern LOCAL_SYM void
 setup_interface_fragment_2d

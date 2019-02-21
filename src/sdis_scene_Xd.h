@@ -805,9 +805,9 @@ XD(scene_get_medium)
   (const struct sdis_scene* scn,
    const double pos[2],
    struct get_medium_info* info, /* May be NULL */
-   const struct sdis_medium** out_medium)
+   struct sdis_medium** out_medium)
 {
-  const struct sdis_medium* medium = NULL;
+  struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
   size_t nfailures = 0;
   const size_t max_failures = 10;

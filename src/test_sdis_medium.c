@@ -28,6 +28,8 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
+  struct sdis_fluid_shader fluid_shader2 = SDIS_FLUID_SHADER_NULL;
+  struct sdis_solid_shader solid_shader2 = SDIS_SOLID_SHADER_NULL;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -64,9 +66,9 @@ main(int argc, char** argv)
   fluid_shader.temperature = DUMMY_FLUID_SHADER.temperature;
 
   fluid_shader.t0 = -1;
-  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &solid));
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   fluid_shader.t0 = INF;
-  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &solid));
+  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   fluid_shader.t0 = DUMMY_FLUID_SHADER.t0;
 
   BA(sdis_fluid_create(dev, &SDIS_FLUID_SHADER_NULL, NULL, &fluid));
@@ -82,7 +84,8 @@ main(int argc, char** argv)
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   CHK(sdis_medium_get_type(solid) == SDIS_SOLID);
   CHK(sdis_medium_get_data(solid) == data);
-  OK(sdis_medium_ref_put(solid));
+
+    OK(sdis_medium_ref_put(solid));
   OK(sdis_data_ref_put(data));
 
   solid_shader.calorific_capacity = NULL;
@@ -111,6 +114,36 @@ main(int argc, char** argv)
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.t0 = DUMMY_SOLID_SHADER.t0;
 
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+
+  CHK(sdis_medium_get_id(fluid) != sdis_medium_get_id(solid));
+
+  BA(sdis_fluid_get_shader(NULL, &fluid_shader2));
+  BA(sdis_fluid_get_shader(fluid, NULL));
+  BA(sdis_fluid_get_shader(solid, &fluid_shader2));
+  OK(sdis_fluid_get_shader(fluid, &fluid_shader2));
+
+  CHK(fluid_shader.calorific_capacity == fluid_shader2.calorific_capacity);
+  CHK(fluid_shader.volumic_mass == fluid_shader2.volumic_mass);
+  CHK(fluid_shader.temperature == fluid_shader2.temperature);
+  CHK(fluid_shader.t0 == fluid_shader2.t0);
+
+  BA(sdis_solid_get_shader(NULL, &solid_shader2));
+  BA(sdis_solid_get_shader(solid, NULL));
+  BA(sdis_solid_get_shader(fluid, &solid_shader2));
+  OK(sdis_solid_get_shader(solid, &solid_shader2));
+
+  CHK(solid_shader.calorific_capacity == solid_shader2.calorific_capacity);
+  CHK(solid_shader.thermal_conductivity == solid_shader2.thermal_conductivity);
+  CHK(solid_shader.volumic_mass == solid_shader2.volumic_mass);
+  CHK(solid_shader.delta_solid == solid_shader2.delta_solid);
+  CHK(solid_shader.volumic_power == solid_shader2.volumic_power);
+  CHK(solid_shader.temperature == solid_shader2.temperature);
+  CHK(solid_shader.t0 == solid_shader2.t0);
+
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid));
   OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);

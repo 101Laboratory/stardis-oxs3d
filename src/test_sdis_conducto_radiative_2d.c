@@ -391,6 +391,8 @@ main(int argc, char** argv)
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
     struct sdis_estimator* estimator;
+    struct sdis_estimator* estimator2;
+    struct sdis_green_function* green;
     double pos[2];
     double time_range[2] = { INF, INF };
     double ref, u;
@@ -416,7 +418,15 @@ main(int argc, char** argv)
     CHK(nfails < N/1000);
     CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
+    /* Check green function */
+    OK(sdis_solve_probe_green_function(scn, 10000, pos, 1, -1, Tref, &green));
+    OK(sdis_green_function_solve(green, time_range, &estimator2));
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+
     OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
   }
 
   /* Release memory */

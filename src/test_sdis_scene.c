@@ -97,6 +97,7 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   struct senc2d_descriptor* descriptor2d;
   size_t ntris, npos;
   size_t i;
+  enum sdis_scene_dimension dim;
 
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
@@ -121,6 +122,11 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   #undef IDS
   #undef POS
   #undef IFA
+
+  BA(sdis_scene_get_dimension(NULL, &dim));
+  BA(sdis_scene_get_dimension(scn, NULL));
+  OK(sdis_scene_get_dimension(scn, &dim));
+  CHK(dim == SDIS_SCENE_3D);
 
   BA(sdis_scene_get_aabb(NULL, lower, upper));
   BA(sdis_scene_get_aabb(scn, NULL, upper));
@@ -198,6 +204,7 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   struct senc_descriptor* descriptor3d;
   size_t nsegs, npos;
   size_t i;
+  enum sdis_scene_dimension dim;
 
   ctx.positions = square_vertices;
   ctx.indices = square_indices;
@@ -222,6 +229,11 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   #undef IDS
   #undef POS
   #undef IFA
+
+  BA(sdis_scene_get_dimension(NULL, &dim));
+  BA(sdis_scene_get_dimension(scn, NULL));
+  OK(sdis_scene_get_dimension(scn, &dim));
+  CHK(dim == SDIS_SCENE_2D);
 
   BA(sdis_scene_get_aabb(NULL, lower, upper));
   BA(sdis_scene_get_aabb(scn, NULL, upper));

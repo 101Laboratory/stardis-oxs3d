@@ -142,6 +142,15 @@ error:
 }
 
 res_T
+sdis_fluid_get_shader
+  (const struct sdis_medium* mdm, struct sdis_fluid_shader* shader)
+{
+  if(!mdm || mdm->type != SDIS_FLUID || !shader) return RES_BAD_ARG;
+  *shader = mdm->shader.fluid;
+  return RES_OK;
+}
+
+res_T
 sdis_solid_create
   (struct sdis_device* dev,
    const struct sdis_solid_shader* shader,
@@ -187,6 +196,15 @@ error:
 }
 
 res_T
+sdis_solid_get_shader
+  (const struct sdis_medium* mdm, struct sdis_solid_shader* shader)
+{
+  if(!mdm || mdm->type != SDIS_SOLID || !shader) return RES_BAD_ARG;
+  *shader = mdm->shader.solid;
+  return RES_OK;
+}
+
+res_T
 sdis_medium_ref_get(struct sdis_medium* medium)
 {
   if(!medium) return RES_BAD_ARG;
@@ -208,9 +226,18 @@ sdis_medium_get_type(const struct sdis_medium* medium)
   ASSERT(medium != NULL);
   return medium->type;
 }
+
 struct sdis_data*
 sdis_medium_get_data(struct sdis_medium* medium)
 {
   ASSERT(medium);
   return medium->data;
 }
+
+unsigned
+sdis_medium_get_id(const struct sdis_medium* medium)
+{
+  ASSERT(medium);
+  return medium->id.index;
+}
+

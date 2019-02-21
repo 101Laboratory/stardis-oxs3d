@@ -41,6 +41,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
 include(rcmake)
 include(rcmake_runtime)
 
+include_directories(
+  ${Star2D_INCLUDE_DIR}
+  ${Star3D_INCLUDE_DIR}
+  ${StarSP_INCLUDE_DIR}
+  ${StarEnc_INCLUDE_DIR}
+  ${StarEnc2D_INCLUDE_DIR}
+  ${RSys_INCLUDE_DIR})
+
 rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 
 ################################################################################
@@ -57,8 +65,11 @@ set(SDIS_FILES_SRC
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
+  sdis_green.c
+  sdis_heat_path.c
   sdis_interface.c
   sdis_medium.c
+  sdis_realisation.c
   sdis_scene.c
   sdis_solve.c)
 
@@ -69,11 +80,21 @@ set(SDIS_FILES_INC
   sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
+  sdis_green.h
+  sdis_heat_path.h
+  sdis_heat_path_boundary_Xd.h
+  sdis_heat_path_conductive_Xd.h
+  sdis_heat_path_convective_Xd.h
+  sdis_heat_path_radiative_Xd.h
   sdis_interface_c.h
   sdis_medium_c.h
+  sdis_realisation.h
+  sdis_realisation_Xd.h
   sdis_scene_c.h
   sdis_scene_Xd.h
-  sdis_solve_Xd.h)
+  sdis_solve_Xd.h
+  sdis_Xd_begin.h
+  sdis_Xd_end.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
 
@@ -123,9 +144,13 @@ rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
 if(NOT NO_TEST)
   find_package(Star3DUT REQUIRED 0.2.0)
 
+  add_library(sdis-test-utils STATIC
+    ${SDIS_SOURCE_DIR}/test_sdis_utils.h
+    ${SDIS_SOURCE_DIR}/test_sdis_utils.c)
+
   function(build_test _name)
     add_executable(${_name} ${SDIS_SOURCE_DIR}/${_name}.c)
-    target_link_libraries(${_name} RSys sdis)
+    target_link_libraries(${_name} sdis-test-utils RSys sdis)
   endfunction()
 
   function(register_test _name)

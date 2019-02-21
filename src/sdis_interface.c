@@ -184,10 +184,34 @@ sdis_interface_ref_put(struct sdis_interface* interf)
   return RES_OK;
 }
 
+SDIS_API res_T
+sdis_interface_get_shader
+  (const struct sdis_interface* interf,
+   struct sdis_interface_shader* shader)
+{
+  if(!interf || !shader) return RES_BAD_ARG;
+  *shader = interf->shader;
+  return RES_OK;
+}
+
+struct sdis_data*
+sdis_interface_get_data(struct sdis_interface* interf)
+{
+  ASSERT(interf);
+  return interf->data;
+}
+
+unsigned
+sdis_interface_get_id(const struct sdis_interface* interf)
+{
+  ASSERT(interf);
+  return interf->id.index;
+}
+
 /*******************************************************************************
  * Local function
  ******************************************************************************/
-const struct sdis_medium*
+struct sdis_medium*
 interface_get_medium
   (const struct sdis_interface* interf, const enum sdis_side side)
 {
@@ -199,13 +223,6 @@ interface_get_medium
     default: FATAL("Unreachable code.\n"); break;
   }
   return mdm;
-}
-
-unsigned
-interface_get_id(const struct sdis_interface* interf)
-{
-  ASSERT(interf);
-  return interf->id.index;
 }
 
 void

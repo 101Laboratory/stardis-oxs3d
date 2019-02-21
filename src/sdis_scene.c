@@ -15,11 +15,9 @@
 
 #include "sdis_scene_Xd.h"
 
-/* Generate the 2D functions of the scene */
+/* Generate the Generic functions of the scene */
 #define SDIS_SCENE_DIMENSION 2
 #include "sdis_scene_Xd.h"
-
-/* Generate the 3D functions of the scene */
 #define SDIS_SCENE_DIMENSION 3
 #include "sdis_scene_Xd.h"
 
@@ -283,7 +281,7 @@ sdis_get_scene_2d_analyze
    struct senc2d_descriptor** descriptor)
 {
   if(!scn || !descriptor) return RES_BAD_ARG;
-  if(! scn->senc2d_descriptor) return RES_BAD_ARG; /* Scene is 3D */
+  if(!scn->senc2d_descriptor) return RES_BAD_ARG; /* Scene is 3D */
   SENC2D(descriptor_ref_get(scn->senc2d_descriptor));
   *descriptor = scn->senc2d_descriptor;
   return RES_OK;
@@ -291,8 +289,8 @@ sdis_get_scene_2d_analyze
 
 res_T
 sdis_get_scene_analyze
-(struct sdis_scene* scn,
-  struct senc_descriptor** descriptor)
+  (struct sdis_scene* scn,
+   struct senc_descriptor** descriptor)
 {
   if(!scn || !descriptor) return RES_BAD_ARG;
   if(!scn->senc_descriptor) return RES_BAD_ARG; /* Scene is 2D */
@@ -304,7 +302,7 @@ sdis_get_scene_analyze
 res_T
 sdis_release_scene_analyze(struct sdis_scene* scn)
 {
-  if (!scn) return RES_BAD_ARG;
+  if(!scn) return RES_BAD_ARG;
   if(scn->senc2d_descriptor)
     SENC2D(descriptor_ref_put(scn->senc2d_descriptor));
   if(scn->senc_descriptor)
@@ -314,10 +312,19 @@ sdis_release_scene_analyze(struct sdis_scene* scn)
   return RES_OK;
 }
 
+res_T
+sdis_scene_get_dimension
+  (const struct sdis_scene* scn,  enum sdis_scene_dimension* dim)
+{
+  if(!scn || !dim) return RES_BAD_ARG;
+  *dim = scene_is_2d(scn) ? SDIS_SCENE_2D : SDIS_SCENE_3D;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
-const struct sdis_interface*
+struct sdis_interface*
 scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 {
   ASSERT(scn && iprim < darray_prim_prop_size_get(&scn->prim_props));
@@ -329,9 +336,10 @@ scene_get_medium
   (const struct sdis_scene* scn,
    const double pos[],
    struct get_medium_info* info,
-   const struct sdis_medium** out_medium)
+   struct sdis_medium** out_medium)
 {
   return scene_is_2d(scn)
     ? scene_get_medium_2d(scn, pos, info, out_medium)
     : scene_get_medium_3d(scn, pos, info, out_medium);
 }
+

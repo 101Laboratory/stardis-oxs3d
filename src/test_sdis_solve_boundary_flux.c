@@ -195,7 +195,7 @@ check_estimator
   printf("T = %g ~ %g +/- %g\n", T, V.E, V.SE);
   CHK(eq_eps(V.E, T, 3 * (V.SE ? V.SE : FLT_EPSILON)));
   OK(sdis_estimator_get_type(estimator, &type));
-  if(type == SDIS_FLUX_ESTIMATOR) {
+  if(type == SDIS_ESTIMATOR_FLUX) {
     OK(sdis_estimator_get_convective_flux(estimator, &V));
     printf("Convective flux = %g ~ %g +/- %g\n", CF, V.E, V.SE);
     CHK(eq_eps(V.E, CF, 3 * (V.SE ? V.SE : FLT_EPSILON)));
@@ -366,7 +366,7 @@ main(int argc, char** argv)
 
   OK(SOLVE(box_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
   OK(sdis_estimator_get_type(estimator, &type));
-  CHK(type == SDIS_FLUX_ESTIMATOR);
+  CHK(type == SDIS_ESTIMATOR_FLUX);
 
   OK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos));
   printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
