@@ -181,8 +181,8 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_get_scene_2d_analyze(scn, &descriptor2d));
   BA(sdis_release_scene_analyze(NULL));
   OK(sdis_release_scene_analyze(scn));
-  /* Allready released */
-  BA(sdis_release_scene_analyze(scn));
+  /* Already released */
+  OK(sdis_release_scene_analyze(scn));
   /* Descriptor released: cannot get it anymore */
   BA(sdis_get_scene_analyze(scn, &descriptor));
 
@@ -291,6 +291,8 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_release_scene_analyze(scn));
   /* Allready released */
   BA(sdis_release_scene_analyze(scn));
+  /* Already released */
+  OK(sdis_release_scene_analyze(scn));
   /* Descriptor released: cannot get it anymore */
   BA(sdis_get_scene_2d_analyze(scn, &descriptor));
 
