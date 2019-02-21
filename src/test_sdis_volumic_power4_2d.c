@@ -348,7 +348,7 @@ main(int argc, char** argv)
   Tref = T2 + (T1-T2)/L * (pos[1]  + vertices[3]);
 #endif
 
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, &estimator));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));

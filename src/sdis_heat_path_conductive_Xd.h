@@ -176,7 +176,8 @@ XD(conductive_path)
       }
     }
 
-    /* Register the power term for the green function */
+    /* Register the power term for the green function. Delay its registration
+     * until the end of the conductive path, i.e. the path is valid */
     if(ctx->green_path && power != SDIS_VOLUMIC_POWER_NONE) {
       green_power_factor += power_factor;
     }
@@ -194,6 +195,12 @@ XD(conductive_path)
         if(tmp >= 0) {
           T->value += tmp;
           T->done = 1;
+
+          /* Register the initial vertex against the heat path */
+          res = register_heat_vertex
+            (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+          if(res != RES_OK) goto error;
+
           break;
         }
         /* The initial condition should have been reached */
@@ -217,6 +224,11 @@ XD(conductive_path)
 
     /* Update the random walk position */
     XD(move_pos)(rwalk->vtx.P, dir0, delta);
+
+    /* Register the new vertex against the heat path */
+    res = register_heat_vertex
+      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+    if(res != RES_OK) goto error;
 
     /* Fetch the current medium */
     if(SXD_HIT_NONE(&rwalk->hit)) {

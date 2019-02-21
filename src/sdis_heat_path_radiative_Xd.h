@@ -107,6 +107,11 @@ XD(trace_radiative_path)
     /* Move the random walk to the hit position */
     XD(move_pos)(rwalk->vtx.P, dir, rwalk->hit.distance);
 
+    /* Register the random walk vertex against the heat path */
+    res = register_heat_vertex
+      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_RADIATIVE);
+    if(res != RES_OK) goto error;
+
     /* Fetch the new interface and setup the hit fragment */
     interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
     XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
@@ -179,7 +184,7 @@ XD(radiative_path)
    struct XD(temperature)* T)
 {
   /* The radiative random walk is always performed in 3D. In 2D, the geometry
-   * are assumed to be extruded to the infinty along the Z dimension. */
+   * are assumed to be extruded to the infinity along the Z dimension. */
   float N[3] = {0, 0, 0};
   float dir[3] = {0, 0, 0};
   res_T res = RES_OK;

@@ -263,13 +263,13 @@ main(int argc, char** argv)
   pos[1] = 0.5;
   pos[2] = 0.5;
   time_range[0] = time_range[1] = INF;
-  BA(sdis_solve_probe(NULL, N, pos, time_range, 1.0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, 0, pos, time_range, 1.0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, N, NULL, time_range, 1.0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, -1, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, NULL));
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(NULL, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, 0, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, NULL, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, -1, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, NULL));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
 
   BA(sdis_estimator_get_type(estimator, NULL));
   BA(sdis_estimator_get_type(NULL, &type));
@@ -318,10 +318,10 @@ main(int argc, char** argv)
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = -1;
-  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
 
   fluid_param->temperature = 300;
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
 
   BA(sdis_solve_probe_green_function(NULL, N, pos, 1.0, 0, 0, &green));
   BA(sdis_solve_probe_green_function(scn, 0, pos, 1.0, 0, 0, &green));

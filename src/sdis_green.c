@@ -459,6 +459,10 @@ sdis_green_function_solve
 
   npaths = darray_green_path_size_get(&green->paths);
 
+  /* Create the estimator */
+  res = estimator_create(green->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+  if(res != RES_OK) goto error;
+
   /* Solve the green function */
   FOR_EACH(ipath, 0, npaths) { /* TODO add multi-threading (?) */
     const double time = sample_time(rng, time_range);
@@ -473,12 +477,8 @@ sdis_green_function_solve
     ++N;
   }
 
-  /* Create the estimator */
-  res = estimator_create
-    (green->dev, SDIS_ESTIMATOR_TEMPERATURE, npaths, N, &estimator);
-  if(res != RES_OK) goto error;
-
   /* Setup the estimated temperature */
+  estimator_setup_realisations_count(estimator, npaths, N);
   estimator_setup_temperature(estimator, accum, accum2);
 
 exit:

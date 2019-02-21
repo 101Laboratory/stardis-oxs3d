@@ -87,4 +87,25 @@ sample_time(struct ssp_rng* rng, const double time_range[2])
   return ssp_rng_uniform_double(rng, time_range[0], time_range[1]);
 }
 
+static INLINE res_T
+register_heat_vertex
+  (struct heat_path* path, 
+   const struct sdis_rwalk_vertex* vtx,
+   const double weight,
+   const enum sdis_heat_vertex_type type)
+{
+  struct sdis_heat_vertex heat_vtx = SDIS_HEAT_VERTEX_NULL;
+  ASSERT(vtx);
+
+  if(!path) return RES_OK;
+
+  heat_vtx.P[0] = vtx->P[0];
+  heat_vtx.P[1] = vtx->P[1];
+  heat_vtx.P[2] = vtx->P[2];
+  heat_vtx.time = vtx->time;
+  heat_vtx.weight = weight;
+  heat_vtx.type = type;
+  return heat_path_add_vertex(path, &heat_vtx);
+}
+
 #endif /* SDIS_MISC_H */

@@ -16,6 +16,8 @@
 #ifndef SDIS_ESTIMATOR_C_H
 #define SDIS_ESTIMATOR_C_H
 
+#include "sdis_heat_path.h"
+
 #include <rsys/math.h>
 #include <rsys/ref_count.h>
 
@@ -37,10 +39,15 @@ struct sdis_estimator {
   size_t nrealisations;
   size_t nfailures;
 
+  struct mutex* mutex;
+  struct darray_heat_path paths; /* Tracked paths */
+
   enum sdis_estimator_type type;
   ref_T ref;
   struct sdis_device* dev;
 };
+
+struct sdis_estimator_handle;
 
 /*******************************************************************************
  * Estimator local API
@@ -49,9 +56,25 @@ extern LOCAL_SYM res_T
 estimator_create
   (struct sdis_device* dev,
    const enum sdis_estimator_type type,
-   const size_t nrealisations,
-   const size_t nsuccesses,
    struct sdis_estimator** estimator);
+
+/* Thread safe */
+extern LOCAL_SYM res_T
+estimator_add_and_release_heat_path
+  (struct sdis_estimator* estimator,
+   struct heat_path* path);
+
+/* Must be invoked before any others "estimator_setup" functions */
+static INLINE void
+estimator_setup_realisations_count
+  (struct sdis_estimator* estimator,
+   const size_t nrealisations,
+   const size_t nsuccesses)
+{
+  ASSERT(estimator && nrealisations && nsuccesses && nsuccesses<=nrealisations);
+  estimator->nrealisations = nsuccesses;
+  estimator->nfailures = nrealisations - nsuccesses;
+}
 
 static INLINE void
 estimator_setup_temperature

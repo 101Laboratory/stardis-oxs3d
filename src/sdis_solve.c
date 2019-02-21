@@ -167,15 +167,16 @@ sdis_solve_probe
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_probe_2d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, NULL, out_estimator);
+      fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
   } else {
     return solve_probe_3d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, NULL, out_estimator);
+      fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
   }
 }
 
@@ -192,10 +193,10 @@ sdis_solve_probe_green_function
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_probe_2d(scn, nrealisations, position, NULL,
-      fp_to_meter, Tarad, Tref, out_green, NULL);
+      fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, out_green, NULL);
   } else {
     return solve_probe_3d(scn, nrealisations, position, NULL,
-      fp_to_meter, Tarad, Tref, out_green, NULL);
+      fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, out_green, NULL);
   }
 }
 

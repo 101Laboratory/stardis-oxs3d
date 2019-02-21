@@ -278,7 +278,7 @@ static INLINE void
 check_memory_allocator(struct mem_allocator* allocator)
 {
   if(MEM_ALLOCATED_SIZE(allocator)) {
-    char dump[128];
+    char dump[1024];
     MEM_DUMP(allocator, dump, sizeof(dump));
     fprintf(stderr, "%s\n", dump);
     FATAL("Memory leaks.\n");
