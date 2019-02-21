@@ -20,6 +20,7 @@ int
 main(int argc, char** argv)
 {
   struct mem_allocator allocator;
+  struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
@@ -27,6 +28,7 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_interface_shader shader2 = SDIS_INTERFACE_SHADER_NULL;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -107,6 +109,29 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf));
   BA(CREATE(dev, solid, fluid, &shader, NULL, &interf));
   shader.convection_coef_upper_bound = 0;
+
+  OK(sdis_data_create(dev, 4, 16, NULL, &data));
+  OK(CREATE(dev, solid, fluid, &shader, data, &interf));
+  CHK(sdis_interface_get_data(interf) == data);
+
+  BA(sdis_interface_get_shader(NULL, &shader2));
+  BA(sdis_interface_get_shader(interf, NULL));
+  OK(sdis_interface_get_shader(interf, &shader2));
+
+  CHK(shader.convection_coef == shader2.convection_coef);
+  CHK(shader.convection_coef_upper_bound == shader2.convection_coef_upper_bound);
+  CHK(shader.front.temperature == shader2.front.temperature);
+  CHK(shader.front.flux == shader2.front.flux);
+  CHK(shader.front.emissivity == shader2.front.emissivity);
+  CHK(shader.front.specular_fraction == shader2.front.specular_fraction);
+  CHK(shader.back.temperature == shader2.back.temperature);
+  CHK(shader.back.flux == shader2.back.flux);
+  CHK(shader.back.emissivity == shader2.back.emissivity);
+  CHK(shader.back.specular_fraction == shader2.back.specular_fraction);
+
+  OK(sdis_interface_ref_put(interf));
+  OK(sdis_data_ref_put(data));
+
   #undef CREATE
 
   OK(sdis_device_ref_put(dev));

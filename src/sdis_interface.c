@@ -184,6 +184,23 @@ sdis_interface_ref_put(struct sdis_interface* interf)
   return RES_OK;
 }
 
+SDIS_API res_T
+sdis_interface_get_shader
+  (const struct sdis_interface* interf,
+   struct sdis_interface_shader* shader)
+{
+  if(!interf || !shader) return RES_BAD_ARG;
+  *shader = interf->shader;
+  return RES_OK;
+}
+
+struct sdis_data*
+sdis_interface_get_data(struct sdis_interface* interf)
+{
+  ASSERT(interf);
+  return interf->data;
+}
+
 /*******************************************************************************
  * Local function
  ******************************************************************************/

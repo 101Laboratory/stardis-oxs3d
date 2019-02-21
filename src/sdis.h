@@ -430,11 +430,21 @@ sdis_fluid_create
    struct sdis_medium** fluid);
 
 SDIS_API res_T
+sdis_fluid_get_shader
+  (const struct sdis_medium* fluid,
+   struct sdis_fluid_shader* shader);
+
+SDIS_API res_T
 sdis_solid_create
   (struct sdis_device* dev,
    const struct sdis_solid_shader* shader,
    struct sdis_data* data, /* Data send to the shader. May be NULL */
    struct sdis_medium** solid);
+
+SDIS_API res_T
+sdis_solid_get_shader
+  (const struct sdis_medium* solid,
+   struct sdis_solid_shader* shader);
 
 SDIS_API res_T
 sdis_medium_ref_get
@@ -471,6 +481,15 @@ sdis_interface_ref_get
 SDIS_API res_T
 sdis_interface_ref_put
   (struct sdis_interface* interf);
+
+SDIS_API res_T
+sdis_interface_get_shader
+  (const struct sdis_interface* interface,
+   struct sdis_interface_shader* shader);
+
+SDIS_API struct sdis_data*
+sdis_interface_get_data
+  (struct sdis_interface* interface);
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
@@ -610,7 +629,7 @@ sdis_estimator_get_type
 SDIS_API res_T
 sdis_estimator_get_realisation_count
   (const struct sdis_estimator* estimator,
-   size_t* nrealisations); /* Succesfull ones */
+   size_t* nrealisations); /* Successful ones */
 
 SDIS_API res_T
 sdis_estimator_get_failure_count

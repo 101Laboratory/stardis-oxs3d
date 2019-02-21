@@ -142,6 +142,15 @@ error:
 }
 
 res_T
+sdis_fluid_get_shader
+  (const struct sdis_medium* mdm, struct sdis_fluid_shader* shader)
+{
+  if(!mdm || mdm->type != SDIS_FLUID || !shader) return RES_BAD_ARG;
+  *shader = mdm->shader.fluid;
+  return RES_OK;
+}
+
+res_T
 sdis_solid_create
   (struct sdis_device* dev,
    const struct sdis_solid_shader* shader,
@@ -184,6 +193,15 @@ error:
     medium = NULL;
   }
   goto exit;
+}
+
+res_T
+sdis_solid_get_shader
+  (const struct sdis_medium* mdm, struct sdis_solid_shader* shader)
+{
+  if(!mdm || mdm->type != SDIS_SOLID || !shader) return RES_BAD_ARG;
+  *shader = mdm->shader.solid;
+  return RES_OK;
 }
 
 res_T
