@@ -188,6 +188,9 @@ struct sdis_green_function {
   struct htable_interf interfaces;
   struct darray_green_path paths; /* List of paths used to estimate the green */
 
+  size_t npaths_valid;
+  size_t npaths_invalid;
+
   ref_T ref;
   struct sdis_device* dev;
 };
@@ -491,6 +494,26 @@ error:
 }
 
 res_T
+sdis_green_function_get_paths_count
+  (const struct sdis_green_function* green, size_t* npaths)
+{
+  if(!green || !npaths) return RES_BAD_ARG;
+  ASSERT(green->npaths_valid != SIZE_MAX);
+  *npaths = green->npaths_valid;
+  return RES_OK;
+}
+
+res_T
+sdis_green_function_get_invalid_paths_count
+  (const struct sdis_green_function* green, size_t* nfails)
+{
+  if(!green || !nfails) return RES_BAD_ARG;
+  ASSERT(green->npaths_invalid != SIZE_MAX);
+  *nfails = green->npaths_invalid;
+  return RES_OK;
+}
+
+res_T
 sdis_green_function_for_each_path
   (struct sdis_green_function* green,
    sdis_process_green_path_T func,
@@ -574,7 +597,7 @@ sdis_green_path_for_each_power_term
   size_t i, n;
   res_T res = RES_OK;
 
-  if(path_handle || !func) {
+  if(!path_handle || !func) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -611,7 +634,7 @@ sdis_green_path_for_each_flux_term
   size_t i, n;
   res_T res = RES_OK;
 
-  if(path_handle || !func) {
+  if(!path_handle || !func) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -659,6 +682,8 @@ green_function_create
   htable_medium_init(dev->allocator, &green->media);
   htable_interf_init(dev->allocator, &green->interfaces);
   darray_green_path_init(dev->allocator, &green->paths);
+  green->npaths_valid = SIZE_MAX;
+  green->npaths_invalid = SIZE_MAX;
 
 exit:
   *out_green = green;
@@ -731,6 +756,23 @@ exit:
   return res;
 error:
   goto exit;
+}
+
+res_T
+green_function_finalize(struct sdis_green_function* green)
+{
+  size_t i, n;
+
+  if(!green) return RES_BAD_ARG;
+
+  green->npaths_valid = 0;
+  n = darray_green_path_size_get(&green->paths);
+  FOR_EACH(i, 0, n) {
+    const struct green_path* path = darray_green_path_cdata_get(&green->paths)+i;
+    green->npaths_valid += path->limit_type != SDIS_POINT_NONE;
+  }
+  green->npaths_invalid = n - green->npaths_valid;
+  return RES_OK;
 }
 
 res_T
@@ -901,4 +943,5 @@ exit:
 error:
   goto exit;
 }
+
 

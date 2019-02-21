@@ -190,7 +190,7 @@ XD(solve_probe)
       goto error;
     }
   }
-  
+
 #if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
 #else
@@ -280,6 +280,10 @@ XD(solve_probe)
       res = green_function_merge_and_clear(green, greens[i]);
       if(res != RES_OK) goto error;
     }
+
+    /* Finalize the estimated green */
+    res = green_function_finalize(green);
+    if(res != RES_OK) goto error;
   }
 
 exit:

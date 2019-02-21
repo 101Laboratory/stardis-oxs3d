@@ -88,6 +88,13 @@ enum sdis_scene_dimension {
   SDIS_SCENE_3D
 };
 
+enum sdis_point_type {
+  SDIS_FRAGMENT,
+  SDIS_VERTEX,
+  SDIS_POINT_TYPES_COUNT__,
+  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
+};
+
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
  * random walk. */
 struct sdis_rwalk_vertex {
@@ -236,25 +243,18 @@ typedef res_T
    const size_t naccums[2], /* #accumulations in X and Y */
    const struct sdis_accum* accums); /* List of row ordered accumulations */
 
-enum sdis_point_type {
-  SDIS_FRAGMENT,
-  SDIS_VERTEX,
-  SDIS_POINT_TYPES_COUNT__,
-  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
-};
-
 struct sdis_green_path {
-  /* Internal data. Should not be accessed */ 
+  /* Internal data. Should not be accessed */
   void* green__;
   size_t id__;
 };
 #define SDIS_GREEN_PATH_NULL__ {NULL, 0}
-static const struct sdis_green_path SDIS_GREEN_PATH_NULL = 
+static const struct sdis_green_path SDIS_GREEN_PATH_NULL =
   SDIS_GREEN_PATH_NULL__;
 
 struct sdis_point {
   union {
-    struct { 
+    struct {
       struct sdis_medium* medium;
       struct sdis_rwalk_vertex vertex;
     } mdmvert;
@@ -265,21 +265,25 @@ struct sdis_point {
   } data;
   enum sdis_point_type type;
 };
-#define SDIS_POINT_NULL__ {{{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
+#define SDIS_POINT_NULL__ { {{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
 static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
 
-/* Functor use to process the limit points of the green function */
+/* Functor used to process the paths registered agains the green function */
 typedef res_T
 (*sdis_process_green_path_T)
-  (const struct sdis_green_path* path,
+  (struct sdis_green_path* path,
    void* context);
 
+/* Functor used to process the power factor registered along a green path for a
+ * given medium */
 typedef res_T
 (*sdis_process_medium_power_term_T)
   (struct sdis_medium* medium,
    const double power_term,
    void* context);
 
+/* Functor used to process the flux factor registered along a green path for a
+ * given interface side */
 typedef res_T
 (*sdis_process_interface_flux_term_T)
   (struct sdis_interface* interf,
@@ -673,23 +677,48 @@ sdis_green_function_solve
    const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
 
+/* Retrieve the number of valid paths used to estimate the green function. It
+ * is actually equal to the number of successful realisations. */
+SDIS_API res_T
+sdis_green_function_get_paths_count
+  (const struct sdis_green_function* green,
+   size_t* npaths);
+
+/* Retrieve the number of rejected paths during the estimation of the green
+ * function due to numerical issues and data inconsistency */
+SDIS_API res_T
+sdis_green_function_get_invalid_paths_count
+  (const struct sdis_green_function* green,
+   size_t* nfails);
+
+/* Iterate over all valid green function paths */
 SDIS_API res_T
 sdis_green_function_for_each_path
   (struct sdis_green_function* green,
    sdis_process_green_path_T func,
    void* context);
 
+/* Retrieve the spatio-temporal end point of a path used to estimate the green
+ * function. Note that this point went back in time from the relative
+ * observation time 0. Its time is thus negative ;  its absolute value
+ * represents the time spent by the path into the system. */
 SDIS_API res_T
 sdis_green_path_get_limit_point
   (struct sdis_green_path* path,
    struct sdis_point* pt);
 
+/* Iterate over all "power terms" associated to the path. Multiply each term
+ * by the power of their associated medium, that is assumed to be constant in
+ * time and space, gives the medium power registered along the path. */
 SDIS_API res_T
 sdis_green_path_for_each_power_term
   (struct sdis_green_path* path,
    sdis_process_medium_power_term_T func,
    void* context);
 
+/* Iterate over all "flux terms" associated to the path. Multiply each term by
+ * the flux of their associated interface side, that is assumed to be constant
+ * in time and space, gives the interface side flux registered along the path. */
 SDIS_API res_T
 sdis_green_path_for_each_flux_term
   (struct sdis_green_path* path,
@@ -788,11 +817,11 @@ sdis_solve_camera
  * media must be constant in time and space too. Furthermore, note that only
  * the interfaces/media that had a flux/volumic power during green estimation
  * can update their flux/volumic power value for subsequent
- * sdis_green_function_solve invokations : other interfaces/media are
+ * sdis_green_function_solve invocations : other interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
  *
- * If the aforementionned assumptions are not ensured by the caller, the
+ * If the aforementioned assumptions are not ensured by the caller, the
  * behavior of the estimated green function is undefined.
  ******************************************************************************/
 SDIS_API res_T

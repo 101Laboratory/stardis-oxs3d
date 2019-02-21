@@ -285,5 +285,9 @@ check_memory_allocator(struct mem_allocator* allocator)
   }
 }
 
+extern LOCAL_SYM void
+check_green_function
+  (struct sdis_green_function* green);
+
 #endif /* TEST_SDIS_UTILS_H */
 

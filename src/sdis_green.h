@@ -41,6 +41,11 @@ green_function_merge_and_clear
   (struct sdis_green_function* dst,
    struct sdis_green_function* src);
 
+/* Finalize the green function state (e.g.: computes the #paths & #failures) */
+extern LOCAL_SYM res_T
+green_function_finalize
+  (struct sdis_green_function* green);
+
 extern LOCAL_SYM res_T
 green_function_create_path
   (struct sdis_green_function* green,

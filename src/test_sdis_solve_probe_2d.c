@@ -218,6 +218,7 @@ main(int argc, char** argv)
 
   OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, &green));
   OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 
   OK(sdis_estimator_ref_put(estimator));

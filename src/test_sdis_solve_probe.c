@@ -336,6 +336,7 @@ main(int argc, char** argv)
   BA(sdis_green_function_solve(green, time_range, NULL));
   OK(sdis_green_function_solve(green, time_range, &estimator2));
 
+  check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 
   BA(sdis_green_function_ref_get(NULL));

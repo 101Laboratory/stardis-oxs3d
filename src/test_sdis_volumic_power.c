@@ -224,13 +224,16 @@ solve(struct sdis_scene* scn, const double pos[])
   printf("Green estimation time = %s\n", dump);
   time_sub(&t1, &t2, &t1);
   time_dump(&t1, TIME_ALL, NULL, dump, sizeof(dump));
-  printf("Green solve time = %s\n\n", dump);
+  printf("Green solve time = %s\n", dump);
 
+  check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
   OK(sdis_green_function_ref_put(green));
+
+  printf("\n");
 }
 
 /*******************************************************************************
