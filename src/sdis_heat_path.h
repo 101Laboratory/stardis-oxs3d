@@ -38,13 +38,13 @@ struct temperature_3d;
 /*******************************************************************************
  * Heat path data structure
  ******************************************************************************/
-struct heat_path {
+struct sdis_heat_path {
   struct darray_heat_vertex vertices;
   enum sdis_heat_path_flag status;
 };
 
 static INLINE void
-heat_path_init(struct mem_allocator* allocator, struct heat_path* path)
+heat_path_init(struct mem_allocator* allocator, struct sdis_heat_path* path)
 {
   ASSERT(path);
   path->status = SDIS_HEAT_PATH_NONE;
@@ -52,14 +52,14 @@ heat_path_init(struct mem_allocator* allocator, struct heat_path* path)
 }
 
 static INLINE void
-heat_path_release(struct heat_path* path)
+heat_path_release(struct sdis_heat_path* path)
 {
   ASSERT(path);
   darray_heat_vertex_release(&path->vertices);
 }
 
 static INLINE res_T
-heat_path_copy(struct heat_path* dst, const struct heat_path* src)
+heat_path_copy(struct sdis_heat_path* dst, const struct sdis_heat_path* src)
 {
   ASSERT(dst && src);
   dst->status = src->status;
@@ -67,7 +67,7 @@ heat_path_copy(struct heat_path* dst, const struct heat_path* src)
 }
 
 static INLINE res_T
-heat_path_copy_and_release(struct heat_path* dst, struct heat_path* src)
+heat_path_copy_and_release(struct sdis_heat_path* dst, struct sdis_heat_path* src)
 {
   ASSERT(dst && src);
   dst->status = src->status;
@@ -75,7 +75,7 @@ heat_path_copy_and_release(struct heat_path* dst, struct heat_path* src)
 }
 
 static INLINE res_T
-heat_path_copy_and_clear(struct heat_path* dst, struct heat_path* src)
+heat_path_copy_and_clear(struct sdis_heat_path* dst, struct sdis_heat_path* src)
 {
   ASSERT(dst && src);
   dst->status = src->status;
@@ -83,7 +83,7 @@ heat_path_copy_and_clear(struct heat_path* dst, struct heat_path* src)
 }
 
 static INLINE res_T
-heat_path_add_vertex(struct heat_path* path, const struct sdis_heat_vertex* vtx)
+heat_path_add_vertex(struct sdis_heat_path* path, const struct sdis_heat_vertex* vtx)
 {
   ASSERT(path && vtx);
   return darray_heat_vertex_push_back(&path->vertices, vtx);
@@ -91,7 +91,7 @@ heat_path_add_vertex(struct heat_path* path, const struct sdis_heat_vertex* vtx)
 
 /* Generate the dynamic array of heat paths */
 #define DARRAY_NAME heat_path
-#define DARRAY_DATA struct heat_path
+#define DARRAY_DATA struct sdis_heat_path
 #define DARRAY_FUNCTOR_INIT heat_path_init
 #define DARRAY_FUNCTOR_RELEASE heat_path_release
 #define DARRAY_FUNCTOR_COPY heat_path_copy

@@ -167,6 +167,80 @@ interface_get_specular_fraction
 }
 
 /*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+struct dump_path_context {
+  FILE* stream;
+  size_t offset;
+  size_t nfailures;
+  size_t nsuccesses;
+};
+static const struct dump_path_context DUMP_PATH_CONTEXT_NULL = {NULL, 0, 0, 0};
+
+static res_T
+dump_vertex_pos(const struct sdis_heat_vertex* vert, void* context)
+{
+  struct dump_path_context* ctx = context;
+  CHK(vert && context);
+  fprintf(ctx->stream, "v %g %g %g\n", SPLIT3(vert->P));
+  return RES_OK;
+}
+
+static res_T
+process_heat_path(const struct sdis_heat_path* path, void* context)
+{
+  struct dump_path_context* ctx = context;
+  struct sdis_heat_vertex vert = SDIS_HEAT_VERTEX_NULL;
+  enum sdis_heat_path_flag status = SDIS_HEAT_PATH_NONE;
+  size_t i;
+  size_t n;
+  (void)context;
+
+  CHK(path && context);
+
+  BA(sdis_heat_path_get_vertices_count(NULL, &n));
+  BA(sdis_heat_path_get_vertices_count(path, NULL));
+  OK(sdis_heat_path_get_vertices_count(path, &n));
+  CHK(n != 0);
+
+  BA(sdis_heat_path_get_status(NULL, &status));
+  BA(sdis_heat_path_get_status(path, NULL));
+  OK(sdis_heat_path_get_status(path, &status));
+  CHK(status == SDIS_HEAT_PATH_SUCCEED || status == SDIS_HEAT_PATH_FAILED);
+
+  switch(status) {
+    case SDIS_HEAT_PATH_FAILED: ++ctx->nfailures; break;
+    case SDIS_HEAT_PATH_SUCCEED: ++ctx->nsuccesses; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+
+  BA(sdis_heat_path_get_vertex(NULL, 0, &vert));
+  BA(sdis_heat_path_get_vertex(path, n, &vert));
+  BA(sdis_heat_path_get_vertex(path, 0, NULL));
+
+  FOR_EACH(i, 0, n) {
+    OK(sdis_heat_path_get_vertex(path, i, &vert));
+    CHK(vert.type == SDIS_HEAT_VERTEX_CONVECTION
+     || vert.type == SDIS_HEAT_VERTEX_CONDUCTION
+     || vert.type == SDIS_HEAT_VERTEX_RADIATIVE);
+  }
+
+  BA(sdis_heat_path_for_each_vertex(NULL, dump_vertex_pos, context));
+  BA(sdis_heat_path_for_each_vertex(path, NULL, context));
+  OK(sdis_heat_path_for_each_vertex(path, dump_vertex_pos, context));
+
+  FOR_EACH(i, 0, n-1) {
+    fprintf(ctx->stream, "l %lu %lu\n",
+      (unsigned long)(i+1 + ctx->offset),
+      (unsigned long)(i+2 + ctx->offset));
+  }
+
+  ctx->offset += n;
+
+  return RES_OK;
+}
+
+/*******************************************************************************
  * Test
  ******************************************************************************/
 int
@@ -187,6 +261,7 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct dump_path_context dump_ctx = DUMP_PATH_CONTEXT_NULL;
   struct context ctx;
   struct fluid* fluid_param;
   struct solid* solid_param;
@@ -196,12 +271,14 @@ main(int argc, char** argv)
   double time_range[2];
   double ref;
   const size_t N = 1000;
+  const size_t N_dump = 10;
   size_t nreals;
   size_t nfails;
+  size_t n;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
   /* Create the fluid medium */
   OK(sdis_data_create
@@ -348,6 +425,24 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
 
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(sdis_estimator_get_paths_count(NULL, &n));
+  BA(sdis_estimator_get_paths_count(estimator, NULL));
+  OK(sdis_estimator_get_paths_count(estimator, &n));
+  CHK(n == 0);
+  OK(sdis_estimator_ref_put(estimator));
+
+  OK(sdis_solve_probe(scn, N_dump, pos, time_range, 1.0, 0, 0,
+    SDIS_HEAT_PATH_ALL, &estimator));
+  OK(sdis_estimator_get_paths_count(estimator, &n));
+  CHK(n == N_dump);
+
+  dump_ctx.stream = stderr;
+  BA(sdis_estimator_for_each_path(NULL, process_heat_path, &dump_ctx));
+  BA(sdis_estimator_for_each_path(estimator, NULL, &dump_ctx));
+  OK(sdis_estimator_for_each_path(estimator, process_heat_path, &dump_ctx));
+
+  OK(sdis_estimator_ref_put(estimator));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));
 

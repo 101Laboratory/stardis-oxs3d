@@ -124,6 +124,43 @@ sdis_estimator_get_total_flux
   return RES_OK;
 }
 
+res_T
+sdis_estimator_get_paths_count
+  (const struct sdis_estimator* estimator, size_t* npaths)
+{
+  if(!estimator || !npaths) return RES_BAD_ARG;
+  *npaths = darray_heat_path_size_get(&estimator->paths);
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_for_each_path
+  (const struct sdis_estimator* estimator,
+   sdis_process_heat_path_T func,
+   void* context)
+{
+  const struct sdis_heat_path* paths = NULL;
+  size_t i, n;
+  res_T res = RES_OK;
+
+  if(!estimator || !func) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  SDIS(estimator_get_paths_count(estimator, &n));
+  paths = darray_heat_path_cdata_get(&estimator->paths);
+  FOR_EACH(i, 0, n) {
+    res = func(paths+i, context);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
@@ -175,9 +212,9 @@ error:
 
 res_T
 estimator_add_and_release_heat_path
-  (struct sdis_estimator* estimator, struct heat_path* path)
+  (struct sdis_estimator* estimator, struct sdis_heat_path* path)
 {
-  struct heat_path* dst = NULL;
+  struct sdis_heat_path* dst = NULL;
   size_t i;
   res_T res = RES_OK;
   ASSERT(estimator && path);

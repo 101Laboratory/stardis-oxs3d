@@ -243,8 +243,8 @@ XD(solve_probe)
     struct ssp_rng* rng = rngs[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
-    struct heat_path* pheat_path = NULL;
-    struct heat_path heat_path;
+    struct sdis_heat_path* pheat_path = NULL;
+    struct sdis_heat_path heat_path;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
@@ -276,7 +276,7 @@ XD(solve_probe)
 
     if(pheat_path) {
       pheat_path->status = res_local == RES_OK
-        ? SDIS_HEAT_PATH_OK
+        ? SDIS_HEAT_PATH_SUCCEED
         : SDIS_HEAT_PATH_FAILED;
 
       /* Check if the path must be saved regarding the register_paths mask */

@@ -46,7 +46,7 @@ probe_realisation_2d
    const double ambient_radiative_temperature,
    const double reference_temperature,
    struct green_path_handle* green_path,
-   struct heat_path* heat_path,
+   struct sdis_heat_path* heat_path,
    double* weight);
 
 extern LOCAL_SYM res_T
@@ -60,7 +60,7 @@ probe_realisation_3d
    const double ambient_radiative_temperature,
    const double reference_temperature,
    struct green_path_handle* green_path,
-   struct heat_path* heat_path,
+   struct sdis_heat_path* heat_path,
    double* weight);
 
 /*******************************************************************************

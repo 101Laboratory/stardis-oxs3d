@@ -97,7 +97,7 @@ XD(probe_realisation)
    const double ambient_radiative_temperature,
    const double reference_temperature,
    struct green_path_handle* green_path,
-   struct heat_path* heat_path,
+   struct sdis_heat_path* heat_path,
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;

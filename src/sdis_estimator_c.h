@@ -62,7 +62,7 @@ estimator_create
 extern LOCAL_SYM res_T
 estimator_add_and_release_heat_path
   (struct sdis_estimator* estimator,
-   struct heat_path* path);
+   struct sdis_heat_path* path);
 
 /* Must be invoked before any others "estimator_setup" functions */
 static INLINE void
