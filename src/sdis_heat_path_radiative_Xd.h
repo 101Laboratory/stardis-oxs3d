@@ -39,7 +39,7 @@ XD(trace_radiative_path)
    struct XD(temperature)* T)
 {
   /* The radiative random walk is always performed in 3D. In 2D, the geometry
-   * are assumed to be extruded to the infinty along the Z dimension. */
+   * are assumed to be extruded to the infinity along the Z dimension. */
   float N[3] = {0, 0, 0};
   float dir[3] = {0, 0, 0};
   res_T res = RES_OK;

@@ -305,7 +305,7 @@ XD(solve_probe)
     }
 
     /* Finalize the estimated green */
-    res = green_function_finalize(green);
+    res = green_function_finalize(green, rng_proxy);
     if(res != RES_OK) goto error;
   }
 

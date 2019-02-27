@@ -448,8 +448,6 @@ main(int argc, char** argv)
   BA(sdis_estimator_for_each_path(estimator, NULL, &dump_ctx));
   OK(sdis_estimator_for_each_path(estimator, process_heat_path, &dump_ctx));
 
-  dump_heat_paths(stderr, estimator);
-
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));

@@ -20,6 +20,7 @@
 
 /* Forward declaration */
 struct sdis_green_function;
+struct ssp_rng_proxy;
 struct green_path;
 
 struct green_path_handle {
@@ -41,10 +42,12 @@ green_function_merge_and_clear
   (struct sdis_green_function* dst,
    struct sdis_green_function* src);
 
-/* Finalize the green function state (e.g.: computes the #paths & #failures) */
+/* Finalize the green function state (e.g.: computes the #paths & #failures,
+ * save the rng state, etc.) */
 extern LOCAL_SYM res_T
 green_function_finalize
-  (struct sdis_green_function* green);
+  (struct sdis_green_function* green,
+   struct ssp_rng_proxy* rng_proxy); /* Proxy RNG used to estimate the function */
 
 extern LOCAL_SYM res_T
 green_function_create_path
