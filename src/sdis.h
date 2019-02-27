@@ -51,12 +51,11 @@ struct senc2d_descriptor;
 struct senc_descriptor;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
- * ref counted. Once created with the appropriated `sdis_<TYPE>_create'
- * function, the caller implicitly owns the created data, i.e. its reference
- * counter is set to 1. The sdis_<TYPE>_ref_<get|put> functions get or release
- * a reference on the data, i.e. they increment or decrement the reference
- * counter, respectively. When this counter reaches 0, the object is silently
- * destroyed and cannot be used anymore. */
+ * ref counted. Once created the caller implicitly owns the created data, i.e.
+ * its reference counter is set to 1. The sdis_<TYPE>_ref_<get|put> functions
+ * get or release a reference on the data, i.e. they increment or decrement the
+ * reference counter, respectively. When this counter reaches 0, the object is
+ * silently destroyed and cannot be used anymore. */
 struct sdis_accum_buffer;
 struct sdis_camera;
 struct sdis_data;
@@ -66,6 +65,9 @@ struct sdis_green_function;
 struct sdis_interface;
 struct sdis_medium;
 struct sdis_scene;
+
+/* Forward declaration of non ref counted types */
+struct sdis_heat_path;
 
 enum sdis_side {
   SDIS_FRONT,
@@ -95,6 +97,19 @@ enum sdis_point_type {
   SDIS_VERTEX,
   SDIS_POINT_TYPES_COUNT__,
   SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
+};
+
+enum sdis_heat_vertex_type {
+  SDIS_HEAT_VERTEX_CONDUCTION,
+  SDIS_HEAT_VERTEX_CONVECTION,
+  SDIS_HEAT_VERTEX_RADIATIVE
+};
+
+enum sdis_heat_path_flag {
+  SDIS_HEAT_PATH_SUCCEED = BIT(0),
+  SDIS_HEAT_PATH_FAILED = BIT(1),
+  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCEED | SDIS_HEAT_PATH_FAILED,
+  SDIS_HEAT_PATH_NONE = 0
 };
 
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
@@ -245,6 +260,18 @@ typedef res_T
    const size_t naccums[2], /* #accumulations in X and Y */
    const struct sdis_accum* accums); /* List of row ordered accumulations */
 
+/* Vertex of heat path v*/
+struct sdis_heat_vertex {
+  double P[3];
+  double time;
+  double weight;
+  enum sdis_heat_vertex_type type;
+};
+#define SDIS_HEAT_VERTEX_NULL__ {{0,0,0}, 0, 0, SDIS_HEAT_VERTEX_CONDUCTION}
+static const struct sdis_heat_vertex SDIS_HEAT_VERTEX_NULL =
+  SDIS_HEAT_VERTEX_NULL__;
+
+/* Path used to estimate the green function */
 struct sdis_green_path {
   /* Internal data. Should not be accessed */
   void* green__;
@@ -270,7 +297,7 @@ struct sdis_point {
 #define SDIS_POINT_NULL__ { {{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
 static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
 
-/* Functor used to process the paths registered agains the green function */
+/* Functor used to process the paths registered against the green function */
 typedef res_T
 (*sdis_process_green_path_T)
   (struct sdis_green_path* path,
@@ -291,6 +318,18 @@ typedef res_T
   (struct sdis_interface* interf,
    const enum sdis_side side,
    const double flux_term,
+   void* context);
+
+/* Functor used to process a heat path registered against the estimator */
+typedef res_T
+(*sdis_process_heat_path_T)
+  (const struct sdis_heat_path* path,
+   void* context);
+
+/* Functor used to process the vertices of a heat path */
+typedef res_T
+(*sdis_process_heat_vertex_T)
+  (const struct sdis_heat_vertex* vertex,
    void* context);
 
 BEGIN_DECLS
@@ -688,6 +727,23 @@ sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);
 
+SDIS_API res_T
+sdis_estimator_get_paths_count
+  (const struct sdis_estimator* estimator,
+   size_t* npaths);
+
+SDIS_API res_T
+sdis_estimator_get_path
+  (const struct sdis_estimator* estimator,
+   const size_t ipath,
+   const struct sdis_heat_path** path);
+
+SDIS_API res_T
+sdis_estimator_for_each_path
+  (const struct sdis_estimator* estimator,
+   sdis_process_heat_path_T func,
+   void* context);
+
 /*******************************************************************************
  * The green function saves the estimation of the propagator
  ******************************************************************************/
@@ -754,6 +810,31 @@ sdis_green_path_for_each_flux_term
    void* context);
 
 /*******************************************************************************
+ * Heat path API
+ ******************************************************************************/
+SDIS_API res_T
+sdis_heat_path_get_vertices_count
+  (const struct sdis_heat_path* path,
+   size_t* nvertices);
+
+SDIS_API res_T
+sdis_heat_path_get_status
+  (const struct sdis_heat_path* path,
+   enum sdis_heat_path_flag* status);
+
+SDIS_API res_T
+sdis_heat_path_get_vertex
+  (const struct sdis_heat_path* path,
+   const size_t ivertex,
+   struct sdis_heat_vertex* vertex);
+
+SDIS_API res_T
+sdis_heat_path_for_each_vertex
+  (const struct sdis_heat_path* path,
+   sdis_process_heat_vertex_T func,
+   void* context);
+
+/*******************************************************************************
  * Solvers
  ******************************************************************************/
 SDIS_API res_T
@@ -765,6 +846,7 @@ sdis_solve_probe
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   const int register_path, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T

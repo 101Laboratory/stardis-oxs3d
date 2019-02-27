@@ -145,7 +145,7 @@ solve(struct sdis_scene* scn, const double pos[])
   ref = T0 + (1 - pos[0]) * PHI/LAMBDA;
 
   time_current(&t0);
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
   time_sub(&t0, time_current(&t1), &t0);
   time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
 

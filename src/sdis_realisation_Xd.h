@@ -97,11 +97,13 @@ XD(probe_realisation)
    const double ambient_radiative_temperature,
    const double reference_temperature,
    struct green_path_handle* green_path,
+   struct sdis_heat_path* heat_path,
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
   struct XD(rwalk) rwalk = XD(RWALK_NULL);
   struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  enum sdis_heat_vertex_type type;
   double t0;
   double (*get_initial_temperature)
     (const struct sdis_medium* mdm,
@@ -125,6 +127,14 @@ XD(probe_realisation)
 
   dX(set)(rwalk.vtx.P, position);
   rwalk.vtx.time = time;
+
+  /* Register the starting position against the heat path */
+  type = medium->type == SDIS_SOLID 
+    ? SDIS_HEAT_VERTEX_CONDUCTION
+    : SDIS_HEAT_VERTEX_CONVECTION;
+  res = register_heat_vertex(heat_path, &rwalk.vtx, 0, type);
+  if(res != RES_OK) goto error;
+
   /* No initial condition with green */
   if(!green_path && t0 >= rwalk.vtx.time) {
     double tmp;
@@ -133,20 +143,22 @@ XD(probe_realisation)
     tmp = get_initial_temperature(medium, &rwalk.vtx);
     if(tmp >= 0) {
       *weight = tmp;
-      return RES_OK;
+      goto exit;
     }
     /* The initial condition should have been reached */
     log_err(scn->dev,
       "%s: undefined initial condition. "
       "The time is %f but the temperature remains unknown.\n",
       FUNC_NAME, t0);
-    return RES_BAD_OP;
+    res = RES_BAD_OP;
+    goto error;
   }
 
   rwalk.hit = SXD_HIT_NULL;
   rwalk.mdm = medium;
 
   ctx.green_path = green_path;
+  ctx.heat_path = heat_path;
   ctx.Tarad = ambient_radiative_temperature;
   ctx.Tref3 =
     reference_temperature
@@ -154,10 +166,14 @@ XD(probe_realisation)
   * reference_temperature;
 
   res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
-  if(res != RES_OK) return res;
+  if(res != RES_OK) goto error;
 
   *weight = T.value;
-  return RES_OK;
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 res_T

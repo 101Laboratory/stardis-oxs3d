@@ -23,6 +23,47 @@
 
 #include "sdis_Xd_begin.h"
 
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static res_T
+XD(register_heat_vertex_in_fluid)
+  (struct sdis_scene* scn,
+   const struct rwalk_context* ctx,
+   struct XD(rwalk)* rwalk,
+   const double weight)
+{
+  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+  const float empirical_dst = 0.1f;
+  const float range[2] = {0, FLT_MAX};
+  float org[DIM];
+  float dir[DIM];
+  float pos[DIM];
+  float dst;
+  struct sXd(hit) hit;
+
+  if(!ctx->heat_path) return RES_OK;
+
+  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+
+  fX_set_dX(org, rwalk->vtx.P);
+  fX(set)(dir, rwalk->hit.normal);
+  if(rwalk->hit_side == SDIS_BACK) fX(minus)(dir, dir);
+
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, &rwalk->hit, &hit));
+  dst = SXD_HIT_NONE(&hit) ? empirical_dst : hit.distance * 0.5f;
+
+  vtx = rwalk->vtx;
+  fX(add)(pos, org, fX(mulf)(dir, dir, dst));
+  dX_set_fX(vtx.P, pos);
+
+  return register_heat_vertex
+    (ctx->heat_path, &vtx, weight, SDIS_HEAT_VERTEX_CONVECTION);
+}
+
+/*******************************************************************************
+ * Local functions
+ ******************************************************************************/
 res_T
 XD(convective_path)
   (struct sdis_scene* scn,
@@ -33,7 +74,6 @@ XD(convective_path)
    struct XD(temperature)* T)
 {
   struct sXd(attrib) attr_P, attr_N;
-  struct sdis_interface_fragment frag;
   const struct sdis_interface* interf;
   const struct enclosure* enc;
   unsigned enc_ids[2];
@@ -62,6 +102,10 @@ XD(convective_path)
       res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &rwalk->vtx);
       if(res != RES_OK) goto error;
     }
+
+    res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
+    if(res != RES_OK) goto error;
+
     goto exit;
   }
 
@@ -147,30 +191,10 @@ XD(convective_path)
     goto error;
   }
 
-  /* A trick to force first r test result.
-   * TODO fix this workaround that seems useless */
-  r = 1;
-
   /* Sample time until init condition is reached or a true convection occurs. */
   for(;;) {
+    struct sdis_interface_fragment frag;
     struct sXd(primitive) prim;
-    /* Setup the fragment of the interface. */
-    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
-
-    /* Fetch hc. */
-    hc = interface_get_convection_coef(interf, &frag);
-    if(hc > enc->hc_upper_bound) {
-      log_err(scn->dev,
-        "%s: hc (%g) exceeds its provided upper bound (%g) at %g %g %g.\n",
-        FUNC_NAME, hc, enc->hc_upper_bound, SPLIT3(rwalk->vtx.P));
-      res = RES_BAD_OP;
-      goto error;
-    }
-
-    if(r < hc / enc->hc_upper_bound) {
-      /* True convection. Always true if hc == bound. */
-      break;
-    }
 
     /* Fetch other physical properties. */
     cp = fluid_get_calorific_capacity(rwalk->mdm, &rwalk->vtx);
@@ -183,12 +207,20 @@ XD(convective_path)
       tau = ssp_ran_exp(rng, mu);
       t0 = ctx->green_path ? -INF : fluid_get_t0(rwalk->mdm);
       rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
+
+      /* Register the new vertex against the heat path */
+      res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
+      if(res != RES_OK) goto error;
+
       if(rwalk->vtx.time == t0) {
         /* Check the initial condition. */
         tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
         if(tmp >= 0) {
           T->value += tmp;
           T->done = 1;
+          if(ctx->heat_path) { /* Update the weight of the last heat vertex */
+            heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
+          }
           goto exit;
         }
         /* The initial condition should have been reached. */
@@ -238,8 +270,29 @@ XD(convective_path)
       FATAL("Unexpected fluid interface.\n");
     }
 
-    /* Renew r for next loop. */
+    /* Register the new vertex against the heat path */
+    res = register_heat_vertex
+      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONVECTION);
+    if(res != RES_OK) goto error;
+
+    /* Setup the fragment of the sampled position into the enclosure. */
+    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+
+    /* Fetch the convection coefficient of the sampled position */
+    hc = interface_get_convection_coef(interf, &frag);
+    if(hc > enc->hc_upper_bound) {
+      log_err(scn->dev,
+        "%s: hc (%g) exceeds its provided upper bound (%g) at %g %g %g.\n",
+        FUNC_NAME, hc, enc->hc_upper_bound, SPLIT3(rwalk->vtx.P));
+      res = RES_BAD_OP;
+      goto error;
+    }
+
     r = ssp_rng_canonical_float(rng);
+    if(r < hc / enc->hc_upper_bound) {
+      /* True convection. Always true if hc == bound. */
+      break;
+    }
   }
 
   rwalk->hit.distance = 0;

@@ -252,6 +252,11 @@ XD(solid_solid_boundary_path)
     rwalk->hit_side = SDIS_SIDE_NULL__;
   }
 
+  /* Register the new vertex against the heat path */
+  res = register_heat_vertex
+    (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+  if(res != RES_OK) goto error;
+
 exit:
   return res;
 error:
@@ -411,6 +416,11 @@ XD(solid_fluid_boundary_path)
       rwalk->hit = SXD_HIT_NULL;
       rwalk->hit_side = SDIS_SIDE_NULL__;
     }
+
+    /* Register the new vertex against the heat path */
+    res = register_heat_vertex
+      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+    if(res != RES_OK) goto error;
   }
 
 exit:
@@ -541,7 +551,13 @@ XD(solid_boundary_with_flux_path)
     rwalk->mdm = mdm;
     rwalk->hit = SXD_HIT_NULL;
     rwalk->hit_side = SDIS_SIDE_NULL__;
+
   }
+
+  /* Register the new vertex against the heat path */
+  res = register_heat_vertex
+    (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+  if(res != RES_OK) goto error;
 
 exit:
   return res;
@@ -589,6 +605,9 @@ XD(boundary_path)
       res = green_path_set_limit_interface_fragment
         (ctx->green_path, interf, &frag);
       if(res != RES_OK) goto error;
+    }
+    if(ctx->heat_path) {
+      heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
     }
     goto exit;
   }

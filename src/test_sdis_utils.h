@@ -278,7 +278,7 @@ static INLINE void
 check_memory_allocator(struct mem_allocator* allocator)
 {
   if(MEM_ALLOCATED_SIZE(allocator)) {
-    char dump[128];
+    char dump[1024];
     MEM_DUMP(allocator, dump, sizeof(dump));
     fprintf(stderr, "%s\n", dump);
     FATAL("Memory leaks.\n");
@@ -288,6 +288,11 @@ check_memory_allocator(struct mem_allocator* allocator)
 extern LOCAL_SYM void
 check_green_function
   (struct sdis_green_function* green);
+
+extern LOCAL_SYM void
+dump_heat_paths
+  (FILE* stream,
+   struct sdis_estimator* estimator);
 
 #endif /* TEST_SDIS_UTILS_H */
 

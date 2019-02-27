@@ -16,8 +16,12 @@
 #ifndef SDIS_HEAT_PATH_H
 #define SDIS_HEAT_PATH_H
 
+#include "sdis.h"
+
+#include <rsys/dynamic_array.h>
 #include <rsys/rsys.h>
 
+/* Forward declarations */
 struct rwalk_2d;
 struct rwalk_3d;
 struct rwalk_context;
@@ -25,6 +29,84 @@ struct sdis_scene;
 struct ssp_rng;
 struct temperature_2d;
 struct temperature_3d;
+
+/* Generate the dynamic array of heat vertices */
+#define DARRAY_NAME heat_vertex
+#define DARRAY_DATA struct sdis_heat_vertex
+#include <rsys/dynamic_array.h>
+
+/*******************************************************************************
+ * Heat path data structure
+ ******************************************************************************/
+struct sdis_heat_path {
+  struct darray_heat_vertex vertices;
+  enum sdis_heat_path_flag status;
+};
+
+static INLINE void
+heat_path_init(struct mem_allocator* allocator, struct sdis_heat_path* path)
+{
+  ASSERT(path);
+  path->status = SDIS_HEAT_PATH_NONE;
+  darray_heat_vertex_init(allocator, &path->vertices);
+}
+
+static INLINE void
+heat_path_release(struct sdis_heat_path* path)
+{
+  ASSERT(path);
+  darray_heat_vertex_release(&path->vertices);
+}
+
+static INLINE res_T
+heat_path_copy(struct sdis_heat_path* dst, const struct sdis_heat_path* src)
+{
+  ASSERT(dst && src);
+  dst->status = src->status;
+  return darray_heat_vertex_copy(&dst->vertices, &src->vertices);
+}
+
+static INLINE res_T
+heat_path_copy_and_release(struct sdis_heat_path* dst, struct sdis_heat_path* src)
+{
+  ASSERT(dst && src);
+  dst->status = src->status;
+  return darray_heat_vertex_copy_and_release(&dst->vertices, &src->vertices);
+}
+
+static INLINE res_T
+heat_path_copy_and_clear(struct sdis_heat_path* dst, struct sdis_heat_path* src)
+{
+  ASSERT(dst && src);
+  dst->status = src->status;
+  return darray_heat_vertex_copy_and_clear(&dst->vertices, &src->vertices);
+}
+
+static INLINE res_T
+heat_path_add_vertex(struct sdis_heat_path* path, const struct sdis_heat_vertex* vtx)
+{
+  ASSERT(path && vtx);
+  return darray_heat_vertex_push_back(&path->vertices, vtx);
+}
+
+static INLINE struct sdis_heat_vertex*
+heat_path_get_last_vertex(struct sdis_heat_path* path)
+{
+  size_t sz;
+  ASSERT(path);
+  sz = darray_heat_vertex_size_get(&path->vertices);
+  ASSERT(sz);
+  return darray_heat_vertex_data_get(&path->vertices) + (sz-1);
+}
+
+/* Generate the dynamic array of heat paths */
+#define DARRAY_NAME heat_path
+#define DARRAY_DATA struct sdis_heat_path
+#define DARRAY_FUNCTOR_INIT heat_path_init
+#define DARRAY_FUNCTOR_RELEASE heat_path_release
+#define DARRAY_FUNCTOR_COPY heat_path_copy
+#define DARRAY_FUNCTOR_COPY_AND_RELEASE heat_path_copy_and_release
+#include <rsys/dynamic_array.h>
 
 /*******************************************************************************
  * Trace or pursue a radiative path

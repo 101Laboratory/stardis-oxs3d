@@ -191,6 +191,9 @@ struct sdis_green_function {
   size_t npaths_valid;
   size_t npaths_invalid;
 
+  struct ssp_rng_type rng_type;
+  FILE* rng_state;
+
   ref_T ref;
   struct sdis_device* dev;
 };
@@ -408,6 +411,7 @@ green_function_release(ref_T* ref)
   htable_medium_release(&green->media);
   htable_interf_release(&green->interfaces);
   darray_green_path_release(&green->paths);
+  if(green->rng_state) fclose(green->rng_state);
   MEM_RM(dev->allocator, green);
   SDIS(device_ref_put(dev));
 }
@@ -452,15 +456,23 @@ sdis_green_function_solve
     goto error;
   }
 
-  /* FIXME do not use a new RNG. Save the RNG state into the green function
-   * after its estimation and initialize the following rng with this state */
-  res = ssp_rng_create(green->dev->allocator, &ssp_rng_mt19937_64, &rng);
+  res = ssp_rng_create(green->dev->allocator, &green->rng_type, &rng);
+  if(res != RES_OK) goto error;
+
+  /* Avoid correlation by defining the RNG state from the final state of the
+   * RNG used to estimate the green function */
+  rewind(green->rng_state);
+  res = ssp_rng_read(rng, green->rng_state);
   if(res != RES_OK) goto error;
 
   npaths = darray_green_path_size_get(&green->paths);
 
+  /* Create the estimator */
+  res = estimator_create(green->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+  if(res != RES_OK) goto error;
+
   /* Solve the green function */
-  FOR_EACH(ipath, 0, npaths) { /* TODO add multi-threading (?) */
+  FOR_EACH(ipath, 0, npaths) {
     const double time = sample_time(rng, time_range);
     double w;
 
@@ -473,12 +485,8 @@ sdis_green_function_solve
     ++N;
   }
 
-  /* Create the estimator */
-  res = estimator_create
-    (green->dev, SDIS_ESTIMATOR_TEMPERATURE, npaths, N, &estimator);
-  if(res != RES_OK) goto error;
-
   /* Setup the estimated temperature */
+  estimator_setup_realisations_count(estimator, npaths, N);
   estimator_setup_temperature(estimator, accum, accum2);
 
 exit:
@@ -685,6 +693,12 @@ green_function_create
   green->npaths_valid = SIZE_MAX;
   green->npaths_invalid = SIZE_MAX;
 
+  green->rng_state = tmpfile();
+  if(!green->rng_state) {
+    res = RES_IO_ERR;
+    goto error;
+  }
+
 exit:
   *out_green = green;
   return res;
@@ -759,12 +773,24 @@ error:
 }
 
 res_T
-green_function_finalize(struct sdis_green_function* green)
+green_function_finalize
+  (struct sdis_green_function* green,
+   struct ssp_rng_proxy* proxy)
 {
   size_t i, n;
+  res_T res = RES_OK;
 
-  if(!green) return RES_BAD_ARG;
+  if(!green || !proxy) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
 
+  /* Save the RNG state */
+  SSP(rng_proxy_get_type(proxy, &green->rng_type));
+  res = ssp_rng_proxy_write(proxy, green->rng_state);
+  if(res != RES_OK) goto error;
+
+  /* Compute the number of valid/invalid green paths */
   green->npaths_valid = 0;
   n = darray_green_path_size_get(&green->paths);
   FOR_EACH(i, 0, n) {
@@ -772,7 +798,11 @@ green_function_finalize(struct sdis_green_function* green)
     green->npaths_valid += path->limit_type != SDIS_POINT_NONE;
   }
   green->npaths_invalid = n - green->npaths_valid;
-  return RES_OK;
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 res_T

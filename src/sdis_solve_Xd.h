@@ -157,6 +157,7 @@ XD(solve_probe)
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_green_function** out_green, /* May be NULL <=> No green func */
    struct sdis_estimator** out_estimator)
 {
@@ -225,6 +226,12 @@ XD(solve_probe)
 
   }
 
+  /* Create the estimator */
+  if(out_estimator) {
+    res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+    if(res != RES_OK) goto error;
+  }
+
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
@@ -236,11 +243,17 @@ XD(solve_probe)
     struct ssp_rng* rng = rngs[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
+    struct sdis_heat_path* pheat_path = NULL;
+    struct sdis_heat_path heat_path;
 
-    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occured */
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
     if(!out_green) {
       time = sample_time(rng, time_range);
+      if(register_paths) {
+        heat_path_init(scn->dev->allocator, &heat_path);
+        pheat_path = &heat_path;
+      }
     } else {
       /* Do not take care of the submitted time when registering the green
        * function. Simply takes 0 as relative time */
@@ -252,7 +265,7 @@ XD(solve_probe)
     }
 
     res_local = XD(probe_realisation)(scn, rng, medium, position, time,
-      fp_to_meter, Tarad, Tref, pgreen_path, &w);
+      fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) { ATOMIC_SET(&res, res_local); continue; }
     } else {
@@ -260,16 +273,26 @@ XD(solve_probe)
       sqr_weight += w*w;
       ++N;
     }
+
+    if(pheat_path) {
+      pheat_path->status = res_local == RES_OK
+        ? SDIS_HEAT_PATH_SUCCEED
+        : SDIS_HEAT_PATH_FAILED;
+
+      /* Check if the path must be saved regarding the register_paths mask */
+      if(!(register_paths & (int)pheat_path->status)) {
+        heat_path_release(pheat_path);
+      } else { /* Register the sampled path */
+        res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
+        if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      }
+    }
   }
   if(res != RES_OK) goto error;
 
+  /* Setup the estimated temperature */
   if(out_estimator) {
-    /* Create the estimator */
-    res = estimator_create
-      (scn->dev, SDIS_ESTIMATOR_TEMPERATURE, nrealisations, N, &estimator);
-    if(res != RES_OK) goto error;
-
-    /* Setup the estimated temperature */
+    estimator_setup_realisations_count(estimator, nrealisations, N);
     estimator_setup_temperature(estimator, weight, sqr_weight);
   }
 
@@ -282,7 +305,7 @@ XD(solve_probe)
     }
 
     /* Finalize the estimated green */
-    res = green_function_finalize(green);
+    res = green_function_finalize(green, rng_proxy);
     if(res != RES_OK) goto error;
   }
 
@@ -407,6 +430,10 @@ XD(solve_probe_boundary)
     if(res != RES_OK) goto error;
   }
 
+  /* Create the estimator */
+  res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+  if(res != RES_OK) goto error;
+
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
@@ -436,12 +463,8 @@ XD(solve_probe_boundary)
   }
   if(res != RES_OK) goto error;
 
-  /* Create the estimator */
-  res = estimator_create
-    (scn->dev, SDIS_ESTIMATOR_TEMPERATURE, nrealisations, N, &estimator);
-  if(res != RES_OK) goto error;
-
   /* Setup the estimated temperature */
+  estimator_setup_realisations_count(estimator, nrealisations, N);
   estimator_setup_temperature(estimator, weight, sqr_weight);
 
 exit:
@@ -564,6 +587,10 @@ XD(solve_boundary)
     if(res != RES_OK) goto error;
   }
 
+  /* Create the estimator */
+  res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+  if(res != RES_OK) goto error;
+
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
   for(irealisation=0; irealisation<(int64_t)nrealisations; ++irealisation) {
@@ -621,12 +648,8 @@ XD(solve_boundary)
     }
   }
 
-  /* Create the estimator */
-  res = estimator_create
-    (scn->dev, SDIS_ESTIMATOR_TEMPERATURE, nrealisations, N, &estimator);
-  if(res != RES_OK) goto error;
-
   /* Setup the estimated temperature */
+  estimator_setup_realisations_count(estimator, nrealisations, N);
   estimator_setup_temperature(estimator, weight, sqr_weight);
 
 exit:
@@ -761,6 +784,10 @@ XD(solve_probe_boundary_flux)
   res = XD(interface_prebuild_fragment)
     (&frag, scn, (unsigned)iprim, uv, fluid_side);
 
+  /* Create the estimator */
+  res = estimator_create(scn->dev, SDIS_ESTIMATOR_FLUX, &estimator);
+  if(res != RES_OK) goto error;
+
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight_t,sqr_weight_t,\
@@ -814,12 +841,8 @@ XD(solve_probe_boundary_flux)
   }
   if(res != RES_OK) goto error;
 
-  /* Create the estimator */
-  res = estimator_create
-    (scn->dev, SDIS_ESTIMATOR_FLUX, nrealisations, N, &estimator);
-  if(res != RES_OK) goto error;
-
   /* Setup the estimated values */
+  estimator_setup_realisations_count(estimator, nrealisations, N);
   estimator_setup_temperature(estimator, weight_t, sqr_weight_t);
   estimator_setup_flux(estimator, FLUX_CONVECTIVE, weight_fc, sqr_weight_fc);
   estimator_setup_flux(estimator, FLUX_RADIATIVE, weight_fr, sqr_weight_fr);
@@ -947,6 +970,10 @@ XD(solve_boundary_flux)
     if(res != RES_OK) goto error;
   }
 
+  /* Create the estimator */
+  res = estimator_create(scn->dev, SDIS_ESTIMATOR_FLUX, &estimator);
+  if(res != RES_OK) goto error;
+
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static) reduction(+:weight_t,sqr_weight_t,\
      weight_fc,sqr_weight_fc,weight_fr,sqr_weight_fr,weight_f,sqr_weight_f,N)
@@ -1045,12 +1072,8 @@ XD(solve_boundary_flux)
   }
   if(res != RES_OK) goto error;
 
-  /* Create the estimator */
-  res = estimator_create
-    (scn->dev, SDIS_ESTIMATOR_FLUX, nrealisations, N, &estimator);
-  if(res != RES_OK) goto error;
-
   /* Setup the estimated values */
+  estimator_setup_realisations_count(estimator, nrealisations, N);
   estimator_setup_temperature(estimator, weight_t, sqr_weight_t);
   estimator_setup_flux(estimator, FLUX_CONVECTIVE, weight_fc, sqr_weight_fc);
   estimator_setup_flux(estimator, FLUX_RADIATIVE, weight_fr, sqr_weight_fr);

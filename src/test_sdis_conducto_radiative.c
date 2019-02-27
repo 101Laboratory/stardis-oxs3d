@@ -398,7 +398,7 @@ main(int argc, char** argv)
     pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     pos[2] = ssp_rng_uniform_double(rng, -0.9, 0.9);
 
-    OK(sdis_solve_probe(scn, N, pos, time_range, 1, -1, Tref, &estimator));
+    OK(sdis_solve_probe(scn, N, pos, time_range, 1, -1, Tref, 0, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     OK(sdis_estimator_get_temperature(estimator, &T));
@@ -422,6 +422,10 @@ main(int argc, char** argv)
     OK(sdis_estimator_ref_put(estimator));
     OK(sdis_estimator_ref_put(estimator2));
     OK(sdis_green_function_ref_put(green));
+
+    OK(sdis_solve_probe(scn, 10, pos, time_range, 1, -1, Tref,
+      SDIS_HEAT_PATH_ALL, &estimator));
+    OK(sdis_estimator_ref_put(estimator));
   }
 
   /* Release memory */
