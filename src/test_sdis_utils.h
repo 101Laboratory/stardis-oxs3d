@@ -289,5 +289,10 @@ extern LOCAL_SYM void
 check_green_function
   (struct sdis_green_function* green);
 
+extern LOCAL_SYM void
+dump_heat_paths
+  (FILE* stream,
+   struct sdis_estimator* estimator);
+
 #endif /* TEST_SDIS_UTILS_H */
 
