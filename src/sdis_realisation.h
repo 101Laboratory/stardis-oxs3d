@@ -37,7 +37,8 @@ enum flux_flag {
  ******************************************************************************/
 extern LOCAL_SYM res_T
 probe_realisation_2d
-  (struct sdis_scene* scn,
+  (const size_t irealisation, /* For debug */
+   struct sdis_scene* scn,
    struct ssp_rng* rng,
    struct sdis_medium* medium,
    const double position[2],
@@ -51,7 +52,8 @@ probe_realisation_2d
 
 extern LOCAL_SYM res_T
 probe_realisation_3d
-  (struct sdis_scene* scn,
+  (const size_t irealisation, /* For debug */
+   struct sdis_scene* scn,
    struct ssp_rng* rng,
    struct sdis_medium* medium,
    const double position[3],

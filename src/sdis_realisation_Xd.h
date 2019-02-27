@@ -88,7 +88,8 @@ error:
  ******************************************************************************/
 res_T
 XD(probe_realisation)
-  (struct sdis_scene* scn,
+  (const size_t irealisation, /* For debug */
+   struct sdis_scene* scn,
    struct ssp_rng* rng,
    struct sdis_medium* medium,
    const double position[],
@@ -110,6 +111,7 @@ XD(probe_realisation)
      const struct sdis_rwalk_vertex* vtx);
   res_T res = RES_OK;
   ASSERT(medium && position && fp_to_meter > 0 && weight && time >= 0);
+  (void)irealisation;
 
   switch(medium->type) {
     case SDIS_FLUID:

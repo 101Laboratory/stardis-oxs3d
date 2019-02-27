@@ -264,8 +264,8 @@ XD(solve_probe)
       pgreen_path = &green_path;
     }
 
-    res_local = XD(probe_realisation)(scn, rng, medium, position, time,
-      fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
+    res_local = XD(probe_realisation)((size_t)irealisation, scn, rng, medium,
+      position, time, fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) { ATOMIC_SET(&res, res_local); continue; }
     } else {
