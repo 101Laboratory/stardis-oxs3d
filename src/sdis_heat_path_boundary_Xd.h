@@ -606,6 +606,9 @@ XD(boundary_path)
         (ctx->green_path, interf, &frag);
       if(res != RES_OK) goto error;
     }
+    if(ctx->heat_path) {
+      heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
+    }
     goto exit;
   }
 

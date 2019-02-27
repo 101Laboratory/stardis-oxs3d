@@ -83,6 +83,17 @@ XD(trace_radiative_path)
           res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &vtx);
           if(res != RES_OK) goto error;
         }
+        if(ctx->heat_path) {
+          const float empirical_dst = 0.1f;
+          struct sdis_rwalk_vertex vtx;
+          vtx = rwalk->vtx;
+          vtx.P[0] += dir[0] * empirical_dst;
+          vtx.P[1] += dir[1] * empirical_dst;
+          vtx.P[2] += dir[2] * empirical_dst;
+          res = register_heat_vertex
+            (ctx->heat_path, &vtx, T->value, SDIS_HEAT_VERTEX_RADIATIVE);
+          if(res != RES_OK) goto error;
+        }
         break;
       } else {
         log_err(scn->dev,

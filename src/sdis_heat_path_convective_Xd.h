@@ -23,6 +23,47 @@
 
 #include "sdis_Xd_begin.h"
 
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static res_T
+XD(register_heat_vertex_in_fluid)
+  (struct sdis_scene* scn,
+   const struct rwalk_context* ctx,
+   struct XD(rwalk)* rwalk,
+   const double weight)
+{
+  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+  const float empirical_dst = 0.1f;
+  const float range[2] = {0, FLT_MAX};
+  float org[DIM];
+  float dir[DIM];
+  float pos[DIM];
+  float dst;
+  struct sXd(hit) hit;
+
+  if(!ctx->heat_path) return RES_OK;
+
+  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+
+  fX_set_dX(org, rwalk->vtx.P);
+  fX(set)(dir, rwalk->hit.normal);
+  if(rwalk->hit_side == SDIS_BACK) fX(minus)(dir, dir);
+
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, &rwalk->hit, &hit));
+  dst = SXD_HIT_NONE(&hit) ? empirical_dst : hit.distance * 0.5f;
+
+  vtx = rwalk->vtx;
+  fX(add)(pos, org, fX(mulf)(dir, dir, dst));
+  dX_set_fX(vtx.P, pos);
+
+  return register_heat_vertex
+    (ctx->heat_path, &vtx, weight, SDIS_HEAT_VERTEX_CONVECTION);
+}
+
+/*******************************************************************************
+ * Local functions
+ ******************************************************************************/
 res_T
 XD(convective_path)
   (struct sdis_scene* scn,
@@ -61,6 +102,10 @@ XD(convective_path)
       res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &rwalk->vtx);
       if(res != RES_OK) goto error;
     }
+
+    res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
+    if(res != RES_OK) goto error;
+
     goto exit;
   }
 
@@ -164,8 +209,7 @@ XD(convective_path)
       rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
 
       /* Register the new vertex against the heat path */
-      res = register_heat_vertex
-        (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONVECTION);
+      res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
       if(res != RES_OK) goto error;
 
       if(rwalk->vtx.time == t0) {
@@ -174,6 +218,9 @@ XD(convective_path)
         if(tmp >= 0) {
           T->value += tmp;
           T->done = 1;
+          if(ctx->heat_path) { /* Update the weight of the last heat vertex */
+            heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
+          }
           goto exit;
         }
         /* The initial condition should have been reached. */

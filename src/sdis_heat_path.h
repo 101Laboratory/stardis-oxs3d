@@ -89,6 +89,16 @@ heat_path_add_vertex(struct sdis_heat_path* path, const struct sdis_heat_vertex*
   return darray_heat_vertex_push_back(&path->vertices, vtx);
 }
 
+static INLINE struct sdis_heat_vertex*
+heat_path_get_last_vertex(struct sdis_heat_path* path)
+{
+  size_t sz;
+  ASSERT(path);
+  sz = darray_heat_vertex_size_get(&path->vertices);
+  ASSERT(sz);
+  return darray_heat_vertex_data_get(&path->vertices) + (sz-1);
+}
+
 /* Generate the dynamic array of heat paths */
 #define DARRAY_NAME heat_path
 #define DARRAY_DATA struct sdis_heat_path

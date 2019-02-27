@@ -80,9 +80,15 @@ XD(conductive_path)
       T->done = 1;
 
       if(ctx->green_path) {
-        res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &rwalk->vtx);
+        res = green_path_set_limit_vertex
+          (ctx->green_path, rwalk->mdm, &rwalk->vtx);
         if(res != RES_OK) goto error;
       }
+
+      if(ctx->heat_path) {
+        heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
+      }
+
       break;
     }
 
@@ -196,11 +202,12 @@ XD(conductive_path)
           T->value += tmp;
           T->done = 1;
 
-          /* Register the initial vertex against the heat path */
-          res = register_heat_vertex
-            (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
-          if(res != RES_OK) goto error;
-
+          if(ctx->heat_path) {
+            struct sdis_heat_vertex* vtx;
+            vtx = heat_path_get_last_vertex(ctx->heat_path);
+            vtx->time = rwalk->vtx.time;
+            vtx->weight = T->value;
+          }
           break;
         }
         /* The initial condition should have been reached */
