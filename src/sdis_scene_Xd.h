@@ -406,7 +406,7 @@ XD(setup_properties)
 #endif
 
     /* Fetch the interface of the primitive */
-    interf(iprim, &itface, ctx);
+    interf(iprim_adjusted, &itface, ctx);
 
     /* Check that the interface is already registered against the scene */
     id = interface_get_id(itface);
