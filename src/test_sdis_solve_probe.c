@@ -258,6 +258,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_estimator* estimator2 = NULL;
   struct sdis_green_function* green = NULL;
+  const struct sdis_heat_path* path = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -437,10 +438,17 @@ main(int argc, char** argv)
   OK(sdis_estimator_get_paths_count(estimator, &n));
   CHK(n == N_dump);
 
+  BA(sdis_estimator_get_path(NULL, 0, &path));
+  BA(sdis_estimator_get_path(estimator, n, &path));
+  BA(sdis_estimator_get_path(estimator, 0, NULL));
+  OK(sdis_estimator_get_path(estimator, 0, &path));
+
   dump_ctx.stream = stderr;
   BA(sdis_estimator_for_each_path(NULL, process_heat_path, &dump_ctx));
   BA(sdis_estimator_for_each_path(estimator, NULL, &dump_ctx));
   OK(sdis_estimator_for_each_path(estimator, process_heat_path, &dump_ctx));
+
+  dump_heat_paths(stderr, estimator);
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_scene_ref_put(scn));

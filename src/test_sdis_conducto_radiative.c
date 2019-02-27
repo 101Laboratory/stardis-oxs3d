@@ -423,7 +423,7 @@ main(int argc, char** argv)
     OK(sdis_estimator_ref_put(estimator2));
     OK(sdis_green_function_ref_put(green));
 
-    OK(sdis_solve_probe(scn, 100, pos, time_range, 1, -1, Tref,
+    OK(sdis_solve_probe(scn, 10, pos, time_range, 1, -1, Tref,
       SDIS_HEAT_PATH_ALL, &estimator));
     OK(sdis_estimator_ref_put(estimator));
   }
