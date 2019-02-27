@@ -133,6 +133,19 @@ sdis_estimator_get_paths_count
   return RES_OK;
 }
 
+SDIS_API res_T
+sdis_estimator_get_path
+  (const struct sdis_estimator* estimator,
+   const size_t ipath,
+   const struct sdis_heat_path** path)
+{
+  if(!estimator || !path
+  || ipath >= darray_heat_path_size_get(&estimator->paths))
+    return RES_BAD_ARG;
+  *path = darray_heat_path_cdata_get(&estimator->paths) + ipath;
+  return RES_OK;
+}
+
 res_T
 sdis_estimator_for_each_path
   (const struct sdis_estimator* estimator,

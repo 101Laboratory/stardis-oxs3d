@@ -733,6 +733,12 @@ sdis_estimator_get_paths_count
    size_t* npaths);
 
 SDIS_API res_T
+sdis_estimator_get_path
+  (const struct sdis_estimator* estimator,
+   const size_t ipath,
+   const struct sdis_heat_path** path);
+
+SDIS_API res_T
 sdis_estimator_for_each_path
   (const struct sdis_estimator* estimator,
    sdis_process_heat_path_T func,
