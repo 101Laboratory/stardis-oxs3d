@@ -220,8 +220,10 @@ XD(conductive_path)
       }
     }
 
-    /* Define if the random walk hits something along dir0 */
-    if(hit0.distance > delta) {
+    /* Define if the random walk hits something along dir0. Multiply delta by
+     * the empirical ray range scale factor to ensure that once moved, the
+     * random walk does not lie in the uncertainty zone near the geometry */
+    if(hit0.distance > delta * RAY_RANGE_MAX_SCALE) {
       rwalk->hit = SXD_HIT_NULL;
       rwalk->hit_side = SDIS_SIDE_NULL__;
     } else {
