@@ -63,7 +63,7 @@ register_medium(struct sdis_scene* scn, struct sdis_medium* mdm)
   res_T res = RES_OK;
   ASSERT(scn && mdm);
 
-  /* Check that the front medium is already registered against the scene */
+  /* Check that the medium is already registered against the scene */
   id = medium_get_id(mdm);
   nmedia = darray_medium_size_get(&scn->media);
   if(id >= nmedia) {
