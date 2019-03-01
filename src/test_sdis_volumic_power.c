@@ -50,7 +50,7 @@
 #define T0 320
 #define LAMBDA 0.1
 #define P0 10
-#define DELTA 1.0/20.0
+#define DELTA 1.0/40.0
 
 /*******************************************************************************
  * Media
@@ -181,12 +181,12 @@ solve(struct sdis_scene* scn, const double pos[])
 
   switch(dim) {
     case SDIS_SCENE_2D:
-      printf("Temperature at (%g %g) = %g ~ %g +/- %g\n",
-        SPLIT2(pos), ref, T.E, T.SE);
+      printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g, %g]\n",
+        SPLIT2(pos), ref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
       break;
     case SDIS_SCENE_3D:
-      printf("Temperature at (%g %g %g) = %g ~ %g +/- %g\n",
-        SPLIT3(pos), ref, T.E, T.SE);
+      printf("Temperature at (%g %g %g) = %g ~ %g +/- %g [%g, %g]\n",
+        SPLIT3(pos), ref, T.E, T.SE, T.E -3*T.SE, T.E + 3*T.SE);
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
