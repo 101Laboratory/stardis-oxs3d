@@ -793,7 +793,7 @@ error:
 static INLINE res_T
 XD(scene_get_medium)
   (const struct sdis_scene* scn,
-   const double pos[2],
+   const double pos[DIM],
    struct get_medium_info* info, /* May be NULL */
    struct sdis_medium** out_medium)
 {
@@ -862,7 +862,8 @@ XD(scene_get_medium)
     fX(normalize)(N, hit.normal);
     cos_N_dir = fX(dot)(N, dir);
 
-    if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
+    /* Not too close and not roughly orthognonal */
+    if(hit.distance > 1.e-6 || absf(cos_N_dir) > 1.e-1f) {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
