@@ -37,10 +37,11 @@ XD(conductive_path)
   double green_power_factor = 0;
   double power_ref = SDIS_VOLUMIC_POWER_NONE;
   struct sdis_medium* mdm;
+  size_t istep = 0; /* Help for debug */
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_SOLID);
-  (void)ctx;
+  (void)ctx, (void)istep;
 
   /* Check the random walk consistency */
   CHK(scene_get_medium(scn, rwalk->vtx.P, NULL, &mdm) == RES_OK);
@@ -141,7 +142,7 @@ XD(conductive_path)
 
       /* Add the volumic power density to the measured temperature */
       if(power != SDIS_VOLUMIC_POWER_NONE) {
-        const double delta_s_in_meter = delta_solid * fp_to_meter;
+        const double delta_s_in_meter = delta_solid * RAY_RANGE_MAX_SCALE * fp_to_meter;
         double h;
         double h_in_meter;
         double cos_U_N;
@@ -277,6 +278,8 @@ XD(conductive_path)
       res = RES_BAD_OP;
       goto error;
     }
+
+    ++istep;
 
   /* Keep going while the solid random walk does not hit an interface */
   } while(SXD_HIT_NONE(&rwalk->hit));
