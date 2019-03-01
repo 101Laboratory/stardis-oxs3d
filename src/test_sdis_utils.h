@@ -253,24 +253,24 @@ check_estimator_eq
 
   OK(sdis_estimator_get_temperature(e1, &mc1));
   OK(sdis_estimator_get_temperature(e2, &mc2));
-  CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
-  CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+  CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+  CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
 
   if(type1 == SDIS_ESTIMATOR_FLUX) {
     OK(sdis_estimator_get_convective_flux(e1, &mc1));
     OK(sdis_estimator_get_convective_flux(e2, &mc2));
-    CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
-    CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
 
     OK(sdis_estimator_get_radiative_flux(e1, &mc1));
     OK(sdis_estimator_get_radiative_flux(e2, &mc2));
-    CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
-    CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
 
     OK(sdis_estimator_get_total_flux(e1, &mc1));
     OK(sdis_estimator_get_total_flux(e2, &mc2));
-    CHK(mc1.E + mc1.SE >= mc2.E - mc2.SE);
-    CHK(mc1.E - mc1.SE <= mc2.E + mc2.SE);
+    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
   }
 }
 
