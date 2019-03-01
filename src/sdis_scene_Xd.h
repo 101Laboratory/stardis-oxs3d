@@ -28,7 +28,6 @@
  * Define the helper functions and the data types used by the scene
  * independently of its dimension, i.e. 2D or 3D.
  ******************************************************************************/
-
 /* Context used to wrap the user geometry and interfaces to Star-Enc */
 struct geometry {
   void (*indices)(const size_t iprim, size_t ids[], void*);
@@ -659,38 +658,29 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     if(header.enclosed_media_count != 1 && !header.is_infinite) {
 #ifndef NDEBUG
       /* Dump the problematic enclosure. */
+      double tmp[DIM];
+      unsigned indices[DIM];
       unsigned i;
-#if DIM == 2
-#define VEC_STR "%g %g"
-#define VEC_SPLIT SPLIT2
-#define UVEC_STR "%u %u"
-#define UVEC_SPLIT(A) 1 + (A)[0], 1 + (A)[1]
-#define PRIM_COUNT segment_count
-#define GET_PRIM senc2d_enclosure_get_segment
-#else
-#define VEC_STR "%g %g %g"
-#define VEC_SPLIT SPLIT3
-#define UVEC_STR "%u %u %u"
-#define UVEC_SPLIT(A) 1 + (A)[0], 1 + (A)[1], 1 + (A)[2]
-#define PRIM_COUNT triangle_count
-#define GET_PRIM senc_enclosure_get_triangle
-#endif
+  #if DIM == 2
       FOR_EACH(i, 0, header.vertices_count) {
-        double tmp[3];
         SENCXD(enclosure_get_vertex(enc, i, tmp));
-        log_warn(scn->dev, "v "VEC_STR"\n", VEC_SPLIT(tmp));
+        log_warn(scn->dev, "v %g %g\n", SPLIT2(tmp));
       }
-      FOR_EACH(i, 0, header.PRIM_COUNT) {
-        unsigned indices[3];
-        ASSERT(GET_PRIM(enc, i, indices) == RES_OK);
-        log_warn(scn->dev, "f "UVEC_STR"\n", UVEC_SPLIT(indices));
+      FOR_EACH(i, 0, header.segment_count) {
+        ASSERT(senc2d_enclosure_get_segment(enc, i, indices) == RES_OK);
+        log_warn(scn->dev, "f %u %u\n", indices[0]+1, indices[1]+1);
       }
-#undef VEC_STR
-#undef VEC_SPLIT
-#undef UVEC_STR
-#undef UVEC_SPLIT
-#undef PRIM_COUNT
-#undef GET_PRIM
+  #else
+      FOR_EACH(i, 0, header.vertices_count) {
+        SENCXD(enclosure_get_vertex(enc, i, tmp));
+        log_warn(scn->dev, "v %g %g %g\n", SPLIT3(tmp));
+      }
+      FOR_EACH(i, 0, header.triangle_count) {
+        ASSERT(senc_enclosure_get_triangle(enc, i, indices) == RES_OK);
+        log_warn(scn->dev, "f %u %u %u\n",
+          indices[0]+1, indices[1]+1, indices[2]+1);
+      }
+  #endif
 #endif
       res = RES_BAD_ARG;
       goto error;
