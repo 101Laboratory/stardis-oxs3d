@@ -23,7 +23,7 @@
 #define H 50.0
 #define LAMBDA 100.0
 #define DELTA (1.0/2.0)
-#define N 10000000
+#define N 10000
 
 /*
  * The 2D scene is a solid slabs stretched along the X dimension to simulate a
@@ -332,17 +332,8 @@ main(int argc, char** argv)
   pos[0] = 0;
   pos[1] = 0.25;
 
-#if 1
   x = pos[1];
   Tref = -Power / (2*LAMBDA) * x*x + Tf + Power/(2*H) + Power/(8*LAMBDA);
-#else
-  tmp = LAMBDA / L;
-  T1 = H1 * (H2+tmp) / (tmp*(H1+H2) + H1*H2) * Tf1
-     + H2 *     tmp  / (tmp*(H1+H2) + H1*H2) * Tf2;
-  T2 = H1 *     tmp  / (tmp*(H1+H2) + H1*H2) * Tf1
-     + H2 * (H1+tmp) / (tmp*(H1+H2) + H1*H2) * Tf2;
-  Tref = T2 + (T1-T2)/L * (pos[1]  + vertices[3]);
-#endif
 
   time_current(&t0);
   OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
