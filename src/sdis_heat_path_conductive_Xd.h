@@ -195,7 +195,7 @@ XD(conductive_path)
     }
 
     /* Sample the time */
-    if(rwalk->vtx.time != INF) {
+    if(!IS_INF(rwalk->vtx.time)) {
       double tau, mu, t0;
       mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
       tau = ssp_ran_exp(rng, mu);
@@ -292,7 +292,7 @@ XD(conductive_path)
   /* Register the power term for the green function */
   if(ctx->green_path && power_ref != SDIS_VOLUMIC_POWER_NONE) {
     res = green_path_add_power_term
-      (ctx->green_path, mdm, &rwalk->vtx, green_power_factor);
+      (ctx->green_path, rwalk->mdm, &rwalk->vtx, green_power_factor);
     if(res != RES_OK) goto error;
   }
 
