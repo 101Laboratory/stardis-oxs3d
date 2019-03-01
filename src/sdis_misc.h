@@ -89,7 +89,7 @@ sample_time(struct ssp_rng* rng, const double time_range[2])
 
 static INLINE res_T
 register_heat_vertex
-  (struct sdis_heat_path* path, 
+  (struct sdis_heat_path* path,
    const struct sdis_rwalk_vertex* vtx,
    const double weight,
    const enum sdis_heat_vertex_type type)
