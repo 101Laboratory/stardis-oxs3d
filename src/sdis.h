@@ -681,6 +681,13 @@ sdis_scene_get_dimension
   (const struct sdis_scene* scn,
    enum sdis_scene_dimension* dim);
 
+/* Return the volume/area of a medium */
+SDIS_API res_T
+sdis_scene_get_medium_spread
+  (struct sdis_scene* scn,
+   const struct sdis_medium* mdm,
+   double* spread);
+
 /*******************************************************************************
  * An estimator stores the state of a simulation
  ******************************************************************************/
