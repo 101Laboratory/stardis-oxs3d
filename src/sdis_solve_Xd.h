@@ -33,7 +33,6 @@ struct XD(boundary_context) {
 static const struct XD(boundary_context) XD(BOUNDARY_CONTEXT_NULL) = {
   NULL, NULL
 };
-
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/

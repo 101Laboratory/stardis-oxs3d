@@ -78,6 +78,9 @@ struct enclosure {
 
   double hc_upper_bound;
   double S_over_V; /* in 3D = surface/volume; in 2D = perimeter/area */
+  double V; /* 3D = volume; 2D = area; */
+
+  unsigned medium_id;
 };
 
 static INLINE void
@@ -88,6 +91,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->s3d_view = NULL;
   darray_uint_init(allocator, &enc->local2global);
   enc->S_over_V = 0;
+  enc->V = 0;
   enc->hc_upper_bound = 0;
 }
 
@@ -111,6 +115,7 @@ enclosure_copy(struct enclosure* dst, const struct enclosure* src)
     dst->s2d_view = src->s2d_view;
   }
   dst->S_over_V = src->S_over_V;
+  dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
   return darray_uint_copy(&dst->local2global, &src->local2global);
 }
@@ -132,6 +137,7 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
     src->s2d_view = NULL;
   }
   dst->S_over_V = src->S_over_V;
+  dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
   return RES_OK;
 }

@@ -913,6 +913,17 @@ sdis_solve_camera
    sdis_write_accums_T writer,
    void* writer_data);
 
+SDIS_API res_T
+sdis_solve_medium
+  (struct sdis_scene* sanc,
+   const size_t nrealisations, /* #realisations */
+   struct sdis_medium* medium, /* Medium to solve */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_estimator** estimator);
+
 /*******************************************************************************
  * Green solvers.
  *

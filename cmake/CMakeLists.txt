@@ -93,6 +93,7 @@ set(SDIS_FILES_INC
   sdis_scene_c.h
   sdis_scene_Xd.h
   sdis_solve_Xd.h
+  sdis_solve_medium_Xd.h
   sdis_Xd_begin.h
   sdis_Xd_end.h)
 

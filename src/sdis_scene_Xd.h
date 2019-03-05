@@ -558,7 +558,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   enc_data = htable_enclosure_find(&scn->enclosures, &header.enclosure_id);
   ASSERT(enc_data != NULL);
 
-  /* Setup the vertex data */
+    /* Setup the vertex data */
   vdata.usage = SXD_POSITION;
 #if DIM == 2
   vdata.type = S2D_FLOAT2;
@@ -590,11 +590,12 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   CALL(s3d_scene_view_compute_area(enc_data->s3d_view, &S));
   CALL(s3d_scene_view_compute_volume(enc_data->s3d_view, &V));
 #endif
+  enc_data->V = V;
   enc_data->S_over_V = S / V;
   ASSERT(enc_data->S_over_V >= 0);
   #undef CALL
 
-  /* Set enclosure hc upper bound regardless of its media being a fluid */
+    /* Set enclosure hc upper bound regardless of its media being a fluid */
   p_ub = htable_d_find(&scn->tmp_hc_ub, &header.enclosure_id);
   ASSERT(p_ub);
   enc_data->hc_upper_bound = *p_ub;
@@ -611,6 +612,9 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
       (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
 #endif
   }
+
+  /* Setup the medium id of the enclosure */
+  SENCXD(enclosure_get_medium(enc, 0, &enc_data->medium_id));
 
 exit:
   enclosure_release(&enc_dummy);
@@ -642,7 +646,6 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 #else
     struct senc_enclosure_header header;
 #endif
-    const struct sdis_medium* mdm;
 
     SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
@@ -687,13 +690,10 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     }
 
     SENCXD(enclosure_get_medium(enc, 0, &enclosed_medium));
-    if(res != RES_OK) goto error;
     ASSERT(enclosed_medium < darray_medium_size_get(&scn->media));
-    mdm = darray_medium_cdata_get(&scn->media)[enclosed_medium];
-    ASSERT(mdm);
 
-    /* Silently discard the solid and infinite enclosures */
-    if(mdm->type == SDIS_FLUID && !header.is_infinite) {
+    /* Silently discard infinite enclosures */
+    if(!header.is_infinite) {
       res = XD(setup_enclosure_geometry)(scn, enc);
       if(res != RES_OK) goto error;
     }
