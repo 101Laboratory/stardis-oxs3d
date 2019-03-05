@@ -76,7 +76,7 @@ compute_medium_enclosure_cumulative
 
     if(sdis_medium_get_id(mdm) != enc->medium_id) continue;
 
-    accum += enc->V + accum;
+    accum += enc->V;
     enc_cumul.enc = enc;
     enc_cumul.cumul = accum;
     res = darray_enclosure_cumul_push_back(cumul, &enc_cumul);

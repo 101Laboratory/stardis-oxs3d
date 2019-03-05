@@ -194,6 +194,7 @@ main(int argc, char** argv)
   struct sdis_medium* fluid0 = NULL;
   struct sdis_medium* fluid1 = NULL;
   struct sdis_interface* solid0_fluid0 = NULL;
+  struct sdis_interface* solid0_fluid1 = NULL;
   struct sdis_interface* solid1_fluid1 = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_data* data = NULL;
@@ -206,6 +207,8 @@ main(int argc, char** argv)
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct context ctx;
   const double trange[2] = {0, INF};
+  double ref;
+  double v, v0, v1;
   const size_t N = 1000;
   size_t nreals;
   size_t nfails;
@@ -258,7 +261,7 @@ main(int argc, char** argv)
     (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
   solid_param = sdis_data_get(data);
   solid_param->cp = 1.0;
-  solid_param->lambda = 10.0;
+  solid_param->lambda = 1.0;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
   solid_param->temperature = -1; /* Unknown temperature */
@@ -279,6 +282,8 @@ main(int argc, char** argv)
   interface_shader.back.specular_fraction = interface_get_specular_fraction;
   OK(sdis_interface_create
     (dev, solid0, fluid0, &interface_shader, data, &solid0_fluid0));
+  OK(sdis_interface_create
+    (dev, solid0, fluid1, &interface_shader, data, &solid0_fluid1));
   OK(sdis_interface_create
     (dev, solid1, fluid1, &interface_shader, data, &solid1_fluid1));
   OK(sdis_data_ref_put(data));
@@ -318,6 +323,18 @@ main(int argc, char** argv)
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
     get_position, &ctx, &scn));
 
+  BA(sdis_scene_get_medium_spread(NULL, solid0, &v0));
+  BA(sdis_scene_get_medium_spread(scn, NULL, &v0));
+  BA(sdis_scene_get_medium_spread(scn, solid0, NULL));
+  OK(sdis_scene_get_medium_spread(scn, solid0, &v0));
+  CHK(v0 > 0);
+  OK(sdis_scene_get_medium_spread(scn, solid1, &v1));
+  CHK(v1 > 0);
+  OK(sdis_scene_get_medium_spread(scn, fluid0, &v));
+  CHK(v == 0);
+  OK(sdis_scene_get_medium_spread(scn, fluid1, &v));
+  CHK(v == 0);
+
   BA(sdis_solve_medium(NULL, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
   BA(sdis_solve_medium(scn, 0, solid0, trange, 1.f, -1, 0, 0, &estimator));
   BA(sdis_solve_medium(scn, N, NULL, trange, 1.f, -1, 0, 0, &estimator));
@@ -345,6 +362,34 @@ main(int argc, char** argv)
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
 
+#if 0
+  OK(sdis_solve_medium(scn, 1, solid1, trange, 1.f, -1, 0,
+    SDIS_HEAT_PATH_ALL, &estimator));
+  dump_heat_paths(stderr, estimator);
+  OK(sdis_estimator_ref_put(estimator));
+#endif
+
+  /* Create a new scene with the same medium in the 2 super shapes */
+  OK(sdis_scene_ref_put(scn));
+  ctx.interf0 = solid0_fluid0;
+  ctx.interf1 = solid0_fluid1;
+  OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
+    get_position, &ctx, &scn));
+
+  OK(sdis_scene_get_medium_spread(scn, solid0, &v));
+  CHK(eq_eps(v, v0+v1, 1.e-6));
+
+  BA(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
+  OK(sdis_solve_medium(scn, 10000, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  ref = Tf0 * v0/v + Tf1 * v1/v;
+  printf("Solid0 + Solid1 = %g ~ %g +/- %g\n", ref, T.E, T.SE);
+  printf("#failures = %lu/10000\n", nfails);
+  CHK(eq_eps(T.E, ref, T.SE*3));
+  OK(sdis_estimator_ref_put(estimator));
+
   /* Release */
   OK(s3dut_mesh_ref_put(msh0));
   OK(s3dut_mesh_ref_put(msh1));
@@ -354,6 +399,7 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(solid0));
   OK(sdis_medium_ref_put(solid1));
   OK(sdis_interface_ref_put(solid0_fluid0));
+  OK(sdis_interface_ref_put(solid0_fluid1));
   OK(sdis_interface_ref_put(solid1_fluid1));
   OK(sdis_scene_ref_put(scn));
 
