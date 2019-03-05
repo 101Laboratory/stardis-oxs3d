@@ -922,6 +922,7 @@ sdis_solve_medium
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   const int register_path, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
 /*******************************************************************************

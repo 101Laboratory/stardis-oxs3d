@@ -204,6 +204,7 @@ XD(solve_medium)
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double Tarad, /* Ambient radiative temperature */
    const double Tref, /* Reference temperature */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** out_estimator)
 {
   struct darray_enclosure_cumul cumul;
@@ -263,6 +264,8 @@ XD(solve_medium)
     const struct enclosure* enc = NULL;
     struct accum* accum = accums + ithread;
     struct ssp_rng* rng = rngs[ithread];
+    struct sdis_heat_path* pheat_path = NULL;
+    struct sdis_heat_path heat_path;
     double weight;
     double time;
     double pos[DIM];
@@ -272,6 +275,12 @@ XD(solve_medium)
 
     /* Sample the time */
     time = sample_time(rng, time_range);
+
+    /* Prepare path registration if necessary */
+    if(register_paths) {
+      heat_path_init(scn->dev->allocator, &heat_path);
+      pheat_path = &heat_path;
+    }
 
     /* Uniformly Sample an enclosure that surround the submitted medium and
      * uniformly sample a position into it */
@@ -285,13 +294,28 @@ XD(solve_medium)
 
     /* Run a probe realisation */
     res_local = XD(probe_realisation)((size_t)irealisation, scn, rng, mdm, pos,
-      time, fp_to_meter, Tarad, Tref, NULL, NULL, &weight);
+      time, fp_to_meter, Tarad, Tref, NULL, pheat_path, &weight);
     if(res_local != RES_OK) {
       if(res_local != RES_BAD_OP) { ATOMIC_SET(&res, res_local); continue; }
     } else {
       accum->sum += weight;
       accum->sum2 += weight*weight;
       ++accum->naccums;
+    }
+
+    /* Finalize the registered path */
+    if(pheat_path) {
+      pheat_path->status = res_local == RES_OK
+        ? SDIS_HEAT_PATH_SUCCEED
+        : SDIS_HEAT_PATH_FAILED;
+
+      /* Check if the path must be saved regarding the register_paths mask */
+      if(!(register_paths & (int)pheat_path->status)) {
+        heat_path_release(pheat_path);
+      } else { /* Register the sampled path */
+        res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
+        if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      }
     }
   }
   if(res != RES_OK) goto error;

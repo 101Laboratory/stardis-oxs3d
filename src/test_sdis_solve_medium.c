@@ -313,19 +313,18 @@ main(int argc, char** argv)
     MEM_RM(&allocator, vertices);
     MEM_RM(&allocator, indices);
   }
-  exit(0);
 #endif
 
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
     get_position, &ctx, &scn));
 
-  BA(sdis_solve_medium(NULL, N, solid0, trange, 1.f, -1, 0, &estimator));
-  BA(sdis_solve_medium(scn, 0, solid0, trange, 1.f, -1, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, NULL, trange, 1.f, -1, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, NULL, 1.f, -1, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, trange, 0.f, -1, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, NULL));
-  OK(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, &estimator));
+  BA(sdis_solve_medium(NULL, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  BA(sdis_solve_medium(scn, 0, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  BA(sdis_solve_medium(scn, N, NULL, trange, 1.f, -1, 0, 0, &estimator));
+  BA(sdis_solve_medium(scn, N, solid0, NULL, 1.f, -1, 0, 0, &estimator));
+  BA(sdis_solve_medium(scn, N, solid0, trange, 0.f, -1, 0, 0, &estimator));
+  BA(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, 0, NULL));
+  OK(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
 
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
@@ -336,7 +335,7 @@ main(int argc, char** argv)
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
 
-  OK(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, &estimator));
+  OK(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));

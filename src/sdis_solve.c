@@ -445,16 +445,17 @@ sdis_solve_medium
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator)
 {
   res_T res = RES_OK;
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     res = solve_medium_2d(scn, nrealisations, medium, time_range, fp_to_meter, Tarad,
-      Tref, estimator);
+      Tref, register_paths, estimator);
   } else {
     res = solve_medium_3d(scn, nrealisations, medium, time_range, fp_to_meter, Tarad,
-      Tref, estimator);
+      Tref, register_paths, estimator);
   }
   return res;
 }
