@@ -580,7 +580,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
 #endif
   CALL(sXd(scene_create)(sXd_dev, &sXd_scn));
   CALL(sXd(scene_attach_shape)(sXd_scn, sXd_shape));
-  CALL(sXd(scene_view_create)(sXd_scn, SXD_SAMPLE, &enc_data->sXd(view)));
+  CALL(sXd(scene_view_create)(sXd_scn, SXD_SAMPLE|SXD_TRACE, &enc_data->sXd(view)));
 
   /* Compute the S/V ratio */
 #if DIM == 2

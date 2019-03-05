@@ -82,6 +82,15 @@ compute_medium_enclosure_cumulative
     res = darray_enclosure_cumul_push_back(cumul, &enc_cumul);
     if(res != RES_OK) goto error;
   }
+
+  if(darray_enclosure_cumul_size_get(cumul) == 0) {
+    log_err(scn->dev,
+      "%s: there is no enclosure that encompasses the submitted medium.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
 exit:
   return res;
 error:
@@ -207,8 +216,9 @@ XD(solve_medium)
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !mdm || !nrealisations || nrealisations > INT64_MAX 
-  || fp_to_meter <= 0 || Tref < 0 || !out_estimator) {
+  if(!scn || !mdm || !nrealisations || nrealisations > INT64_MAX
+  || !time_range || time_range[0] > time_range[1] || fp_to_meter <= 0
+  || Tref <  0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }

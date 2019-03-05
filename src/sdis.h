@@ -915,7 +915,7 @@ sdis_solve_camera
 
 SDIS_API res_T
 sdis_solve_medium
-  (struct sdis_scene* sanc,
+  (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
    struct sdis_medium* medium, /* Medium to solve */
    const double time_range[2], /* Observation time */
