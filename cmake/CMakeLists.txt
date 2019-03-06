@@ -93,6 +93,7 @@ set(SDIS_FILES_INC
   sdis_scene_c.h
   sdis_scene_Xd.h
   sdis_solve_Xd.h
+  sdis_solve_medium_Xd.h
   sdis_Xd_begin.h
   sdis_Xd_end.h)
 
@@ -184,6 +185,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe3_2d)
   new_test(test_sdis_solve_boundary)
   new_test(test_sdis_solve_boundary_flux)
+  new_test(test_sdis_solve_medium)
+  new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4_2d)
 
@@ -198,6 +201,7 @@ if(NOT NO_TEST)
     add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
   endif()
 
+  target_link_libraries(test_sdis_solve_medium Star3DUT)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)

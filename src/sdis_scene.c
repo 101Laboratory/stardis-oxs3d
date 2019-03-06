@@ -312,11 +312,43 @@ sdis_scene_release_analysis(struct sdis_scene* scn)
 
 res_T
 sdis_scene_get_dimension
-  (const struct sdis_scene* scn,  enum sdis_scene_dimension* dim)
+  (const struct sdis_scene* scn, enum sdis_scene_dimension* dim)
 {
   if(!scn || !dim) return RES_BAD_ARG;
   *dim = scene_is_2d(scn) ? SDIS_SCENE_2D : SDIS_SCENE_3D;
   return RES_OK;
+}
+
+res_T
+sdis_scene_get_medium_spread
+  (struct sdis_scene* scn,
+   const struct sdis_medium* mdm,
+   double* out_spread)
+{
+  struct htable_enclosure_iterator it, end;
+  double spread = 0;
+  res_T res = RES_OK;
+
+  if(!scn || !mdm || !out_spread) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  htable_enclosure_begin(&scn->enclosures, &it);
+  htable_enclosure_end(&scn->enclosures, &end);
+  while(!htable_enclosure_iterator_eq(&it, &end)) {
+    const struct enclosure* enc = htable_enclosure_iterator_data_get(&it);
+    htable_enclosure_iterator_next(&it);
+    if(sdis_medium_get_id(mdm) == enc->medium_id) {
+      spread += enc->V;
+    }
+  }
+  *out_spread = spread;
+  
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 /*******************************************************************************

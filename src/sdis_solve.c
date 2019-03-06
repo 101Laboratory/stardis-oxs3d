@@ -25,6 +25,12 @@
 #define SDIS_XD_DIMENSION 3
 #include "sdis_solve_Xd.h"
 
+/* Generate the medium solvers */
+#define SDIS_XD_DIMENSION 2
+#include "sdis_solve_medium_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_solve_medium_Xd.h"
+
 #include <star/ssp.h>
 #include <omp.h>
 
@@ -428,5 +434,29 @@ exit:
   return (res_T)res;
 error:
   goto exit;
+}
+
+res_T
+sdis_solve_medium
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   struct sdis_medium* medium, /* Medium to solve */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   struct sdis_estimator** estimator)
+{
+  res_T res = RES_OK;
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    res = solve_medium_2d(scn, nrealisations, medium, time_range, fp_to_meter, Tarad,
+      Tref, register_paths, estimator);
+  } else {
+    res = solve_medium_3d(scn, nrealisations, medium, time_range, fp_to_meter, Tarad,
+      Tref, register_paths, estimator);
+  }
+  return res;
 }
 

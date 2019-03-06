@@ -681,6 +681,15 @@ sdis_scene_get_dimension
   (const struct sdis_scene* scn,
    enum sdis_scene_dimension* dim);
 
+/* Return the area/volume of occupied by a medium in a 2D/3D scene. Only
+ * enclosed media are handled, i.e. media whose border are explicitly defined
+ * by a geometry. */
+SDIS_API res_T
+sdis_scene_get_medium_spread
+  (struct sdis_scene* scn,
+   const struct sdis_medium* mdm,
+   double* spread);
+
 /*******************************************************************************
  * An estimator stores the state of a simulation
  ******************************************************************************/
@@ -913,6 +922,18 @@ sdis_solve_camera
    sdis_write_accums_T writer,
    void* writer_data);
 
+SDIS_API res_T
+sdis_solve_medium
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   struct sdis_medium* medium, /* Medium to solve */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   const int register_path, /* Combination of enum sdis_heat_path_flag */
+   struct sdis_estimator** estimator);
+
 /*******************************************************************************
  * Green solvers.
  *
@@ -927,7 +948,7 @@ sdis_solve_camera
  * media must be constant in time and space too. Furthermore, note that only
  * the interfaces/media that had a flux/volumic power during green estimation
  * can update their flux/volumic power value for subsequent
- * sdis_green_function_solve invocations : other interfaces/media are
+ * sdis_green_function_solve invocations : others interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
  *
