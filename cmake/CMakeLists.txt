@@ -186,6 +186,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_boundary)
   new_test(test_sdis_solve_boundary_flux)
   new_test(test_sdis_solve_medium)
+  new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4_2d)
 

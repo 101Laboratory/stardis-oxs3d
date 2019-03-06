@@ -16,9 +16,8 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
-#include <rsys/math.h>
 #include <rsys/stretchy_array.h>
-#include <star/s3dut.h>
+#include <rsys/math.h>
 
 #include <string.h>
 
@@ -27,71 +26,61 @@
 #define N 1000ul /* #realisations */
 
 /*
- * The scene is composed of 2 super shapes whose temperature is unknown. The
- * first super shape is surrounded by a fluid whose temperature is Tf0 while
- * the second one is in fluid whose temperature is Tf1. The temperatures of the
- * super shape 0 and 1 are thus uniform and equal to Tf0 and Tf1, respectively.
+ * The scene is composed of a square and a disk whose temperature is unknown.
+ * The square is surrounded by a fluid whose temperature is Tf0 while the disk
+ * is in a fluid whose temperature is Tf1. The temperature of the square
+ * and the disk are thus uniform and equal to Tf0 and Tf1, respectively.
  *
- * This program performs 2 tests. In the first one, the super shapes 0 and 1
- * have different media; the medium solver thus estimates the
- * temperature of one super shape. In the second test, the scene is updated to
- * use the same medium for the 2 super shapes. In this case, when invoked on
+ *          #  #          Tf1        +---------+
+ *       #        #    _\            |         |   _\  Tf0
+ *      #          #  / /            |         |  / /
+ *      #          #  \__/           |         |  \__/
+ *       #        #                  |         |
+ *          #  #                     +---------+
+ *
+ * This program performs 2 tests. In the first one, the square and the disk
+ * have different media; the medium solver estimates the temperature of
+ * the square or the one of the disk. In the second test, the scene is updated
+ * to use the same medium for the 2 shapes. When invoked on
  * the right medium, the estimated temperature T is equal to :
  *
- *    T = Tf0 * V0/(V0 + V1) + Tf1 * V1/(V0 + V1)
+ *    T = Tf0 * A0/(A0 + A1) + Tf1 * A1/(A0 + A1)
  *
- * with V0 and V1 the volume of the super shapes 0 and 1, respectively.
+ * with A0 and A1 the area of the shape and the area of the disk, respectively.
  */
 
 /*******************************************************************************
  * Geometry
  ******************************************************************************/
 struct context {
-  struct s3dut_mesh_data msh0;
-  struct s3dut_mesh_data msh1;
+  const double* positions;
+  const size_t* indices;
+  size_t nsegments_interf0; /* #segments of the interface 0 */
   struct sdis_interface* interf0;
   struct sdis_interface* interf1;
 };
 
 static void
-get_indices(const size_t itri, size_t ids[3], void* context)
+get_indices(const size_t iseg, size_t ids[2], void* context)
 {
   const struct context* ctx = context;
-  /* Note that we swap the indices to ensure that the triangle normals point
-   * inward the super shape */
-  if(itri < ctx->msh0.nprimitives) {
-    ids[0] = ctx->msh0.indices[itri*3+0];
-    ids[2] = ctx->msh0.indices[itri*3+1];
-    ids[1] = ctx->msh0.indices[itri*3+2];
-  } else {
-    const size_t itri2 = itri - ctx->msh0.nprimitives;
-    ids[0] = ctx->msh1.indices[itri2*3+0] + ctx->msh0.nvertices;
-    ids[2] = ctx->msh1.indices[itri2*3+1] + ctx->msh0.nvertices;
-    ids[1] = ctx->msh1.indices[itri2*3+2] + ctx->msh0.nvertices;
-  }
+  ids[0] = ctx->indices[iseg*2+0];
+  ids[1] = ctx->indices[iseg*2+1];
 }
 
 static void
-get_position(const size_t ivert, double pos[3], void* context)
+get_position(const size_t ivert, double pos[2], void* context)
 {
   const struct context* ctx = context;
-  if(ivert < ctx->msh0.nvertices) {
-    pos[0] = ctx->msh0.positions[ivert*3+0] - 2.0;
-    pos[1] = ctx->msh0.positions[ivert*3+1];
-    pos[2] = ctx->msh0.positions[ivert*3+2];
-  } else {
-    const size_t ivert2 = ivert - ctx->msh0.nvertices;
-    pos[0] = ctx->msh1.positions[ivert2*3+0] + 2.0;
-    pos[1] = ctx->msh1.positions[ivert2*3+1];
-    pos[2] = ctx->msh1.positions[ivert2*3+2];
-  }
+  pos[0] = ctx->positions[ivert*2+0];
+  pos[1] = ctx->positions[ivert*2+1];
 }
 
 static void
-get_interface(const size_t itri, struct sdis_interface** bound, void* context)
+get_interface(const size_t iseg, struct sdis_interface** bound, void* context)
 {
   const struct context* ctx = context;
-  *bound = itri < ctx->msh0.nprimitives ? ctx->interf0 : ctx->interf1;
+  *bound = iseg < ctx->nsegments_interf0 ? ctx->interf0 : ctx->interf1;
 }
 
 /*******************************************************************************
@@ -197,10 +186,6 @@ int
 main(int argc, char** argv)
 {
   struct mem_allocator allocator;
-  struct s3dut_super_formula f0 = S3DUT_SUPER_FORMULA_NULL;
-  struct s3dut_super_formula f1 = S3DUT_SUPER_FORMULA_NULL;
-  struct s3dut_mesh* msh0 = NULL;
-  struct s3dut_mesh* msh1 = NULL;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid0 = NULL;
@@ -221,12 +206,14 @@ main(int argc, char** argv)
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct context ctx;
   const double trange[2] = {0, INF};
+  double a, a0, a1;
   double ref;
-  double v, v0, v1;
+  double* positions = NULL;
+  size_t* indices = NULL;
+  size_t nverts;
   size_t nreals;
   size_t nfails;
-  size_t ntris;
-  size_t nverts;
+  size_t i;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -301,123 +288,110 @@ main(int argc, char** argv)
     (dev, solid1, fluid1, &interface_shader, data, &solid1_fluid1));
   OK(sdis_data_ref_put(data));
 
-  /* Create the mesh0 */
-  f0.A = 1; f0.B = 1; f0.M = 3; f0.N0 = 1; f0.N1 = 1; f0.N2 = 2;
-  f1.A = 1; f1.B = 1; f1.M = 10; f1.N0 = 1; f1.N1 = 1; f1.N2 = 3;
-  OK(s3dut_create_super_shape(&allocator, &f0, &f1, 1, 64, 32, &msh0));
-  OK(s3dut_mesh_get_data(msh0, &ctx.msh0));
+  /* Setup the square geometry */
+  sa_add(positions, square_nvertices*2);
+  sa_add(indices, square_nsegments*2);
+  memcpy(positions, square_vertices, square_nvertices*sizeof(double[2]));
+  memcpy(indices, square_indices, square_nsegments*sizeof(size_t[2]));
 
-  /* Create the mesh1 */
-  f0.A = 1; f0.B = 1; f0.M = 10; f0.N0 = 1; f0.N1 = 1; f0.N2 = 5;
-  f1.A = 1; f1.B = 1; f1.M = 1; f1.N0 = 1; f1.N1 = 1; f1.N2 = 1;
-  OK(s3dut_create_super_shape(&allocator, &f0, &f1, 1, 64, 32, &msh1));
-  OK(s3dut_mesh_get_data(msh1, &ctx.msh1));
+  /* Transate the square in X */
+  FOR_EACH(i, 0, square_nvertices) positions[i*2] += 2;
+
+  /* Setup a disk */
+  nverts = 64;
+  FOR_EACH(i, 0, nverts) {
+    const double theta = (double)i * (2*PI)/(double)nverts;
+    const double r = 1; /* Radius */
+    const double x = cos(theta) * r - 2/* X translation */;
+    const double y = sin(theta) * r + 0.5/* Y translation */;
+    sa_push(positions, x);
+    sa_push(positions, y);
+  }
+  FOR_EACH(i, 0, nverts) {
+    const size_t i0 = i + square_nvertices;
+    const size_t i1 = (i+1) % nverts + square_nvertices;
+    /* Flip the ids to ensure that the normals point inward the disk */
+    sa_push(indices, i1);
+    sa_push(indices, i0);
+  }
 
   /* Create the scene */
+  ctx.positions = positions;
+  ctx.indices = indices;
+  ctx.nsegments_interf0 = square_nsegments;
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid1_fluid1;
-  ntris = ctx.msh0.nprimitives + ctx.msh1.nprimitives;
-  nverts = ctx.msh0.nvertices + ctx.msh1.nvertices;
-#if 0
-  {
-    double* vertices = NULL;
-    size_t* indices = NULL;
-    size_t i;
-    CHK(vertices = MEM_CALLOC(&allocator, nverts*3, sizeof(*vertices)));
-    CHK(indices = MEM_CALLOC(&allocator, ntris*3, sizeof(*indices)));
-    FOR_EACH(i, 0, ntris) get_indices(i, indices + i*3, &ctx);
-    FOR_EACH(i, 0, nverts) get_position(i, vertices + i*3, &ctx);
-    dump_mesh(stdout, vertices, nverts, indices, ntris);
-    MEM_RM(&allocator, vertices);
-    MEM_RM(&allocator, indices);
-  }
-#endif
+  OK(sdis_scene_2d_create(dev, sa_size(indices)/2, get_indices, get_interface,
+    sa_size(positions)/2, get_position, &ctx, &scn));
 
-  OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+  OK(sdis_scene_get_medium_spread(scn, solid0, &a0));
+  CHK(eq_eps(a0, 1.0, 1.e-6));
+  OK(sdis_scene_get_medium_spread(scn, solid1, &a1));
+  /* Rough estimation since the disk is coarsely discretized */
+  CHK(eq_eps(a1, PI, 1.e-1));
 
-  BA(sdis_scene_get_medium_spread(NULL, solid0, &v0));
-  BA(sdis_scene_get_medium_spread(scn, NULL, &v0));
-  BA(sdis_scene_get_medium_spread(scn, solid0, NULL));
-  OK(sdis_scene_get_medium_spread(scn, solid0, &v0));
-  CHK(v0 > 0);
-  OK(sdis_scene_get_medium_spread(scn, solid1, &v1));
-  CHK(v1 > 0);
-  OK(sdis_scene_get_medium_spread(scn, fluid0, &v));
-  CHK(v == 0);
-  OK(sdis_scene_get_medium_spread(scn, fluid1, &v));
-  CHK(v == 0);
-
-  BA(sdis_solve_medium(NULL, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, 0, solid0, trange, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, NULL, trange, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, NULL, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, trange, 0.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, 0, NULL));
+  /* Estimate the temperature of the square */
   OK(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
-
+  OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  printf("Shape0 temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("#failures = %lu/%lu\n", nfails, N);
+  printf("Square temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
+  printf("#failures = %lu / %lu\n", nfails, N);
   CHK(eq_eps(T.E, Tf0, T.SE));
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
 
+  /* Estimate the temperature of the disk */
   OK(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  printf("Shape1 temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("#failures = %lu/%lu\n", nfails, N);
+  printf("Disk temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
+  printf("#failures = %lu / %lu\n", nfails, N);
   CHK(eq_eps(T.E, Tf1, T.SE));
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
 
-#if 0
-  OK(sdis_solve_medium(scn, 1, solid1, trange, 1.f, -1, 0,
-    SDIS_HEAT_PATH_ALL, &estimator));
-  dump_heat_paths(stderr, estimator);
-  OK(sdis_estimator_ref_put(estimator));
-#endif
-
-  /* Create a new scene with the same medium in the 2 super shapes */
+  /* Create a new scene with the same medium for the disk and the square */
   OK(sdis_scene_ref_put(scn));
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid0_fluid1;
-  OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+  OK(sdis_scene_2d_create(dev, sa_size(indices)/2, get_indices, get_interface,
+    sa_size(positions)/2, get_position, &ctx, &scn));
 
-  OK(sdis_scene_get_medium_spread(scn, solid0, &v));
-  CHK(eq_eps(v, v0+v1, 1.e-6));
+  OK(sdis_scene_get_medium_spread(scn, solid0, &a));
+  CHK(eq_eps(a, a0+a1, 1.e-6));
 
+  /* Estimate the temperature of the square and disk shapes */
   BA(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
   OK(sdis_solve_medium(scn, 10000, solid0, trange, 1.f, -1, 0, 0, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  ref = Tf0 * v0/v + Tf1 * v1/v;
-  printf("Shape0 + Shape1 temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
-  printf("#failures = %lu/10000\n", nfails);
-  CHK(eq_eps(T.E, ref, T.SE*3));
+  ref = Tf0 * a0/a + Tf1 * a1/a;
+  printf("Square + Disk temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
+  printf("#failures = %lu / 10000\n", nfails);
+  CHK(eq_eps(T.E, ref, 3*T.SE));
+  CHK(nreals + nfails == 10000);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Release */
-  OK(s3dut_mesh_ref_put(msh0));
-  OK(s3dut_mesh_ref_put(msh1));
   OK(sdis_device_ref_put(dev));
-  OK(sdis_medium_ref_put(fluid0));
-  OK(sdis_medium_ref_put(fluid1));
   OK(sdis_medium_ref_put(solid0));
   OK(sdis_medium_ref_put(solid1));
+  OK(sdis_medium_ref_put(fluid0));
+  OK(sdis_medium_ref_put(fluid1));
   OK(sdis_interface_ref_put(solid0_fluid0));
   OK(sdis_interface_ref_put(solid0_fluid1));
   OK(sdis_interface_ref_put(solid1_fluid1));
   OK(sdis_scene_ref_put(scn));
+
+  sa_release(positions);
+  sa_release(indices);
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }
+

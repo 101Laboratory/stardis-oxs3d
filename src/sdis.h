@@ -681,7 +681,9 @@ sdis_scene_get_dimension
   (const struct sdis_scene* scn,
    enum sdis_scene_dimension* dim);
 
-/* Return the volume/area of a medium */
+/* Return the area/volume of occupied by a medium in a 2D/3D scene. Only
+ * enclosed media are handled, i.e. media whose border are explicitly defined
+ * by a geometry. */
 SDIS_API res_T
 sdis_scene_get_medium_spread
   (struct sdis_scene* scn,
@@ -946,7 +948,7 @@ sdis_solve_medium
  * media must be constant in time and space too. Furthermore, note that only
  * the interfaces/media that had a flux/volumic power during green estimation
  * can update their flux/volumic power value for subsequent
- * sdis_green_function_solve invocations : other interfaces/media are
+ * sdis_green_function_solve invocations : others interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
  *
