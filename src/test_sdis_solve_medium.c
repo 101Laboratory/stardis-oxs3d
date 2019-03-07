@@ -220,7 +220,7 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct context ctx;
-  const double trange[2] = {0, INF};
+  const double trange[2] = {INF, INF};
   double ref;
   double v, v0, v1;
   size_t nreals;
