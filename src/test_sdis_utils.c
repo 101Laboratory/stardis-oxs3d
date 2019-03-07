@@ -118,8 +118,8 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
     case SDIS_FRAGMENT:
       frag = pt.data.itfrag.fragment;
       frag.time = INF;
-      OK(sdis_interface_get_shader(pt.data.itfrag.interface, &interf));
-      data = sdis_interface_get_data(pt.data.itfrag.interface);
+      OK(sdis_interface_get_shader(pt.data.itfrag.intface, &interf));
+      data = sdis_interface_get_data(pt.data.itfrag.intface);
       temp = frag.side == SDIS_FRONT
         ? interf.front.temperature(&frag, data)
         : interf.back.temperature(&frag, data);

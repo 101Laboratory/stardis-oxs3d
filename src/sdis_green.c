@@ -36,14 +36,15 @@ struct power_term {
   double term; /* Power term computed during green estimation */
   unsigned id; /* Identifier of the medium of the term */
 };
+
 #define POWER_TERM_NULL__ {INF, UINT_MAX}
-static const struct power_term POWER_TERM_NULL = POWER_TERM_NULL__;
 
 static INLINE void
 power_term_init(struct mem_allocator* allocator, struct power_term* term)
 {
+  struct power_term power_term_null = POWER_TERM_NULL__;
   ASSERT(term); (void)allocator;
-  *term = POWER_TERM_NULL;
+  *term = power_term_null;
 }
 
 /* Generate the dynamic array of power terms */
@@ -58,13 +59,13 @@ struct flux_term {
   enum sdis_side side;
 };
 #define FLUX_TERM_NULL__ {INF, UINT_MAX, SDIS_SIDE_NULL__}
-static const struct flux_term FLUX_TERM_NULL = FLUX_TERM_NULL__;
 
 static INLINE void
 flux_term_init(struct mem_allocator* allocator, struct flux_term* term)
 {
+  const struct flux_term flux_term_null = FLUX_TERM_NULL__;
   ASSERT(term); (void)allocator;
-  *term = FLUX_TERM_NULL;
+  *term = flux_term_null;
 }
 
 /* Generate the dynamic array of flux terms */
@@ -577,7 +578,7 @@ sdis_green_path_get_limit_point
 
   switch(path->limit_type) {
     case SDIS_FRAGMENT:
-      pt->data.itfrag.interface = green_function_fetch_interf(green, path->limit_id);
+      pt->data.itfrag.intface = green_function_fetch_interf(green, path->limit_id);
       pt->data.itfrag.fragment = path->limit.fragment;
       break;
     case SDIS_VERTEX:
@@ -897,7 +898,7 @@ green_path_add_power_term
   if(iterm < nterms) {
     terms[iterm].term += val;
   } else {
-    struct power_term term = POWER_TERM_NULL;
+    struct power_term term = POWER_TERM_NULL__;
     term.term = val;
     term.id = id;
     res = darray_power_term_push_back(&handle->path->power_terms, &term);
@@ -956,7 +957,7 @@ green_path_add_flux_term
   if(iterm < nterms) {
     terms[iterm].term += val;
   } else {
-    struct flux_term term = FLUX_TERM_NULL;
+    struct flux_term term = FLUX_TERM_NULL__;
     term.term = val;
     term.id = id;
     term.side = frag->side;

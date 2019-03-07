@@ -288,7 +288,7 @@ struct sdis_point {
       struct sdis_rwalk_vertex vertex;
     } mdmvert;
     struct {
-      struct sdis_interface* interface;
+      struct sdis_interface* intface;
       struct sdis_interface_fragment fragment;
     } itfrag;
   } data;
@@ -533,16 +533,16 @@ sdis_interface_ref_put
 
 SDIS_API res_T
 sdis_interface_get_shader
-  (const struct sdis_interface* interface,
+  (const struct sdis_interface* interf,
    struct sdis_interface_shader* shader);
 
 SDIS_API struct sdis_data*
 sdis_interface_get_data
-  (struct sdis_interface* interface);
+  (struct sdis_interface* interf);
 
 SDIS_API unsigned
 sdis_interface_get_id
-  (const struct sdis_interface* interface);
+  (const struct sdis_interface* interf);
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric

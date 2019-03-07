@@ -67,7 +67,7 @@ XD(conductive_path)
     double rho; /* Volumic mass */
     double cp; /* Calorific capacity */
     double tmp;
-    double power_factor;
+    double power_factor = 0;
     double power;
     float delta, delta_solid; /* Random walk numerical parameter */
     float range[2];
