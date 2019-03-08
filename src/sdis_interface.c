@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
+#include "sdis_scene_c.h"
 
 #include <rsys/double2.h>
 #include <rsys/double3.h>
@@ -257,5 +258,94 @@ setup_interface_fragment_3d
   d2_set_f2(frag->uv, hit->uv);
   frag->time = vertex->time;
   frag->side = side;
+}
+
+res_T
+build_interface_fragment_2d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double* uv,
+   const enum sdis_side side)
+{
+  struct s2d_attrib attr_P, attr_N;
+  struct s2d_primitive prim = S2D_PRIMITIVE_NULL;
+  struct s2d_hit hit = S2D_HIT_NULL;
+  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+  float st;
+  res_T res = RES_OK;
+
+  ASSERT(frag && scn && uv && scene_is_2d(scn));
+  ASSERT(side == SDIS_FRONT || side == SDIS_BACK);
+
+  st = (float)uv[0];
+
+  #define CALL(Func) { res = Func; if(res != RES_OK) goto error; } (void)0
+  CALL(s2d_scene_view_get_primitive(scn->s2d_view, iprim, &prim));
+  CALL(s2d_primitive_get_attrib(&prim, S2D_POSITION, st, &attr_P));
+  CALL(s2d_primitive_get_attrib(&prim, S2D_GEOMETRY_NORMAL, st, &attr_N));
+  #undef CALL
+
+  vtx.P[0] = attr_P.value[0];
+  vtx.P[1] = attr_P.value[1];
+  vtx.time = NaN;
+  hit.normal[0] = attr_N.value[0];
+  hit.normal[1] = attr_N.value[1];
+  hit.distance = 0;
+  hit.prim = prim;
+
+  setup_interface_fragment_2d(frag, &vtx, &hit, side);
+
+exit:
+  return res;
+error:
+  *frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  goto exit;
+}
+
+res_T
+build_interface_fragment_3d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double* uv,
+   const enum sdis_side side)
+{
+  struct s3d_attrib attr_P, attr_N;
+  struct s3d_primitive prim = S3D_PRIMITIVE_NULL;
+  struct s3d_hit hit = S3D_HIT_NULL;
+  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+  float st[2];
+  res_T res = RES_OK;
+
+  ASSERT(frag && scn && uv && !scene_is_2d(scn));
+  ASSERT(side == SDIS_FRONT || side == SDIS_BACK);
+
+  st[0] = (float)uv[0];
+  st[1] = (float)uv[1];
+
+  #define CALL(Func) { res = Func; if(res != RES_OK) goto error; } (void)0
+  CALL(s3d_scene_view_get_primitive(scn->s3d_view, iprim, &prim));
+  CALL(s3d_primitive_get_attrib(&prim, S3D_POSITION, st, &attr_P));
+  CALL(s3d_primitive_get_attrib(&prim, S3D_GEOMETRY_NORMAL, st, &attr_N));
+  #undef CALL
+
+  vtx.P[0] = attr_P.value[0];
+  vtx.P[1] = attr_P.value[1];
+  vtx.P[2] = attr_P.value[2];
+  vtx.time = NaN;
+  hit.normal[0] = attr_N.value[0];
+  hit.normal[1] = attr_N.value[1];
+  hit.normal[2] = attr_N.value[2];
+  hit.distance = 0;
+  hit.prim = prim;
+
+  setup_interface_fragment_3d(frag, &vtx, &hit, side);
+
+exit:
+  return res;
+error:
+  *frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  goto exit;
 }
 

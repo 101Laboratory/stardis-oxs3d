@@ -33,6 +33,11 @@ static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
 
 #endif /* SDIS_XD_BEGIN_H */
 
+#ifdef SDIS_XD_BEGIN_H__
+  #error "This header is already included without its associated sdis_Xd_end.h file."
+#endif
+#define SDIS_XD_BEGIN_H__
+
 /* Check prerequisite */
 #ifndef SDIS_XD_DIMENSION
   #error "The SDIS_XD_DIMENSION macro must be defined."

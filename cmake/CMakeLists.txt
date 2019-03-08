@@ -93,8 +93,10 @@ set(SDIS_FILES_INC
   sdis_realisation_Xd.h
   sdis_scene_c.h
   sdis_scene_Xd.h
-  sdis_solve_Xd.h
+  sdis_solve_boundary_Xd.h
   sdis_solve_medium_Xd.h
+  sdis_solve_probe_Xd.h
+  sdis_solve_probe_boundary_Xd.h
   sdis_Xd_begin.h
   sdis_Xd_end.h)
 

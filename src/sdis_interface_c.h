@@ -62,6 +62,22 @@ setup_interface_fragment_3d
    const struct s3d_hit* hit,
    const enum sdis_side side);
 
+extern LOCAL_SYM res_T
+build_interface_fragment_2d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double uv[1],
+   const enum sdis_side side);
+
+extern LOCAL_SYM res_T
+build_interface_fragment_3d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double uv[2],
+   const enum sdis_side side);
+
 static INLINE double
 interface_get_convection_coef
   (const struct sdis_interface* interf,

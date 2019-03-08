@@ -19,20 +19,32 @@
 #include "sdis_estimator_c.h"
 #include "sdis_interface_c.h"
 
-/* Generate the solvers */
+#include <star/ssp.h>
+#include <omp.h>
+
+/* Generate the probe solvers */
 #define SDIS_XD_DIMENSION 2
-#include "sdis_solve_Xd.h"
+#include "sdis_solve_probe_Xd.h"
 #define SDIS_XD_DIMENSION 3
-#include "sdis_solve_Xd.h"
+#include "sdis_solve_probe_Xd.h"
+
+/* Generate the probe boundary solvers */
+#define SDIS_XD_DIMENSION 2
+#include "sdis_solve_probe_boundary_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_solve_probe_boundary_Xd.h"
+
+/* Generate the boundary solvers */
+#define SDIS_XD_DIMENSION 2
+#include "sdis_solve_boundary_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_solve_boundary_Xd.h"
 
 /* Generate the medium solvers */
 #define SDIS_XD_DIMENSION 2
 #include "sdis_solve_medium_Xd.h"
 #define SDIS_XD_DIMENSION 3
 #include "sdis_solve_medium_Xd.h"
-
-#include <star/ssp.h>
-#include <omp.h>
 
 /*******************************************************************************
  * Helper functions

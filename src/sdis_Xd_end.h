@@ -13,6 +13,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#ifndef SDIS_XD_BEGIN_H__
+  #error "The sdis_Xd_begin.h file must be included priorly to this file."
+#endif
+
 #undef SDIS_XD_DIMENSION
 #undef DIM
 
@@ -33,3 +37,5 @@
 #undef fX
 #undef fX_set_dX
 #undef dX_set_fX
+
+#undef SDIS_XD_BEGIN_H__
