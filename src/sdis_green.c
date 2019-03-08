@@ -37,14 +37,14 @@ struct power_term {
   unsigned id; /* Identifier of the medium of the term */
 };
 
-#define POWER_TERM_NULL__ {INF, UINT_MAX}
+#define POWER_TERM_NULL__ {DBL_MAX, UINT_MAX}
+static const struct power_term POWER_TERM_NULL = POWER_TERM_NULL__;
 
 static INLINE void
 power_term_init(struct mem_allocator* allocator, struct power_term* term)
 {
-  struct power_term power_term_null = POWER_TERM_NULL__;
   ASSERT(term); (void)allocator;
-  *term = power_term_null;
+  *term = POWER_TERM_NULL;
 }
 
 /* Generate the dynamic array of power terms */
@@ -58,14 +58,14 @@ struct flux_term {
   unsigned id; /* Id of the interface of the flux term */
   enum sdis_side side;
 };
-#define FLUX_TERM_NULL__ {INF, UINT_MAX, SDIS_SIDE_NULL__}
+#define FLUX_TERM_NULL__ {DBL_MAX, UINT_MAX, SDIS_SIDE_NULL__}
+static const struct flux_term FLUX_TERM_NULL = FLUX_TERM_NULL__;
 
 static INLINE void
 flux_term_init(struct mem_allocator* allocator, struct flux_term* term)
 {
-  const struct flux_term flux_term_null = FLUX_TERM_NULL__;
   ASSERT(term); (void)allocator;
-  *term = flux_term_null;
+  *term = FLUX_TERM_NULL;
 }
 
 /* Generate the dynamic array of flux terms */
