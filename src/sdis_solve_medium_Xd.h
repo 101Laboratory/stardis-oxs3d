@@ -211,7 +211,7 @@ XD(solve_medium)
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   struct sdis_estimator* estimator = NULL;
-  struct accum { double sum, sum2; size_t naccums; }* accums = NULL;
+  struct accum* accums = NULL;
   int64_t irealisation;
   int cumul_is_init = 0;
   size_t i;
@@ -300,7 +300,7 @@ XD(solve_medium)
     } else {
       accum->sum += weight;
       accum->sum2 += weight*weight;
-      ++accum->naccums;
+      ++accum->count;
     }
 
     /* Finalize the registered path */
@@ -321,15 +321,11 @@ XD(solve_medium)
   if(res != RES_OK) goto error;
 
   /* Merge the per thread accumulators into the accumulator of the thread 0 */
-  FOR_EACH(i, 1, scn->dev->nthreads) {
-    accums[0].sum += accums[i].sum;
-    accums[0].sum2 += accums[i].sum2;
-    accums[0].naccums += accums[i].naccums;
-  }
-  ASSERT(accums[0].naccums <= nrealisations);
+  sum_accums(accums, scn->dev->nthreads, &accums[0]);
+  ASSERT(accums[0].count <= nrealisations);
 
   /* Setup the estimated temperature */
-  estimator_setup_realisations_count(estimator, nrealisations, accums[0].naccums);
+  estimator_setup_realisations_count(estimator, nrealisations, accums[0].count);
   estimator_setup_temperature(estimator, accums[0].sum, accums[0].sum2);
 
 exit:

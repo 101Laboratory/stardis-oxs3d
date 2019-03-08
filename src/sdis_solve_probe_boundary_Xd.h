@@ -44,11 +44,8 @@ XD(solve_probe_boundary)
   struct sdis_estimator* estimator = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
-  double weight = 0;
-  double sqr_weight = 0;
-  const int64_t rcount = (int64_t)nrealisations;
+  struct accum* accums = NULL;
   int64_t irealisation = 0;
-  size_t N = 0; /* #realisations that do not fail */
   size_t i;
   ATOMIC res = RES_OK;
 
@@ -115,14 +112,15 @@ XD(solve_probe_boundary)
   /* Create the per thread RNG */
   rngs = MEM_CALLOC
     (scn->dev->allocator, scn->dev->nthreads, sizeof(struct ssp_rng*));
-  if(!rngs) {
-    res = RES_MEM_ERR;
-    goto error;
-  }
+  if(!rngs) { res = RES_MEM_ERR; goto error; }
   FOR_EACH(i, 0, scn->dev->nthreads) {
     res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
     if(res != RES_OK) goto error;
   }
+
+  /* Create the per thread accumulator */
+  accums = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*accums));
+  if(!accums) { res = RES_MEM_ERR; goto error; }
 
   /* Create the estimator */
   res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
@@ -130,13 +128,14 @@ XD(solve_probe_boundary)
 
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
-  for(irealisation = 0; irealisation < rcount; ++irealisation) {
-    res_T res_local;
-    double w = NaN;
-    double time;
+  #pragma omp parallel for schedule(static)
+  for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
+    struct accum* accum = &accums[ithread];
+    double w = NaN;
+    double time;
+    res_T res_local;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
@@ -144,22 +143,21 @@ XD(solve_probe_boundary)
 
     res_local = XD(boundary_realisation)
       (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
-    if(res_local != RES_OK) {
-      if(res_local != RES_BAD_OP) {
-        ATOMIC_SET(&res, res_local);
-        continue;
-      }
-    } else {
-      weight += w;
-      sqr_weight += w*w;
-      ++N;
+    if(res_local == RES_OK) {
+      accum->sum += w;
+      accum->sum2 += w*w;
+      ++accum->count;
+    } else if(res_local != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_local);
+      continue;
     }
   }
   if(res != RES_OK) goto error;
 
   /* Setup the estimated temperature */
-  estimator_setup_realisations_count(estimator, nrealisations, N);
-  estimator_setup_temperature(estimator, weight, sqr_weight);
+  sum_accums(accums, scn->dev->nthreads, &accums[0]);
+  estimator_setup_realisations_count(estimator, nrealisations, accums[0].count);
+  estimator_setup_temperature(estimator, accums[0].sum, accums[0].sum2);
 
 exit:
   if(rngs) {
@@ -168,6 +166,7 @@ exit:
     }
     MEM_RM(scn->dev->allocator, rngs);
   }
+  if(accums) MEM_RM(scn->dev->allocator, accums);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;
@@ -198,13 +197,11 @@ XD(solve_probe_boundary_flux)
   const struct sdis_medium *fmd, *bmd;
   enum sdis_side solid_side, fluid_side;
   struct sdis_interface_fragment frag;
-  double weight_t = 0, sqr_weight_t = 0;
-  double weight_fc = 0, sqr_weight_fc = 0;
-  double weight_fr = 0, sqr_weight_fr = 0;
-  double weight_f= 0, sqr_weight_f = 0;
-  const int64_t rcount = (int64_t)nrealisations;
+  struct accum* acc_tp = NULL; /* Per thread temperature accumulator */
+  struct accum* acc_fl = NULL; /* Per thread flux accumulator */
+  struct accum* acc_fc = NULL; /* Per thread convective flux accumulator */
+  struct accum* acc_fr = NULL; /* Per thread radiative flux accumulator */
   int64_t irealisation = 0;
-  size_t N = 0; /* #realisations that do not fail */
   size_t i;
   ATOMIC res = RES_OK;
 
@@ -279,14 +276,22 @@ XD(solve_probe_boundary_flux)
   /* Create the per thread RNG */
   rngs = MEM_CALLOC
     (scn->dev->allocator, scn->dev->nthreads, sizeof(struct ssp_rng*));
-  if(!rngs) {
-    res = RES_MEM_ERR;
-    goto error;
-  }
+  if(!rngs) { res = RES_MEM_ERR; goto error; }
   FOR_EACH(i, 0, scn->dev->nthreads) {
     res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs + i);
     if(res != RES_OK) goto error;
   }
+
+  /* Create the per thread accumulator */
+  #define ALLOC_ACCUMS(Dst) {                                                  \
+    Dst = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*Dst));   \
+    if(!Dst) { res = RES_MEM_ERR; goto error; }                                \
+  } (void)0
+  ALLOC_ACCUMS(acc_tp);
+  ALLOC_ACCUMS(acc_fc);
+  ALLOC_ACCUMS(acc_fl);
+  ALLOC_ACCUMS(acc_fr);
+  #undef ALLOC_ACCUMS
 
   /* Prebuild the interface fragment */
   res = XD(build_interface_fragment)
@@ -299,15 +304,18 @@ XD(solve_probe_boundary_flux)
 
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static) reduction(+:weight_t,sqr_weight_t,\
-     weight_fc,sqr_weight_fc,weight_fr,sqr_weight_fr,weight_f,sqr_weight_f,N)
-  for(irealisation = 0; irealisation < rcount; ++irealisation) {
-    res_T res_local;
-    double T_brf[3] = { 0, 0, 0 };
+  #pragma omp parallel for schedule(static)
+  for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
+    struct accum* acc_temp = &acc_tp[ithread];
+    struct accum* acc_flux = &acc_fl[ithread];
+    struct accum* acc_fcon = &acc_fc[ithread];
+    struct accum* acc_frad = &acc_fr[ithread];
     double time, epsilon, hc, hr;
     int flux_mask = 0;
+    double T_brf[3] = { 0, 0, 0 };
+    res_T res_local;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
@@ -325,45 +333,61 @@ XD(solve_probe_boundary_flux)
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
     res_local = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
       solid_side, fp_to_meter, Tarad, Tref, flux_mask, T_brf);
-    if(res_local != RES_OK) {
-      if(res_local != RES_BAD_OP) {
-        ATOMIC_SET(&res, res_local);
-        continue;
-      }
-    } else {
+    if(res_local == RES_OK) {
       const double Tboundary = T_brf[0];
       const double Tradiative = T_brf[1];
       const double Tfluid = T_brf[2];
       const double w_conv = hc * (Tboundary - Tfluid);
       const double w_rad = hr * (Tboundary - Tradiative);
       const double w_total = w_conv + w_rad;
-      weight_t += Tboundary;
-      sqr_weight_t += Tboundary * Tboundary;
-      weight_fc += w_conv;
-      sqr_weight_fc += w_conv * w_conv;
-      weight_fr += w_rad;
-      sqr_weight_fr += w_rad * w_rad;
-      weight_f += w_total;
-      sqr_weight_f += w_total * w_total;
-      ++N;
+      /* Temperature */
+      acc_temp->sum += Tboundary;
+      acc_temp->sum2 += Tboundary*Tboundary;
+      ++acc_temp->count;
+      /* Overwall flux */
+      acc_flux->sum += w_total;
+      acc_flux->sum2 += w_total*w_total;
+      ++acc_flux->count;
+      /* Convective flux */
+      acc_fcon->sum  += w_conv;
+      acc_fcon->sum2 += w_conv*w_conv;
+      ++acc_fcon->count;
+      /* Radiative flux */
+      acc_frad->sum += w_rad;
+      acc_frad->sum2 += w_rad*w_rad;
+      ++acc_frad->count;
+    } else if(res_local != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_local);
+      continue;
     }
   }
   if(res != RES_OK) goto error;
 
+  /* Redux the per thread accumulators  */
+  sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);
+  sum_accums(acc_fc, scn->dev->nthreads, &acc_fc[0]);
+  sum_accums(acc_fr, scn->dev->nthreads, &acc_fr[0]);
+  sum_accums(acc_fl, scn->dev->nthreads, &acc_fl[0]);
+  ASSERT(acc_tp[0].count == acc_fl[0].count);
+  ASSERT(acc_tp[0].count == acc_fr[0].count);
+  ASSERT(acc_tp[0].count == acc_fc[0].count);
+
   /* Setup the estimated values */
-  estimator_setup_realisations_count(estimator, nrealisations, N);
-  estimator_setup_temperature(estimator, weight_t, sqr_weight_t);
-  estimator_setup_flux(estimator, FLUX_CONVECTIVE, weight_fc, sqr_weight_fc);
-  estimator_setup_flux(estimator, FLUX_RADIATIVE, weight_fr, sqr_weight_fr);
-  estimator_setup_flux(estimator, FLUX_TOTAL, weight_f, sqr_weight_f);
+  estimator_setup_realisations_count(estimator, nrealisations, acc_tp[0].count);
+  estimator_setup_temperature(estimator, acc_tp[0].sum, acc_tp[0].sum2);
+  estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc[0].sum, acc_fc[0].sum2);
+  estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr[0].sum, acc_fr[0].sum2);
+  estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl[0].sum, acc_fl[0].sum2);
 
 exit:
   if(rngs) {
-    FOR_EACH(i, 0, scn->dev->nthreads) {
-      if(rngs[i]) SSP(rng_ref_put(rngs[i]));
-    }
+    FOR_EACH(i, 0, scn->dev->nthreads) {if(rngs[i]) SSP(rng_ref_put(rngs[i]));}
     MEM_RM(scn->dev->allocator, rngs);
   }
+  if(acc_tp) MEM_RM(scn->dev->allocator, acc_tp);
+  if(acc_fc) MEM_RM(scn->dev->allocator, acc_fc);
+  if(acc_fr) MEM_RM(scn->dev->allocator, acc_fr);
+  if(acc_fl) MEM_RM(scn->dev->allocator, acc_fl);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;

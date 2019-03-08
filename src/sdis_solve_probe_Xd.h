@@ -47,11 +47,8 @@ XD(solve_probe)
   struct sdis_green_function** greens = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
-  double weight = 0;
-  double sqr_weight = 0;
-  const int64_t rcount = (int64_t)nrealisations;
+  struct accum* accums = NULL;
   int64_t irealisation = 0;
-  size_t N = 0; /* #realisations that do not fail */
   size_t i;
   ATOMIC res = RES_OK;
 
@@ -91,6 +88,10 @@ XD(solve_probe)
     if(res != RES_OK) goto error;
   }
 
+  /* Create the per thread accumulator */
+  accums = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*accums));
+  if(!accums) { res = RES_MEM_ERR; goto error; }
+
   /* Retrieve the medium in which the submitted position lies */
   res = scene_get_medium(scn, position, NULL, &medium);
   if(res != RES_OK) goto error;
@@ -114,17 +115,18 @@ XD(solve_probe)
 
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static) reduction(+:weight,sqr_weight,N)
-  for(irealisation = 0; irealisation < rcount; ++irealisation) {
-    res_T res_local;
-    double w = NaN;
-    double time;
+  #pragma omp parallel for schedule(static)
+  for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
+    struct accum* accum = &accums[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
     struct sdis_heat_path* pheat_path = NULL;
     struct sdis_heat_path heat_path;
+    double w = NaN;
+    double time;
+    res_T res_local;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
@@ -146,12 +148,13 @@ XD(solve_probe)
 
     res_local = XD(probe_realisation)((size_t)irealisation, scn, rng, medium,
       position, time, fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
-    if(res_local != RES_OK) {
-      if(res_local != RES_BAD_OP) { ATOMIC_SET(&res, res_local); continue; }
-    } else {
-      weight += w;
-      sqr_weight += w*w;
-      ++N;
+    if(res_local == RES_OK) {
+      accum->sum += w;
+      accum->sum2 += w*w;
+      ++accum->count;
+    } else if(res_local != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_local);
+      continue;
     }
 
     if(pheat_path) {
@@ -172,8 +175,10 @@ XD(solve_probe)
 
   /* Setup the estimated temperature */
   if(out_estimator) {
-    estimator_setup_realisations_count(estimator, nrealisations, N);
-    estimator_setup_temperature(estimator, weight, sqr_weight);
+    struct accum acc;
+    sum_accums(accums, scn->dev->nthreads, &acc);
+    estimator_setup_realisations_count(estimator, nrealisations, acc.count);
+    estimator_setup_temperature(estimator, acc.sum, acc.sum2);
   }
 
   if(out_green) {
@@ -202,6 +207,7 @@ exit:
     }
     MEM_RM(scn->dev->allocator, greens);
   }
+  if(accums) MEM_RM(scn->dev->allocator, accums);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;

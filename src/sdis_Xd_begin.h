@@ -22,6 +22,14 @@
 struct green_path_handle;
 struct sdis_heat_path;
 
+struct accum {
+  double sum; /* Sum of MC weights */
+  double sum2; /* Sum of square MC weights */
+  size_t count; /* #accumulated MC weights */
+};
+#define ACCUM_NULL__ {0,0,0}
+static const struct accum ACCUM_NULL = ACCUM_NULL__;
+
 struct rwalk_context {
   struct green_path_handle* green_path;
   struct sdis_heat_path* heat_path;
@@ -30,6 +38,24 @@ struct rwalk_context {
 };
 #define RWALK_CONTEXT_NULL__ {NULL, NULL, 0, 0}
 static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
+
+static INLINE void
+sum_accums
+  (const struct accum accums[],
+   const size_t naccums,
+   struct accum* accum)
+{
+  struct accum acc = ACCUM_NULL;
+  size_t i;
+  ASSERT(accums && naccums && accum);
+
+  FOR_EACH(i, 0, naccums) {
+    acc.sum += accums[i].sum;
+    acc.sum2 += accums[i].sum2;
+    acc.count += accums[i].count;
+  }
+  *accum = acc;
+}
 
 #endif /* SDIS_XD_BEGIN_H */
 
