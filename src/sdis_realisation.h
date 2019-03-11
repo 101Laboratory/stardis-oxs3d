@@ -79,6 +79,7 @@ boundary_realisation_2d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct sdis_heat_path* heat_path,
    double* weight);
 
 extern LOCAL_SYM res_T
@@ -92,6 +93,7 @@ boundary_realisation_3d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct sdis_heat_path* heat_path,
    double* weight);
 
 extern LOCAL_SYM res_T

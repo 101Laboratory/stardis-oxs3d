@@ -229,15 +229,16 @@ sdis_solve_probe_boundary
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_probe_boundary_2d(scn, nrealisations, iprim, uv, time_range,
-      side, fp_to_meter, Tarad, Tref, out_estimator);
+      side, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
   } else {
     return solve_probe_boundary_3d(scn, nrealisations, iprim, uv, time_range,
-      side, fp_to_meter, Tarad, Tref, out_estimator);
+      side, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
   }
 }
 
@@ -252,15 +253,16 @@ sdis_solve_boundary
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_boundary_2d(scn, nrealisations, primitives, sides, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
   } else {
     return solve_boundary_3d(scn, nrealisations, primitives, sides, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
   }
 }
 

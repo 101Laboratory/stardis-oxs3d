@@ -855,7 +855,7 @@ sdis_solve_probe
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
-   const int register_path, /* Combination of enum sdis_heat_path_flag */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -869,6 +869,7 @@ sdis_solve_probe_boundary
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -882,6 +883,7 @@ sdis_solve_boundary
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -931,7 +933,7 @@ sdis_solve_medium
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
-   const int register_path, /* Combination of enum sdis_heat_path_flag */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
 /*******************************************************************************

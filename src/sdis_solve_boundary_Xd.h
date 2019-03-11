@@ -83,6 +83,7 @@ XD(solve_boundary)
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** out_estimator)
 {
   struct XD(boundary_context) ctx = XD(BOUNDARY_CONTEXT_NULL);
@@ -187,6 +188,8 @@ XD(solve_boundary)
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
     struct accum* accum = &accums[ithread];
+    struct sdis_heat_path* pheat_path = NULL;
+    struct sdis_heat_path heat_path;
     struct sXd(primitive) prim;
     enum sdis_side side;
     size_t iprim;
@@ -199,6 +202,11 @@ XD(solve_boundary)
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
     time = sample_time(rng, time_range);
+
+    if(register_paths) {
+      heat_path_init(scn->dev->allocator, &heat_path);
+      pheat_path = &heat_path;
+    }
 
     /* Sample a position onto the boundary */
 #if SDIS_XD_DIMENSION == 2
@@ -225,8 +233,8 @@ XD(solve_boundary)
     side = sides[prim.prim_id];
 
     /* Invoke the boundary realisation */
-    res_local = XD(boundary_realisation)
-      (scn, rng, iprim, uv, time, side, fp_to_meter, Tarad, Tref, &w);
+    res_local = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
+      fp_to_meter, Tarad, Tref, pheat_path, &w);
 
     /* Update the MC accumulators */
     if(res_local == RES_OK) {
@@ -236,6 +244,20 @@ XD(solve_boundary)
     } else if(res_local != RES_BAD_OP) {
       ATOMIC_SET(&res, res_local);
       continue;
+    }
+
+    if(pheat_path) {
+      pheat_path->status = res_local == RES_OK
+        ? SDIS_HEAT_PATH_SUCCEED
+        : SDIS_HEAT_PATH_FAILED;
+
+      /* Check if the path must be saved regarding the register_paths mask */
+      if(!(register_paths & (int)pheat_path->status)) {
+        heat_path_release(pheat_path);
+      } else { /* Register the sampled path */
+        res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
+        if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      }
     }
   }
 

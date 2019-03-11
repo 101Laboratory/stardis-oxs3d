@@ -46,9 +46,14 @@ XD(compute_temperature)
   size_t istack = 0;
 #endif
   /* Maximum accepted #failures before stopping the realisation */
+  struct sdis_heat_vertex* heat_vtx = NULL;
   const size_t MAX_FAILS = 10;
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+
+  if(ctx->heat_path && T->func == XD(boundary_path)) {
+    heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
+  }
 
   do {
     /* Save the current random walk state */
@@ -70,6 +75,25 @@ XD(compute_temperature)
       if(res == RES_BAD_OP) { *rwalk = rwalk_bkp; *T = T_bkp; }
     } while(res == RES_BAD_OP && ++nfails < MAX_FAILS);
     if(res != RES_OK) goto error;
+
+    /* Update the type of the first vertex of the random walks that begin on a
+     * boundary. Indeed, one knows the "right" type of the first vertex only
+     * after the boundary_path execution that defines the sub path to resolve
+     * from the submitted boundary position. Note that if the boundary
+     * temperature is know, the type is let as it. */
+    if(heat_vtx && !T->done) {
+      if(heat_path_get_last_vertex(ctx->heat_path) != heat_vtx) {
+        /* Path was reinjected into a solid */
+        heat_vtx->type = SDIS_HEAT_VERTEX_CONDUCTION;
+      } else if(T->func == XD(convective_path)) {
+        heat_vtx->type = SDIS_HEAT_VERTEX_CONVECTION;
+      } else if(T->func == XD(radiative_path)) {
+        heat_vtx->type = SDIS_HEAT_VERTEX_RADIATIVE;
+      } else {
+        FATAL("Unreachable code.\n");
+      }
+      heat_vtx = NULL; /* Notify that the first vertex is finalized */
+    }
 
   } while(!T->done);
 
@@ -131,7 +155,7 @@ XD(probe_realisation)
   rwalk.vtx.time = time;
 
   /* Register the starting position against the heat path */
-  type = medium->type == SDIS_SOLID 
+  type = medium->type == SDIS_SOLID
     ? SDIS_HEAT_VERTEX_CONDUCTION
     : SDIS_HEAT_VERTEX_CONVECTION;
   res = register_heat_vertex(heat_path, &rwalk.vtx, 0, type);
@@ -189,6 +213,7 @@ XD(boundary_realisation)
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
+   struct sdis_heat_path* heat_path,
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
@@ -233,14 +258,23 @@ XD(boundary_realisation)
   f2_set(rwalk.hit.uv, st);
 #endif
 
+  res = register_heat_vertex(heat_path, &rwalk.vtx, 0/*weight*/,
+    SDIS_HEAT_VERTEX_CONDUCTION);
+  if(res != RES_OK) goto error;
+
+  ctx.heat_path = heat_path;
   ctx.Tarad = Tarad;
   ctx.Tref3 = Tref*Tref*Tref;
 
   res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
-  if(res != RES_OK) return res;
+  if(res != RES_OK) goto error;
 
   *weight = T.value;
-  return RES_OK;
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 res_T
