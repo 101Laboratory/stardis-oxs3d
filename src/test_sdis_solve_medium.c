@@ -25,6 +25,7 @@
 #define Tf0 300.0
 #define Tf1 330.0
 #define N 1000ul /* #realisations */
+#define Np 10000ul /* #realisations precise */
 
 /*
  * The scene is composed of 2 super shapes whose temperature is unknown. The
@@ -213,6 +214,8 @@ main(int argc, char** argv)
   struct sdis_scene* scn = NULL;
   struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
+  struct sdis_green_function* green = NULL;
   struct fluid* fluid_param = NULL;
   struct solid* solid_param = NULL;
   struct interf* interface_param = NULL;
@@ -393,15 +396,33 @@ main(int argc, char** argv)
   CHK(eq_eps(v, v0+v1, 1.e-6));
 
   BA(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
-  OK(sdis_solve_medium(scn, 10000, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  OK(sdis_solve_medium(scn, Np, solid0, trange, 1.f, -1, 0, 0, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   ref = Tf0 * v0/v + Tf1 * v1/v;
   printf("Shape0 + Shape1 temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
-  printf("#failures = %lu/10000\n", nfails);
+  printf("#failures = %lu/%lu\n", nfails, Np);
   CHK(eq_eps(T.E, ref, T.SE*3));
+
+  /* Solve green */
+  BA(sdis_solve_medium_green_function(NULL, Np, solid0, 1.0, 0, 0, &green));
+  BA(sdis_solve_medium_green_function(scn, 0, solid0, 1.0, 0, 0, &green));
+  BA(sdis_solve_medium_green_function(scn, Np, NULL, 1.0, 0, 0, &green));
+  BA(sdis_solve_medium_green_function(scn, Np, solid0, 0.0, 0, 0, &green));
+  BA(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, -1, &green));
+  BA(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, NULL));
+  BA(sdis_solve_medium_green_function(scn, Np, solid1, 1.0, 0, 0, &green));
+  OK(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, &green));
+
+  OK(sdis_green_function_solve(green, trange, &estimator2));
+  check_green_function(green);
+  check_estimator_eq(estimator, estimator2);
+
+  OK(sdis_green_function_ref_put(green));
+
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
 
   /* Release */
   OK(s3dut_mesh_ref_put(msh0));

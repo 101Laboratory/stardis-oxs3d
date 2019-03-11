@@ -39,7 +39,7 @@ XD(solve_probe)
    const double Tref, /* Reference temperature */
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_green_function** out_green, /* May be NULL <=> No green func */
-   struct sdis_estimator** out_estimator)
+   struct sdis_estimator** out_estimator) /* May be NULL <=> No estimator */
 {
   struct sdis_medium* medium = NULL;
   struct sdis_estimator* estimator = NULL;

@@ -965,6 +965,16 @@ sdis_solve_probe_green_function
    const double reference_temperature, /* In Kelvin */
    struct sdis_green_function** green);
 
+SDIS_API res_T
+sdis_solve_medium_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   struct sdis_medium* medium, /* Medium to solve */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
+
 END_DECLS
 
 #endif /* SDIS_H */
