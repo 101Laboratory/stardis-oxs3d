@@ -204,7 +204,7 @@ main(int argc, char** argv)
   OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
   /* Temporary file used to dump heat paths */
-  CHK(fp = tmpfile());
+  CHK((fp = tmpfile()) != NULL);
 
   /* Create the fluid medium */
   OK(sdis_data_create

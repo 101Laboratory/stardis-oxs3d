@@ -339,7 +339,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   printf("Square temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("#failures = %lu / %lu\n", nfails, N);
+  printf("#failures = %lu / %lu\n", (unsigned long)nfails, N);
   CHK(eq_eps(T.E, Tf0, T.SE));
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
@@ -350,7 +350,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   printf("Disk temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("#failures = %lu / %lu\n", nfails, N);
+  printf("#failures = %lu / %lu\n", (unsigned long)nfails, N);
   CHK(eq_eps(T.E, Tf1, T.SE));
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
@@ -373,7 +373,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   ref = Tf0 * a0/a + Tf1 * a1/a;
   printf("Square + Disk temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
-  printf("#failures = %lu / %lu\n", nfails, Np);
+  printf("#failures = %lu / %lu\n", (unsigned long)nfails, Np);
   CHK(eq_eps(T.E, ref, 3*T.SE));
   CHK(nreals + nfails == Np);
 
