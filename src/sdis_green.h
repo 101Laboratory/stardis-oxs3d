@@ -42,6 +42,12 @@ green_function_merge_and_clear
   (struct sdis_green_function* dst,
    struct sdis_green_function* src);
 
+extern LOCAL_SYM res_T
+green_function_redux_and_clear
+  (struct sdis_green_function* dst,
+   struct sdis_green_function* greens[],
+   const size_t ngreens);
+
 /* Finalize the green function state (e.g.: computes the #paths & #failures,
  * save the rng state, etc.) */
 extern LOCAL_SYM res_T

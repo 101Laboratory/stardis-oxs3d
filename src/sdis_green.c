@@ -774,6 +774,27 @@ error:
 }
 
 res_T
+green_function_redux_and_clear
+  (struct sdis_green_function* dst,
+   struct sdis_green_function* greens[],
+   const size_t ngreens)
+{
+  size_t i;
+  res_T res = RES_OK;
+  ASSERT(dst && greens && ngreens);
+
+  FOR_EACH(i, 0, ngreens) {
+    res = green_function_merge_and_clear(dst, greens[i]);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
 green_function_finalize
   (struct sdis_green_function* green,
    struct ssp_rng_proxy* proxy)

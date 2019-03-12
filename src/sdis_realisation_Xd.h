@@ -213,6 +213,7 @@ XD(boundary_realisation)
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
+   struct green_path_handle* green_path,
    struct sdis_heat_path* heat_path,
    double* weight)
 {
@@ -262,6 +263,7 @@ XD(boundary_realisation)
     SDIS_HEAT_VERTEX_CONDUCTION);
   if(res != RES_OK) goto error;
 
+  ctx.green_path = green_path;
   ctx.heat_path = heat_path;
   ctx.Tarad = Tarad;
   ctx.Tref3 = Tref*Tref*Tref;

@@ -367,12 +367,11 @@ XD(solve_medium)
   }
 
   if(out_green) {
+    /* Redux the per thread green function into the green of the 1st thread */
     green = greens[0]; /* Return the green of the 1st thread */
     greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
-    FOR_EACH(i, 1, scn->dev->nthreads) { /* Merge the per thread green */
-      res = green_function_merge_and_clear(green, greens[i]);
-      if(res != RES_OK) goto error;
-    }
+    res = green_function_redux_and_clear(green, greens+1, scn->dev->nthreads-1);
+    if(res != RES_OK) goto error;
 
     /* Finalize the estimated green */
     res = green_function_finalize(green, rng_proxy);
@@ -399,6 +398,10 @@ exit:
   if(out_green) *out_green = green;
   return (res_T)res;
 error:
+  if(green) {
+    SDIS(green_function_ref_put(green));
+    green = NULL;
+  }
   if(estimator) {
     SDIS(estimator_ref_put(estimator));
     estimator = NULL;

@@ -96,15 +96,14 @@ XD(solve_probe)
   res = scene_get_medium(scn, position, NULL, &medium);
   if(res != RES_OK) goto error;
 
+  /* Create the per thread green function */
   if(out_green) {
-    /* Create the per thread green function */
     greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
     if(!greens) { res = RES_MEM_ERR; goto error; }
     FOR_EACH(i, 0, scn->dev->nthreads) {
       res = green_function_create(scn->dev, &greens[i]);
       if(res != RES_OK) goto error;
     }
-
   }
 
   /* Create the estimator */
@@ -182,12 +181,11 @@ XD(solve_probe)
   }
 
   if(out_green) {
+    /* Redux the per thread green function into the green of the 1st thread */
     green = greens[0]; /* Return the green of the 1st thread */
     greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
-    FOR_EACH(i, 1, scn->dev->nthreads) { /* Merge the per thread green */
-      res = green_function_merge_and_clear(green, greens[i]);
-      if(res != RES_OK) goto error;
-    }
+    res = green_function_redux_and_clear(green, greens+1, scn->dev->nthreads-1);
+    if(res != RES_OK) goto error;
 
     /* Finalize the estimated green */
     res = green_function_finalize(green, rng_proxy);

@@ -234,7 +234,7 @@ XD(solve_boundary)
 
     /* Invoke the boundary realisation */
     res_local = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
-      fp_to_meter, Tarad, Tref, pheat_path, &w);
+      fp_to_meter, Tarad, Tref, NULL, pheat_path, &w);
 
     /* Update the MC accumulators */
     if(res_local == RES_OK) {

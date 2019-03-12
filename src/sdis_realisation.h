@@ -79,6 +79,7 @@ boundary_realisation_2d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct green_path_handle* green_path,
    struct sdis_heat_path* heat_path,
    double* weight);
 
@@ -93,6 +94,7 @@ boundary_realisation_3d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct green_path_handle* green_path,
    struct sdis_heat_path* heat_path,
    double* weight);
 

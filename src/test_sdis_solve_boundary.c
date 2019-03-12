@@ -181,6 +181,8 @@ main(int argc, char** argv)
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
+  struct sdis_green_function* green = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -199,7 +201,7 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
 
   /* Temporary file used to dump heat paths */
   CHK(fp = tmpfile());
@@ -291,6 +293,7 @@ main(int argc, char** argv)
   ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
 
   #define SOLVE sdis_solve_probe_boundary
+  #define GREEN sdis_solve_probe_boundary_green_function
   #define F SDIS_FRONT
   uv[0] = 0.3;
   uv[1] = 0.3;
@@ -314,7 +317,23 @@ main(int argc, char** argv)
   OK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos));
   printf("Boundary temperature of the box at (%g %g %g) = ", SPLIT3(pos));
   check_estimator(estimator, N, ref);
+
+  BA(GREEN(NULL, N, iprim, uv, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, 0, iprim, uv, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, 12, uv, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, NULL, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, uv, -1, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, uv, F, 0, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, uv, F, 1, 0, 0, NULL));
+
+  OK(GREEN(box_scn, N, iprim, uv, F, 1, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator_eq(estimator, estimator2);
+
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
 
   /* Dump paths */
   OK(SOLVE(box_scn, N_dump, iprim, uv, time_range, F, 1.0, 0, 0,
@@ -334,7 +353,15 @@ main(int argc, char** argv)
   OK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos));
   printf("Boundary temperature of the square at (%g %g) = ", SPLIT2(pos));
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(square_scn, N, iprim, uv, F, 1, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator_eq(estimator, estimator2);
+
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  OK(sdis_green_function_ref_put(green));
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;

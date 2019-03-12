@@ -235,10 +235,32 @@ sdis_solve_probe_boundary
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_probe_boundary_2d(scn, nrealisations, iprim, uv, time_range,
-      side, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
+      side, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
   } else {
     return solve_probe_boundary_3d(scn, nrealisations, iprim, uv, time_range,
-      side, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
+      side, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+  }
+}
+
+res_T
+sdis_solve_probe_boundary_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const enum sdis_side side, /* Side of iprim on which the probe lies */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_green_function** green)
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return solve_probe_boundary_2d(scn, nrealisations, iprim, uv, NULL,
+      side, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green, NULL);
+  } else {
+    return solve_probe_boundary_3d(scn, nrealisations, iprim, uv, NULL,
+      side, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green, NULL);
   }
 }
 
@@ -300,16 +322,14 @@ sdis_solve_boundary_flux
    const double Tref, /* In Kelvin */
    struct sdis_estimator** out_estimator)
 {
-  res_T res = RES_OK;
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    res = solve_boundary_flux_2d(scn, nrealisations, primitives, nprimitives,
+    return solve_boundary_flux_2d(scn, nrealisations, primitives, nprimitives,
       time_range, fp_to_meter, Tarad, Tref, out_estimator);
   } else {
-    res = solve_boundary_flux_3d(scn, nrealisations, primitives, nprimitives,
+    return solve_boundary_flux_3d(scn, nrealisations, primitives, nprimitives,
       time_range, fp_to_meter, Tarad, Tref, out_estimator);
   }
-  return res;
 }
 
 res_T

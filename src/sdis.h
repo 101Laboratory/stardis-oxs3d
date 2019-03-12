@@ -793,7 +793,7 @@ sdis_green_function_for_each_path
 
 /* Retrieve the spatio-temporal end point of a path used to estimate the green
  * function. Note that this point went back in time from the relative
- * observation time 0. Its time is thus negative ;  its absolute value
+ * observation time 0. Its time is thus negative; its absolute value
  * represents the time spent by the path into the system. */
 SDIS_API res_T
 sdis_green_path_get_limit_point
@@ -950,7 +950,7 @@ sdis_solve_medium
  * media must be constant in time and space too. Furthermore, note that only
  * the interfaces/media that had a flux/volumic power during green estimation
  * can update their flux/volumic power value for subsequent
- * sdis_green_function_solve invocations : others interfaces/media are
+ * sdis_green_function_solve invocations: others interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
  *
@@ -962,6 +962,18 @@ sdis_solve_probe_green_function
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
    const double position[3], /* Probe position */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
+
+SDIS_API res_T
+sdis_solve_probe_boundary_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const enum sdis_side side, /* Side of iprim on which the probe lies */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
