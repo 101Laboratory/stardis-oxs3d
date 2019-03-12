@@ -84,6 +84,7 @@ XD(solve_boundary)
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   struct sdis_green_function** out_green,
    struct sdis_estimator** out_estimator)
 {
   struct XD(boundary_context) ctx = XD(BOUNDARY_CONTEXT_NULL);
@@ -92,6 +93,8 @@ XD(solve_boundary)
   struct sXd(shape)* shape = NULL;
   struct sXd(scene_view)* view = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_green_function* green = NULL;
+  struct sdis_green_function** greens = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   struct accum* accums = NULL;
@@ -101,12 +104,20 @@ XD(solve_boundary)
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
-  || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-  || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
-  || !sides || !nprimitives || fp_to_meter < 0 || Tref < 0
-  || !out_estimator) {
+  || !sides || !nprimitives || fp_to_meter <= 0 || Tref < 0) {
     res = RES_BAD_ARG;
     goto error;
+  }
+  if(!out_estimator && !out_green) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+  if(out_estimator) {
+    if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+      res = RES_BAD_ARG;
+      goto error;
+    }
   }
 
 #if SDIS_XD_DIMENSION == 2
@@ -178,9 +189,21 @@ XD(solve_boundary)
   accums = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*accums));
   if(!accums) { res = RES_MEM_ERR; goto error; }
 
+  /* Create the per thread green function */
+  if(out_green) {
+    greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
+    if(!greens) { res = RES_MEM_ERR; goto error; }
+    FOR_EACH(i, 0, scn->dev->nthreads) {
+      res = green_function_create(scn->dev, &greens[i]);
+      if(res != RES_OK) goto error;
+    }
+  }
+
   /* Create the estimator */
-  res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
-  if(res != RES_OK) goto error;
+  if(out_estimator) {
+    res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+    if(res != RES_OK) goto error;
+  }
 
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
@@ -188,6 +211,8 @@ XD(solve_boundary)
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
     struct accum* accum = &accums[ithread];
+    struct green_path_handle* pgreen_path = NULL;
+    struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
     struct sdis_heat_path* pheat_path = NULL;
     struct sdis_heat_path heat_path;
     struct sXd(primitive) prim;
@@ -201,11 +226,19 @@ XD(solve_boundary)
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
-    time = sample_time(rng, time_range);
-
-    if(register_paths) {
-      heat_path_init(scn->dev->allocator, &heat_path);
-      pheat_path = &heat_path;
+    if(!out_green) {
+      time = sample_time(rng, time_range);
+      if(register_paths) {
+        heat_path_init(scn->dev->allocator, &heat_path);
+        pheat_path = &heat_path;
+      }
+    } else {
+      /* Do not take care of the submitted time when registering the green
+       * function. Simply takes 0 as relative time */
+      time = 0;
+      res_local = green_function_create_path(greens[ithread], &green_path);
+      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      pgreen_path = &green_path;
     }
 
     /* Sample a position onto the boundary */
@@ -234,7 +267,7 @@ XD(solve_boundary)
 
     /* Invoke the boundary realisation */
     res_local = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
-      fp_to_meter, Tarad, Tref, NULL, pheat_path, &w);
+      fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
 
     /* Update the MC accumulators */
     if(res_local == RES_OK) {
@@ -261,28 +294,56 @@ XD(solve_boundary)
     }
   }
 
-  sum_accums(accums, scn->dev->nthreads, &accums[0]);
-
   /* Setup the estimated temperature */
-  estimator_setup_realisations_count(estimator, nrealisations, accums[0].count);
-  estimator_setup_temperature(estimator, accums[0].sum, accums[0].sum2);
+  if(out_estimator) {
+    struct accum acc;
+    sum_accums(accums, scn->dev->nthreads, &acc);
+    estimator_setup_realisations_count(estimator, nrealisations, acc.count);
+    estimator_setup_temperature(estimator, acc.sum, acc.sum2);
+  }
+
+  /* Setup the green function */
+  if(out_green) {
+    /* Redux the per thread green function into the green of the 1st thread */
+    green = greens[0]; /* Return the green of the 1st thread */
+    greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
+    res = green_function_redux_and_clear(green, greens+1, scn->dev->nthreads-1);
+    if(res != RES_OK) goto error;
+
+    /* Finalize the estimated green */
+    res = green_function_finalize(green, rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
 exit:
   if(rngs) {
-    FOR_EACH(i, 0, scn->dev->nthreads) {if(rngs[i]) SSP(rng_ref_put(rngs[i]));}
+    FOR_EACH(i, 0, scn->dev->nthreads) {
+      if(rngs[i]) SSP(rng_ref_put(rngs[i]));
+    }
     MEM_RM(scn->dev->allocator, rngs);
+  }
+  if(greens) {
+    FOR_EACH(i, 0, scn->dev->nthreads) {
+      if(greens[i]) SDIS(green_function_ref_put(greens[i]));
+    }
+    MEM_RM(scn->dev->allocator, greens);
   }
   if(accums) MEM_RM(scn->dev->allocator, accums);
   if(scene) SXD(scene_ref_put(scene));
   if(shape) SXD(shape_ref_put(shape));
   if(view) SXD(scene_view_ref_put(view));
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;
 error:
   if(estimator) {
     SDIS(estimator_ref_put(estimator));
     estimator = NULL;
+  }
+  if(green) {
+    SDIS(green_function_ref_put(green));
+    green = NULL;
   }
   goto exit;
 }

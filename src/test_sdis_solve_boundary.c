@@ -329,7 +329,7 @@ main(int argc, char** argv)
   OK(GREEN(box_scn, N, iprim, uv, F, 1, 0, 0, &green));
   check_green_function(green);
   OK(sdis_green_function_solve(green, time_range, &estimator2));
-  check_estimator_eq(estimator, estimator2);
+  check_estimator(estimator2, N, ref);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -357,7 +357,7 @@ main(int argc, char** argv)
   OK(GREEN(square_scn, N, iprim, uv, F, 1, 0, 0, &green));
   check_green_function(green);
   OK(sdis_green_function_solve(green, time_range, &estimator2));
-  check_estimator_eq(estimator, estimator2);
+  check_estimator(estimator2, N, ref);
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
@@ -370,6 +370,7 @@ main(int argc, char** argv)
 
   #undef F
   #undef SOLVE
+  #undef GREEN
 
   sides[0] = SDIS_FRONT;
   sides[1] = SDIS_FRONT;
@@ -377,6 +378,7 @@ main(int argc, char** argv)
   sides[3] = SDIS_FRONT;
 
   #define SOLVE sdis_solve_boundary
+  #define GREEN sdis_solve_boundary_green_function
   prims[0] = 6;
   prims[1] = 7;
   BA(SOLVE(NULL, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
@@ -397,7 +399,23 @@ main(int argc, char** argv)
   OK(SOLVE(box_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the right side of the box = ");
   check_estimator(estimator, N, ref);
+
+  BA(GREEN(NULL, N, prims, sides, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, 0, prims, sides, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, NULL, sides, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, NULL, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, sides, 0, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, sides, 2, 0.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, sides, 2, 1.0, 0, 0, NULL));
+
+  OK(GREEN(box_scn, N, prims, sides, 2, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
 
   /* Dump path */
   OK(SOLVE(box_scn, N_dump, prims, sides, 2, time_range, 1.0, 0, 0,
@@ -411,7 +429,15 @@ main(int argc, char** argv)
   OK(SOLVE(square_scn, N, prims, sides, 1, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the right side of the square = ");
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(square_scn, N, prims, sides, 1, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
 
   /* Dump path */
   OK(SOLVE(square_scn, N_dump, prims, sides, 1, time_range, 1.0, 0, 0,
@@ -436,7 +462,15 @@ main(int argc, char** argv)
   OK(SOLVE(box_scn, N, prims, sides, 4, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the left+right sides of the box = ");
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(box_scn, N, prims, sides, 4, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
 
   /* Average temperature on the left+right sides of the square */
   prims[0] = 1;
@@ -444,8 +478,17 @@ main(int argc, char** argv)
   OK(SOLVE(square_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the left+right sides of the square = ");
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(square_scn, N, prims, sides, 2, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
   #undef SOLVE
+  #undef GREEN
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));

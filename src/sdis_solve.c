@@ -281,10 +281,34 @@ sdis_solve_boundary
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
     return solve_boundary_2d(scn, nrealisations, primitives, sides, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
   } else {
     return solve_boundary_3d(scn, nrealisations, primitives, sides, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, register_paths, out_estimator);
+      time_range, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+  }
+}
+
+res_T
+sdis_solve_boundary_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double Tarad, /* In Kelvin */
+   const double Tref, /* In Kelvin */
+   struct sdis_green_function** green)
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return solve_boundary_2d(scn, nrealisations, primitives, sides,
+      nprimitives, NULL, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green,
+      NULL);
+  } else {
+    return solve_boundary_3d(scn, nrealisations, primitives, sides,
+      nprimitives, NULL, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green,
+      NULL);
   }
 }
 

@@ -980,6 +980,18 @@ sdis_solve_probe_boundary_green_function
    struct sdis_green_function** green);
 
 SDIS_API res_T
+sdis_solve_boundary_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
+
+SDIS_API res_T
 sdis_solve_medium_green_function
   (struct sdis_scene* scn,
    const size_t nrealisations, /* #realisations */
