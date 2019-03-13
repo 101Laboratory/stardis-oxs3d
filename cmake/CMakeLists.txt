@@ -16,7 +16,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(stardis C)
 enable_testing()
-cmake_policy(SET CMP0054 OLD) # Disable OpenMP CMake warning
+if(POLICY CMP0054)
+  cmake_policy(SET CMP0054 OLD) # Disable OpenMP CMake warning
+endif()
 
 include(CMakeDependentOption)
 
@@ -57,7 +59,7 @@ rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 ################################################################################
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 7)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 1)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
