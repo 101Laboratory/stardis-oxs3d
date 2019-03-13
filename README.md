@@ -25,12 +25,59 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.7
+
+#### Add Green function support
+
+Provide new solve functions that compute and save the Green function, i.e. the
+propagator used in regular solvers. The resulting Green function can be then
+evaluated to obtain an estimate of the temperature.
+
+The time spent to compute the Green function is comparable to the computation
+time of regular solvers; actually, they rely on the same code. However, its
+evaluation is instantaneous while it still handles the limit conditions, the
+boundary fluxes and the power term of the media *at the moment* of the
+evaluation. This means that one can estimate the Green function of a system
+only one time and then evaluate it with different limit conditions, boundary
+fluxes or power terms with negligible computation costs.
+
+Currently, Stardis assumes that during the Green function estimation, the
+properties of the system do not depend on time. In addition, it assumes that
+the boundary fluxes and the volumic powers are constants in time and space.
+Anyway, on Green function evaluation, the limit conditions of the system can
+still vary in time and space; systems in steady state can be simulated with
+Green functions.
+
+#### Add heat path registration
+
+Add the `int register_paths` mask to almost all solve functions to enable the
+registration against the returned estimator of the failure and/or successful
+random paths used by the solvers. For each path, the registered data are:
+
+- the vertices of the path;
+- the type of the path (failed or succeed);
+- the type of the path vertices (conductive, convective or radiative);
+- the Monte-Carlo weight of each path vertex;
+- the current time of each path vertex.
+
+Note that the amount of registered data can be huge if too more paths are
+registered.  Consequently, this functionality should be used with few
+realisations to obtain a subset of representative paths, or to only register
+the few paths that failed in order to diagnose what went wrong.
+
+#### Miscellaneous
+
+- Add the `sdis_solve_medium` function: it  estimates the average temperature
+  of a medium.
+- Fix the setup of the interfaces: the interface associated to a geometric
+  primitive could not be the right one.
+
 ### Version 0.6.1
 
 - Bump version of the Star-Enclosures[2D] dependencies: the new versions fix
   issues in the construction of fluid enclosures.
-- Bump version of the Star-<2D|3D> dependencies: the new versions rely on Embree3
-  rather than on Embree2 for their ray-tracing back-end.
+- Bump version of the Star-<2D|3D> dependencies: the new versions rely on
+  Embree3 rather than on Embree2 for their ray-tracing back-end.
 
 ### Version 0.6
 
@@ -138,8 +185,8 @@ First version and implementation of the Stardis solver API.
 
 ## License
 
-Stardis is Copyright (C) 2016-2019 |Meso|Star> (<contact@meso-star.com>). It is
-free software released under the GPLv3+ license. You are welcome to
-redistribute it under certain conditions; refer to the COPYING files for
-details.
+Copyright (C) 2016-2019 |Meso|Star> (<contact@meso-star.com>). Stardis is free
+software released under the GPLv3+ license: GNU GPL version 3 or later. You are
+welcome to redistribute it under certain conditions; refer to the COPYING files
+for details.
 
