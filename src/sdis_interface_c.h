@@ -36,14 +36,17 @@ struct sdis_interface {
   struct sdis_device* dev;
 };
 
-extern LOCAL_SYM const struct sdis_medium*
+extern LOCAL_SYM struct sdis_medium*
 interface_get_medium
   (const struct sdis_interface* interf,
    const enum sdis_side side);
 
-extern LOCAL_SYM unsigned
-interface_get_id
-  (const struct sdis_interface* interf);
+static FINLINE unsigned
+interface_get_id(const struct sdis_interface* interf)
+{
+  ASSERT(interf);
+  return interf->id.index;
+}
 
 extern LOCAL_SYM void
 setup_interface_fragment_2d
@@ -57,6 +60,22 @@ setup_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_rwalk_vertex* vertex,
    const struct s3d_hit* hit,
+   const enum sdis_side side);
+
+extern LOCAL_SYM res_T
+build_interface_fragment_2d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double uv[1],
+   const enum sdis_side side);
+
+extern LOCAL_SYM res_T
+build_interface_fragment_3d
+  (struct sdis_interface_fragment* frag,
+   const struct sdis_scene* scn,
+   const unsigned iprim,
+   const double uv[2],
    const enum sdis_side side);
 
 static INLINE double

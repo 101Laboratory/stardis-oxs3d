@@ -47,22 +47,27 @@
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
+struct senc2d_descriptor;
+struct senc_descriptor;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
- * ref counted. Once created with the appropriated `sdis_<TYPE>_create'
- * function, the caller implicitly owns the created data, i.e. its reference
- * counter is set to 1. The sdis_<TYPE>_ref_<get|put> functions get or release
- * a reference on the data, i.e. they increment or decrement the reference
- * counter, respectively. When this counter reaches 0, the object is silently
- * destroyed and cannot be used anymore. */
+ * ref counted. Once created the caller implicitly owns the created data, i.e.
+ * its reference counter is set to 1. The sdis_<TYPE>_ref_<get|put> functions
+ * get or release a reference on the data, i.e. they increment or decrement the
+ * reference counter, respectively. When this counter reaches 0, the object is
+ * silently destroyed and cannot be used anymore. */
 struct sdis_accum_buffer;
 struct sdis_camera;
 struct sdis_data;
 struct sdis_device;
 struct sdis_estimator;
+struct sdis_green_function;
 struct sdis_interface;
 struct sdis_medium;
 struct sdis_scene;
+
+/* Forward declaration of non ref counted types */
+struct sdis_heat_path;
 
 enum sdis_side {
   SDIS_FRONT,
@@ -77,9 +82,34 @@ enum sdis_medium_type {
 };
 
 enum sdis_estimator_type {
-  SDIS_TEMPERATURE_ESTIMATOR,
-  SDIS_FLUX_ESTIMATOR,
-  SDIS_EST_TYPES_COUNT__
+  SDIS_ESTIMATOR_TEMPERATURE,
+  SDIS_ESTIMATOR_FLUX,
+  SDIS_ESTIMATOR_TYPES_COUNT__
+};
+
+enum sdis_scene_dimension {
+  SDIS_SCENE_2D,
+  SDIS_SCENE_3D
+};
+
+enum sdis_point_type {
+  SDIS_FRAGMENT,
+  SDIS_VERTEX,
+  SDIS_POINT_TYPES_COUNT__,
+  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
+};
+
+enum sdis_heat_vertex_type {
+  SDIS_HEAT_VERTEX_CONDUCTION,
+  SDIS_HEAT_VERTEX_CONVECTION,
+  SDIS_HEAT_VERTEX_RADIATIVE
+};
+
+enum sdis_heat_path_flag {
+  SDIS_HEAT_PATH_SUCCEED = BIT(0),
+  SDIS_HEAT_PATH_FAILED = BIT(1),
+  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCEED | SDIS_HEAT_PATH_FAILED,
+  SDIS_HEAT_PATH_NONE = 0
 };
 
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
@@ -230,6 +260,78 @@ typedef res_T
    const size_t naccums[2], /* #accumulations in X and Y */
    const struct sdis_accum* accums); /* List of row ordered accumulations */
 
+/* Vertex of heat path v*/
+struct sdis_heat_vertex {
+  double P[3];
+  double time;
+  double weight;
+  enum sdis_heat_vertex_type type;
+};
+#define SDIS_HEAT_VERTEX_NULL__ {{0,0,0}, 0, 0, SDIS_HEAT_VERTEX_CONDUCTION}
+static const struct sdis_heat_vertex SDIS_HEAT_VERTEX_NULL =
+  SDIS_HEAT_VERTEX_NULL__;
+
+/* Path used to estimate the green function */
+struct sdis_green_path {
+  /* Internal data. Should not be accessed */
+  void* green__;
+  size_t id__;
+};
+#define SDIS_GREEN_PATH_NULL__ {NULL, 0}
+static const struct sdis_green_path SDIS_GREEN_PATH_NULL =
+  SDIS_GREEN_PATH_NULL__;
+
+struct sdis_point {
+  union {
+    struct {
+      struct sdis_medium* medium;
+      struct sdis_rwalk_vertex vertex;
+    } mdmvert;
+    struct {
+      struct sdis_interface* intface;
+      struct sdis_interface_fragment fragment;
+    } itfrag;
+  } data;
+  enum sdis_point_type type;
+};
+#define SDIS_POINT_NULL__ { {{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
+static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
+
+/* Functor used to process the paths registered against the green function */
+typedef res_T
+(*sdis_process_green_path_T)
+  (struct sdis_green_path* path,
+   void* context);
+
+/* Functor used to process the power factor registered along a green path for a
+ * given medium */
+typedef res_T
+(*sdis_process_medium_power_term_T)
+  (struct sdis_medium* medium,
+   const double power_term,
+   void* context);
+
+/* Functor used to process the flux factor registered along a green path for a
+ * given interface side */
+typedef res_T
+(*sdis_process_interface_flux_term_T)
+  (struct sdis_interface* interf,
+   const enum sdis_side side,
+   const double flux_term,
+   void* context);
+
+/* Functor used to process a heat path registered against the estimator */
+typedef res_T
+(*sdis_process_heat_path_T)
+  (const struct sdis_heat_path* path,
+   void* context);
+
+/* Functor used to process the vertices of a heat path */
+typedef res_T
+(*sdis_process_heat_vertex_T)
+  (const struct sdis_heat_vertex* vertex,
+   void* context);
+
 BEGIN_DECLS
 
 /*******************************************************************************
@@ -373,11 +475,21 @@ sdis_fluid_create
    struct sdis_medium** fluid);
 
 SDIS_API res_T
+sdis_fluid_get_shader
+  (const struct sdis_medium* fluid,
+   struct sdis_fluid_shader* shader);
+
+SDIS_API res_T
 sdis_solid_create
   (struct sdis_device* dev,
    const struct sdis_solid_shader* shader,
    struct sdis_data* data, /* Data send to the shader. May be NULL */
    struct sdis_medium** solid);
+
+SDIS_API res_T
+sdis_solid_get_shader
+  (const struct sdis_medium* solid,
+   struct sdis_solid_shader* shader);
 
 SDIS_API res_T
 sdis_medium_ref_get
@@ -394,6 +506,10 @@ sdis_medium_get_type
 SDIS_API struct sdis_data*
 sdis_medium_get_data
   (struct sdis_medium* medium);
+
+SDIS_API unsigned
+sdis_medium_get_id
+  (const struct sdis_medium* medium);
 
 /*******************************************************************************
  * An interface is the boundary between 2 media.
@@ -414,6 +530,19 @@ sdis_interface_ref_get
 SDIS_API res_T
 sdis_interface_ref_put
   (struct sdis_interface* interf);
+
+SDIS_API res_T
+sdis_interface_get_shader
+  (const struct sdis_interface* interf,
+   struct sdis_interface_shader* shader);
+
+SDIS_API struct sdis_data*
+sdis_interface_get_data
+  (struct sdis_interface* interf);
+
+SDIS_API unsigned
+sdis_interface_get_id
+  (const struct sdis_interface* interf);
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
@@ -529,6 +658,38 @@ sdis_scene_boundary_project_position
    const double pos[3],
    double uv[]);
 
+/* Get the descriptor of the 3D scene's enclosures */
+SDIS_API res_T
+sdis_scene_get_analysis
+  (struct sdis_scene* scn,
+   struct senc_descriptor** descriptor);
+
+/* Get the descriptor of the 2D scene's enclosures */
+SDIS_API res_T
+sdis_scene_2d_get_analysis
+  (struct sdis_scene* scn,
+   struct senc2d_descriptor** descriptor);
+
+/* Release the descriptor of the scene's enclosures; subsequent attempts to get
+ * it will fail. */
+SDIS_API res_T
+sdis_scene_release_analysis
+  (struct sdis_scene* scn);
+
+SDIS_API res_T
+sdis_scene_get_dimension
+  (const struct sdis_scene* scn,
+   enum sdis_scene_dimension* dim);
+
+/* Return the area/volume of occupied by a medium in a 2D/3D scene. Only
+ * enclosed media are handled, i.e. media whose border are explicitly defined
+ * by a geometry. */
+SDIS_API res_T
+sdis_scene_get_medium_spread
+  (struct sdis_scene* scn,
+   const struct sdis_medium* mdm,
+   double* spread);
+
 /*******************************************************************************
  * An estimator stores the state of a simulation
  ******************************************************************************/
@@ -548,7 +709,7 @@ sdis_estimator_get_type
 SDIS_API res_T
 sdis_estimator_get_realisation_count
   (const struct sdis_estimator* estimator,
-   size_t* nrealisations); /* Succesfull ones */
+   size_t* nrealisations); /* Successful ones */
 
 SDIS_API res_T
 sdis_estimator_get_failure_count
@@ -570,14 +731,120 @@ sdis_estimator_get_radiative_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);
 
-
 SDIS_API res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);
 
+SDIS_API res_T
+sdis_estimator_get_paths_count
+  (const struct sdis_estimator* estimator,
+   size_t* npaths);
+
+SDIS_API res_T
+sdis_estimator_get_path
+  (const struct sdis_estimator* estimator,
+   const size_t ipath,
+   const struct sdis_heat_path** path);
+
+SDIS_API res_T
+sdis_estimator_for_each_path
+  (const struct sdis_estimator* estimator,
+   sdis_process_heat_path_T func,
+   void* context);
+
 /*******************************************************************************
- * Miscellaneous functions
+ * The green function saves the estimation of the propagator
+ ******************************************************************************/
+SDIS_API res_T
+sdis_green_function_ref_get
+  (struct sdis_green_function* green);
+
+SDIS_API res_T
+sdis_green_function_ref_put
+  (struct sdis_green_function* green);
+
+SDIS_API res_T
+sdis_green_function_solve
+  (struct sdis_green_function* green,
+   const double time_range[2], /* Observation time */
+   struct sdis_estimator** estimator);
+
+/* Retrieve the number of valid paths used to estimate the green function. It
+ * is actually equal to the number of successful realisations. */
+SDIS_API res_T
+sdis_green_function_get_paths_count
+  (const struct sdis_green_function* green,
+   size_t* npaths);
+
+/* Retrieve the number of rejected paths during the estimation of the green
+ * function due to numerical issues and data inconsistency */
+SDIS_API res_T
+sdis_green_function_get_invalid_paths_count
+  (const struct sdis_green_function* green,
+   size_t* nfails);
+
+/* Iterate over all valid green function paths */
+SDIS_API res_T
+sdis_green_function_for_each_path
+  (struct sdis_green_function* green,
+   sdis_process_green_path_T func,
+   void* context);
+
+/* Retrieve the spatio-temporal end point of a path used to estimate the green
+ * function. Note that this point went back in time from the relative
+ * observation time 0. Its time is thus negative; its absolute value
+ * represents the time spent by the path into the system. */
+SDIS_API res_T
+sdis_green_path_get_limit_point
+  (struct sdis_green_path* path,
+   struct sdis_point* pt);
+
+/* Iterate over all "power terms" associated to the path. Multiply each term
+ * by the power of their associated medium, that is assumed to be constant in
+ * time and space, gives the medium power registered along the path. */
+SDIS_API res_T
+sdis_green_path_for_each_power_term
+  (struct sdis_green_path* path,
+   sdis_process_medium_power_term_T func,
+   void* context);
+
+/* Iterate over all "flux terms" associated to the path. Multiply each term by
+ * the flux of their associated interface side, that is assumed to be constant
+ * in time and space, gives the interface side flux registered along the path. */
+SDIS_API res_T
+sdis_green_path_for_each_flux_term
+  (struct sdis_green_path* path,
+   sdis_process_interface_flux_term_T func,
+   void* context);
+
+/*******************************************************************************
+ * Heat path API
+ ******************************************************************************/
+SDIS_API res_T
+sdis_heat_path_get_vertices_count
+  (const struct sdis_heat_path* path,
+   size_t* nvertices);
+
+SDIS_API res_T
+sdis_heat_path_get_status
+  (const struct sdis_heat_path* path,
+   enum sdis_heat_path_flag* status);
+
+SDIS_API res_T
+sdis_heat_path_get_vertex
+  (const struct sdis_heat_path* path,
+   const size_t ivertex,
+   struct sdis_heat_vertex* vertex);
+
+SDIS_API res_T
+sdis_heat_path_for_each_vertex
+  (const struct sdis_heat_path* path,
+   sdis_process_heat_vertex_T func,
+   void* context);
+
+/*******************************************************************************
+ * Solvers
  ******************************************************************************/
 SDIS_API res_T
 sdis_solve_probe
@@ -588,6 +855,7 @@ sdis_solve_probe
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -601,21 +869,8 @@ sdis_solve_probe_boundary
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
-
-SDIS_API res_T
-sdis_solve_camera
-  (struct sdis_scene* scn,
-   const struct sdis_camera* cam, /* Point of view */
-   const double time, /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const size_t width, /* Image definition in in X */
-   const size_t height, /* Image definition in Y */
-   const size_t spp, /* #samples per pixel */
-   sdis_write_accums_T writer,
-   void* writer_data);
 
 SDIS_API res_T
 sdis_solve_boundary
@@ -628,9 +883,9 @@ sdis_solve_boundary
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    struct sdis_estimator** estimator);
 
-/* Flux solver */
 SDIS_API res_T
 sdis_solve_probe_boundary_flux
   (struct sdis_scene* scn,
@@ -654,6 +909,97 @@ sdis_solve_boundary_flux
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */
    struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_solve_camera
+  (struct sdis_scene* scn,
+   const struct sdis_camera* cam, /* Point of view */
+   const double time, /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   const size_t width, /* Image definition in in X */
+   const size_t height, /* Image definition in Y */
+   const size_t spp, /* #samples per pixel */
+   sdis_write_accums_T writer,
+   void* writer_data);
+
+SDIS_API res_T
+sdis_solve_medium
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   struct sdis_medium* medium, /* Medium to solve */
+   const double time_range[2], /* Observation time */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   struct sdis_estimator** estimator);
+
+/*******************************************************************************
+ * Green solvers.
+ *
+ * The caller should ensure that green solvers are invoked on scenes whose data
+ * do not depend on time. Indeed, on green estimation, the time parameter along
+ * the random walks registers the relative time spent in the system rather than
+ * an absolute time. As a consequence, the media/interfaces parameters cannot
+ * vary in time with respect to an absolute time value.
+ *
+ * In addition, the green solvers assumes that the interface fluxes are
+ * constants in time and space. In the same way the volumic power of the solid
+ * media must be constant in time and space too. Furthermore, note that only
+ * the interfaces/media that had a flux/volumic power during green estimation
+ * can update their flux/volumic power value for subsequent
+ * sdis_green_function_solve invocations: others interfaces/media are
+ * definitely registered against the green function as interfaces/media with no
+ * flux/volumic power.
+ *
+ * If the aforementioned assumptions are not ensured by the caller, the
+ * behavior of the estimated green function is undefined.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_solve_probe_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const double position[3], /* Probe position */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
+
+SDIS_API res_T
+sdis_solve_probe_boundary_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t iprim, /* Identifier of the primitive on which the probe lies */
+   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
+   const enum sdis_side side, /* Side of iprim on which the probe lies */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
+
+SDIS_API res_T
+sdis_solve_boundary_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   const size_t primitives[], /* List of boundary primitives to handle */
+   const enum sdis_side sides[], /* Per primitive side to consider */
+   const size_t nprimitives, /* #primitives */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
+
+SDIS_API res_T
+sdis_solve_medium_green_function
+  (struct sdis_scene* scn,
+   const size_t nrealisations, /* #realisations */
+   struct sdis_medium* medium, /* Medium to solve */
+   const double fp_to_meter, /* Scale from floating point units to meters */
+   const double ambient_radiative_temperature, /* In Kelvin */
+   const double reference_temperature, /* In Kelvin */
+   struct sdis_green_function** green);
 
 END_DECLS
 

@@ -15,24 +15,23 @@
 
 #include "sdis.h"
 #include "test_sdis_utils.h"
+#include <rsys/clock_time.h>
 #include <rsys/math.h>
 
-#define Tf1 0
-#define Tf2 100
-#define Power 0 /*10000*/
-#define H1 50
-#define H2 50
+#define Tf 100.0
+#define Power 10000.0
+#define H 50.0
 #define LAMBDA 100.0
-#define DELTA (1.0/20.0)
+#define DELTA (1.0/2.0)
 #define N 10000
 
 /*
  * The 2D scene is a solid slabs stretched along the X dimension to simulate a
- * 1D case. The slab has a volumic power and has a convective exchange with the
- * surrounding fluid whose temperature is fixed to Tfluid.
+ * 1D case. The slab has a volumic power and has a convective exchange with 
+ * surrounding fluid whose temperature is fixed to Tf.
  *
  *
- *           _\  TFluid
+ *           _\  Tf
  *          / /
  *          \__/
  *
@@ -42,17 +41,17 @@
  *
  * ... -----Hboundary----- ...
  *
- *           _\  TFluid
+ *           _\  Tf
  *          / /
  *          \__/
  *
  */
 
 static const double vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
- -10000.5,-0.5,
- -10000.5, 0.5,
-  10000.5, 0.5,
-  10000.5,-0.5
+ -1000000.5,-0.5,
+ -1000000.5, 0.5,
+  1000000.5, 0.5,
+  1000000.5,-0.5
 };
 static const size_t nvertices = sizeof(vertices)/sizeof(double[2]);
 
@@ -200,6 +199,8 @@ interface_get_temperature
 int
 main(int argc, char** argv)
 {
+  char dump[128];
+  struct time t0, t1;
   struct mem_allocator allocator;
   struct solid* solid_param = NULL;
   struct fluid* fluid_param = NULL;
@@ -223,8 +224,7 @@ main(int argc, char** argv)
   double pos[2];
   double time_range[2] = { INF, INF };
   double Tref;
-  double a, b, x;
-  double L;
+  double x;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -238,14 +238,14 @@ main(int argc, char** argv)
   OK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
-  fluid_param->temperature = Tf1;
+  fluid_param->temperature = Tf;
   OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid1));
   OK(sdis_data_ref_put(data));
 
   OK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_param = sdis_data_get(data);
-  fluid_param->temperature = Tf2;
+  fluid_param->temperature = Tf;
   OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid2));
   OK(sdis_data_ref_put(data));
 
@@ -288,7 +288,7 @@ main(int argc, char** argv)
   OK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data));
   interf_param = sdis_data_get(data);
-  interf_param->h = H1;
+  interf_param->h = H;
   interf_param->temperature = -1;
   OK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
     &interf_solid_fluid1));
@@ -298,7 +298,7 @@ main(int argc, char** argv)
   OK(sdis_data_create (dev, sizeof(struct interf), ALIGNOF(struct interf),
     NULL, &data));
   interf_param = sdis_data_get(data);
-  interf_param->h = H2;
+  interf_param->h = H;
   interf_param->temperature = -1;
   OK(sdis_interface_create(dev, solid, fluid2, &interf_shader, data,
     &interf_solid_fluid2));
@@ -332,23 +332,15 @@ main(int argc, char** argv)
   pos[0] = 0;
   pos[1] = 0.25;
 
-  L = vertices[3] - vertices[1];
-#if 1
-  x = pos[1] + vertices[3];
-  a = (H2*Power*L + H1*H2*(Tf1 - Tf2) + H1*H2*Power*L*L/(2*LAMBDA))
-    / (LAMBDA * (H1 + H2) + H1*H2*L);
-  b = Tf2 + a * LAMBDA / H2;
-  Tref = -Power / (2*LAMBDA) * x*x + a * x + b;
-#else
-  tmp = LAMBDA / L;
-  T1 = H1 * (H2+tmp) / (tmp*(H1+H2) + H1*H2) * Tf1
-     + H2 *     tmp  / (tmp*(H1+H2) + H1*H2) * Tf2;
-  T2 = H1 *     tmp  / (tmp*(H1+H2) + H1*H2) * Tf1
-     + H2 * (H1+tmp) / (tmp*(H1+H2) + H1*H2) * Tf2;
-  Tref = T2 + (T1-T2)/L * (pos[1]  + vertices[3]);
-#endif
+  x = pos[1];
+  Tref = -Power / (2*LAMBDA) * x*x + Tf + Power/(2*H) + Power/(8*LAMBDA);
 
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, &estimator));
+  time_current(&t0);
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
+  time_sub(&t0, time_current(&t1), &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+  printf("Elapsed time = %s\n", dump);
+
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));

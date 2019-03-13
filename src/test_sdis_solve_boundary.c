@@ -44,6 +44,7 @@
 
 #define UNKNOWN_TEMPERATURE -1
 #define N 10000 /* #realisations */
+#define N_dump 10 /* #dumped paths */
 
 #define Tf 310.0
 #define Tb 300.0
@@ -168,6 +169,7 @@ check_estimator
 int
 main(int argc, char** argv)
 {
+  FILE* fp = NULL;
   struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
@@ -179,6 +181,8 @@ main(int argc, char** argv)
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
+  struct sdis_green_function* green = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -197,7 +201,10 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+
+  /* Temporary file used to dump heat paths */
+  CHK((fp = tmpfile()) != NULL);
 
   /* Create the fluid medium */
   OK(sdis_data_create
@@ -286,51 +293,84 @@ main(int argc, char** argv)
   ref = (H*Tf + LAMBDA * Tb) / (H + LAMBDA);
 
   #define SOLVE sdis_solve_probe_boundary
+  #define GREEN sdis_solve_probe_boundary_green_function
   #define F SDIS_FRONT
   uv[0] = 0.3;
   uv[1] = 0.3;
   iprim = 6;
 
-  BA(SOLVE(NULL, N, iprim, uv, time_range, F, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, 0, iprim, uv, time_range, F, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, 12, uv, time_range, F, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, NULL, time_range, F, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, NULL, F, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, time_range, -1, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, NULL));
+  BA(SOLVE(NULL, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, 0, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, 12, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, iprim, NULL, time_range, F, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, iprim, uv, NULL, F, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, iprim, uv, time_range, -1, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, NULL));
   tr[0] = tr[1] = -1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, NULL));
+  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, 0, NULL));
   tr[0] = 1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, NULL));
+  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, 0, NULL));
   tr[1] = 0;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, NULL));
+  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, 0, NULL));
 
-  OK(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, &estimator));
+  OK(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
   OK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos));
   printf("Boundary temperature of the box at (%g %g %g) = ", SPLIT3(pos));
   check_estimator(estimator, N, ref);
+
+  BA(GREEN(NULL, N, iprim, uv, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, 0, iprim, uv, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, 12, uv, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, NULL, F, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, uv, -1, 1, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, uv, F, 0, 0, 0, &green));
+  BA(GREEN(box_scn, N, iprim, uv, F, 1, 0, 0, NULL));
+
+  OK(GREEN(box_scn, N, iprim, uv, F, 1, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+
+  /* Dump paths */
+  OK(SOLVE(box_scn, N_dump, iprim, uv, time_range, F, 1.0, 0, 0,
+    SDIS_HEAT_PATH_ALL, &estimator));
+  dump_heat_paths(fp, estimator);
   OK(sdis_estimator_ref_put(estimator));
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  BA(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
   fluid_param->temperature = Tf;
 
   uv[0] = 0.5;
   iprim = 3;
-  BA(SOLVE(square_scn, N, 4, uv, time_range, F, 1.0, 0, 0, &estimator));
-  OK(SOLVE(square_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, &estimator));
+  BA(SOLVE(square_scn, N, 4, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
+  OK(SOLVE(square_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
   OK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos));
   printf("Boundary temperature of the square at (%g %g) = ", SPLIT2(pos));
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(square_scn, N, iprim, uv, F, 1, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  OK(sdis_green_function_ref_put(green));
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  BA(SOLVE(square_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, &estimator));
+  BA(SOLVE(square_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
   fluid_param->temperature = Tf;
+
   #undef F
   #undef SOLVE
+  #undef GREEN
 
   sides[0] = SDIS_FRONT;
   sides[1] = SDIS_FRONT;
@@ -338,41 +378,78 @@ main(int argc, char** argv)
   sides[3] = SDIS_FRONT;
 
   #define SOLVE sdis_solve_boundary
+  #define GREEN sdis_solve_boundary_green_function
   prims[0] = 6;
   prims[1] = 7;
-  BA(SOLVE(NULL, N, prims, sides, 2, time_range, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, 0, prims, sides, 2, time_range, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, NULL, sides, 2, time_range, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, prims, NULL, 2, time_range, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, prims, sides, 0, time_range, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, prims, sides, 2, NULL, 1.0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, NULL));
+  BA(SOLVE(NULL, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, 0, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, NULL, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, prims, NULL, 2, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, prims, sides, 0, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, prims, sides, 2, NULL, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, NULL));
   tr[0] = tr[1] = -1;
-  BA(SOLVE(box_scn, N, prims, sides, 2, tr, 1.0, 0, 0, NULL));
+  BA(SOLVE(box_scn, N, prims, sides, 2, tr, 1.0, 0, 0, 0, NULL));
   tr[0] = 1;
-  BA(SOLVE(box_scn, N, prims, sides, 2, tr, 1.0, 0, 0, NULL));
+  BA(SOLVE(box_scn, N, prims, sides, 2, tr, 1.0, 0, 0, 0, NULL));
   tr[1] = 0;
-  BA(SOLVE(box_scn, N, prims, sides, 2, tr, 1.0, 0, 0, NULL));
+  BA(SOLVE(box_scn, N, prims, sides, 2, tr, 1.0, 0, 0, 0, NULL));
 
   /* Average temperature on the right side of the box */
-  OK(SOLVE(box_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, &estimator));
+  OK(SOLVE(box_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the right side of the box = ");
   check_estimator(estimator, N, ref);
+
+  BA(GREEN(NULL, N, prims, sides, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, 0, prims, sides, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, NULL, sides, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, NULL, 2, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, sides, 0, 1.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, sides, 2, 0.0, 0, 0, &green));
+  BA(GREEN(box_scn, N, prims, sides, 2, 1.0, 0, 0, NULL));
+
+  OK(GREEN(box_scn, N, prims, sides, 2, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+
+  /* Dump path */
+  OK(SOLVE(box_scn, N_dump, prims, sides, 2, time_range, 1.0, 0, 0,
+    SDIS_HEAT_PATH_ALL, &estimator));
+  dump_heat_paths(fp, estimator);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Average temperature on the right side of the square */
   prims[0] = 3;
   sides[0] = SDIS_FRONT;
-  OK(SOLVE(square_scn, N, prims, sides, 1, time_range, 1.0, 0, 0, &estimator));
+  OK(SOLVE(square_scn, N, prims, sides, 1, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the right side of the square = ");
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(square_scn, N, prims, sides, 1, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+
+  /* Dump path */
+  OK(SOLVE(square_scn, N_dump, prims, sides, 1, time_range, 1.0, 0, 0,
+    SDIS_HEAT_PATH_ALL, &estimator));
+  dump_heat_paths(fp, estimator);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Check out of bound prims */
   prims[0] = 12;
-  BA(SOLVE(box_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
   prims[0] = 4;
-  BA(SOLVE(square_scn, N, prims, sides, 1, time_range, 1.0, 0, 0, &estimator));
+  BA(SOLVE(square_scn, N, prims, sides, 1, time_range, 1.0, 0, 0, 0, &estimator));
 
   /* Average temperature on the left+right sides of the box */
   prims[0] = 2;
@@ -382,23 +459,42 @@ main(int argc, char** argv)
 
   ref = (ref + Tb) / 2;
 
-  OK(SOLVE(box_scn, N, prims, sides, 4, time_range, 1.0, 0, 0, &estimator));
+  OK(SOLVE(box_scn, N, prims, sides, 4, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the left+right sides of the box = ");
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(box_scn, N, prims, sides, 4, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
 
   /* Average temperature on the left+right sides of the square */
   prims[0] = 1;
   prims[1] = 3;
-  OK(SOLVE(square_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, &estimator));
+  OK(SOLVE(square_scn, N, prims, sides, 2, time_range, 1.0, 0, 0, 0, &estimator));
   printf("Average temperature of the left+right sides of the square = ");
   check_estimator(estimator, N, ref);
+
+  OK(GREEN(square_scn, N, prims, sides, 2, 1.0, 0, 0, &green));
+  check_green_function(green);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  check_estimator(estimator2, N, ref);
+
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
   #undef SOLVE
+  #undef GREEN
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
   OK(sdis_device_ref_put(dev));
+
+  CHK(fclose(fp) == 0);
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

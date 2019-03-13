@@ -441,7 +441,7 @@ main(int argc, char** argv)
     FATAL("Unreachable code.\n");
   }
 
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, &estimator));
+  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));

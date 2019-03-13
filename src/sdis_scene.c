@@ -15,11 +15,9 @@
 
 #include "sdis_scene_Xd.h"
 
-/* Generate the 2D functions of the scene */
+/* Generate the Generic functions of the scene */
 #define SDIS_SCENE_DIMENSION 2
 #include "sdis_scene_Xd.h"
-
-/* Generate the 3D functions of the scene */
 #define SDIS_SCENE_DIMENSION 3
 #include "sdis_scene_Xd.h"
 
@@ -106,6 +104,8 @@ scene_release(ref_T * ref)
   htable_d_release(&scn->tmp_hc_ub);
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
+  if(scn->senc_descriptor) SENC(descriptor_ref_put(scn->senc_descriptor));
+  if(scn->senc2d_descriptor) SENC2D(descriptor_ref_put(scn->senc2d_descriptor));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }
@@ -275,10 +275,86 @@ sdis_scene_boundary_project_position
   return RES_OK;
 }
 
+res_T
+sdis_scene_2d_get_analysis
+  (struct sdis_scene* scn,
+   struct senc2d_descriptor** descriptor)
+{
+  if(!scn || !descriptor) return RES_BAD_ARG;
+  if(!scn->senc2d_descriptor) return RES_BAD_ARG; /* Scene is 3D */
+  SENC2D(descriptor_ref_get(scn->senc2d_descriptor));
+  *descriptor = scn->senc2d_descriptor;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_analysis
+  (struct sdis_scene* scn,
+   struct senc_descriptor** descriptor)
+{
+  if(!scn || !descriptor) return RES_BAD_ARG;
+  if(!scn->senc_descriptor) return RES_BAD_ARG; /* Scene is 2D */
+  SENC(descriptor_ref_get(scn->senc_descriptor));
+  *descriptor = scn->senc_descriptor;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_release_analysis(struct sdis_scene* scn)
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scn->senc2d_descriptor) SENC2D(descriptor_ref_put(scn->senc2d_descriptor));
+  if(scn->senc_descriptor) SENC(descriptor_ref_put(scn->senc_descriptor));
+  scn->senc_descriptor = NULL;
+  scn->senc2d_descriptor = NULL;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_dimension
+  (const struct sdis_scene* scn, enum sdis_scene_dimension* dim)
+{
+  if(!scn || !dim) return RES_BAD_ARG;
+  *dim = scene_is_2d(scn) ? SDIS_SCENE_2D : SDIS_SCENE_3D;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_medium_spread
+  (struct sdis_scene* scn,
+   const struct sdis_medium* mdm,
+   double* out_spread)
+{
+  struct htable_enclosure_iterator it, end;
+  double spread = 0;
+  res_T res = RES_OK;
+
+  if(!scn || !mdm || !out_spread) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  htable_enclosure_begin(&scn->enclosures, &it);
+  htable_enclosure_end(&scn->enclosures, &end);
+  while(!htable_enclosure_iterator_eq(&it, &end)) {
+    const struct enclosure* enc = htable_enclosure_iterator_data_get(&it);
+    htable_enclosure_iterator_next(&it);
+    if(sdis_medium_get_id(mdm) == enc->medium_id) {
+      spread += enc->V;
+    }
+  }
+  *out_spread = spread;
+  
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
-const struct sdis_interface*
+struct sdis_interface*
 scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 {
   ASSERT(scn && iprim < darray_prim_prop_size_get(&scn->prim_props));
@@ -290,9 +366,10 @@ scene_get_medium
   (const struct sdis_scene* scn,
    const double pos[],
    struct get_medium_info* info,
-   const struct sdis_medium** out_medium)
+   struct sdis_medium** out_medium)
 {
   return scene_is_2d(scn)
     ? scene_get_medium_2d(scn, pos, info, out_medium)
     : scene_get_medium_3d(scn, pos, info, out_medium);
 }
+

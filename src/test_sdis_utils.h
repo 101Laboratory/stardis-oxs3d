@@ -240,15 +240,59 @@ dump_segments
 }
 
 static INLINE void
+check_estimator_eq
+  (const struct sdis_estimator* e1, const struct sdis_estimator* e2)
+{
+  struct sdis_mc mc1, mc2;
+  enum sdis_estimator_type type1, type2;
+  ASSERT(e1 && e2);
+
+  OK(sdis_estimator_get_type(e1, &type1));
+  OK(sdis_estimator_get_type(e2, &type2));
+  CHK(type1 == type2);
+
+  OK(sdis_estimator_get_temperature(e1, &mc1));
+  OK(sdis_estimator_get_temperature(e2, &mc2));
+  CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+  CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+
+  if(type1 == SDIS_ESTIMATOR_FLUX) {
+    OK(sdis_estimator_get_convective_flux(e1, &mc1));
+    OK(sdis_estimator_get_convective_flux(e2, &mc2));
+    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+
+    OK(sdis_estimator_get_radiative_flux(e1, &mc1));
+    OK(sdis_estimator_get_radiative_flux(e2, &mc2));
+    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+
+    OK(sdis_estimator_get_total_flux(e1, &mc1));
+    OK(sdis_estimator_get_total_flux(e2, &mc2));
+    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+  }
+}
+
+static INLINE void
 check_memory_allocator(struct mem_allocator* allocator)
 {
   if(MEM_ALLOCATED_SIZE(allocator)) {
-    char dump[128];
+    char dump[1024];
     MEM_DUMP(allocator, dump, sizeof(dump));
     fprintf(stderr, "%s\n", dump);
     FATAL("Memory leaks.\n");
   }
 }
+
+extern LOCAL_SYM void
+check_green_function
+  (struct sdis_green_function* green);
+
+extern LOCAL_SYM void
+dump_heat_paths
+  (FILE* stream,
+   struct sdis_estimator* estimator);
 
 #endif /* TEST_SDIS_UTILS_H */
 

@@ -17,6 +17,8 @@
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
 
+#include <rsys/mutex.h>
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
@@ -28,8 +30,8 @@ estimator_release(ref_T* ref)
   ASSERT(ref);
   estimator = CONTAINER_OF(ref, struct sdis_estimator, ref);
   dev = estimator->dev;
-  ASSERT((estimator->fluxes!=NULL) == (estimator->type==SDIS_FLUX_ESTIMATOR));
-  MEM_RM(dev->allocator, estimator->fluxes);
+  darray_heat_path_release(&estimator->paths);
+  if(estimator->mutex) mutex_destroy(estimator->mutex);
   MEM_RM(dev->allocator, estimator);
   SDIS(device_ref_put(dev));
 }
@@ -93,10 +95,10 @@ res_T
 sdis_estimator_get_convective_flux
   (const struct sdis_estimator* estimator, struct sdis_mc* flux)
 {
-  if(!estimator || !flux ||estimator->type != SDIS_FLUX_ESTIMATOR)
+  if(!estimator || !flux ||estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
   ASSERT(estimator->fluxes);
-  *flux = estimator->fluxes[FLUX_CONVECTIVE__];
+  *flux = estimator->fluxes[FLUX_CONVECTIVE];
   return RES_OK;
 }
 
@@ -104,10 +106,10 @@ res_T
 sdis_estimator_get_radiative_flux
   (const struct sdis_estimator* estimator, struct sdis_mc* flux)
 {
-  if(!estimator || !flux || estimator->type != SDIS_FLUX_ESTIMATOR)
+  if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
   ASSERT(estimator->fluxes);
-  *flux = estimator->fluxes[FLUX_RADIATIVE__];
+  *flux = estimator->fluxes[FLUX_RADIATIVE];
   return RES_OK;
 }
 
@@ -115,11 +117,61 @@ res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator, struct sdis_mc* flux)
 {
-  if(!estimator || !flux || estimator->type != SDIS_FLUX_ESTIMATOR)
+  if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
   ASSERT(estimator->fluxes);
-  *flux = estimator->fluxes[FLUX_TOTAL__];
+  *flux = estimator->fluxes[FLUX_TOTAL];
   return RES_OK;
+}
+
+res_T
+sdis_estimator_get_paths_count
+  (const struct sdis_estimator* estimator, size_t* npaths)
+{
+  if(!estimator || !npaths) return RES_BAD_ARG;
+  *npaths = darray_heat_path_size_get(&estimator->paths);
+  return RES_OK;
+}
+
+SDIS_API res_T
+sdis_estimator_get_path
+  (const struct sdis_estimator* estimator,
+   const size_t ipath,
+   const struct sdis_heat_path** path)
+{
+  if(!estimator || !path
+  || ipath >= darray_heat_path_size_get(&estimator->paths))
+    return RES_BAD_ARG;
+  *path = darray_heat_path_cdata_get(&estimator->paths) + ipath;
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_for_each_path
+  (const struct sdis_estimator* estimator,
+   sdis_process_heat_path_T func,
+   void* context)
+{
+  const struct sdis_heat_path* paths = NULL;
+  size_t i, n;
+  res_T res = RES_OK;
+
+  if(!estimator || !func) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  SDIS(estimator_get_paths_count(estimator, &n));
+  paths = darray_heat_path_cdata_get(&estimator->paths);
+  FOR_EACH(i, 0, n) {
+    res = func(paths+i, context);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 /*******************************************************************************
@@ -134,9 +186,9 @@ estimator_create
   struct sdis_estimator* estimator = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_estimator
-    || (type != SDIS_TEMPERATURE_ESTIMATOR && type != SDIS_FLUX_ESTIMATOR))
-  {
+  if(!dev
+  || (unsigned)type >= SDIS_ESTIMATOR_TYPES_COUNT__
+  || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -146,13 +198,19 @@ estimator_create
     res = RES_MEM_ERR;
     goto error;
   }
-  estimator->type = type;
-  estimator->fluxes = (type != SDIS_FLUX_ESTIMATOR) ? NULL
-    : MEM_CALLOC(dev->allocator, FLUX_NAMES_COUNT__, sizeof(struct sdis_mc));
   ref_init(&estimator->ref);
   SDIS(device_ref_get(dev));
+  estimator->nrealisations = 0;
+  estimator->nfailures = 0;
   estimator->dev = dev;
-  if(type == SDIS_FLUX_ESTIMATOR && !estimator->fluxes) goto error;
+  estimator->type = type;
+  darray_heat_path_init(dev->allocator, &estimator->paths);
+
+  estimator->mutex = mutex_create();
+  if(!estimator->mutex) {
+    res = RES_MEM_ERR;
+    goto error;
+  }
 
 exit:
   if(out_estimator) *out_estimator = estimator;
@@ -162,6 +220,33 @@ error:
     SDIS(estimator_ref_put(estimator));
     estimator = NULL;
   }
+  goto exit;
+}
+
+res_T
+estimator_add_and_release_heat_path
+  (struct sdis_estimator* estimator, struct sdis_heat_path* path)
+{
+  struct sdis_heat_path* dst = NULL;
+  size_t i;
+  res_T res = RES_OK;
+  ASSERT(estimator && path);
+
+  mutex_lock(estimator->mutex);
+
+  i = darray_heat_path_size_get(&estimator->paths);
+
+  res = darray_heat_path_resize(&estimator->paths, i+1);
+  if(res != RES_OK) goto error;
+
+  dst = darray_heat_path_data_get(&estimator->paths) + i;
+  res = heat_path_copy_and_release(dst, path);
+  if(res != RES_OK) goto error;
+
+exit:
+  mutex_unlock(estimator->mutex);
+  return res;
+error:
   goto exit;
 }
 

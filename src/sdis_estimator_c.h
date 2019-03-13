@@ -16,6 +16,9 @@
 #ifndef SDIS_ESTIMATOR_C_H
 #define SDIS_ESTIMATOR_C_H
 
+#include "sdis_heat_path.h"
+
+#include <rsys/math.h>
 #include <rsys/ref_count.h>
 
 /* Forward declarations */
@@ -23,32 +26,86 @@ struct sdis_device;
 struct sdis_estimator;
 enum sdis_estimator_type;
 
-enum flux_names {
-  FLUX_CONVECTIVE__,
-  FLUX_RADIATIVE__,
-  FLUX_TOTAL__,
+enum flux_name {
+  FLUX_CONVECTIVE,
+  FLUX_RADIATIVE,
+  FLUX_TOTAL,
   FLUX_NAMES_COUNT__
 };
 
 struct sdis_estimator {
   struct sdis_mc temperature;
-  struct sdis_mc* fluxes;
+  struct sdis_mc fluxes[FLUX_NAMES_COUNT__];
   size_t nrealisations;
   size_t nfailures;
+
+  struct mutex* mutex;
+  struct darray_heat_path paths; /* Tracked paths */
 
   enum sdis_estimator_type type;
   ref_T ref;
   struct sdis_device* dev;
 };
 
+struct sdis_estimator_handle;
+
 /*******************************************************************************
- * Estmator data structure
+ * Estimator local API
  ******************************************************************************/
 extern LOCAL_SYM res_T
 estimator_create
   (struct sdis_device* dev,
    const enum sdis_estimator_type type,
    struct sdis_estimator** estimator);
+
+/* Thread safe */
+extern LOCAL_SYM res_T
+estimator_add_and_release_heat_path
+  (struct sdis_estimator* estimator,
+   struct sdis_heat_path* path);
+
+/* Must be invoked before any others "estimator_setup" functions */
+static INLINE void
+estimator_setup_realisations_count
+  (struct sdis_estimator* estimator,
+   const size_t nrealisations,
+   const size_t nsuccesses)
+{
+  ASSERT(estimator && nrealisations && nsuccesses && nsuccesses<=nrealisations);
+  estimator->nrealisations = nsuccesses;
+  estimator->nfailures = nrealisations - nsuccesses;
+}
+
+static INLINE void
+estimator_setup_temperature
+  (struct sdis_estimator* estim,
+   const double sum,
+   const double sum2)
+{
+  double N;
+  ASSERT(estim && estim->nrealisations);
+  N = (double)estim->nrealisations;
+  estim->temperature.E = sum/N;
+  estim->temperature.V = sum2/N - estim->temperature.E*estim->temperature.E;
+  estim->temperature.V = MMAX(estim->temperature.V, 0);
+  estim->temperature.SE = sqrt(estim->temperature.V/N);
+}
+
+static INLINE void
+estimator_setup_flux
+  (struct sdis_estimator* estim,
+   const enum flux_name name,
+   const double sum,
+   const double sum2)
+{
+  double N;
+  ASSERT(estim && (unsigned)name < FLUX_NAMES_COUNT__ && estim->nrealisations);
+  N = (double)estim->nrealisations;
+  estim->fluxes[name].E = sum/N;
+  estim->fluxes[name].V = sum2/N - estim->fluxes[name].E*estim->fluxes[name].E;
+  estim->fluxes[name].V = MMAX(estim->fluxes[name].V, 0);
+  estim->fluxes[name].SE = sqrt(estim->fluxes[name].V/N);
+}
 
 #endif /* SDIS_PROBE_ESTIMATOR_C_H */
 

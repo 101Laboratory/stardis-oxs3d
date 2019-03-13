@@ -41,6 +41,10 @@ struct get_medium_info {
   struct s2d_hit hit_2d;
   struct s3d_hit hit_3d;
 };
+#define GET_MEDIUM_INFO_NULL__ \
+  {{0,0,0}, {0,0,0}, {0,0,0}, S2D_HIT_NULL__, S3D_HIT_NULL__}
+static const struct get_medium_info GET_MEDIUM_INFO_NULL =
+  GET_MEDIUM_INFO_NULL__;
 
 static INLINE void
 prim_prop_init(struct mem_allocator* allocator, struct prim_prop* prim)
@@ -74,6 +78,9 @@ struct enclosure {
 
   double hc_upper_bound;
   double S_over_V; /* in 3D = surface/volume; in 2D = perimeter/area */
+  double V; /* 3D = volume; 2D = area; */
+
+  unsigned medium_id;
 };
 
 static INLINE void
@@ -84,6 +91,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->s3d_view = NULL;
   darray_uint_init(allocator, &enc->local2global);
   enc->S_over_V = 0;
+  enc->V = 0;
   enc->hc_upper_bound = 0;
 }
 
@@ -107,6 +115,7 @@ enclosure_copy(struct enclosure* dst, const struct enclosure* src)
     dst->s2d_view = src->s2d_view;
   }
   dst->S_over_V = src->S_over_V;
+  dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
   return darray_uint_copy(&dst->local2global, &src->local2global);
 }
@@ -128,6 +137,7 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
     src->s2d_view = NULL;
   }
   dst->S_over_V = src->S_over_V;
+  dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
   return RES_OK;
 }
@@ -147,13 +157,13 @@ enclosure_local2global_prim_id
 #define DARRAY_FUNCTOR_INIT interface_init
 #include <rsys/dynamic_array.h>
 
-/* Declare the array of medium */
+/* Declare the array of media */
 #define DARRAY_NAME medium
 #define DARRAY_DATA struct sdis_medium*
 #define DARRAY_FUNCTOR_INIT medium_init
 #include <rsys/dynamic_array.h>
 
-/* Declare the array of primitive */
+/* Declare the array of primitives */
 #define DARRAY_NAME prim_prop
 #define DARRAY_DATA struct prim_prop
 #define DARRAY_FUNCTOR_INIT prim_prop_init
@@ -169,7 +179,7 @@ enclosure_local2global_prim_id
 #define HTABLE_DATA_FUNCTOR_COPY_AND_RELEASE enclosure_copy_and_release
 #include <rsys/hash_table.h>
 
-/* Declare the hash table that maps an enclosure id to its data */
+/* Declare the hash table that maps an enclosure id to hc upper bound */
 #define HTABLE_NAME d
 #define HTABLE_KEY unsigned
 #define HTABLE_DATA double
@@ -181,6 +191,8 @@ struct sdis_scene {
   struct darray_prim_prop prim_props; /* Per primitive properties */
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
+  struct senc_descriptor* senc_descriptor;
+  struct senc2d_descriptor* senc2d_descriptor;
 
   struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */
@@ -199,7 +211,7 @@ scene_get_primitives_count(const struct sdis_scene* scn)
   return darray_prim_prop_size_get(&scn->prim_props);
 }
 
-extern LOCAL_SYM const struct sdis_interface*
+extern LOCAL_SYM struct sdis_interface*
 scene_get_interface
   (const struct sdis_scene* scene,
    const unsigned iprim);
@@ -209,7 +221,7 @@ scene_get_medium
   (const struct sdis_scene* scene,
    const double position[],
    struct get_medium_info* info, /* May be NULL */
-   const struct sdis_medium** medium);
+   struct sdis_medium** medium);
 
 static INLINE void
 scene_get_enclosure_ids

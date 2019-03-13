@@ -28,7 +28,6 @@
  * Define the helper functions and the data types used by the scene
  * independently of its dimension, i.e. 2D or 3D.
  ******************************************************************************/
-
 /* Context used to wrap the user geometry and interfaces to Star-Enc */
 struct geometry {
   void (*indices)(const size_t iprim, size_t ids[], void*);
@@ -63,7 +62,7 @@ register_medium(struct sdis_scene* scn, struct sdis_medium* mdm)
   res_T res = RES_OK;
   ASSERT(scn && mdm);
 
-  /* Check that the front medium is already registered against the scene */
+  /* Check that the medium is already registered against the scene */
   id = medium_get_id(mdm);
   nmedia = darray_medium_size_get(&scn->media);
   if(id >= nmedia) {
@@ -406,7 +405,7 @@ XD(setup_properties)
 #endif
 
     /* Fetch the interface of the primitive */
-    interf(iprim, &itface, ctx);
+    interf(iprim_adjusted, &itface, ctx);
 
     /* Check that the interface is already registered against the scene */
     id = interface_get_id(itface);
@@ -559,7 +558,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   enc_data = htable_enclosure_find(&scn->enclosures, &header.enclosure_id);
   ASSERT(enc_data != NULL);
 
-  /* Setup the vertex data */
+    /* Setup the vertex data */
   vdata.usage = SXD_POSITION;
 #if DIM == 2
   vdata.type = S2D_FLOAT2;
@@ -581,7 +580,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
 #endif
   CALL(sXd(scene_create)(sXd_dev, &sXd_scn));
   CALL(sXd(scene_attach_shape)(sXd_scn, sXd_shape));
-  CALL(sXd(scene_view_create)(sXd_scn, SXD_SAMPLE, &enc_data->sXd(view)));
+  CALL(sXd(scene_view_create)(sXd_scn, SXD_SAMPLE|SXD_TRACE, &enc_data->sXd(view)));
 
   /* Compute the S/V ratio */
 #if DIM == 2
@@ -591,11 +590,12 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   CALL(s3d_scene_view_compute_area(enc_data->s3d_view, &S));
   CALL(s3d_scene_view_compute_volume(enc_data->s3d_view, &V));
 #endif
+  enc_data->V = V;
   enc_data->S_over_V = S / V;
   ASSERT(enc_data->S_over_V >= 0);
   #undef CALL
 
-  /* Set enclosure hc upper bound regardless of its media being a fluid */
+    /* Set enclosure hc upper bound regardless of its media being a fluid */
   p_ub = htable_d_find(&scn->tmp_hc_ub, &header.enclosure_id);
   ASSERT(p_ub);
   enc_data->hc_upper_bound = *p_ub;
@@ -612,6 +612,9 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
       (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
 #endif
   }
+
+  /* Setup the medium id of the enclosure */
+  SENCXD(enclosure_get_medium(enc, 0, &enc_data->medium_id));
 
 exit:
   enclosure_release(&enc_dummy);
@@ -643,7 +646,6 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
 #else
     struct senc_enclosure_header header;
 #endif
-    const struct sdis_medium* mdm;
 
     SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
@@ -659,51 +661,39 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     if(header.enclosed_media_count != 1 && !header.is_infinite) {
 #ifndef NDEBUG
       /* Dump the problematic enclosure. */
+      double tmp[DIM];
+      unsigned indices[DIM];
       unsigned i;
-#if DIM == 2
-#define VEC_STR "%g %g"
-#define VEC_SPLIT SPLIT2
-#define UVEC_STR "%u %u"
-#define UVEC_SPLIT(A) 1 + (A)[0], 1 + (A)[1]
-#define PRIM_COUNT segment_count
-#define GET_PRIM senc2d_enclosure_get_segment
-#else
-#define VEC_STR "%g %g %g"
-#define VEC_SPLIT SPLIT3
-#define UVEC_STR "%u %u %u"
-#define UVEC_SPLIT(A) 1 + (A)[0], 1 + (A)[1], 1 + (A)[2]
-#define PRIM_COUNT triangle_count
-#define GET_PRIM senc_enclosure_get_triangle
-#endif
+  #if DIM == 2
       FOR_EACH(i, 0, header.vertices_count) {
-        double tmp[3];
         SENCXD(enclosure_get_vertex(enc, i, tmp));
-        log_warn(scn->dev, "v "VEC_STR"\n", VEC_SPLIT(tmp));
+        log_warn(scn->dev, "v %g %g\n", SPLIT2(tmp));
       }
-      FOR_EACH(i, 0, header.PRIM_COUNT) {
-        unsigned indices[3];
-        ASSERT(GET_PRIM(enc, i, indices) == RES_OK);
-        log_warn(scn->dev, "f "UVEC_STR"\n", UVEC_SPLIT(indices));
+      FOR_EACH(i, 0, header.segment_count) {
+        ASSERT(senc2d_enclosure_get_segment(enc, i, indices) == RES_OK);
+        log_warn(scn->dev, "f %u %u\n", indices[0]+1, indices[1]+1);
       }
-#undef VEC_STR
-#undef VEC_SPLIT
-#undef UVEC_STR
-#undef UVEC_SPLIT
-#undef PRIM_COUNT
-#undef GET_PRIM
+  #else
+      FOR_EACH(i, 0, header.vertices_count) {
+        SENCXD(enclosure_get_vertex(enc, i, tmp));
+        log_warn(scn->dev, "v %g %g %g\n", SPLIT3(tmp));
+      }
+      FOR_EACH(i, 0, header.triangle_count) {
+        ASSERT(senc_enclosure_get_triangle(enc, i, indices) == RES_OK);
+        log_warn(scn->dev, "f %u %u %u\n",
+          indices[0]+1, indices[1]+1, indices[2]+1);
+      }
+  #endif
 #endif
       res = RES_BAD_ARG;
       goto error;
     }
 
     SENCXD(enclosure_get_medium(enc, 0, &enclosed_medium));
-    if(res != RES_OK) goto error;
     ASSERT(enclosed_medium < darray_medium_size_get(&scn->media));
-    mdm = darray_medium_cdata_get(&scn->media)[enclosed_medium];
-    ASSERT(mdm);
 
-    /* Silently discard the solid and infinite enclosures */
-    if(mdm->type == SDIS_FLUID && !header.is_infinite) {
+    /* Silently discard infinite enclosures */
+    if(!header.is_infinite) {
       res = XD(setup_enclosure_geometry)(scn, enc);
       if(res != RES_OK) goto error;
     }
@@ -780,10 +770,14 @@ XD(scene_create)
     log_err(dev, "%s: could not setup the enclosures.\n", FUNC_NAME);
     goto error;
   }
+#if DIM==2
+  scn->senc2d_descriptor = desc;
+#else
+  scn->senc_descriptor = desc;
+#endif
 
 exit:
   if(out_scn) *out_scn = scn;
-  if(desc) SENCXD(descriptor_ref_put(desc));
   return res;
 error:
   if(scn) {
@@ -799,11 +793,11 @@ error:
 static INLINE res_T
 XD(scene_get_medium)
   (const struct sdis_scene* scn,
-   const double pos[2],
+   const double pos[DIM],
    struct get_medium_info* info, /* May be NULL */
-   const struct sdis_medium** out_medium)
+   struct sdis_medium** out_medium)
 {
-  const struct sdis_medium* medium = NULL;
+  struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
   size_t nfailures = 0;
   const size_t max_failures = 10;
@@ -868,7 +862,8 @@ XD(scene_get_medium)
     fX(normalize)(N, hit.normal);
     cos_N_dir = fX(dot)(N, dir);
 
-    if(absf(cos_N_dir) > 1.e-1f) { /* Not roughly orthognonal */
+    /* Not too close and not roughly orthognonal */
+    if(hit.distance > 1.e-6 || absf(cos_N_dir) > 1.e-1f) {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium

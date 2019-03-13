@@ -16,6 +16,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(stardis C)
 enable_testing()
+cmake_policy(SET CMP0054 OLD) # Disable OpenMP CMake warning
 
 include(CMakeDependentOption)
 
@@ -41,14 +42,22 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
 include(rcmake)
 include(rcmake_runtime)
 
+include_directories(
+  ${Star2D_INCLUDE_DIR}
+  ${Star3D_INCLUDE_DIR}
+  ${StarSP_INCLUDE_DIR}
+  ${StarEnc_INCLUDE_DIR}
+  ${StarEnc2D_INCLUDE_DIR}
+  ${RSys_INCLUDE_DIR})
+
 rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 
 ################################################################################
 # Configure and define targets
 ################################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 6)
-set(VERSION_PATCH 1)
+set(VERSION_MINOR 7)
+set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
@@ -57,8 +66,11 @@ set(SDIS_FILES_SRC
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
+  sdis_green.c
+  sdis_heat_path.c
   sdis_interface.c
   sdis_medium.c
+  sdis_realisation.c
   sdis_scene.c
   sdis_solve.c)
 
@@ -69,11 +81,24 @@ set(SDIS_FILES_INC
   sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
+  sdis_green.h
+  sdis_heat_path.h
+  sdis_heat_path_boundary_Xd.h
+  sdis_heat_path_conductive_Xd.h
+  sdis_heat_path_convective_Xd.h
+  sdis_heat_path_radiative_Xd.h
   sdis_interface_c.h
   sdis_medium_c.h
+  sdis_realisation.h
+  sdis_realisation_Xd.h
   sdis_scene_c.h
   sdis_scene_Xd.h
-  sdis_solve_Xd.h)
+  sdis_solve_boundary_Xd.h
+  sdis_solve_medium_Xd.h
+  sdis_solve_probe_Xd.h
+  sdis_solve_probe_boundary_Xd.h
+  sdis_Xd_begin.h
+  sdis_Xd_end.h)
 
 set(SDIS_FILES_DOC COPYING README.md)
 
@@ -123,9 +148,13 @@ rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
 if(NOT NO_TEST)
   find_package(Star3DUT REQUIRED 0.2.0)
 
+  add_library(sdis-test-utils STATIC
+    ${SDIS_SOURCE_DIR}/test_sdis_utils.h
+    ${SDIS_SOURCE_DIR}/test_sdis_utils.c)
+
   function(build_test _name)
     add_executable(${_name} ${SDIS_SOURCE_DIR}/${_name}.c)
-    target_link_libraries(${_name} RSys sdis)
+    target_link_libraries(${_name} sdis-test-utils RSys sdis)
   endfunction()
 
   function(register_test _name)
@@ -159,21 +188,23 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe3_2d)
   new_test(test_sdis_solve_boundary)
   new_test(test_sdis_solve_boundary_flux)
+  new_test(test_sdis_solve_medium)
+  new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_volumic_power)
+  new_test(test_sdis_volumic_power4_2d)
 
   # Additionnal tests
   build_test(test_sdis_volumic_power2)
   build_test(test_sdis_volumic_power2_2d)
   build_test(test_sdis_volumic_power3_2d)
-  build_test(test_sdis_volumic_power4_2d)
 
   if(ALL_TESTS)
     add_test(test_sdis_volumic_power2    test_sdis_volumic_power2)
     add_test(test_sdis_volumic_power2_2d test_sdis_volumic_power2_2d)
     add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
-    add_test(test_sdis_volumic_power4_2d test_sdis_volumic_power4_2d)
   endif()
 
+  target_link_libraries(test_sdis_solve_medium Star3DUT)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
