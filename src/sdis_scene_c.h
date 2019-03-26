@@ -93,6 +93,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->S_over_V = 0;
   enc->V = 0;
   enc->hc_upper_bound = 0;
+  enc->medium_id = UINT_MAX;
 }
 
 static INLINE void
@@ -117,6 +118,7 @@ enclosure_copy(struct enclosure* dst, const struct enclosure* src)
   dst->S_over_V = src->S_over_V;
   dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
+  dst->medium_id = src->medium_id;
   return darray_uint_copy(&dst->local2global, &src->local2global);
 }
 
@@ -139,6 +141,7 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
   dst->S_over_V = src->S_over_V;
   dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
+  dst->medium_id = src->medium_id;
   return RES_OK;
 }
 
