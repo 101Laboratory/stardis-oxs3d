@@ -857,7 +857,7 @@ XD(scene_get_medium)
 
     /* The hits of all targeted positions on the current primitive are on
      * vertices. Challenge positions on another primitive. */
-    if(istep > nsteps) continue;
+    if(istep >= nsteps) continue;
 
     fX(normalize)(N, hit.normal);
     cos_N_dir = fX(dot)(N, dir);
