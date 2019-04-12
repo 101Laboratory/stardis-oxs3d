@@ -45,9 +45,9 @@ XD(compute_temperature)
   }* stack = NULL;
   size_t istack = 0;
 #endif
-  /* Maximum accepted #failures before stopping the realisation */
   struct sdis_heat_vertex* heat_vtx = NULL;
-  const size_t MAX_FAILS = 10;
+  /* Maximum accepted #failures before stopping the realisation */
+  const size_t MAX_FAILS = 1;
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
 

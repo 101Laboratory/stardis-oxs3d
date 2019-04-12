@@ -22,7 +22,7 @@
 #define Power 10000.0
 #define H 50.0
 #define LAMBDA 100.0
-#define DELTA (1.0/2.0)
+#define DELTA 0.4/*(1.0/2.0)*/
 #define N 10000
 
 /*

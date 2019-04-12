@@ -24,6 +24,130 @@
 
 #include "sdis_Xd_begin.h"
 
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+/* Sample the next direction to walk toward and compute the distance to travel.
+ * Return the sampled direction `dir0', the distance to travel along this
+ * direction, the hit `hit0' along `dir0' wrt to the returned distance, the
+ * direction `dir1' used to adjust the displacement distance, and the hit
+ * `hit1' along `dir1' used to adjust the displacement distance. */
+static float
+XD(sample_next_step)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const float pos[DIM],
+   const float delta_solid,
+   float dir0[DIM], /* Sampled direction */
+   float dir1[DIM], /* Direction used to adjust delta */
+   struct sXd(hit)* hit0, /* Hit along the sampled direction */
+   struct sXd(hit)* hit1) /* Hit used to adjust delta */
+{
+  float dirs[2*DIM][DIM];
+  float range[2];
+  float delta;
+  struct sXd(hit) hit= SXD_HIT_NULL;
+  int idir;
+  int idir1;
+  ASSERT(scn && rng && pos && delta_solid>0 && dir0 && dir1 && hit0 && hit1);
+
+  *hit0 = SXD_HIT_NULL;
+  *hit1 = SXD_HIT_NULL;
+
+#if DIM == 2
+  /* Sample a main direction around 2PI */
+  ssp_ran_circle_uniform_float(rng, dirs[0], NULL);
+
+  /* Compute in dirs[2] a direction orthogonal to dirs[0] */
+  dirs[2][0] = -dirs[0][1];
+  dirs[2][1] =  dirs[0][0];
+  ASSERT(f2_is_normalized(dirs[2]));
+  ASSERT(eq_epsf(f2_dot(dirs[0], dirs[2]), 0, 1.e-6f));
+
+  /* Negate the orthornormal frame */
+  f2_minus(dirs[1], dirs[0]);
+  f2_minus(dirs[3], dirs[2]);
+#else
+  {
+    float dir_abs[DIM];
+    int i, j, k;
+
+    /* Sample a main direction around 4PI */
+    ssp_ran_sphere_uniform_float(rng, dirs[0], NULL);
+
+    /* Find the index of the maximum coordinate of the sampled direction */
+    dir_abs[0] = absf(dirs[0][0]);
+    dir_abs[1] = absf(dirs[0][1]);
+    dir_abs[2] = absf(dirs[0][2]);
+    i =  dir_abs[0] > dir_abs[1]
+      ? (dir_abs[0] > dir_abs[2] ? 0 : 2)
+      : (dir_abs[1] > dir_abs[2] ? 1 : 2);
+    j = (i+1) % 3;
+    k = (j+1) % 3;
+
+    /* Compute a direction orthogonal to the sample dir */
+    dirs[2][i] = -(dirs[0][j]*dirs[0][j] + dirs[0][k]*dirs[0][k]) / dirs[0][i];
+    dirs[2][j] = dirs[0][j];
+    dirs[2][k] = dirs[0][k];
+    f3_normalize(dirs[2], dirs[2]);
+
+    /* Complete the orthonormal frame */
+    f3_cross(dirs[4], dirs[0], dirs[2]);
+    f3_normalize(dirs[4], dirs[4]);
+
+    /* Negate the orthonormal frame */
+    f3_minus(dirs[1], dirs[0]);
+    f3_minus(dirs[3], dirs[2]);
+    f3_minus(dirs[5], dirs[4]);
+
+    ASSERT(f3_is_normalized(dirs[2]));
+    ASSERT(f3_is_normalized(dirs[4]));
+    ASSERT(eq_epsf(f3_dot(dirs[0], dirs[2]), 0, 1.e-6f));
+    ASSERT(eq_epsf(f3_dot(dirs[0], dirs[4]), 0, 1.e-6f));
+    ASSERT(eq_epsf(f3_dot(dirs[2], dirs[4]), 0, 1.e-6f));
+  }
+#endif
+
+  /* Use the previously computed orthornormal frame to estimate the minimum
+   * distance from `pos' to the scene boundary */
+  range[0] = 0.f;
+  range[1] = delta_solid*RAY_RANGE_MAX_SCALE;
+  delta = FLT_MAX;
+  idir1 = 0;
+  FOR_EACH(idir, 0, 2*DIM) {
+    SXD(scene_view_trace_ray(scn->sXd(view), pos, dirs[idir], range, NULL, &hit));
+    if(idir == 0) *hit0 = hit;
+    if(hit.distance < delta) {
+      delta = hit.distance;
+      *hit1 = hit;
+      idir1 = idir;
+    }
+  }
+
+  if(delta == FLT_MAX) {
+    /* Hit nothing along all tested directions. Set delta to delta_solid. */
+    delta = delta_solid;
+  } else if
+  (  delta != hit0->distance
+  && eq_eps(hit0->distance, delta, delta_solid*(RAY_RANGE_MAX_SCALE-1))) {
+    /* Set delta to the main hit distance if it is roughly equal to it in order
+     * to avoid numerical issues on moving along the main direction. Use the
+     * RAY_RANGE_MAX_SCALE factor to define the `epsilon' used by this
+     * comparison */
+    delta = hit0->distance;
+    *hit1 = *hit0;
+    idir1 = 0;
+  }
+
+  fX(set)(dir0, dirs[0]);
+  fX(set)(dir1, dirs[idir1]);
+
+  return delta;
+}
+
+/*******************************************************************************
+ * Local function
+ ******************************************************************************/
 res_T
 XD(conductive_path)
   (struct sdis_scene* scn,
@@ -70,7 +194,6 @@ XD(conductive_path)
     double power_factor = 0;
     double power;
     float delta, delta_solid; /* Random walk numerical parameter */
-    float range[2];
     float dir0[DIM], dir1[DIM];
     float org[DIM];
 
@@ -109,39 +232,19 @@ XD(conductive_path)
       goto error;
     }
 
-#if DIM == 2
-    /* Sample a direction around 2PI */
-    ssp_ran_circle_uniform_float(rng, dir0, NULL);
-#else
-    /* Sample a direction around 4PI */
-    ssp_ran_sphere_uniform_float(rng, dir0, NULL);
-#endif
-
-    /* Trace a ray along the sampled direction and its opposite to check if a
-     * surface is hit in [0, delta_solid]. */
     fX_set_dX(org, rwalk->vtx.P);
-    fX(minus)(dir1, dir0);
-    hit0 = hit1 = SXD_HIT_NULL;
-    range[0] = 0.f, range[1] = delta_solid*RAY_RANGE_MAX_SCALE;
-    SXD(scene_view_trace_ray(scn->sXd(view), org, dir0, range, NULL, &hit0));
-    SXD(scene_view_trace_ray(scn->sXd(view), org, dir1, range, NULL, &hit1));
 
-    if(SXD_HIT_NONE(&hit0) && SXD_HIT_NONE(&hit1)) {
-      /* Hit nothing: move along dir0 of the original delta */
-      delta = delta_solid;
+    /* Sample the direction to walk toward and compute the distance to travel */
+    delta = XD(sample_next_step)
+      (scn, rng, org, delta_solid, dir0, dir1, &hit0, &hit1);
 
-      /* Add the volumic power density to the measured temperature */
-      if(power != SDIS_VOLUMIC_POWER_NONE) {
+    /* Add the volumic power density to the measured temperature */
+    if(power != SDIS_VOLUMIC_POWER_NONE) {
+      if((S3D_HIT_NONE(&hit0) && S3D_HIT_NONE(&hit1))) { /* Hit nothing */
         const double delta_in_meter = delta * fp_to_meter;
         power_factor = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
         T->value += power * power_factor;
-      }
-    } else {
-      /* Hit something: move along dir0 of the minimum hit distance */
-      delta = MMIN(hit0.distance, hit1.distance);
-
-      /* Add the volumic power density to the measured temperature */
-      if(power != SDIS_VOLUMIC_POWER_NONE) {
+      } else {
         const double delta_s_adjusted = delta_solid * RAY_RANGE_MAX_SCALE;
         const double delta_s_in_meter = delta_solid * fp_to_meter;
         double h;
@@ -226,10 +329,8 @@ XD(conductive_path)
       }
     }
 
-    /* Define if the random walk hits something along dir0. Multiply delta by
-     * the empirical ray range scale factor to ensure that once moved, the
-     * random walk does not lie in the uncertainty zone near the geometry */
-    if(hit0.distance > delta * RAY_RANGE_MAX_SCALE) {
+    /* Define if the random walk hits something along dir0 */
+    if(hit0.distance > delta) {
       rwalk->hit = SXD_HIT_NULL;
       rwalk->hit_side = SDIS_SIDE_NULL__;
     } else {

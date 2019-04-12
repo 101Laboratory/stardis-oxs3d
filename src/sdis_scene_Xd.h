@@ -850,8 +850,8 @@ XD(scene_get_medium)
           goto error;
         }
       }
-    /* Discard the hit if it is on a vertex, i.e. between 2 segments,  and
-     * target a new position onto the current primitive */
+    /* Discard the hit if it is on a vertex/edge, and target a new position
+     * onto the current primitive */
     } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit))
          && ++istep < nsteps);
 
@@ -863,7 +863,7 @@ XD(scene_get_medium)
     cos_N_dir = fX(dot)(N, dir);
 
     /* Not too close and not roughly orthognonal */
-    if(hit.distance > 1.e-6 || absf(cos_N_dir) > 1.e-1f) {
+    if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-1f) {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
