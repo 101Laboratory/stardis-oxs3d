@@ -341,20 +341,6 @@ XD(conductive_path)
 
     ++istep;
 
-#if 0
-   {
-#define Tf 100.0
-#define Power 10000.0
-#define H 50.0
-#define LAMBDA 100.0
-#define DELTA 0.4/*(1.0/2.0)*/
-
-      T->value += -Power / (2*LAMBDA) * rwalk->vtx.P[1]*rwalk->vtx.P[1] + Tf + Power/(2*H) + Power/(8*LAMBDA);
-      T->done = 1;
-      break;
-    }
-#endif
-
   /* Keep going while the solid random walk does not hit an interface */
   } while(SXD_HIT_NONE(&rwalk->hit));
 
