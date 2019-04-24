@@ -194,7 +194,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_medium)
   new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_volumic_power)
-  new_test(test_sdis_volumic_power4_2d)
+  new_test(test_sdis_volumic_power4)
 
   # Additionnal tests
   build_test(test_sdis_volumic_power2)
