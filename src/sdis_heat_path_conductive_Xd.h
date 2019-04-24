@@ -59,15 +59,10 @@ XD(sample_next_step)
   ssp_ran_circle_uniform_float(rng, dirs[0], NULL);
 
   /* Compute in dirs[2] a direction orthogonal to dirs[0] */
-#if 0
-  dirs[2][0] =  dirs[0][0];
-  dirs[2][1] =  dirs[0][1];
-#else
   dirs[2][0] = -dirs[0][1];
   dirs[2][1] =  dirs[0][0];
   ASSERT(f2_is_normalized(dirs[2]));
   ASSERT(eq_epsf(f2_dot(dirs[0], dirs[2]), 0, 1.e-6f));
-#endif
 
   /* Negate the orthornormal frame */
   f2_minus(dirs[1], dirs[0]);
