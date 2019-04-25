@@ -20,7 +20,9 @@
 #include <rsys/math.h>
 
 #define Tfluid 350.0 /* Temperature of the fluid in Kelvin */
+#define LAMBDA 10.0 /* Thermal conductivity */
 #define Hcoef 1.0 /* Convection coefficient */
+#define Pw 10000.0 /* Volumetric power */
 #define Nreals 10000 /* #realisations */
 #define UNKNOWN -1
 
@@ -68,6 +70,36 @@ trilinear_temperature(const double pos[3])
   return a*x + b*y + c*z;
 }
 
+static double
+volumetric_temperature(const double pos[3], const double upper[3])
+{
+  const double beta = - 1.0 / 3.0 * Pw / (2*LAMBDA);
+  const double temp =
+    beta * (pos[0]*pos[0] - upper[0]*upper[0])
+  + beta * (pos[1]*pos[1] - upper[1]*upper[1])
+  + beta * (pos[2]*pos[2] - upper[2]*upper[2]);
+  CHK(temp > 0);
+  return temp;
+}
+
+static void
+print_estimation_result
+  (const struct sdis_estimator* estimator, const double Tref)
+{
+  struct sdis_mc T = SDIS_MC_NULL;
+  size_t nreals;
+  size_t nfails;
+
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  CHK(nfails < Nreals * 0.0001);
+  printf("T = %g ~ %g +/- %g [%g, %g]; #failures = %lu / %lu\n",
+    Tref, T.E, T.SE, T.E - 3*T.SE, T.E + 3*T.SE,
+    (unsigned long)nfails, (unsigned long)Nreals);
+  CHK(eq_eps(T.E, Tref, T.SE*3));
+}
+
 /*******************************************************************************
  * Geometry
  ******************************************************************************/
@@ -107,7 +139,14 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 /*******************************************************************************
  * Interface
  ******************************************************************************/
+enum profile {
+  PROFILE_UNKNOWN,
+  PROFILE_TRILINEAR,
+  PROFILE_VOLUMETRIC_POWER
+};
 struct interf {
+  enum profile profile;
+  double upper[3]; /* Upper bound of the scene */
   double h;
 };
 
@@ -116,9 +155,22 @@ interface_get_temperature
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   const struct interf* interf;
+  double temperature;
   CHK(data != NULL && frag != NULL);
   interf = sdis_data_cget(data);
-  return interf->h > 0 ? UNKNOWN : trilinear_temperature(frag->P);
+  switch(interf->profile) {
+    case PROFILE_UNKNOWN:
+      temperature = UNKNOWN;
+      break;
+    case PROFILE_VOLUMETRIC_POWER:
+      temperature = volumetric_temperature(frag->P, interf->upper);
+      break;
+    case PROFILE_TRILINEAR:
+      temperature = trilinear_temperature(frag->P);
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return temperature;
 }
 
 static double
@@ -150,6 +202,7 @@ struct solid {
   double lambda;
   double rho;
   double temperature;
+  double power;
 };
 
 static double
@@ -192,6 +245,14 @@ solid_get_temperature
   return ((const struct solid*)sdis_data_cget(data))->temperature;
 }
 
+static double
+solid_get_volumetric_power
+  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
+{
+  CHK(data != NULL && vtx != NULL);
+  return ((const struct solid*)sdis_data_cget(data))->power;
+}
+
 /*******************************************************************************
  * Main function
  ******************************************************************************/
@@ -202,7 +263,6 @@ main(int argc, char** argv)
   struct s3dut_super_formula f0 = S3DUT_SUPER_FORMULA_NULL;
   struct s3dut_super_formula f1 = S3DUT_SUPER_FORMULA_NULL;
   struct s3dut_mesh* msh = NULL;
-  struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
@@ -221,9 +281,6 @@ main(int argc, char** argv)
   double upper[3];
   double size[3];
   const double time[2] = {DBL_MAX, DBL_MAX};
-  double ref;
-  size_t nreals;
-  size_t nfails;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -239,6 +296,7 @@ main(int argc, char** argv)
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
+  solid_shader.volumic_power = solid_get_volumetric_power;
 
   /* Create the solid medium */
   OK(sdis_data_create
@@ -249,6 +307,7 @@ main(int argc, char** argv)
   solid_param->cp = 1.0;
   solid_param->rho = 1.0;
   solid_param->temperature = -1;
+  solid_param->power = SDIS_VOLUMIC_POWER_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
 
@@ -283,39 +342,38 @@ main(int argc, char** argv)
   size[2] = upper[2] - lower[2];
   solid_param->delta = MMIN(MMIN(size[0], size[1]), size[2]) / 20.0;
 
-  /* Launch probe estimation */
+  interf_param->upper[0] = upper[0];
+  interf_param->upper[1] = upper[1];
+  interf_param->upper[2] = upper[2];
+  interf_param->h = 1;
+
   probe[0] = 0;
   probe[1] = 0;
   probe[2] = 0;
-  interf_param->h = 0;
+
+  /* Launch probe estimation with trilinear profile set at interfaces */
+  interf_param->profile = PROFILE_TRILINEAR;
   OK(sdis_solve_probe(scn, Nreals, probe, time, 1.0, -1, 0,
     SDIS_HEAT_PATH_FAILED, &estimator));
-
-  /* Print estimation results */
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  print_estimation_result(estimator, trilinear_temperature(probe));
   OK(sdis_estimator_ref_put(estimator));
-  CHK(nfails < Nreals * 0.0001);
-  ref = trilinear_temperature(probe);
-  printf("T = %g ~ %g +/- %g; #failures = %lu / %lu\n",
-    ref, T.E, T.SE, (unsigned long)nfails, (unsigned long)Nreals);
-  CHK(eq_eps(T.E, ref, T.SE*3));
+
+  /* Launch probe estimation with volumetric power profile set at interfaces */
+  interf_param->profile = PROFILE_VOLUMETRIC_POWER;
+  solid_param->power = Pw;
+  OK(sdis_solve_probe(scn, Nreals, probe, time, 1.0, -1, 0,
+    SDIS_HEAT_PATH_FAILED, &estimator));
+  print_estimation_result(estimator, volumetric_temperature(probe, upper));
+  solid_param->power = SDIS_VOLUMIC_POWER_NONE;
+  OK(sdis_estimator_ref_put(estimator));
 
   /* Launch medium integration */
-  interf_param->h = 1; /* H delta T */
+  interf_param->profile = PROFILE_UNKNOWN;
   OK(sdis_solve_medium(scn, Nreals, solid, time, 1.0, -1, 0,
     SDIS_HEAT_PATH_FAILED, &estimator));
+  print_estimation_result(estimator, Tfluid);
   /*dump_heat_paths(stdout, estimator);*/
-
-  /* Print estimation results */
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_ref_put(estimator));
-  printf("T ~ %g +/- %g; #failures = %lu / %lu\n", T.E, T.SE,
-    (unsigned long)nfails, (unsigned long)Nreals);
-  CHK(nfails < Nreals * 0.001);
 
   /* Release */
   OK(s3dut_mesh_ref_put(msh));
