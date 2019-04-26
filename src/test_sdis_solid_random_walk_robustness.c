@@ -93,7 +93,7 @@ print_estimation_result
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  CHK(nfails < Nreals * 0.0001);
+  CHK(nfails <= Nreals * 0.0005);
   printf("T = %g ~ %g +/- %g [%g, %g]; #failures = %lu / %lu\n",
     Tref, T.E, T.SE, T.E - 3*T.SE, T.E + 3*T.SE,
     (unsigned long)nfails, (unsigned long)Nreals);
