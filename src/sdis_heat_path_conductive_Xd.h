@@ -128,12 +128,15 @@ XD(sample_next_step)
     /* Hit nothing along all tested directions. Set delta to delta_solid. */
     delta = delta_solid;
   } else if
-  (  delta != hit0->distance
-  && eq_eps(hit0->distance, delta, delta_solid*(RAY_RANGE_MAX_SCALE-1))) {
+  (  !SXD_HIT_NONE(hit0)
+  && delta != hit0->distance
+  && (  eq_eps(hit0->distance, delta, delta_solid*(RAY_RANGE_MAX_SCALE-1))
+     || hit0->distance < delta_solid * 0.01)) {
     /* Set delta to the main hit distance if it is roughly equal to it in order
      * to avoid numerical issues on moving along the main direction. Use the
      * RAY_RANGE_MAX_SCALE factor to define the `epsilon' used by this
-     * comparison */
+     * comparison. In addition force delta to the main hit distance if this
+     * distance is quite small regarding the original delta. */
     delta = hit0->distance;
     *hit1 = *hit0;
     idir1 = 0;
