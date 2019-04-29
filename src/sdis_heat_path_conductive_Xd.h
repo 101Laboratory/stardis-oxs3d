@@ -131,7 +131,7 @@ XD(sample_next_step)
   (  !SXD_HIT_NONE(hit0)
   && delta != hit0->distance
   && (  eq_eps(hit0->distance, delta, delta_solid*(RAY_RANGE_MAX_SCALE-1))
-     || hit0->distance < delta_solid * 0.01)) {
+     || hit0->distance < delta_solid * 0.1)) {
     /* Set delta to the main hit distance if it is roughly equal to it in order
      * to avoid numerical issues on moving along the main direction. Use the
      * RAY_RANGE_MAX_SCALE factor to define the `epsilon' used by this
