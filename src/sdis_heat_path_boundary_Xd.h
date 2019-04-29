@@ -151,9 +151,9 @@ XD(solid_solid_boundary_path)
   /* Note that reinjection distance is *FIXED*. It MUST ensure that the orthogonal
    * distance from the boundary to the point to challenge is equal to delta. */
   delta_front = solid_get_delta(solid_front, &rwalk->vtx);
-  delta_back  = solid_get_delta(solid_back, &rwalk->vtx);
+  delta_back = solid_get_delta(solid_back, &rwalk->vtx);
   delta_boundary_front = delta_front*sqrt(DIM);
-  delta_boundary_back  = delta_back *sqrt(DIM);
+  delta_boundary_back = delta_back *sqrt(DIM);
 
   /* Sample a reinjection direction and reflect it around the normal. Then
    * reflect them on the back side of the interface. */
@@ -174,7 +174,7 @@ XD(solid_solid_boundary_path)
 
   /* Adjust the reinjection distance */
   reinject_dst_front = MMIN(MMIN(delta_boundary_front, hit0.distance), hit2.distance);
-  reinject_dst_back  = MMIN(MMIN(delta_boundary_back,  hit1.distance), hit3.distance);
+  reinject_dst_back = MMIN(MMIN(delta_boundary_back,  hit1.distance), hit3.distance);
 
   /* Define the reinjection side. Note that the proba should be :
    *    Lf/Df' / (Lf/Df' + Lb/Db')
@@ -203,25 +203,43 @@ XD(solid_solid_boundary_path)
     delta_boundary = delta_boundary_back;
   }
 
-  /* Switch in 1D reinjection scheme */
+  /* Reinjection distance is too small. Switch in 1D reinjection scheme to
+   * avoid numerical inaccuracies */
   if(reinject_dst < delta_boundary * REINJECT_DST_MIN_SCALE) {
-    if(dir == dir0) {
-      fX(set)(dir, rwalk->hit.normal);
-    } else {
-      fX(minus)(dir, rwalk->hit.normal);
+    /* The boundary normal is normalized at the beginning of a `boundary path' */
+    ASSERT(fX(is_normalized)(rwalk->hit.normal));
+
+    /* Reinject along the normal */
+    fX(set)  (dir0, rwalk->hit.normal);
+    fX(minus)(dir1, rwalk->hit.normal);
+    delta_boundary_front = delta_front;
+    delta_boundary_back  = delta_back;
+
+    /* Adjust the reinjection distance of the random walk wrt scene geometry */
+    f2(range0, 0, (float)delta_boundary_front*RAY_RANGE_MAX_SCALE);
+    f2(range1, 0, (float)delta_boundary_back *RAY_RANGE_MAX_SCALE);
+    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range0, &rwalk->hit, &hit0));
+    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir1, range1, &rwalk->hit, &hit1));
+    reinject_dst_front = MMIN(delta_boundary_front, hit0.distance);
+    reinject_dst_back  = MMIN(delta_boundary_back,  hit1.distance);
+
+    /* Define the reinjection side */
+    r = ssp_rng_canonical(rng);
+    proba = (lambda_front / reinject_dst_front)
+      / (lambda_front/reinject_dst_front + lambda_back/reinject_dst_back);
+    if(r < proba) { /* Reinjection in front */
+      dir = dir0;
+      hit = &hit0;
+      mdm = solid_front;
+      reinject_dst = reinject_dst_front;
+    } else { /* Reinjection in back */
+      dir = dir1;
+      hit = &hit1;
+      mdm = solid_back;
+      reinject_dst = reinject_dst_back;
     }
 
-    f2(range0, 0, (float)delta_boundary*RAY_RANGE_MAX_SCALE);
-    SXD(scene_view_trace_ray(scn->sXd(view), pos, dir, range0, &rwalk->hit, hit));
-    reinject_dst = MMIN(delta_boundary, hit->distance),
-    dim = 1;
-
-    /* Hit something in 1D. Arbitrarily move the random walk to 0.5 of the hit
-     * distance */
-    if(!SXD_HIT_NONE(hit)) {
-      reinject_dst *= 0.5;
-      *hit = SXD_HIT_NULL;
-    }
+    /* TODO handle infinite bounces, i.e. parallel adiabatic surfaces */
   }
 
   /* Handle the volumic power */
@@ -238,7 +256,8 @@ XD(solid_solid_boundary_path)
     }
   }
 
-  /* Reinject */
+  /* Reinject. If the reinjection move the point too close of a boundary,
+   * assume that the zone is isotherm and move to the boundary. */
   XD(move_pos)(rwalk->vtx.P, dir, (float)reinject_dst);
   if(eq_epsf(hit->distance, (float)reinject_dst, 1.e-4f)) {
     T->func = XD(boundary_path);
@@ -356,15 +375,10 @@ XD(solid_fluid_boundary_path)
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
     delta_boundary = MMIN(hit0.distance, delta);
 
-    /* Hit something in 1D. Arbitrarily move the random walk to 0.5 of the hit
-     * distance in order to avoid infinite bounces for parallel plane */
-    if(!SXD_HIT_NONE(&hit0)) {
-      delta_boundary *= 0.5;
-      hit0 = SXD_HIT_NULL;
-    }
-
     delta = delta_boundary;
     dim = 1;
+
+    /* TODO handle infinite bounces, i.e. parallel adiabatic surfaces */
   }
 
   /* Fetch the boundary properties */
@@ -403,7 +417,8 @@ XD(solid_fluid_boundary_path)
       }
     }
 
-    /* Reinject */
+    /* Reinject. If the reinjection move the point too close of a boundary,
+     * assume that the zone is isotherm and move to the boundary. */
     XD(move_pos)(rwalk->vtx.P, dir0, (float)delta_boundary);
     if(eq_epsf(hit0.distance, (float)delta_boundary, 1.e-4f)) {
       T->func = XD(boundary_path);
@@ -507,15 +522,10 @@ XD(solid_boundary_with_flux_path)
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dir0, range, &rwalk->hit, &hit0));
     delta_boundary = MMIN(hit0.distance, delta_boundary);
 
-    /* Hit something in 1D. Arbitrarily move the random walk to 0.5 of the hit
-     * distance in order to avoid infinite bounces for parallel plane */
-    if(!SXD_HIT_NONE(&hit0)) {
-      delta_boundary *= 0.5;
-      hit0 = SXD_HIT_NULL;
-    }
-
     delta = delta_boundary;
     dim = 1;
+
+    /* TODO handle infinite bounces, i.e. parallel adiabatic surfaces */
   }
 
   /* Handle the flux */
@@ -539,7 +549,8 @@ XD(solid_boundary_with_flux_path)
     }
   }
 
-  /* Reinject into the solid */
+  /* Reinject. If the reinjection move the point too close of a boundary,
+   * assume that the zone is isotherm and move to the boundary. */
   XD(move_pos)(rwalk->vtx.P, dir0, (float)delta_boundary);
   if(eq_epsf(hit0.distance, (float)delta_boundary, 1.e-4f)) {
     T->func = XD(boundary_path);
