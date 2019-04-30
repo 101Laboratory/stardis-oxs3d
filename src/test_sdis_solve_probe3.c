@@ -190,7 +190,7 @@ main(int argc, char** argv)
   double pos[3];
   double time_range[2];
   double ref;
-  const size_t N = 100000;
+  const size_t N = 10000;
   size_t ntris;
   size_t nverts;
   size_t nreals;
