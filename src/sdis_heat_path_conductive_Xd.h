@@ -76,6 +76,9 @@ XD(sample_next_step)
     ssp_ran_sphere_uniform_float(rng, dirs[0], NULL);
 
     /* Find the index of the maximum coordinate of the sampled direction */
+#if 0
+    f3_minus(dirs[1], dirs[0]);
+#else
     dir_abs[0] = absf(dirs[0][0]);
     dir_abs[1] = absf(dirs[0][1]);
     dir_abs[2] = absf(dirs[0][2]);
@@ -105,6 +108,7 @@ XD(sample_next_step)
     ASSERT(eq_epsf(f3_dot(dirs[0], dirs[2]), 0, 1.e-6f));
     ASSERT(eq_epsf(f3_dot(dirs[0], dirs[4]), 0, 1.e-6f));
     ASSERT(eq_epsf(f3_dot(dirs[2], dirs[4]), 0, 1.e-6f));
+#endif
   }
 #endif
 
@@ -114,7 +118,7 @@ XD(sample_next_step)
   range[1] = delta_solid*RAY_RANGE_MAX_SCALE;
   delta = FLT_MAX;
   idir1 = 0;
-  FOR_EACH(idir, 0, 2*DIM) {
+  FOR_EACH(idir, 0, 2) {
     SXD(scene_view_trace_ray(scn->sXd(view), pos, dirs[idir], range, NULL, &hit));
     if(idir == 0) *hit0 = hit;
     if(hit.distance < delta) {
