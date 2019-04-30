@@ -286,9 +286,55 @@ XD(conductive_path)
 
     /* Add the volumic power density to the measured temperature */
     if(power != SDIS_VOLUMIC_POWER_NONE) {
-      const double delta_in_meter = delta * fp_to_meter;
-      power_factor = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
-      T->value += power * power_factor;
+      if((S3D_HIT_NONE(&hit0) && S3D_HIT_NONE(&hit1))) { /* Hit nothing */
+        const double delta_in_meter = delta * fp_to_meter;
+        power_factor = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
+        T->value += power * power_factor;
+      } else {
+        const double delta_s_adjusted = delta_solid * RAY_RANGE_MAX_SCALE;
+        const double delta_s_in_meter = delta_solid * fp_to_meter;
+        double h;
+        double h_in_meter;
+        double cos_U_N;
+        float N[DIM];
+
+        if(delta == hit0.distance) {
+          fX(normalize)(N, hit0.normal);
+          cos_U_N = fX(dot)(dir0, N);
+        } else {
+          ASSERT(delta == hit1.distance);
+          fX(normalize)(N, hit1.normal);
+          cos_U_N = fX(dot)(dir1, N);
+        }
+
+        h = delta * fabs(cos_U_N);
+        h_in_meter = h * fp_to_meter;
+
+        /* The regular power term at wall */
+        tmp = h_in_meter * h_in_meter / (2.0 * lambda);
+
+        /* Add the power corrective term. Be careful to use the adjusted
+         * delta_solid to correctly handle the RAY_RANGE_MAX_SCALE factor in
+         * the computation of the limit angle. But keep going with the
+         * unmodified delta_solid in the corrective term since it was the one
+         * that was "wrongly" used in the previous step and that must be
+         * corrected. */
+        if(h == delta_s_adjusted) {
+          tmp += -(delta_s_in_meter * delta_s_in_meter)/(2.0*DIM*lambda);
+        } else if(h < delta_s_adjusted) {
+          const double sin_a = h / delta_s_adjusted;
+#if DIM==2
+          /* tmp1 = sin(2a) / (PI - 2*a) */
+          const double tmp1 = sin_a * sqrt(1 - sin_a*sin_a)/acos(sin_a);
+          tmp += -(delta_s_in_meter * delta_s_in_meter)/(4.0*lambda) * tmp1;
+#else
+          const double tmp1 = (sin_a*sin_a*sin_a - sin_a)/ (1-sin_a);
+          tmp += (delta_s_in_meter * delta_s_in_meter)/(6.0*lambda) * tmp1;
+#endif
+        }
+        power_factor = tmp;
+        T->value += power * power_factor;
+      }
     }
 
     /* Register the power term for the green function. Delay its registration
