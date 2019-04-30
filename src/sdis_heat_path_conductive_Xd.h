@@ -43,12 +43,10 @@ XD(sample_next_step)
    struct sXd(hit)* hit0, /* Hit along the sampled direction */
    struct sXd(hit)* hit1) /* Hit used to adjust delta */
 {
-  float dirs[2*DIM][DIM];
+  struct sXd(hit) hits[2];
+  float dirs[2][DIM];
   float range[2];
   float delta;
-  struct sXd(hit) hit= SXD_HIT_NULL;
-  int idir;
-  int idir1;
   ASSERT(scn && rng && pos && delta_solid>0 && dir0 && dir1 && hit0 && hit1);
 
   *hit0 = SXD_HIT_NULL;
@@ -57,99 +55,140 @@ XD(sample_next_step)
 #if DIM == 2
   /* Sample a main direction around 2PI */
   ssp_ran_circle_uniform_float(rng, dirs[0], NULL);
-
-  /* Compute in dirs[2] a direction orthogonal to dirs[0] */
-  dirs[2][0] = -dirs[0][1];
-  dirs[2][1] =  dirs[0][0];
-  ASSERT(f2_is_normalized(dirs[2]));
-  ASSERT(eq_epsf(f2_dot(dirs[0], dirs[2]), 0, 1.e-6f));
-
-  /* Negate the orthornormal frame */
-  f2_minus(dirs[1], dirs[0]);
-  f2_minus(dirs[3], dirs[2]);
 #else
-  {
-    float dir_abs[DIM];
-    int i, j, k;
-
-    /* Sample a main direction around 4PI */
-    ssp_ran_sphere_uniform_float(rng, dirs[0], NULL);
-
-    /* Find the index of the maximum coordinate of the sampled direction */
-#if 0
-    f3_minus(dirs[1], dirs[0]);
-#else
-    dir_abs[0] = absf(dirs[0][0]);
-    dir_abs[1] = absf(dirs[0][1]);
-    dir_abs[2] = absf(dirs[0][2]);
-    i =  dir_abs[0] > dir_abs[1]
-      ? (dir_abs[0] > dir_abs[2] ? 0 : 2)
-      : (dir_abs[1] > dir_abs[2] ? 1 : 2);
-    j = (i+1) % 3;
-    k = (j+1) % 3;
-
-    /* Compute a direction orthogonal to the sample dir */
-    dirs[2][i] = -(dirs[0][j]*dirs[0][j] + dirs[0][k]*dirs[0][k]) / dirs[0][i];
-    dirs[2][j] = dirs[0][j];
-    dirs[2][k] = dirs[0][k];
-    f3_normalize(dirs[2], dirs[2]);
-
-    /* Complete the orthonormal frame */
-    f3_cross(dirs[4], dirs[0], dirs[2]);
-    f3_normalize(dirs[4], dirs[4]);
-
-    /* Negate the orthonormal frame */
-    f3_minus(dirs[1], dirs[0]);
-    f3_minus(dirs[3], dirs[2]);
-    f3_minus(dirs[5], dirs[4]);
-
-    ASSERT(f3_is_normalized(dirs[2]));
-    ASSERT(f3_is_normalized(dirs[4]));
-    ASSERT(eq_epsf(f3_dot(dirs[0], dirs[2]), 0, 1.e-6f));
-    ASSERT(eq_epsf(f3_dot(dirs[0], dirs[4]), 0, 1.e-6f));
-    ASSERT(eq_epsf(f3_dot(dirs[2], dirs[4]), 0, 1.e-6f));
+  /* Sample a main direction around 4PI */
+  ssp_ran_sphere_uniform_float(rng, dirs[0], NULL);
 #endif
+
+  /* Negate the sampled dir */
+  fX(minus)(dirs[1], dirs[0]);
+
+  /* Use the previously sampled direction to estimate the minimum distance from
+   * `pos' to the scene boundary */
+  f2(range, 0.f, delta_solid*RAY_RANGE_MAX_SCALE);
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dirs[0], range, NULL, &hits[0]));
+  SXD(scene_view_trace_ray(scn->sXd(view), pos, dirs[1], range, NULL, &hits[1]));
+  if(SXD_HIT_NONE(&hits[0]) && SXD_HIT_NONE(&hits[1])) {
+    delta = delta_solid;
+  } else {
+    delta = MMIN(hits[0].distance, hits[1].distance);
   }
-#endif
 
-  /* Use the previously computed orthornormal frame to estimate the minimum
-   * distance from `pos' to the scene boundary */
-  range[0] = 0.f;
-  range[1] = delta_solid*RAY_RANGE_MAX_SCALE;
-  delta = FLT_MAX;
-  idir1 = 0;
-  FOR_EACH(idir, 0, 2) {
-    SXD(scene_view_trace_ray(scn->sXd(view), pos, dirs[idir], range, NULL, &hit));
-    if(idir == 0) *hit0 = hit;
-    if(hit.distance < delta) {
-      delta = hit.distance;
-      *hit1 = hit;
-      idir1 = idir;
+  if(!SXD_HIT_NONE(&hits[0])
+  && delta != hits[0].distance
+  && eq_eps(hits[0].distance, delta, delta_solid*0.1)) {
+    /* Set delta to the main hit distance if it is roughly equal to it in order
+     * to avoid numerical issues on moving along the main direction. */
+    delta = hits[0].distance;
+  }
+
+  /* Setup outputs */
+  if(delta <= delta_solid*0.1 && hits[1].distance == delta) {
+    /* Snap the random walk to the boundary if delta is too small */
+    fX(set)(dir0, dirs[1]);
+    *hit0 = hits[1];
+    fX(splat)(dir1, (float)INF);
+    *hit1 = SXD_HIT_NULL;
+  } else {
+    fX(set)(dir0, dirs[0]);
+    *hit0 = hits[0];
+    if(delta == hits[0].distance) {
+      fX(set)(dir1, dirs[0]);
+      *hit1 = hits[0];
+    } else if(delta == hits[1].distance) {
+      fX(set)(dir1, dirs[1]);
+      *hit1 = hits[1];
+    } else {
+      fX(splat)(dir1, 0);
+      *hit1 = SXD_HIT_NULL;
     }
   }
 
-  if(delta == FLT_MAX) {
-    /* Hit nothing along all tested directions. Set delta to delta_solid. */
-    delta = delta_solid;
-  } else if
-  (  !SXD_HIT_NONE(hit0)
-  && delta != hit0->distance
-  && (  eq_eps(hit0->distance, delta, delta_solid*(RAY_RANGE_MAX_SCALE-1))
-     || hit0->distance < delta_solid * 0.1)) {
-    /* Set delta to the main hit distance if it is roughly equal to it in order
-     * to avoid numerical issues on moving along the main direction. Use the
-     * RAY_RANGE_MAX_SCALE factor to define the `epsilon' used by this
-     * comparison. In addition force delta to the main hit distance if this
-     * distance is quite small regarding the original delta. */
-    delta = hit0->distance;
-    *hit1 = *hit0;
-    idir1 = 0;
+  return delta;
+}
+
+/* Sample the next direction to walk toward and compute the distance to travel.
+ * If the targeted position does not lie inside the current medium, reject it
+ * and sample a new next step. */
+static res_T
+XD(sample_next_step_robust)
+  (struct sdis_scene* scn,
+   struct sdis_medium* current_mdm,
+   struct ssp_rng* rng,
+   const double pos[DIM],
+   const float delta_solid,
+   float dir0[DIM], /* Sampled direction */
+   float dir1[DIM], /* Direction used to adjust delta */
+   struct sXd(hit)* hit0, /* Hit along the sampled direction */
+   struct sXd(hit)* hit1, /* Hit used to adjust delta */
+   float* out_delta)
+{
+  struct sdis_medium* mdm;
+  float delta;
+  float org[DIM];
+  const size_t MAX_ATTEMPTS = 10;
+  size_t iattempt = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && current_mdm && rng && pos && delta_solid > 0);
+  ASSERT(dir0 && dir1 && hit0 && hit1 && out_delta);
+
+  fX_set_dX(org, pos);
+  do {
+    struct get_medium_info info;
+    double pos_next[DIM];
+
+    /* Compute the next step */
+    delta = XD(sample_next_step)
+      (scn, rng, org, delta_solid, dir0, dir1, hit0, hit1);
+
+    /* Retrieve the medium of the next step */
+    if(hit0->distance > delta) {
+      XD(move_pos)(dX(set)(pos_next, pos), dir0, delta);
+      res = scene_get_medium(scn, pos_next, &info, &mdm);
+      if(res != RES_OK) goto error;
+    } else {
+      struct sdis_interface* interf;
+      enum sdis_side side;
+      interf = scene_get_interface(scn, hit0->prim.prim_id);
+      side = fX(dot)(dir0, hit0->normal) < 0 ? SDIS_FRONT : SDIS_BACK;
+      mdm = interface_get_medium(interf, side);
+    }
+
+    /* Check medium consistency */
+    if(current_mdm != mdm) {
+#if DIM == 2
+      log_err(scn->dev,
+        "%s: inconsistent medium during the solid random walk at {%g, %g}.\n",
+        FUNC_NAME, SPLIT2(pos));
+#else
+      log_err(scn->dev,
+        "%s: inconsistent medium during the solid random walk at {%g, %g, %g}.\n",
+        FUNC_NAME, SPLIT3(pos));
+#endif
+    }
+  } while(current_mdm != mdm && ++iattempt < MAX_ATTEMPTS);
+
+  /* Handle error */
+  if(iattempt >= MAX_ATTEMPTS) {
+#if DIM == 2
+    log_err(scn->dev,
+      "%s: could not find a next valid conductive step at {%g, %g}.\n",
+      FUNC_NAME, SPLIT2(pos));
+#else
+    log_err(scn->dev,
+      "%s: could not find a next valid conductive step at {%g, %g, %g}.\n",
+      FUNC_NAME, SPLIT3(pos));
+#endif
+    res = RES_BAD_OP;
+    goto error;
   }
 
-  fX(set)(dir0, dirs[0]);
-  fX(set)(dir1, dirs[idir1]);
+  *out_delta = delta;
 
-  return delta;
+exit:
+  return res;
+error:
+  goto exit;
 }
 
 /*******************************************************************************
@@ -192,7 +231,6 @@ XD(conductive_path)
   }
 
   do { /* Solid random walk */
-    struct get_medium_info info = GET_MEDIUM_INFO_NULL;
     struct sXd(hit) hit0, hit1;
     double lambda; /* Thermal conductivity */
     double rho; /* Volumic mass */
@@ -242,8 +280,9 @@ XD(conductive_path)
     fX_set_dX(org, rwalk->vtx.P);
 
     /* Sample the direction to walk toward and compute the distance to travel */
-    delta = XD(sample_next_step)
-      (scn, rng, org, delta_solid, dir0, dir1, &hit0, &hit1);
+    res = XD(sample_next_step_robust)(scn, mdm, rng, rwalk->vtx.P, delta_solid,
+      dir0, dir1, &hit0, &hit1, &delta);
+    if(res != RES_OK) goto error;
 
     /* Add the volumic power density to the measured temperature */
     if(power != SDIS_VOLUMIC_POWER_NONE) {
@@ -306,45 +345,6 @@ XD(conductive_path)
     res = register_heat_vertex
       (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
     if(res != RES_OK) goto error;
-
-    /* Fetch the current medium */
-    if(SXD_HIT_NONE(&rwalk->hit)) {
-      CHK(scene_get_medium(scn, rwalk->vtx.P, &info, &mdm) == RES_OK);
-    } else {
-      const struct sdis_interface* interf;
-      interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-      mdm = interface_get_medium(interf, rwalk->hit_side);
-    }
-
-    /* Check random walk consistency */
-    if(mdm != rwalk->mdm) {
-      log_err(scn->dev,
-        "%s: inconsistent medium during the solid random walk.\n", FUNC_NAME);
-#if DIM == 2
-  #define VEC_STR "%g %g"
-  #define VEC_SPLIT SPLIT2
-#else
-  #define VEC_STR "%g %g %g"
-  #define VEC_SPLIT SPLIT3
-#endif
-      log_err(scn->dev,
-        "  start position: " VEC_STR "; current position: " VEC_STR "\n",
-        VEC_SPLIT(position_start), VEC_SPLIT(rwalk->vtx.P));
-      if(SXD_HIT_NONE(&rwalk->hit)) {
-        float hit_pos[DIM];
-        fX(mulf)(hit_pos, info.ray_dir, info.XD(hit).distance);
-        fX(add)(hit_pos, info.ray_org, hit_pos);
-        log_err(scn->dev, "  ray org: " VEC_STR "; ray dir: " VEC_STR "\n",
-          VEC_SPLIT(info.ray_org), VEC_SPLIT(info.ray_dir));
-        log_err(scn->dev, "  targeted point: " VEC_STR "\n",
-          VEC_SPLIT(info.pos_tgt));
-        log_err(scn->dev, "  hit pos: " VEC_STR "\n", VEC_SPLIT(hit_pos));
-      }
-#undef VEC_STR
-#undef VEC_SPLIT
-      res = RES_BAD_OP;
-      goto error;
-    }
 
     ++istep;
 
