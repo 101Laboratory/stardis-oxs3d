@@ -52,6 +52,7 @@ XD(trace_radiative_path)
   /* Launch the radiative random walk */
   for(;;) {
     const struct sdis_interface* interf = NULL;
+    struct hit_filter_data filter_data;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
     struct sdis_medium* chk_mdm = NULL;
     double alpha;
@@ -63,12 +64,14 @@ XD(trace_radiative_path)
     fX_set_dX(pos, rwalk->vtx.P);
 
     /* Trace the radiative ray */
+    filter_data.XD(hit) = rwalk->hit;
+    filter_data.epsilon = 1.e-6;
 #if (SDIS_XD_DIMENSION == 2)
     SXD(scene_view_trace_ray_3d
-      (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
+      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->hit));
 #else
     SXD(scene_view_trace_ray
-      (scn->sXd(view), pos, dir, range, &rwalk->hit, &rwalk->hit));
+      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->hit));
 #endif
     if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
       rwalk->hit_side = SDIS_SIDE_NULL__;

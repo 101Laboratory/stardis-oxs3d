@@ -134,7 +134,6 @@ XD(sample_next_step_robust)
 
   fX_set_dX(org, pos);
   do {
-    struct get_medium_info info;
     double pos_next[DIM];
 
     /* Compute the next step */
@@ -144,7 +143,7 @@ XD(sample_next_step_robust)
     /* Retrieve the medium of the next step */
     if(hit0->distance > delta) {
       XD(move_pos)(dX(set)(pos_next, pos), dir0, delta);
-      res = scene_get_medium(scn, pos_next, &info, &mdm);
+      res = scene_get_medium_in_closed_boundaries(scn, pos_next, &mdm);
       if(res != RES_OK) goto error;
     } else {
       struct sdis_interface* interf;
@@ -156,6 +155,7 @@ XD(sample_next_step_robust)
 
     /* Check medium consistency */
     if(current_mdm != mdm) {
+#if 0
 #if DIM == 2
       log_err(scn->dev,
         "%s: inconsistent medium during the solid random walk at {%g, %g}.\n",
@@ -164,6 +164,7 @@ XD(sample_next_step_robust)
       log_err(scn->dev,
         "%s: inconsistent medium during the solid random walk at {%g, %g, %g}.\n",
         FUNC_NAME, SPLIT3(pos));
+#endif
 #endif
     }
   } while(current_mdm != mdm && ++iattempt < MAX_ATTEMPTS);
@@ -214,8 +215,8 @@ XD(conductive_path)
   (void)ctx, (void)istep;
 
   /* Check the random walk consistency */
-  CHK(scene_get_medium(scn, rwalk->vtx.P, NULL, &mdm) == RES_OK);
-  if(mdm != rwalk->mdm) {
+  res = scene_get_medium_in_closed_boundaries(scn, rwalk->vtx.P, &mdm);
+  if(res != RES_OK || mdm != rwalk->mdm) {
     log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;

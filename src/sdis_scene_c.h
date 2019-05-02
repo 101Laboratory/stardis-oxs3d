@@ -31,6 +31,12 @@ struct prim_prop {
   unsigned back_enclosure; /* Id of the back facing enclosure */
 };
 
+struct hit_filter_data {
+  struct s2d_hit hit_2d;
+  struct s3d_hit hit_3d;
+  double epsilon; /* Threshold defining roughly equal intersections */
+};
+
 struct get_medium_info {
   /* Targeted position */
   float pos_tgt[3];
@@ -221,6 +227,17 @@ scene_get_medium
   (const struct sdis_scene* scene,
    const double position[],
    struct get_medium_info* info, /* May be NULL */
+   struct sdis_medium** medium);
+
+/* This function assumes that the tested position lies into finite enclosure.
+ * The medium into which it lies is thus retrieved by tracing rays along the
+ * main axis. For possible infinite enclosure, one has to use the
+ * `scene_get_medium' function instead that, in counterpart, can be more time
+ * consuming. */
+extern LOCAL_SYM res_T
+scene_get_medium_in_closed_boundaries
+  (const struct sdis_scene* scn,
+   const double position[],
    struct sdis_medium** medium);
 
 static INLINE void

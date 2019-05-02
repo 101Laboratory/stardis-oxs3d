@@ -90,6 +90,7 @@ XD(select_reinjection_dir)
   struct sdis_interface* interf;
   struct sdis_medium* mdm0;
   struct sdis_medium* mdm1;
+  struct hit_filter_data filter_data;
   struct sXd(hit) hit;
   struct sXd(hit) hit0;
   struct sXd(hit) hit1;
@@ -109,13 +110,15 @@ XD(select_reinjection_dir)
 
   f2(range, 0, FLT_MAX);
   fX_set_dX(org, rwalk->vtx.P);
-  SXD(scene_view_trace_ray(scn->sXd(view), org, dir0, range, &rwalk->hit, &hit0));
-  SXD(scene_view_trace_ray(scn->sXd(view), org, dir1, range, &rwalk->hit, &hit1));
+  filter_data.XD(hit) = rwalk->hit;
+  filter_data.epsilon = delta * 0.01;
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir0, range, &filter_data, &hit0));
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir1, range, &filter_data, &hit1));
 
   /* Retrieve the medium at the reinjection pos along dir0 */
   if(SXD_HIT_NONE(&hit0)) {
     XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir0, (float)delta);
-    res = scene_get_medium(scn, tmp, NULL, &mdm0);
+    res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm0);
     if(res != RES_OK) goto error;
   } else {
     interf = scene_get_interface(scn, hit0.prim.prim_id);
@@ -126,7 +129,7 @@ XD(select_reinjection_dir)
   /* Retrieve the medium at the reinjection pos along dir1 */
   if(SXD_HIT_NONE(&hit1)) {
     XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir1, (float)delta);
-    res = scene_get_medium(scn, tmp, NULL, &mdm1);
+    res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm1);
     if(res != RES_OK) goto error;
   } else {
     interf = scene_get_interface(scn, hit1.prim.prim_id);

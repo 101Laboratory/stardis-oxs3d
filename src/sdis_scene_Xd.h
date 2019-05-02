@@ -166,9 +166,8 @@ clear_properties(struct sdis_scene* scn)
  * approximative way is to test that its position have at least one barycentric
  * coordinate roughly equal to 0 or 1. */
 static FINLINE int
-hit_on_vertex(const struct s2d_hit* hit)
+hit_on_vertex(const struct s2d_hit* hit, const float on_vertex_eps)
 {
-  const float on_vertex_eps = 1.e-4f;
   float v;
   ASSERT(hit && !S2D_HIT_NONE(hit));
   v = 1.f - hit->u;
@@ -183,9 +182,8 @@ hit_on_vertex(const struct s2d_hit* hit)
  * simple but approximative way is to test that its position have at least one
  * barycentric coordinate roughly equal to 0 or 1. */
 static FINLINE int
-hit_on_edge(const struct s3d_hit* hit)
+hit_on_edge(const struct s3d_hit* hit, const float on_edge_eps)
 {
-  const float on_edge_eps = 1.e-4f;
   float w;
   ASSERT(hit && !S3D_HIT_NONE(hit));
   w = 1.f - hit->uv[0] - hit->uv[1];
@@ -206,23 +204,21 @@ XD(hit_filter_function)
    const float org[DIM],
    const float dir[DIM],
    void* ray_data,
-   void* filter_data)
+   void* global_data)
 {
-  const struct sXd(hit)* hit_from = ray_data;
-  (void)org, (void)dir, (void)filter_data;
+  const struct hit_filter_data* filter_data = ray_data;
+  const struct sXd(hit)* hit_from = &filter_data->XD(hit);
+  (void)org, (void)dir, (void)global_data;
 
-  if(!hit_from || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
+  if(!ray_data || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
-  if(eq_epsf(hit->distance, 0, 1.e-6f)) {
+  if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
     /* If the targeted point is near of the origin, check that it lies on an
      * edge/vertex shared by the 2 primitives. */
-#if DIM == 2
-    return hit_on_vertex(hit_from) && hit_on_vertex(hit);
-#else
-    return hit_on_edge(hit_from) && hit_on_edge(hit);
-#endif
+    return HIT_ON_BOUNDARY(hit_from, 1.e-4f)
+        && HIT_ON_BOUNDARY(hit, 1e-4f);
   }
   return 0;
 }
@@ -801,6 +797,7 @@ XD(scene_get_medium)
   size_t iprim, nprims;
   size_t nfailures = 0;
   const size_t max_failures = 10;
+  float P[DIM];
   /* Range of the parametric coordinate into which positions are challenged */
 #if DIM == 2
   float st[3];
@@ -821,14 +818,23 @@ XD(scene_get_medium)
   f2(st[2], 5.f/12.f, 5.f/12.f);
 #endif
 
+  fX_set_dX(P, pos);
+
   SXD(scene_view_primitives_count(scn->sXd(view), &nprims));
   FOR_EACH(iprim, 0, nprims) {
     struct sXd(hit) hit;
     struct sXd(attrib) attr;
     struct sXd(primitive) prim;
     const float range[2] = {0.f, FLT_MAX};
-    float N[DIM], P[DIM], dir[DIM], cos_N_dir;
+    float N[DIM], dir[DIM], cos_N_dir;
     size_t istep = 0;
+
+    if(iprim && (iprim % 100) == 0) {
+      log_warn(scn->dev,
+        "%s: performance issue. Up to %lu primitives were tested to define the "
+        "current medium at {%g, %g, %g}.\n",
+        FUNC_NAME, (unsigned long)iprim, SPLIT3(P));
+    }
 
     do {
       /* Retrieve a position onto the primitive */
@@ -837,7 +843,7 @@ XD(scene_get_medium)
 
       /* Trace a ray from the random walk vertex toward the retrieved primitive
        * position */
-      fX(normalize)(dir, fX(sub)(dir, attr.value, fX_set_dX(P, pos)));
+      fX(normalize)(dir, fX(sub)(dir, attr.value, P));
       SXD(scene_view_trace_ray(scn->sXd(view), P, dir, range, NULL, &hit));
 
       /* Unforeseen error. One has to intersect a primitive ! */
@@ -852,7 +858,7 @@ XD(scene_get_medium)
       }
     /* Discard the hit if it is on a vertex/edge, and target a new position
      * onto the current primitive */
-    } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit))
+    } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit, 1.e-4f))
          && ++istep < nsteps);
 
     /* The hits of all targeted positions on the current primitive are on
@@ -863,7 +869,7 @@ XD(scene_get_medium)
     cos_N_dir = fX(dot)(N, dir);
 
     /* Not too close and not roughly orthognonal */
-    if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-1f) {
+    if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
@@ -893,6 +899,67 @@ error:
 #endif
   goto exit;
 }
+
+static INLINE res_T
+XD(scene_get_medium_in_closed_boundaries)
+  (const struct sdis_scene* scn,
+   const double pos[DIM],
+   struct sdis_medium** out_medium)
+{
+  struct sdis_medium* medium = NULL;
+  const float dirs[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
+  float P[DIM];
+  int idir;
+  res_T res = RES_OK;
+  ASSERT(scn && pos);
+
+  fX_set_dX(P, pos);
+  FOR_EACH(idir, 0, 2*DIM) {
+    struct sXd(hit) hit;
+    const float range[2] = {0.f, FLT_MAX};
+    float N[DIM], cos_N_dir;
+
+    /* Trace a ray from the random walk vertex toward the retrieved primitive
+     * position */
+    SXD(scene_view_trace_ray(scn->sXd(view), P, dirs[idir], range, NULL, &hit));
+
+    /* Unforeseen error. One has to intersect a primitive ! */
+    if(SXD_HIT_NONE(&hit)) continue;
+
+    /* Discard a hits if it lies on an edge/point */
+    if(HIT_ON_BOUNDARY(&hit, 1.e-4f)) continue;
+
+    fX(normalize)(N, hit.normal);
+    cos_N_dir = fX(dot)(N, dirs[idir]);
+
+    /* Not too close and not roughly orthognonal */
+    if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
+      const struct sdis_interface* interf;
+      interf = scene_get_interface(scn, hit.prim.prim_id);
+      medium = interface_get_medium
+        (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+      break;
+    }
+  }
+  if(idir >= 2*DIM) {
+    res = XD(scene_get_medium)(scn, pos, NULL, &medium);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  *out_medium = medium;
+  return res;
+error:
+#if DIM == 2
+  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
+    FUNC_NAME, SPLIT2(pos));
+#else
+  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
+    FUNC_NAME, SPLIT3(pos));
+#endif
+  goto exit;
+}
+
 #undef SDIS_SCENE_DIMENSION
 #undef DIM
 #undef sencXd
