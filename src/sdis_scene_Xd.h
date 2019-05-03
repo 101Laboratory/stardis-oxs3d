@@ -166,34 +166,173 @@ clear_properties(struct sdis_scene* scn)
  * approximative way is to test that its position have at least one barycentric
  * coordinate roughly equal to 0 or 1. */
 static FINLINE int
-hit_on_vertex(const struct s2d_hit* hit, const float on_vertex_eps)
+hit_on_vertex
+  (const struct s2d_hit* hit,
+   const float org[3],
+   const float dir[3])
 {
+  const float ON_VERTEX_EPSILON = 1.e-4f;
   float v;
   ASSERT(hit && !S2D_HIT_NONE(hit));
+  (void)org, (void)dir;
   v = 1.f - hit->u;
-  return eq_epsf(hit->u, 0.f, on_vertex_eps)
-      || eq_epsf(hit->u, 1.f, on_vertex_eps)
-      || eq_epsf(v, 0.f, on_vertex_eps)
-      || eq_epsf(v, 1.f, on_vertex_eps);
+  return eq_epsf(hit->u, 0.f, ON_VERTEX_EPSILON)
+      || eq_epsf(hit->u, 1.f, ON_VERTEX_EPSILON)
+      || eq_epsf(v, 0.f, ON_VERTEX_EPSILON)
+      || eq_epsf(v, 1.f, ON_VERTEX_EPSILON);
 }
 
 #else  /* DIM == 3 */
-/* Check that `hit' roughly lies on an edge. For triangular primitives, a
- * simple but approximative way is to test that its position have at least one
- * barycentric coordinate roughly equal to 0 or 1. */
+#define ON_EDGE_EPSILON 1.e-3f
+/* Check that `hit' roughly lies on an edge. */
 static FINLINE int
-hit_on_edge(const struct s3d_hit* hit, const float on_edge_eps)
+hit_on_edge
+  (const struct s3d_hit* hit,
+   const float org[3],
+   const float dir[3])
 {
-  float w;
+  struct s3d_attrib v0, v1, v2;
+  float E0[3], E1[3], N[3];
+  float tri_2area;
+  float hit_2area0;
+  float hit_2area1;
+  float hit_2area2;
+  float hit_pos[3];
   ASSERT(hit && !S3D_HIT_NONE(hit));
-  w = 1.f - hit->uv[0] - hit->uv[1];
-  return eq_epsf(hit->uv[0], 0.f, on_edge_eps)
-      || eq_epsf(hit->uv[0], 1.f, on_edge_eps)
-      || eq_epsf(hit->uv[1], 0.f, on_edge_eps)
-      || eq_epsf(hit->uv[1], 1.f, on_edge_eps)
-      || eq_epsf(w, 0.f, on_edge_eps)
-      || eq_epsf(w, 1.f, on_edge_eps);
+
+  /* Retrieve the triangle vertices */
+  S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 1, S3D_POSITION, &v1));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 2, S3D_POSITION, &v2));
+
+  /* Compute the triangle area * 2 */
+  f3_sub(E0, v1.value, v0.value);
+  f3_sub(E1, v2.value, v0.value);
+  tri_2area = f3_len(f3_cross(N, E0, E1));
+
+  /* Compute the hit position */
+  f3_add(hit_pos, org, f3_mulf(hit_pos, dir, hit->distance));
+
+  /* Compute areas */
+  f3_sub(E0, v0.value, hit_pos);
+  f3_sub(E1, v1.value, hit_pos);
+  hit_2area0 = f3_len(f3_cross(N, E0, E1));
+  f3_sub(E0, v1.value, hit_pos);
+  f3_sub(E1, v2.value, hit_pos);
+  hit_2area1 = f3_len(f3_cross(N, E0, E1));
+  f3_sub(E0, v2.value, hit_pos);
+  f3_sub(E1, v0.value, hit_pos);
+  hit_2area2 = f3_len(f3_cross(N, E0, E1));
+
+  if(hit_2area0 / tri_2area < ON_EDGE_EPSILON
+  || hit_2area1 / tri_2area < ON_EDGE_EPSILON
+  || hit_2area2 / tri_2area < ON_EDGE_EPSILON)
+    return 1;
+
+  return 0;
 }
+
+static int
+hit_shared_edge
+  (const struct s3d_primitive* tri0,
+   const struct s3d_primitive* tri1,
+   const float pos0[3], /* Tested position onto the triangle 0 */
+   const float pos1[3]) /* Tested Position onto the triangle 1 */
+{
+  struct s3d_attrib tri0_vertices[3]; /* Vertex positions of the triangle 0 */
+  struct s3d_attrib tri1_vertices[3]; /* Vertex positions of the triangle 1 */
+  float E0[3], E1[3]; /* Temporary variables storing triangle edges */
+  float N0[3], N1[3]; /* Temporary Normals */
+  float tri0_2area, tri1_2area; /* 2*area of the submitted triangles */
+  float tmp0_2area, tmp1_2area;
+  float cos_normals;
+  int tri0_edge[2] = {-1, -1}; /* Shared edge vertex ids for the triangle 0 */
+  int tri1_edge[2] = {-1, -1}; /* Shared edge vertex ids for the triangle 1 */
+  int edge_ivertex = 0; /* Temporary variable */
+  int tri0_ivertex, tri1_ivertex;
+  int iv0, iv1, iv2;
+  ASSERT(tri0 && tri1 && pos0 && pos1);
+
+  /* Fetch the vertices of the triangle 0 */
+  S3D(triangle_get_vertex_attrib(tri0, 0, S3D_POSITION, &tri0_vertices[0]));
+  S3D(triangle_get_vertex_attrib(tri0, 1, S3D_POSITION, &tri0_vertices[1]));
+  S3D(triangle_get_vertex_attrib(tri0, 2, S3D_POSITION, &tri0_vertices[2]));
+
+  /* Fetch the vertices of the triangle 1 */
+  S3D(triangle_get_vertex_attrib(tri1, 0, S3D_POSITION, &tri1_vertices[0]));
+  S3D(triangle_get_vertex_attrib(tri1, 1, S3D_POSITION, &tri1_vertices[1]));
+  S3D(triangle_get_vertex_attrib(tri1, 2, S3D_POSITION, &tri1_vertices[2]));
+
+  /* Look for the vertices shared by the 2 triangles */
+  for(tri0_ivertex=0; tri0_ivertex < 3 && edge_ivertex < 2; ++tri0_ivertex) {
+  for(tri1_ivertex=0; tri1_ivertex < 3 && edge_ivertex < 2; ++tri1_ivertex) {
+    const int vertex_eq = f3_eq_eps
+      (tri0_vertices[tri0_ivertex].value,
+       tri1_vertices[tri1_ivertex].value,
+       1.e-6f);
+    if(vertex_eq) {
+      tri0_edge[edge_ivertex] = tri0_ivertex;
+      tri1_edge[edge_ivertex] = tri1_ivertex;
+      ++edge_ivertex;
+      /* We assume that the triangles are not degenerated. As a consequence we
+       * can break here since a vertex of the triangle 0 can be equal to at
+       * most one vertex of the triangle 1 */
+      break;
+    }
+  }}
+
+  /* The triangles do not have a common edge */
+  if(edge_ivertex < 2) return 0;
+
+  /* Ensure that the vertices of the shared edge are registered in the right
+   * order regarding the triangle vertices, i.e. (0,1), (1,2) or (2,0) */
+  if((tri0_edge[0]+1)%3 != tri0_edge[1]) SWAP(int, tri0_edge[0], tri0_edge[1]);
+  if((tri1_edge[0]+1)%3 != tri1_edge[1]) SWAP(int, tri1_edge[0], tri1_edge[1]);
+
+  /* Compute the shared edge normal lying in the triangle 0 plane */
+  iv0 =  tri0_edge[0];
+  iv1 =  tri0_edge[1];
+  iv2 = (tri0_edge[1]+1) % 3;
+  f3_sub(E0, tri0_vertices[iv1].value, tri0_vertices[iv0].value);
+  f3_sub(E1, tri0_vertices[iv2].value, tri0_vertices[iv0].value);
+  f3_cross(N0, E0, E1); /* Triangle 0 normal */
+  tri0_2area = f3_len(N0);
+  f3_cross(N0, N0, E0);
+
+  /* Compute the shared edge normal lying in the triangle 1 plane */
+  iv0 =  tri1_edge[0];
+  iv1 =  tri1_edge[1];
+  iv2 = (tri1_edge[1]+1) % 3;
+  f3_sub(E0, tri1_vertices[iv1].value, tri1_vertices[iv0].value);
+  f3_sub(E1, tri1_vertices[iv2].value, tri1_vertices[iv0].value);
+  f3_cross(N1, E0, E1);
+  tri1_2area = f3_len(N1);
+  f3_cross(N1, N1, E0);
+
+  /* Compute the cosine between the 2 edge normals */
+  f3_normalize(N0, N0);
+  f3_normalize(N1, N1);
+  cos_normals = f3_dot(N0, N1);
+
+  /* The angle formed by the 2 triangles is too sharp */
+  if(cos_normals > -0.70710678 /* ~ cos(PI/4) */ ) return 0;
+
+  /* Compute the 2 times the area of the (pos0, shared_edge.vertex0,
+   * shared_edge.vertex1) triangles */
+  f3_sub(E0, tri0_vertices[tri0_edge[0]].value, pos0);
+  f3_sub(E1, tri0_vertices[tri0_edge[1]].value, pos0);
+  tmp0_2area = f3_len(f3_cross(N0, E0, E1));
+
+  /* Compute the 2 times the area of the (pos1, shared_edge.vertex0,
+   * shared_edge.vertex1) triangles */
+  f3_sub(E0, tri1_vertices[tri1_edge[0]].value, pos1);
+  f3_sub(E1, tri1_vertices[tri1_edge[1]].value, pos1);
+  tmp1_2area = f3_len(f3_cross(N1, E0, E1));
+
+  return tmp0_2area / tri0_2area < ON_EDGE_EPSILON
+      && tmp1_2area / tri1_2area < ON_EDGE_EPSILON;
+}
+#undef ON_EDGE_EPSILON
 #endif /* DIM == 2 */
 
 /* Avoid self-intersection for a ray starting from a planar primitive, i.e. a
@@ -215,10 +354,17 @@ XD(hit_filter_function)
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
+
+#if DIM == 2
     /* If the targeted point is near of the origin, check that it lies on an
-     * edge/vertex shared by the 2 primitives. */
-    return HIT_ON_BOUNDARY(hit_from, 1.e-4f)
-        && HIT_ON_BOUNDARY(hit, 1e-4f);
+     * edge/vertex shared by the 2 primitives and that the primitives are roughly coplanary */
+    return HIT_ON_BOUNDARY(hit_from, org, dir)
+        && HIT_ON_BOUNDARY(hit, org, dir);
+#else
+    float pos[3];
+    f3_add(pos, org, f3_mulf(pos, dir, hit->distance));
+    return hit_shared_edge(&hit_from->prim, &hit->prim, org, pos);
+#endif
   }
   return 0;
 }
@@ -858,7 +1004,7 @@ XD(scene_get_medium)
       }
     /* Discard the hit if it is on a vertex/edge, and target a new position
      * onto the current primitive */
-    } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit, 1.e-4f))
+    } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit, P, dir))
          && ++istep < nsteps);
 
     /* The hits of all targeted positions on the current primitive are on
@@ -927,7 +1073,7 @@ XD(scene_get_medium_in_closed_boundaries)
     if(SXD_HIT_NONE(&hit)) continue;
 
     /* Discard a hits if it lies on an edge/point */
-    if(HIT_ON_BOUNDARY(&hit, 1.e-4f)) continue;
+    if(HIT_ON_BOUNDARY(&hit, P, dirs[idir])) continue;
 
     fX(normalize)(N, hit.normal);
     cos_N_dir = fX(dot)(N, dirs[idir]);
