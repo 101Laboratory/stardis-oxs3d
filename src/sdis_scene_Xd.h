@@ -22,6 +22,7 @@
 #include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
 
+#include <star/ssp.h>
 #include <rsys/rsys.h>
 
 /*******************************************************************************
@@ -183,7 +184,7 @@ hit_on_vertex
 }
 
 #else  /* DIM == 3 */
-#define ON_EDGE_EPSILON 1.e-3f
+#define ON_EDGE_EPSILON 1.e-4f
 /* Check that `hit' roughly lies on an edge. */
 static FINLINE int
 hit_on_edge
@@ -971,20 +972,25 @@ XD(scene_get_medium)
     struct sXd(hit) hit;
     struct sXd(attrib) attr;
     struct sXd(primitive) prim;
+    size_t iprim2;
     const float range[2] = {0.f, FLT_MAX};
     float N[DIM], dir[DIM], cos_N_dir;
     size_t istep = 0;
 
-    if(iprim && (iprim % 100) == 0) {
-      log_warn(scn->dev,
-        "%s: performance issue. Up to %lu primitives were tested to define the "
-        "current medium at {%g, %g, %g}.\n",
-        FUNC_NAME, (unsigned long)iprim, SPLIT3(P));
+    /* 1 primitive over 2, take a primitive from the end of the primitive list.
+     * When primitives are sorted in a coherent manner regarding their
+     * position, this strategy avoids to test primitives that are going to be
+     * rejected of the same manner due to possible numerical issues of the
+     * resulting intersection. */
+    if((iprim % 2) == 0) {
+      iprim2 = iprim / 2;
+    } else {
+      iprim2 = nprims - 1 - (iprim / 2);
     }
 
     do {
       /* Retrieve a position onto the primitive */
-      SXD(scene_view_get_primitive(scn->sXd(view), (unsigned)iprim, &prim));
+      SXD(scene_view_get_primitive(scn->sXd(view), (unsigned)iprim2, &prim));
       SXD(primitive_get_attrib(&prim, SXD_POSITION, st[istep], &attr));
 
       /* Trace a ray from the random walk vertex toward the retrieved primitive
@@ -1032,6 +1038,18 @@ XD(scene_get_medium)
     }
   }
 
+  if(iprim >= nprims) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(iprim > 10 && iprim > (size_t)((double)iprim * 0.05)) {
+    log_warn(scn->dev,
+      "%s: performance issue. Up to %lu primitives were tested to define the "
+      "current medium at {%g, %g, %g}.\n",
+      FUNC_NAME, (unsigned long)iprim, SPLIT3(P));
+  }
+
 exit:
   *out_medium = medium;
   return res;
@@ -1053,8 +1071,8 @@ XD(scene_get_medium_in_closed_boundaries)
    struct sdis_medium** out_medium)
 {
   struct sdis_medium* medium = NULL;
-  const float dirs[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
   float P[DIM];
+  float dirs[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
   int idir;
   res_T res = RES_OK;
   ASSERT(scn && pos);
@@ -1063,7 +1081,8 @@ XD(scene_get_medium_in_closed_boundaries)
   FOR_EACH(idir, 0, 2*DIM) {
     struct sXd(hit) hit;
     const float range[2] = {0.f, FLT_MAX};
-    float N[DIM], cos_N_dir;
+    float N[DIM];
+    float cos_N_dir;
 
     /* Trace a ray from the random walk vertex toward the retrieved primitive
      * position */
