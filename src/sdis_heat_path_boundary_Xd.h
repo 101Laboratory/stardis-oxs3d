@@ -25,9 +25,9 @@
 #include "sdis_Xd_begin.h"
 
 /* Emperical scale factor applied to the challenged reinjection distance. If
- * the distance to reinject is less than this adjusted value, the solver
- * switches from 2D reinjection scheme to the 1D reinjection scheme in order to
- * avoid numerical issues. */
+ * the distance to reinject is less than this adjusted value, the solver will
+ * try to discard the reinjection distance if possible in order to avoid
+ * numerical issues. */
 #define REINJECT_DST_MIN_SCALE 0.125f
 
 /*******************************************************************************
