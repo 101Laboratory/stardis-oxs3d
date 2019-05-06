@@ -1043,7 +1043,7 @@ XD(scene_get_medium)
     goto error;
   }
 
-  if(iprim > 10 && iprim > (size_t)((double)iprim * 0.05)) {
+  if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
     log_warn(scn->dev,
       "%s: performance issue. Up to %lu primitives were tested to define the "
       "current medium at {%g, %g, %g}.\n",
@@ -1097,7 +1097,7 @@ XD(scene_get_medium_in_closed_boundaries)
     fX(normalize)(N, hit.normal);
     cos_N_dir = fX(dot)(N, dirs[idir]);
 
-    /* Not too close and not roughly orthognonal */
+    /* Not too close and not roughly orthogonal */
     if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
