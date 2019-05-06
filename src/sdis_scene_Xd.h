@@ -1072,17 +1072,33 @@ XD(scene_get_medium_in_closed_boundaries)
 {
   struct sdis_medium* medium = NULL;
   float P[DIM];
+  float frame[DIM*DIM];
+  float N[DIM];
   float dirs[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
   int idir;
   res_T res = RES_OK;
   ASSERT(scn && pos);
 
+#if DIM == 2
+  /* TODO build the frame */
+  (void)frame;
+#else
+  /* Build a frame that will be used to rotate the main axis by PI/4 around
+   * each axis. This can avoid numerical issues when geometry is discretized
+   * along the main axis */
+  N[0] = N[1] = N[2] = (float)(1.0 / sqrt(3.0));
+  f33_basis(frame, N);
+#endif
+
   fX_set_dX(P, pos);
   FOR_EACH(idir, 0, 2*DIM) {
     struct sXd(hit) hit;
     const float range[2] = {0.f, FLT_MAX};
-    float N[DIM];
     float cos_N_dir;
+
+#if DIM == 3
+    f33_mulf3(dirs[idir], frame, dirs[idir]);
+#endif
 
     /* Trace a ray from the random walk vertex toward the retrieved primitive
      * position */
