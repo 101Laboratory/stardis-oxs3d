@@ -75,6 +75,32 @@ XD(sample_reinjection_dir)
 #endif
 }
 
+static FINLINE void
+XD(move_away_primitive_boundaries)
+  (struct XD(rwalk)* rwalk,
+   const double delta)
+{
+  struct sXd(attrib) attr;
+  float pos[DIM];
+  float dir[DIM];
+  float len;
+#if DIM == 2
+  const float st = 0.5f;
+#else
+  const float st[2] = {0.33f, 0.33f};
+#endif
+  ASSERT(rwalk && !SXD_HIT_NONE(&rwalk->hit) && delta > 0);
+
+  SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_POSITION, st, &attr));
+
+  fX_set_dX(pos, rwalk->vtx.P);
+  fX(sub)(dir, attr.value, pos);
+  len = fX(normalize)(dir, dir);
+  len = MMIN(len, (float)(delta*0.1));
+
+  XD(move_pos)(rwalk->vtx.P, dir, len);
+}
+
 static FINLINE res_T
 XD(select_reinjection_dir)
   (const struct sdis_scene* scn,
@@ -104,56 +130,67 @@ XD(select_reinjection_dir)
   float org[DIM];
   float range[2];
   enum sdis_side side;
+  int iattempt = 0;
+  const int MAX_ATTEMPTS = 2;
   res_T res = RES_OK;
   ASSERT(scn && mdm && rwalk && dir0 && dir1 && delta > 0);
   ASSERT(reinject_dir && reinject_dst && reinject_hit);
 
-  f2(range, 0, FLT_MAX);
-  fX_set_dX(org, rwalk->vtx.P);
-  filter_data.XD(hit) = rwalk->hit;
-  filter_data.epsilon = delta * 0.01;
-  SXD(scene_view_trace_ray(scn->sXd(view), org, dir0, range, &filter_data, &hit0));
-  SXD(scene_view_trace_ray(scn->sXd(view), org, dir1, range, &filter_data, &hit1));
+  do {
+    f2(range, 0, FLT_MAX);
+    fX_set_dX(org, rwalk->vtx.P);
+    filter_data.XD(hit) = rwalk->hit;
+    filter_data.epsilon = delta * 0.01;
+    SXD(scene_view_trace_ray(scn->sXd(view), org, dir0, range, &filter_data, &hit0));
+    SXD(scene_view_trace_ray(scn->sXd(view), org, dir1, range, &filter_data, &hit1));
 
-  /* Retrieve the medium at the reinjection pos along dir0 */
-  if(SXD_HIT_NONE(&hit0)) {
-    XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir0, (float)delta);
-    res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm0);
-    if(res != RES_OK) goto error;
-  } else {
-    interf = scene_get_interface(scn, hit0.prim.prim_id);
-    side = fX(dot)(dir0, hit0.normal) < 0 ? SDIS_FRONT : SDIS_BACK;
-    mdm0 = interface_get_medium(interf, side);
-  }
-
-  /* Retrieve the medium at the reinjection pos along dir1 */
-  if(SXD_HIT_NONE(&hit1)) {
-    XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir1, (float)delta);
-    res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm1);
-    if(res != RES_OK) goto error;
-  } else {
-    interf = scene_get_interface(scn, hit1.prim.prim_id);
-    side = fX(dot)(dir1, hit1.normal) < 0 ? SDIS_FRONT : SDIS_BACK;
-    mdm1 = interface_get_medium(interf, side);
-  }
-
-  dst0 = dst1 = -1;
-  if(mdm0 == mdm) { /* Check reinjection consistency */
-    if(hit0.distance <= delta_adjusted) {
-      dst0 = hit0.distance;
+    /* Retrieve the medium at the reinjection pos along dir0 */
+    if(SXD_HIT_NONE(&hit0)) {
+      XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir0, (float)delta);
+      res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm0);
+      if(res != RES_OK) goto error;
     } else {
-      dst0 = delta;
-      hit0 = SXD_HIT_NULL;
+      interf = scene_get_interface(scn, hit0.prim.prim_id);
+      side = fX(dot)(dir0, hit0.normal) < 0 ? SDIS_FRONT : SDIS_BACK;
+      mdm0 = interface_get_medium(interf, side);
     }
-  }
-  if(mdm1 == mdm) {/* Check reinjection consistency */
-    if(hit1.distance <= delta_adjusted) {
-      dst1 = hit1.distance;
+
+    /* Retrieve the medium at the reinjection pos along dir1 */
+    if(SXD_HIT_NONE(&hit1)) {
+      XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir1, (float)delta);
+      res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm1);
+      if(res != RES_OK) goto error;
     } else {
-      dst1 = delta;
-      hit1 = SXD_HIT_NULL;
+      interf = scene_get_interface(scn, hit1.prim.prim_id);
+      side = fX(dot)(dir1, hit1.normal) < 0 ? SDIS_FRONT : SDIS_BACK;
+      mdm1 = interface_get_medium(interf, side);
     }
-  }
+
+    dst0 = dst1 = -1;
+    if(mdm0 == mdm) { /* Check reinjection consistency */
+      if(hit0.distance <= delta_adjusted) {
+        dst0 = hit0.distance;
+      } else {
+        dst0 = delta;
+        hit0 = SXD_HIT_NULL;
+      }
+    }
+    if(mdm1 == mdm) {/* Check reinjection consistency */
+      if(hit1.distance <= delta_adjusted) {
+        dst1 = hit1.distance;
+      } else {
+        dst1 = delta;
+        hit1 = SXD_HIT_NULL;
+      }
+    }
+
+    /* No valid reinjection. Maybe the random walk is near a sharp corner and
+     * the ray-tracing misses the geometry. Try to move toward primitive center
+     * and retry to find a valid reinjectin. */
+    if(dst0 == -1 && dst1 == -1) {
+      XD(move_away_primitive_boundaries)(rwalk, delta);
+    }
+  } while(dst0 == -1 && dst1 == -1 && ++iattempt < MAX_ATTEMPTS);
 
   if(dst0 == -1 && dst1 == -1) { /* No valid reinjection */
     log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
