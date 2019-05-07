@@ -75,6 +75,7 @@ XD(sample_reinjection_dir)
 #endif
 }
 
+#if DIM == 2
 static FINLINE void
 XD(move_away_primitive_boundaries)
   (struct XD(rwalk)* rwalk,
@@ -84,11 +85,7 @@ XD(move_away_primitive_boundaries)
   float pos[DIM];
   float dir[DIM];
   float len;
-#if DIM == 2
   const float st = 0.5f;
-#else
-  const float st[2] = {0.33f, 0.33f};
-#endif
   ASSERT(rwalk && !SXD_HIT_NONE(&rwalk->hit) && delta > 0);
 
   SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_POSITION, st, &attr));
@@ -100,18 +97,85 @@ XD(move_away_primitive_boundaries)
 
   XD(move_pos)(rwalk->vtx.P, dir, len);
 }
+#else
+/* Move the random walk away from the primitive boundaries to avoid numerical
+ * issues leading to inconsistent random walks. */
+static FINLINE void
+XD(move_away_primitive_boundaries)
+  (struct XD(rwalk)* rwalk,
+   const double delta)
+{
+  struct s3d_attrib v0, v1, v2; /* Triangle vertices */
+  float E[3][4]; /* 3D edge equations */
+  float dst[3]; /* Distance from current position to edge equation */
+  float N[3]; /* Triangle normal */
+  float P[3]; /* Random walk position */
+  float min_dst, max_dst;
+  float len;
+  int i;
+  ASSERT(rwalk && delta > 0 && !S3D_HIT_NONE(&rwalk->hit));
+
+  fX_set_dX(P, rwalk->vtx.P);
+
+  /* Fetch triangle vertices */
+  S3D(triangle_get_vertex_attrib(&rwalk->hit.prim, 0, S3D_POSITION, &v0));
+  S3D(triangle_get_vertex_attrib(&rwalk->hit.prim, 1, S3D_POSITION, &v1));
+  S3D(triangle_get_vertex_attrib(&rwalk->hit.prim, 2, S3D_POSITION, &v2));
+
+  /* Compute the edge vector */
+  f3_sub(E[0], v1.value, v0.value);
+  f3_sub(E[1], v2.value, v1.value);
+  f3_sub(E[2], v0.value, v2.value);
+
+  /* Compute the triangle normal */
+  f3_cross(N, E[1], E[0]);
+
+  /* Compute the 3D edge equation */
+  f3_normalize(E[0], f3_cross(E[0], E[0], N));
+  f3_normalize(E[1], f3_cross(E[1], E[1], N));
+  f3_normalize(E[2], f3_cross(E[2], E[2], N));
+  E[0][3] = -f3_dot(E[0], v0.value);
+  E[1][3] = -f3_dot(E[1], v1.value);
+  E[2][3] = -f3_dot(E[2], v2.value);
+
+  /* Compute the distance from current position to the edges */
+  dst[0] = f3_dot(E[0], P) + E[0][3];
+  dst[1] = f3_dot(E[1], P) + E[1][3];
+  dst[2] = f3_dot(E[2], P) + E[2][3];
+
+  /* Retrieve the min and max distance */
+  min_dst = MMIN(MMIN(dst[0], dst[1]), dst[2]);
+  max_dst = MMAX(MMAX(dst[0], dst[1]), dst[2]);
+
+  /* Search for the edge index that is neither the nearest nor the farthest
+   * from the current random walk position. This will be the edge toward which
+   * we will move the position */
+  FOR_EACH(i, 0, 3) {
+    if(dst[i] != min_dst && dst[i] != max_dst) break;
+  }
+  ASSERT(i < 3);
+
+  /* TODO if the current position is near a vertex, one should move toward
+   * the farthest edge instead to avoid too small displacement */
+
+  len = -MMIN(dst[i]*0.5f, (float)(delta*0.1));
+  XD(move_pos)(rwalk->vtx.P, E[i], len);
+}
+#endif
 
 static FINLINE res_T
 XD(select_reinjection_dir)
   (const struct sdis_scene* scn,
-   const struct sdis_medium* mdm,
-   struct XD(rwalk)* rwalk,
-   const float dir0[DIM],
-   const float dir1[DIM],
-   const double delta,
-   float reinject_dir[DIM],
-   float* reinject_dst,
-   struct sXd(hit)* reinject_hit)
+   const struct sdis_medium* mdm, /* Medium into which the reinjection occurs */
+   struct XD(rwalk)* rwalk, /* Current random walk state */
+   const float dir0[DIM], /* Challenged direction */
+   const float dir1[DIM], /* Challanged direction */
+   const double delta, /* Max reinjection distance */
+   float reinject_dir[DIM], /* Selected direction */
+   float* reinject_dst, /* Effective reinjection distance */
+   int can_move, /* Define of the random wal pos can be moved or not */
+   int* move_pos, /* Define if the current random walk was moved. May be NULL */
+   struct sXd(hit)* reinject_hit) /* Hit along the reinjection dir */
 {
   struct sdis_interface* interf;
   struct sdis_medium* mdm0;
@@ -131,10 +195,12 @@ XD(select_reinjection_dir)
   float range[2];
   enum sdis_side side;
   int iattempt = 0;
-  const int MAX_ATTEMPTS = 2;
+  const int MAX_ATTEMPTS = can_move ? 2 : 1;
   res_T res = RES_OK;
   ASSERT(scn && mdm && rwalk && dir0 && dir1 && delta > 0);
   ASSERT(reinject_dir && reinject_dst && reinject_hit);
+
+  if(move_pos) *move_pos = 0;
 
   do {
     f2(range, 0, FLT_MAX);
@@ -185,15 +251,21 @@ XD(select_reinjection_dir)
     }
 
     /* No valid reinjection. Maybe the random walk is near a sharp corner and
-     * the ray-tracing misses the geometry. Try to move toward primitive center
-     * and retry to find a valid reinjectin. */
+     * thus the ray-tracing misses the enclosure geometry. Another possibility
+     * is that the random walk lies roughly on an edge. In this case, sampled
+     * reinjecton dirs can intersect the primitive on the other side of the
+     * edge. Normally, this primitive should be filtered by the "hit_filter"
+     * function but this may be not the case due to "threshold effect". In both
+     * situations, try to slightly move away from the primitive boundaries and
+     * retry to find a valid reinjection. */
     if(dst0 == -1 && dst1 == -1) {
       XD(move_away_primitive_boundaries)(rwalk, delta);
+      if(move_pos) *move_pos = 1;
     }
   } while(dst0 == -1 && dst1 == -1 && ++iattempt < MAX_ATTEMPTS);
 
   if(dst0 == -1 && dst1 == -1) { /* No valid reinjection */
-    log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
+   log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -318,9 +390,11 @@ XD(solid_solid_boundary_path)
   double r;
   double power;
   float dir0[DIM], dir1[DIM], dir2[DIM], dir3[DIM];
+  float dir_front[DIM], dir_back[DIM];
   float* dir;
   float reinject_dst_front, reinject_dst_back;
   float reinject_dst;
+  int move;
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && ctx && frag && rwalk && rng && T);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
@@ -353,13 +427,21 @@ XD(solid_solid_boundary_path)
 
   /* Select the reinjection direction and distance for the front side */
   res = XD(select_reinjection_dir)(scn, solid_front, rwalk, dir0, dir2,
-    delta_boundary_front, dir0, &reinject_dst_front, &hit0);
+    delta_boundary_front, dir_front, &reinject_dst_front, 1, NULL, &hit0);
   if(res != RES_OK) goto error;
 
   /* Select the reinjection direction and distance for the back side */
   res = XD(select_reinjection_dir)(scn, solid_back, rwalk, dir1, dir3,
-    delta_boundary_back, dir1, &reinject_dst_back, &hit1);
+    delta_boundary_back, dir_back, &reinject_dst_back, 1, &move, &hit1);
   if(res != RES_OK) goto error;
+
+  /* If random walk was moved by the select_reinjection_dir on back side, one
+   * has to rerun the select_reinjection_dir on front side at the new pos */
+  if(move) {
+    res = XD(select_reinjection_dir)(scn, solid_front, rwalk, dir0, dir2,
+      delta_boundary_front, dir_front, &reinject_dst_front, 0, NULL, &hit0);
+    if(res != RES_OK) goto error;
+  }
 
   /* Define the reinjection side. Note that the proba should be :
    *    Lf/Df' / (Lf/Df' + Lb/Db')
@@ -375,12 +457,12 @@ XD(solid_solid_boundary_path)
   proba = (lambda_front/reinject_dst_front)
     / (lambda_front/reinject_dst_front + lambda_back/reinject_dst_back);
   if(r < proba) { /* Reinject in front */
-    dir = dir0;
+    dir = dir_front;
     hit = &hit0;
     mdm = solid_front;
     reinject_dst = reinject_dst_front;
   } else { /* Reinject in back */
-    dir = dir1;
+    dir = dir_back;
     hit = &hit1;
     mdm = solid_back;
     reinject_dst = reinject_dst_back;
@@ -497,7 +579,7 @@ XD(solid_fluid_boundary_path)
 
   /* Select the solid reinjection direction and distance */
   res = XD(select_reinjection_dir)(scn, solid, rwalk, dir0, dir1,
-    delta_boundary, dir0, &reinject_dst, &hit);
+    delta_boundary, dir0, &reinject_dst, 1, NULL, &hit);
   if(res != RES_OK) goto error;
 
   /* Define the orthogonal dst from the reinjection pos to the interface */
@@ -622,7 +704,7 @@ XD(solid_boundary_with_flux_path)
 
   /* Select the reinjection direction and distance */
   res = XD(select_reinjection_dir)(scn, mdm, rwalk, dir0, dir1,
-    delta_boundary, dir0, &reinject_dst, &hit);
+    delta_boundary, dir0, &reinject_dst, 1, NULL, &hit);
   if(res != RES_OK) goto error;
 
   /* Define the orthogonal dst from the reinjection pos to the interface */
