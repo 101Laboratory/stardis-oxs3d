@@ -126,7 +126,7 @@ XD(sample_next_step_robust)
   struct sdis_medium* mdm;
   float delta;
   float org[DIM];
-  const size_t MAX_ATTEMPTS = 10;
+  const size_t MAX_ATTEMPTS = 100;
   size_t iattempt = 0;
   res_T res = RES_OK;
   ASSERT(scn && current_mdm && rng && pos && delta_solid > 0);
