@@ -25,6 +25,9 @@
 #include <star/ssp.h>
 #include <rsys/rsys.h>
 
+/* Emperical cos threshold defining if an angle is sharp */
+#define SHARP_ANGLE_COS_THRESOLD -0.70710678 /* ~ cos(3*PI/4) */
+
 /*******************************************************************************
  * Define the helper functions and the data types used by the scene
  * independently of its dimension, i.e. 2D or 3D.
@@ -163,30 +166,114 @@ clear_properties(struct sdis_scene* scn)
  * Helper functions
  ******************************************************************************/
 #if DIM == 2
-/* Check that `hit' roughly lies on a vertex. For segments, a simple but
- * approximative way is to test that its position have at least one barycentric
- * coordinate roughly equal to 0 or 1. */
-static FINLINE int
+#define ON_VERTEX_EPSILON 1.e-4f
+/* Check that `hit' roughly lies on a vertex. */
+static INLINE int
 hit_on_vertex
   (const struct s2d_hit* hit,
    const float org[3],
    const float dir[3])
 {
-  const float ON_VERTEX_EPSILON = 1.e-4f;
-  float v;
-  ASSERT(hit && !S2D_HIT_NONE(hit));
-  (void)org, (void)dir;
-  v = 1.f - hit->u;
-  return eq_epsf(hit->u, 0.f, ON_VERTEX_EPSILON)
-      || eq_epsf(hit->u, 1.f, ON_VERTEX_EPSILON)
-      || eq_epsf(v, 0.f, ON_VERTEX_EPSILON)
-      || eq_epsf(v, 1.f, ON_VERTEX_EPSILON);
+  struct s2d_attrib v0, v1;
+  float E[2];
+  float hit_pos[2];
+  float segment_len;
+  float hit_len0;
+  float hit_len1;
+  ASSERT(hit && !S2D_HIT_NONE(hit) && org && dir);
+
+  /* Rertieve the segment vertices */
+  S2D(segment_get_vertex_attrib(&hit->prim, 0, S2D_POSITION, &v0));
+  S2D(segment_get_vertex_attrib(&hit->prim, 1, S2D_POSITION, &v1));
+
+  /* Compute the length of the segment */
+  segment_len = f2_len(f2_sub(E, v1.value, v0.value));
+
+  /* Compute the hit position onto the segment */
+  f2_add(hit_pos, org, f2_mulf(hit_pos, dir, hit->distance));
+
+  /* Compute the length from hit position to segment vertices */
+  hit_len0 = f2_len(f2_sub(E, v0.value, hit_pos));
+  hit_len1 = f2_len(f2_sub(E, v1.value, hit_pos));
+
+  if(hit_len0 / segment_len < ON_VERTEX_EPSILON
+  || hit_len1 / segment_len < ON_VERTEX_EPSILON)
+    return 1;
+  return 0;
+}
+
+static int
+hit_shared_vertex
+  (const struct s2d_primitive* seg0,
+   const struct s2d_primitive* seg1,
+   const float pos0[2], /* Tested position onto the segment 0 */
+   const float pos1[2]) /* Tested Position onto the segment 1 */
+{
+  struct s2d_attrib seg0_vertices[2]; /* Vertex positions of the segment 0 */
+  struct s2d_attrib seg1_vertices[2]; /* Vertex positions of the segment 1 */
+  float d0[2], d1[2]; /* temporary vector */
+  float seg0_len, seg1_len; /* Length of the segments */
+  float tmp0_len, tmp1_len;
+  float cos_normals;
+  int seg0_vert = -1; /* Id of the shared vertex for the segment 0 */
+  int seg1_vert = -1; /* Id of the shared vertex for the segment 1 */
+  int seg0_ivertex, seg1_ivertex;
+  ASSERT(seg0 && seg1 && pos0 && pos1);
+
+  /* Fetch the vertices of the segment 0 */
+  S2D(segment_get_vertex_attrib(seg0, 0, S2D_POSITION, &seg0_vertices[0]));
+  S2D(segment_get_vertex_attrib(seg0, 1, S2D_POSITION, &seg0_vertices[1]));
+
+  /* Fetch the vertices of the segment 1 */
+  S2D(segment_get_vertex_attrib(seg1, 0, S2D_POSITION, &seg1_vertices[0]));
+  S2D(segment_get_vertex_attrib(seg1, 1, S2D_POSITION, &seg1_vertices[1]));
+
+  /* Look for the vertex shared by the 2 segments */
+  for(seg0_ivertex = 0; seg0_ivertex < 2 && seg0_vert < 0; ++seg0_ivertex) {
+  for(seg1_ivertex = 0; seg1_ivertex < 2 && seg1_vert < 0; ++seg1_ivertex) {
+    const int vertex_eq = f2_eq_eps
+      (seg0_vertices[seg0_ivertex].value,
+       seg1_vertices[seg1_ivertex].value,
+       1.e-6f);
+    if(vertex_eq) {
+      seg0_vert = seg0_ivertex;
+      seg1_vert = seg1_ivertex;
+      /* We assume that the segments are not degenerated. As a consequence we
+       * can break here since a vertex of the segment 0 can be equal to at most
+       * one vertex of the segment 1 */
+      break;
+    }
+  }}
+
+  /* The segments do not have a common vertex */
+  if(seg0_vert < 0) return 0;
+
+  /* Compute the dirctions from shared vertex to the opposite segment vertex */
+  f2_sub(d0, seg0_vertices[(seg0_vert+1)%2].value, seg0_vertices[seg0_vert].value);
+  f2_sub(d1, seg1_vertices[(seg1_vert+1)%2].value, seg1_vertices[seg1_vert].value);
+
+  /* Compute the cosine between the segments */
+  seg0_len = f2_normalize(d0, d0);
+  seg1_len = f2_normalize(d1, d1);
+  cos_normals = f2_dot(d0, d1);
+
+  /* The angle formed by the 2 segments is sharp. Do not filter the hit */
+  if(cos_normals > SHARP_ANGLE_COS_THRESOLD) return 0;
+
+  /* Compute the length from pos<0|1> to shared vertex */
+  f2_sub(d0, seg0_vertices[seg0_vert].value, pos0);
+  f2_sub(d1, seg1_vertices[seg1_vert].value, pos1);
+  tmp0_len = f2_len(d0);
+  tmp1_len = f2_len(d1);
+
+  return (eq_epsf(seg0_len, 0, 1.e-6f) || tmp0_len/seg0_len < ON_VERTEX_EPSILON)
+      && (eq_epsf(seg1_len, 0, 1.e-6f) || tmp1_len/seg1_len < ON_VERTEX_EPSILON);
 }
 
 #else  /* DIM == 3 */
 #define ON_EDGE_EPSILON 1.e-4f
 /* Check that `hit' roughly lies on an edge. */
-static FINLINE int
+static INLINE int
 hit_on_edge
   (const struct s3d_hit* hit,
    const float org[3],
@@ -199,7 +286,7 @@ hit_on_edge
   float hit_2area1;
   float hit_2area2;
   float hit_pos[3];
-  ASSERT(hit && !S3D_HIT_NONE(hit));
+  ASSERT(hit && !S3D_HIT_NONE(hit) && org && dir);
 
   /* Retrieve the triangle vertices */
   S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
@@ -315,8 +402,8 @@ hit_shared_edge
   f3_normalize(N1, N1);
   cos_normals = f3_dot(N0, N1);
 
-  /* The angle formed by the 2 triangles is too sharp */
-  if(cos_normals > -0.70710678 /* ~ cos(PI/4) */ ) return 0;
+  /* The angle formed by the 2 triangles is sharp */
+  if(cos_normals > SHARP_ANGLE_COS_THRESOLD) return 0;
 
   /* Compute the 2 times the area of the (pos0, shared_edge.vertex0,
    * shared_edge.vertex1) triangles */
@@ -330,8 +417,8 @@ hit_shared_edge
   f3_sub(E1, tri1_vertices[tri1_edge[1]].value, pos1);
   tmp1_2area = f3_len(f3_cross(N1, E0, E1));
 
-  return tmp0_2area / tri0_2area < ON_EDGE_EPSILON
-      && tmp1_2area / tri1_2area < ON_EDGE_EPSILON;
+  return (eq_epsf(tri0_2area, 0, 1.e-6f) || tmp0_2area/tri0_2area < ON_EDGE_EPSILON)
+      && (eq_epsf(tri1_2area, 0, 1.e-6f) || tmp1_2area/tri1_2area < ON_EDGE_EPSILON);
 }
 #undef ON_EDGE_EPSILON
 #endif /* DIM == 2 */
@@ -355,15 +442,13 @@ XD(hit_filter_function)
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
-
-#if DIM == 2
+    float pos[DIM];
+    fX(add)(pos, org, fX(mulf)(pos, dir, hit->distance));
     /* If the targeted point is near of the origin, check that it lies on an
-     * edge/vertex shared by the 2 primitives and that the primitives are roughly coplanary */
-    return HIT_ON_BOUNDARY(hit_from, org, dir)
-        && HIT_ON_BOUNDARY(hit, org, dir);
+     * edge/vertex shared by the 2 primitives */
+#if DIM == 2
+    return hit_shared_vertex(&hit_from->prim, &hit->prim, org, pos);
 #else
-    float pos[3];
-    f3_add(pos, org, f3_mulf(pos, dir, hit->distance));
     return hit_shared_edge(&hit_from->prim, &hit->prim, org, pos);
 #endif
   }
