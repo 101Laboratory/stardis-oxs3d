@@ -781,7 +781,7 @@ green_function_redux_and_clear
 {
   size_t i;
   res_T res = RES_OK;
-  ASSERT(dst && greens && ngreens);
+  ASSERT(dst && greens);
 
   FOR_EACH(i, 0, ngreens) {
     res = green_function_merge_and_clear(dst, greens[i]);
