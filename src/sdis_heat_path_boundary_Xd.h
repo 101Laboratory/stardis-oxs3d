@@ -148,11 +148,12 @@ XD(move_away_primitive_boundaries)
   dst[1] = f3_dot(E[1], P) + E[1][3];
   dst[2] = f3_dot(E[2], P) + E[2][3];
 
-  /* Retrieve the min and max distance */
+  /* Retrieve the min and max distance from random walk position to triangle
+   * edges */
   min_dst = MMIN(MMIN(dst[0], dst[1]), dst[2]);
   max_dst = MMAX(MMAX(dst[0], dst[1]), dst[2]);
 
-  /* Sort the edge with respect to their distance to the random walk position */
+  /* Sort the edges with respect to their distance to the random walk position */
   FOR_EACH(i, 0, 3) {
     if(dst[i] == min_dst) {
       imin = i;
@@ -167,24 +168,24 @@ XD(move_away_primitive_boundaries)
   /* TODO if the current position is near a vertex, one should move toward the
    * farthest edge along its normal to avoid too small displacement */
 
-  /* Compute the distance `len' from the current position to the edges to move
+  /* Compute the distance `dst' from the current position to the edges to move
    * to, along the normal of the edge from which the random walk is the nearest
    *
-   *           +.                 cos(a) = dst[imid] / len
-   *          /  `*.              len = dst[imid] / cos(a)
+   *           +.                 cos(a) = d / dst => dst = d / cos_a
+   *          /  `*.
    *         /    | `*.
-   *        / len | a /`*.
+   *        /  dst| a /`*.
    *       /      |  /    `*.
-   *      /       | /dst[imid]*.
+   *      /       | / d      `*.
    *     /        |/            `*.
    *    +---------o----------------+  */
   cos_a1 = f3_dot(E[imin], f3_minus(tmp, E[imid]));
   cos_a2 = f3_dot(E[imin], f3_minus(tmp, E[imax]));
-
-  /* Compute the maximum displacement distance into the triangle along the the
-   * normal of the edge from which the random walk is the nearest */
   dst[imid] = cos_a1 > 0 ? dst[imid] / cos_a1 : FLT_MAX;
   dst[imax] = cos_a2 > 0 ? dst[imax] / cos_a2 : FLT_MAX;
+
+  /* Compute the maximum displacement distance into the triangle along the
+   * normal of the edge from which the random walk is the nearest */
   len = MMIN(dst[imid], dst[imax]);
   ASSERT(len != FLT_MAX);
 
@@ -478,7 +479,9 @@ XD(solid_solid_boundary_path)
   float* dir;
   float reinject_dst_front, reinject_dst_back;
   float reinject_dst;
-  const int MAX_ATTEMPTS = 10;
+  /* In 2D it is useless to try to resample a reinjection direction since there
+   * is only one possible direction */
+  const int MAX_ATTEMPTS = DIM == 2 ? 1 : 10;
   int iattempt;
   int move;
   int reinjection_is_valid;
@@ -647,7 +650,9 @@ XD(solid_fluid_boundary_path)
   double tmp;
   float dir0[DIM], dir1[DIM];
   float reinject_dst;
-  const int MAX_ATTEMPTS = 10;
+  /* In 2D it is useless to try to resample a reinjection direction since there
+   * is only one possible direction */
+  const int MAX_ATTEMPTS = DIM == 2 ? 1 : 10;
   int iattempt;
   int reinjection_is_valid = 0;
   res_T res = RES_OK;
@@ -804,7 +809,9 @@ XD(solid_boundary_with_flux_path)
   float dir0[DIM];
   float dir1[DIM];
   float reinject_dst;
-  const int MAX_ATTEMPTS = 10;
+  /* In 2D it is useless to try to resample a reinjection direction since there
+   * is only one possible direction */
+  const int MAX_ATTEMPTS = DIM == 2 ? 1 : 10;
   int iattempt = 0;
   int reinjection_is_valid = 0;
   res_T res = RES_OK;
