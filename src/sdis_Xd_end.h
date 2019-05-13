@@ -37,5 +37,6 @@
 #undef fX
 #undef fX_set_dX
 #undef dX_set_fX
+#undef fXX_mulfX
 
 #undef SDIS_XD_BEGIN_H__

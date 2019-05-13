@@ -23,6 +23,8 @@
 #include "sdis_scene_c.h"
 
 #include <star/ssp.h>
+#include <rsys/float22.h>
+#include <rsys/float33.h>
 #include <rsys/rsys.h>
 
 /* Emperical cos threshold defining if an angle is sharp */
@@ -152,6 +154,7 @@ clear_properties(struct sdis_scene* scn)
 /* Vector macros generic to SDIS_SCENE_DIMENSION */
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
+#define fXX_mulfX CONCAT(CONCAT(CONCAT(CONCAT(f, DIM), DIM), _mulf), DIM)
 
 /* Macro making generic its subimitted name to SDIS_SCENE_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
@@ -1158,32 +1161,31 @@ XD(scene_get_medium_in_closed_boundaries)
   struct sdis_medium* medium = NULL;
   float P[DIM];
   float frame[DIM*DIM];
-  float N[DIM];
   float dirs[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
   int idir;
   res_T res = RES_OK;
   ASSERT(scn && pos);
 
-#if DIM == 2
-  /* TODO build the frame */
-  (void)frame;
-#else
   /* Build a frame that will be used to rotate the main axis by PI/4 around
    * each axis. This can avoid numerical issues when geometry is discretized
    * along the main axis */
-  N[0] = N[1] = N[2] = (float)(1.0 / sqrt(3.0));
-  f33_basis(frame, N);
+#if DIM == 2
+  f22_rotation(frame, (float)PI/4);
+#else
+/*  N[0] = N[1] = N[2] = (float)(1.0 / sqrt(3.0));*/
+/*  f33_basis(frame, N);*/
+  f33_rotation(frame, (float)PI/4, (float)PI/4, (float)PI/4);
 #endif
 
   fX_set_dX(P, pos);
   FOR_EACH(idir, 0, 2*DIM) {
     struct sXd(hit) hit;
+    float N[DIM];
     const float range[2] = {0.f, FLT_MAX};
     float cos_N_dir;
 
-#if DIM == 3
-    f33_mulf3(dirs[idir], frame, dirs[idir]);
-#endif
+    /* Transform the directions to avoid to be aligned with the axis */
+    fXX_mulfX(dirs[idir], frame, dirs[idir]);
 
     /* Trace a ray from the random walk vertex toward the retrieved primitive
      * position */
@@ -1242,6 +1244,7 @@ error:
 #undef SXD_PRIMITIVE_EQ
 #undef fX
 #undef fX_set_dX
+#undef fXX_mulfX
 #undef XD
 #undef HIT_ON_BOUNDARY
 
