@@ -92,6 +92,15 @@ sdis_estimator_get_temperature
 }
 
 res_T
+sdis_estimator_get_realisation_time
+  (const struct sdis_estimator* estimator, struct sdis_mc* mc)
+{
+  if(!estimator || !mc) return RES_BAD_ARG;
+  *mc = estimator->realisation_time;
+  return RES_OK;
+}
+
+res_T
 sdis_estimator_get_convective_flux
   (const struct sdis_estimator* estimator, struct sdis_mc* flux)
 {

@@ -192,6 +192,8 @@ struct sdis_green_function {
   size_t npaths_valid;
   size_t npaths_invalid;
 
+  struct accum realisation_time; /* Time per realisation */
+
   struct ssp_rng_type rng_type;
   FILE* rng_state;
 
@@ -489,6 +491,8 @@ sdis_green_function_solve
   /* Setup the estimated temperature */
   estimator_setup_realisations_count(estimator, npaths, N);
   estimator_setup_temperature(estimator, accum, accum2);
+  estimator_setup_realisation_time
+    (estimator, green->realisation_time.sum, green->realisation_time.sum2);
 
 exit:
   if(rng) SSP(rng_ref_put(rng));
@@ -797,12 +801,13 @@ error:
 res_T
 green_function_finalize
   (struct sdis_green_function* green,
-   struct ssp_rng_proxy* proxy)
+   struct ssp_rng_proxy* proxy,
+   const struct accum* time)
 {
   size_t i, n;
   res_T res = RES_OK;
 
-  if(!green || !proxy) {
+  if(!green || !proxy || !time) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -820,6 +825,9 @@ green_function_finalize
     green->npaths_valid += path->limit_type != SDIS_POINT_NONE;
   }
   green->npaths_invalid = n - green->npaths_valid;
+
+  ASSERT(green->npaths_valid == time->count);
+  green->realisation_time = *time;
 
 exit:
   return res;

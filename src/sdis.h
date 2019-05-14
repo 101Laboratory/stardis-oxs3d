@@ -722,6 +722,11 @@ sdis_estimator_get_temperature
    struct sdis_mc* temperature);
 
 SDIS_API res_T
+sdis_estimator_get_realisation_time
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* time);
+
+SDIS_API res_T
 sdis_estimator_get_convective_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);

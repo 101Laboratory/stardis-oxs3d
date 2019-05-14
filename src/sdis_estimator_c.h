@@ -35,6 +35,7 @@ enum flux_name {
 
 struct sdis_estimator {
   struct sdis_mc temperature;
+  struct sdis_mc realisation_time;
   struct sdis_mc fluxes[FLUX_NAMES_COUNT__];
   size_t nrealisations;
   size_t nfailures;
@@ -76,19 +77,31 @@ estimator_setup_realisations_count
   estimator->nfailures = nrealisations - nsuccesses;
 }
 
+#define SETUP_MC(McName, Sum, Sum2, Count) {                                   \
+  (McName).E = (Sum) / (double)(Count);                                        \
+  (McName).V = (Sum2) / (double)(Count) - (McName).E*(McName).E;               \
+  (McName).V = MMAX((McName).V, 0);                                            \
+  (McName).SE = sqrt((McName).V / (double)(Count));                            \
+} (void)0
+
 static INLINE void
 estimator_setup_temperature
   (struct sdis_estimator* estim,
    const double sum,
    const double sum2)
 {
-  double N;
   ASSERT(estim && estim->nrealisations);
-  N = (double)estim->nrealisations;
-  estim->temperature.E = sum/N;
-  estim->temperature.V = sum2/N - estim->temperature.E*estim->temperature.E;
-  estim->temperature.V = MMAX(estim->temperature.V, 0);
-  estim->temperature.SE = sqrt(estim->temperature.V/N);
+  SETUP_MC(estim->temperature, sum, sum2, estim->nrealisations);
+}
+
+static INLINE void
+estimator_setup_realisation_time
+  (struct sdis_estimator* estim,
+   const double sum,
+   const double sum2)
+{
+  ASSERT(estim && estim->nrealisations);
+  SETUP_MC(estim->realisation_time, sum, sum2, estim->nrealisations);
 }
 
 static INLINE void
@@ -98,14 +111,11 @@ estimator_setup_flux
    const double sum,
    const double sum2)
 {
-  double N;
   ASSERT(estim && (unsigned)name < FLUX_NAMES_COUNT__ && estim->nrealisations);
-  N = (double)estim->nrealisations;
-  estim->fluxes[name].E = sum/N;
-  estim->fluxes[name].V = sum2/N - estim->fluxes[name].E*estim->fluxes[name].E;
-  estim->fluxes[name].V = MMAX(estim->fluxes[name].V, 0);
-  estim->fluxes[name].SE = sqrt(estim->fluxes[name].V/N);
+  SETUP_MC(estim->fluxes[name], sum, sum2, estim->nrealisations);
 }
+
+#undef SETUP_MC
 
 #endif /* SDIS_PROBE_ESTIMATOR_C_H */
 
