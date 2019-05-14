@@ -411,7 +411,7 @@ main(int argc, char** argv)
 
     CHK(nfails + nreals == N);
     CHK(nfails < N/1000);
-    CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
+    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     /* Check green function */
     OK(sdis_solve_probe_green_function(scn, N, pos, 1, -1, Tref, &green));

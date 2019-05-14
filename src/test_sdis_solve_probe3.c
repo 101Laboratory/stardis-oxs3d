@@ -312,7 +312,7 @@ main(int argc, char** argv)
   /* Check the results */
   CHK(nfails + nreals == N);
   CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, 2*T.SE));
+  CHK(eq_eps(T.E, ref, 3*T.SE));
 
   /* Check green function */
   OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, -1, 0, &green));

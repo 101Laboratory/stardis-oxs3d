@@ -22,7 +22,13 @@
 #include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
 
+#include <star/ssp.h>
+#include <rsys/float22.h>
+#include <rsys/float33.h>
 #include <rsys/rsys.h>
+
+/* Emperical cos threshold defining if an angle is sharp */
+#define SHARP_ANGLE_COS_THRESOLD -0.70710678 /* ~ cos(3*PI/4) */
 
 /*******************************************************************************
  * Define the helper functions and the data types used by the scene
@@ -148,6 +154,7 @@ clear_properties(struct sdis_scene* scn)
 /* Vector macros generic to SDIS_SCENE_DIMENSION */
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
+#define fXX_mulfX CONCAT(CONCAT(CONCAT(CONCAT(f, DIM), DIM), _mulf), DIM)
 
 /* Macro making generic its subimitted name to SDIS_SCENE_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
@@ -162,40 +169,261 @@ clear_properties(struct sdis_scene* scn)
  * Helper functions
  ******************************************************************************/
 #if DIM == 2
-/* Check that `hit' roughly lies on a vertex. For segments, a simple but
- * approximative way is to test that its position have at least one barycentric
- * coordinate roughly equal to 0 or 1. */
-static FINLINE int
-hit_on_vertex(const struct s2d_hit* hit)
+#define ON_VERTEX_EPSILON 1.e-4f
+/* Check that `hit' roughly lies on a vertex. */
+static INLINE int
+hit_on_vertex
+  (const struct s2d_hit* hit,
+   const float org[3],
+   const float dir[3])
 {
-  const float on_vertex_eps = 1.e-4f;
-  float v;
-  ASSERT(hit && !S2D_HIT_NONE(hit));
-  v = 1.f - hit->u;
-  return eq_epsf(hit->u, 0.f, on_vertex_eps)
-      || eq_epsf(hit->u, 1.f, on_vertex_eps)
-      || eq_epsf(v, 0.f, on_vertex_eps)
-      || eq_epsf(v, 1.f, on_vertex_eps);
+  struct s2d_attrib v0, v1;
+  float E[2];
+  float hit_pos[2];
+  float segment_len;
+  float hit_len0;
+  float hit_len1;
+  ASSERT(hit && !S2D_HIT_NONE(hit) && org && dir);
+
+  /* Rertieve the segment vertices */
+  S2D(segment_get_vertex_attrib(&hit->prim, 0, S2D_POSITION, &v0));
+  S2D(segment_get_vertex_attrib(&hit->prim, 1, S2D_POSITION, &v1));
+
+  /* Compute the length of the segment */
+  segment_len = f2_len(f2_sub(E, v1.value, v0.value));
+
+  /* Compute the hit position onto the segment */
+  f2_add(hit_pos, org, f2_mulf(hit_pos, dir, hit->distance));
+
+  /* Compute the length from hit position to segment vertices */
+  hit_len0 = f2_len(f2_sub(E, v0.value, hit_pos));
+  hit_len1 = f2_len(f2_sub(E, v1.value, hit_pos));
+
+  if(hit_len0 / segment_len < ON_VERTEX_EPSILON
+  || hit_len1 / segment_len < ON_VERTEX_EPSILON)
+    return 1;
+  return 0;
+}
+
+static int
+hit_shared_vertex
+  (const struct s2d_primitive* seg0,
+   const struct s2d_primitive* seg1,
+   const float pos0[2], /* Tested position onto the segment 0 */
+   const float pos1[2]) /* Tested Position onto the segment 1 */
+{
+  struct s2d_attrib seg0_vertices[2]; /* Vertex positions of the segment 0 */
+  struct s2d_attrib seg1_vertices[2]; /* Vertex positions of the segment 1 */
+  float d0[2], d1[2]; /* temporary vector */
+  float seg0_len, seg1_len; /* Length of the segments */
+  float tmp0_len, tmp1_len;
+  float cos_normals;
+  int seg0_vert = -1; /* Id of the shared vertex for the segment 0 */
+  int seg1_vert = -1; /* Id of the shared vertex for the segment 1 */
+  int seg0_ivertex, seg1_ivertex;
+  ASSERT(seg0 && seg1 && pos0 && pos1);
+
+  /* Fetch the vertices of the segment 0 */
+  S2D(segment_get_vertex_attrib(seg0, 0, S2D_POSITION, &seg0_vertices[0]));
+  S2D(segment_get_vertex_attrib(seg0, 1, S2D_POSITION, &seg0_vertices[1]));
+
+  /* Fetch the vertices of the segment 1 */
+  S2D(segment_get_vertex_attrib(seg1, 0, S2D_POSITION, &seg1_vertices[0]));
+  S2D(segment_get_vertex_attrib(seg1, 1, S2D_POSITION, &seg1_vertices[1]));
+
+  /* Look for the vertex shared by the 2 segments */
+  for(seg0_ivertex = 0; seg0_ivertex < 2 && seg0_vert < 0; ++seg0_ivertex) {
+  for(seg1_ivertex = 0; seg1_ivertex < 2 && seg1_vert < 0; ++seg1_ivertex) {
+    const int vertex_eq = f2_eq_eps
+      (seg0_vertices[seg0_ivertex].value,
+       seg1_vertices[seg1_ivertex].value,
+       1.e-6f);
+    if(vertex_eq) {
+      seg0_vert = seg0_ivertex;
+      seg1_vert = seg1_ivertex;
+      /* We assume that the segments are not degenerated. As a consequence we
+       * can break here since a vertex of the segment 0 can be equal to at most
+       * one vertex of the segment 1 */
+      break;
+    }
+  }}
+
+  /* The segments do not have a common vertex */
+  if(seg0_vert < 0) return 0;
+
+  /* Compute the dirctions from shared vertex to the opposite segment vertex */
+  f2_sub(d0, seg0_vertices[(seg0_vert+1)%2].value, seg0_vertices[seg0_vert].value);
+  f2_sub(d1, seg1_vertices[(seg1_vert+1)%2].value, seg1_vertices[seg1_vert].value);
+
+  /* Compute the cosine between the segments */
+  seg0_len = f2_normalize(d0, d0);
+  seg1_len = f2_normalize(d1, d1);
+  cos_normals = f2_dot(d0, d1);
+
+  /* The angle formed by the 2 segments is sharp. Do not filter the hit */
+  if(cos_normals > SHARP_ANGLE_COS_THRESOLD) return 0;
+
+  /* Compute the length from pos<0|1> to shared vertex */
+  f2_sub(d0, seg0_vertices[seg0_vert].value, pos0);
+  f2_sub(d1, seg1_vertices[seg1_vert].value, pos1);
+  tmp0_len = f2_len(d0);
+  tmp1_len = f2_len(d1);
+
+  return (eq_epsf(seg0_len, 0, 1.e-6f) || tmp0_len/seg0_len < ON_VERTEX_EPSILON)
+      && (eq_epsf(seg1_len, 0, 1.e-6f) || tmp1_len/seg1_len < ON_VERTEX_EPSILON);
 }
 
 #else  /* DIM == 3 */
-/* Check that `hit' roughly lies on an edge. For triangular primitives, a
- * simple but approximative way is to test that its position have at least one
- * barycentric coordinate roughly equal to 0 or 1. */
-static FINLINE int
-hit_on_edge(const struct s3d_hit* hit)
+#define ON_EDGE_EPSILON 1.e-4f
+/* Check that `hit' roughly lies on an edge. */
+static INLINE int
+hit_on_edge
+  (const struct s3d_hit* hit,
+   const float org[3],
+   const float dir[3])
 {
-  const float on_edge_eps = 1.e-4f;
-  float w;
-  ASSERT(hit && !S3D_HIT_NONE(hit));
-  w = 1.f - hit->uv[0] - hit->uv[1];
-  return eq_epsf(hit->uv[0], 0.f, on_edge_eps)
-      || eq_epsf(hit->uv[0], 1.f, on_edge_eps)
-      || eq_epsf(hit->uv[1], 0.f, on_edge_eps)
-      || eq_epsf(hit->uv[1], 1.f, on_edge_eps)
-      || eq_epsf(w, 0.f, on_edge_eps)
-      || eq_epsf(w, 1.f, on_edge_eps);
+  struct s3d_attrib v0, v1, v2;
+  float E0[3], E1[3], N[3];
+  float tri_2area;
+  float hit_2area0;
+  float hit_2area1;
+  float hit_2area2;
+  float hit_pos[3];
+  ASSERT(hit && !S3D_HIT_NONE(hit) && org && dir);
+
+  /* Retrieve the triangle vertices */
+  S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 1, S3D_POSITION, &v1));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 2, S3D_POSITION, &v2));
+
+  /* Compute the triangle area * 2 */
+  f3_sub(E0, v1.value, v0.value);
+  f3_sub(E1, v2.value, v0.value);
+  tri_2area = f3_len(f3_cross(N, E0, E1));
+
+  /* Compute the hit position */
+  f3_add(hit_pos, org, f3_mulf(hit_pos, dir, hit->distance));
+
+  /* Compute areas */
+  f3_sub(E0, v0.value, hit_pos);
+  f3_sub(E1, v1.value, hit_pos);
+  hit_2area0 = f3_len(f3_cross(N, E0, E1));
+  f3_sub(E0, v1.value, hit_pos);
+  f3_sub(E1, v2.value, hit_pos);
+  hit_2area1 = f3_len(f3_cross(N, E0, E1));
+  f3_sub(E0, v2.value, hit_pos);
+  f3_sub(E1, v0.value, hit_pos);
+  hit_2area2 = f3_len(f3_cross(N, E0, E1));
+
+  if(hit_2area0 / tri_2area < ON_EDGE_EPSILON
+  || hit_2area1 / tri_2area < ON_EDGE_EPSILON
+  || hit_2area2 / tri_2area < ON_EDGE_EPSILON)
+    return 1;
+
+  return 0;
 }
+
+static int
+hit_shared_edge
+  (const struct s3d_primitive* tri0,
+   const struct s3d_primitive* tri1,
+   const float pos0[3], /* Tested position onto the triangle 0 */
+   const float pos1[3]) /* Tested Position onto the triangle 1 */
+{
+  struct s3d_attrib tri0_vertices[3]; /* Vertex positions of the triangle 0 */
+  struct s3d_attrib tri1_vertices[3]; /* Vertex positions of the triangle 1 */
+  float E0[3], E1[3]; /* Temporary variables storing triangle edges */
+  float N0[3], N1[3]; /* Temporary Normals */
+  float tri0_2area, tri1_2area; /* 2*area of the submitted triangles */
+  float tmp0_2area, tmp1_2area;
+  float cos_normals;
+  int tri0_edge[2] = {-1, -1}; /* Shared edge vertex ids for the triangle 0 */
+  int tri1_edge[2] = {-1, -1}; /* Shared edge vertex ids for the triangle 1 */
+  int edge_ivertex = 0; /* Temporary variable */
+  int tri0_ivertex, tri1_ivertex;
+  int iv0, iv1, iv2;
+  ASSERT(tri0 && tri1 && pos0 && pos1);
+
+  /* Fetch the vertices of the triangle 0 */
+  S3D(triangle_get_vertex_attrib(tri0, 0, S3D_POSITION, &tri0_vertices[0]));
+  S3D(triangle_get_vertex_attrib(tri0, 1, S3D_POSITION, &tri0_vertices[1]));
+  S3D(triangle_get_vertex_attrib(tri0, 2, S3D_POSITION, &tri0_vertices[2]));
+
+  /* Fetch the vertices of the triangle 1 */
+  S3D(triangle_get_vertex_attrib(tri1, 0, S3D_POSITION, &tri1_vertices[0]));
+  S3D(triangle_get_vertex_attrib(tri1, 1, S3D_POSITION, &tri1_vertices[1]));
+  S3D(triangle_get_vertex_attrib(tri1, 2, S3D_POSITION, &tri1_vertices[2]));
+
+  /* Look for the vertices shared by the 2 triangles */
+  for(tri0_ivertex=0; tri0_ivertex < 3 && edge_ivertex < 2; ++tri0_ivertex) {
+  for(tri1_ivertex=0; tri1_ivertex < 3 && edge_ivertex < 2; ++tri1_ivertex) {
+    const int vertex_eq = f3_eq_eps
+      (tri0_vertices[tri0_ivertex].value,
+       tri1_vertices[tri1_ivertex].value,
+       1.e-6f);
+    if(vertex_eq) {
+      tri0_edge[edge_ivertex] = tri0_ivertex;
+      tri1_edge[edge_ivertex] = tri1_ivertex;
+      ++edge_ivertex;
+      /* We assume that the triangles are not degenerated. As a consequence we
+       * can break here since a vertex of the triangle 0 can be equal to at
+       * most one vertex of the triangle 1 */
+      break;
+    }
+  }}
+
+  /* The triangles do not have a common edge */
+  if(edge_ivertex < 2) return 0;
+
+  /* Ensure that the vertices of the shared edge are registered in the right
+   * order regarding the triangle vertices, i.e. (0,1), (1,2) or (2,0) */
+  if((tri0_edge[0]+1)%3 != tri0_edge[1]) SWAP(int, tri0_edge[0], tri0_edge[1]);
+  if((tri1_edge[0]+1)%3 != tri1_edge[1]) SWAP(int, tri1_edge[0], tri1_edge[1]);
+
+  /* Compute the shared edge normal lying in the triangle 0 plane */
+  iv0 =  tri0_edge[0];
+  iv1 =  tri0_edge[1];
+  iv2 = (tri0_edge[1]+1) % 3;
+  f3_sub(E0, tri0_vertices[iv1].value, tri0_vertices[iv0].value);
+  f3_sub(E1, tri0_vertices[iv2].value, tri0_vertices[iv0].value);
+  f3_cross(N0, E0, E1); /* Triangle 0 normal */
+  tri0_2area = f3_len(N0);
+  f3_cross(N0, N0, E0);
+
+  /* Compute the shared edge normal lying in the triangle 1 plane */
+  iv0 =  tri1_edge[0];
+  iv1 =  tri1_edge[1];
+  iv2 = (tri1_edge[1]+1) % 3;
+  f3_sub(E0, tri1_vertices[iv1].value, tri1_vertices[iv0].value);
+  f3_sub(E1, tri1_vertices[iv2].value, tri1_vertices[iv0].value);
+  f3_cross(N1, E0, E1);
+  tri1_2area = f3_len(N1);
+  f3_cross(N1, N1, E0);
+
+  /* Compute the cosine between the 2 edge normals */
+  f3_normalize(N0, N0);
+  f3_normalize(N1, N1);
+  cos_normals = f3_dot(N0, N1);
+
+  /* The angle formed by the 2 triangles is sharp */
+  if(cos_normals > SHARP_ANGLE_COS_THRESOLD) return 0;
+
+  /* Compute the 2 times the area of the (pos0, shared_edge.vertex0,
+   * shared_edge.vertex1) triangles */
+  f3_sub(E0, tri0_vertices[tri0_edge[0]].value, pos0);
+  f3_sub(E1, tri0_vertices[tri0_edge[1]].value, pos0);
+  tmp0_2area = f3_len(f3_cross(N0, E0, E1));
+
+  /* Compute the 2 times the area of the (pos1, shared_edge.vertex0,
+   * shared_edge.vertex1) triangles */
+  f3_sub(E0, tri1_vertices[tri1_edge[0]].value, pos1);
+  f3_sub(E1, tri1_vertices[tri1_edge[1]].value, pos1);
+  tmp1_2area = f3_len(f3_cross(N1, E0, E1));
+
+  return (eq_epsf(tri0_2area, 0, 1.e-6f) || tmp0_2area/tri0_2area < ON_EDGE_EPSILON)
+      && (eq_epsf(tri1_2area, 0, 1.e-6f) || tmp1_2area/tri1_2area < ON_EDGE_EPSILON);
+}
+#undef ON_EDGE_EPSILON
 #endif /* DIM == 2 */
 
 /* Avoid self-intersection for a ray starting from a planar primitive, i.e. a
@@ -206,22 +434,25 @@ XD(hit_filter_function)
    const float org[DIM],
    const float dir[DIM],
    void* ray_data,
-   void* filter_data)
+   void* global_data)
 {
-  const struct sXd(hit)* hit_from = ray_data;
-  (void)org, (void)dir, (void)filter_data;
+  const struct hit_filter_data* filter_data = ray_data;
+  const struct sXd(hit)* hit_from = &filter_data->XD(hit);
+  (void)org, (void)dir, (void)global_data;
 
-  if(!hit_from || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
+  if(!ray_data || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
-  if(eq_epsf(hit->distance, 0, 1.e-6f)) {
+  if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
+    float pos[DIM];
+    fX(add)(pos, org, fX(mulf)(pos, dir, hit->distance));
     /* If the targeted point is near of the origin, check that it lies on an
-     * edge/vertex shared by the 2 primitives. */
+     * edge/vertex shared by the 2 primitives */
 #if DIM == 2
-    return hit_on_vertex(hit_from) && hit_on_vertex(hit);
+    return hit_shared_vertex(&hit_from->prim, &hit->prim, org, pos);
 #else
-    return hit_on_edge(hit_from) && hit_on_edge(hit);
+    return hit_shared_edge(&hit_from->prim, &hit->prim, org, pos);
 #endif
   }
   return 0;
@@ -321,7 +552,7 @@ XD(run_analyze)
   ASSERT(scn && nprims && indices && interf && nverts && position && out_desc);
 
   res = sencXd(device_create)(scn->dev->logger, scn->dev->allocator,
-    scn->dev->nthreads, scn->dev->verbose, &senc);
+    1/*scn->dev->nthreads*/, scn->dev->verbose, &senc);
   if(res != RES_OK) goto error;
 
   res = sencXd(scene_create)(senc,
@@ -801,6 +1032,7 @@ XD(scene_get_medium)
   size_t iprim, nprims;
   size_t nfailures = 0;
   const size_t max_failures = 10;
+  float P[DIM];
   /* Range of the parametric coordinate into which positions are challenged */
 #if DIM == 2
   float st[3];
@@ -821,23 +1053,37 @@ XD(scene_get_medium)
   f2(st[2], 5.f/12.f, 5.f/12.f);
 #endif
 
+  fX_set_dX(P, pos);
+
   SXD(scene_view_primitives_count(scn->sXd(view), &nprims));
   FOR_EACH(iprim, 0, nprims) {
     struct sXd(hit) hit;
     struct sXd(attrib) attr;
     struct sXd(primitive) prim;
+    size_t iprim2;
     const float range[2] = {0.f, FLT_MAX};
-    float N[DIM], P[DIM], dir[DIM], cos_N_dir;
+    float N[DIM], dir[DIM], cos_N_dir;
     size_t istep = 0;
+
+    /* 1 primitive over 2, take a primitive from the end of the primitive list.
+     * When primitives are sorted in a coherent manner regarding their
+     * position, this strategy avoids to test primitives that are going to be
+     * rejected of the same manner due to possible numerical issues of the
+     * resulting intersection. */
+    if((iprim % 2) == 0) {
+      iprim2 = iprim / 2;
+    } else {
+      iprim2 = nprims - 1 - (iprim / 2);
+    }
 
     do {
       /* Retrieve a position onto the primitive */
-      SXD(scene_view_get_primitive(scn->sXd(view), (unsigned)iprim, &prim));
+      SXD(scene_view_get_primitive(scn->sXd(view), (unsigned)iprim2, &prim));
       SXD(primitive_get_attrib(&prim, SXD_POSITION, st[istep], &attr));
 
       /* Trace a ray from the random walk vertex toward the retrieved primitive
        * position */
-      fX(normalize)(dir, fX(sub)(dir, attr.value, fX_set_dX(P, pos)));
+      fX(normalize)(dir, fX(sub)(dir, attr.value, P));
       SXD(scene_view_trace_ray(scn->sXd(view), P, dir, range, NULL, &hit));
 
       /* Unforeseen error. One has to intersect a primitive ! */
@@ -850,9 +1096,9 @@ XD(scene_get_medium)
           goto error;
         }
       }
-    /* Discard the hit if it is on a vertex, i.e. between 2 segments,  and
-     * target a new position onto the current primitive */
-    } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit))
+    /* Discard the hit if it is on a vertex/edge, and target a new position
+     * onto the current primitive */
+    } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit, P, dir))
          && ++istep < nsteps);
 
     /* The hits of all targeted positions on the current primitive are on
@@ -863,7 +1109,7 @@ XD(scene_get_medium)
     cos_N_dir = fX(dot)(N, dir);
 
     /* Not too close and not roughly orthognonal */
-    if(hit.distance > 1.e-6 || absf(cos_N_dir) > 1.e-1f) {
+    if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
       const struct sdis_interface* interf;
       interf = scene_get_interface(scn, hit.prim.prim_id);
       medium = interface_get_medium
@@ -880,6 +1126,18 @@ XD(scene_get_medium)
     }
   }
 
+  if(iprim >= nprims) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
+    log_warn(scn->dev,
+      "%s: performance issue. Up to %lu primitives were tested to define the "
+      "current medium at {%g, %g, %g}.\n",
+      FUNC_NAME, (unsigned long)iprim, SPLIT3(P));
+  }
+
 exit:
   *out_medium = medium;
   return res;
@@ -893,6 +1151,83 @@ error:
 #endif
   goto exit;
 }
+
+static INLINE res_T
+XD(scene_get_medium_in_closed_boundaries)
+  (const struct sdis_scene* scn,
+   const double pos[DIM],
+   struct sdis_medium** out_medium)
+{
+  struct sdis_medium* medium = NULL;
+  float P[DIM];
+  float frame[DIM*DIM];
+  float dirs[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
+  int idir;
+  res_T res = RES_OK;
+  ASSERT(scn && pos);
+
+  /* Build a frame that will be used to rotate the main axis by PI/4 around
+   * each axis. This can avoid numerical issues when geometry is discretized
+   * along the main axis */
+#if DIM == 2
+  f22_rotation(frame, (float)PI/4);
+#else
+/*  N[0] = N[1] = N[2] = (float)(1.0 / sqrt(3.0));*/
+/*  f33_basis(frame, N);*/
+  f33_rotation(frame, (float)PI/4, (float)PI/4, (float)PI/4);
+#endif
+
+  fX_set_dX(P, pos);
+  FOR_EACH(idir, 0, 2*DIM) {
+    struct sXd(hit) hit;
+    float N[DIM];
+    const float range[2] = {0.f, FLT_MAX};
+    float cos_N_dir;
+
+    /* Transform the directions to avoid to be aligned with the axis */
+    fXX_mulfX(dirs[idir], frame, dirs[idir]);
+
+    /* Trace a ray from the random walk vertex toward the retrieved primitive
+     * position */
+    SXD(scene_view_trace_ray(scn->sXd(view), P, dirs[idir], range, NULL, &hit));
+
+    /* Unforeseen error. One has to intersect a primitive ! */
+    if(SXD_HIT_NONE(&hit)) continue;
+
+    /* Discard a hits if it lies on an edge/point */
+    if(HIT_ON_BOUNDARY(&hit, P, dirs[idir])) continue;
+
+    fX(normalize)(N, hit.normal);
+    cos_N_dir = fX(dot)(N, dirs[idir]);
+
+    /* Not too close and not roughly orthogonal */
+    if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
+      const struct sdis_interface* interf;
+      interf = scene_get_interface(scn, hit.prim.prim_id);
+      medium = interface_get_medium
+        (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+      break;
+    }
+  }
+  if(idir >= 2*DIM) {
+    res = XD(scene_get_medium)(scn, pos, NULL, &medium);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  *out_medium = medium;
+  return res;
+error:
+#if DIM == 2
+  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
+    FUNC_NAME, SPLIT2(pos));
+#else
+  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
+    FUNC_NAME, SPLIT3(pos));
+#endif
+  goto exit;
+}
+
 #undef SDIS_SCENE_DIMENSION
 #undef DIM
 #undef sencXd
@@ -909,6 +1244,7 @@ error:
 #undef SXD_PRIMITIVE_EQ
 #undef fX
 #undef fX_set_dX
+#undef fXX_mulfX
 #undef XD
 #undef HIT_ON_BOUNDARY
 

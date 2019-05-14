@@ -373,3 +373,14 @@ scene_get_medium
     : scene_get_medium_3d(scn, pos, info, out_medium);
 }
 
+res_T
+scene_get_medium_in_closed_boundaries
+  (const struct sdis_scene* scn,
+   const double pos[],
+   struct sdis_medium** out_medium)
+{
+  return scene_is_2d(scn)
+    ? scene_get_medium_in_closed_boundaries_2d(scn, pos, out_medium)
+    : scene_get_medium_in_closed_boundaries_3d(scn, pos, out_medium);
+}
+

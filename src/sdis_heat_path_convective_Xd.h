@@ -34,6 +34,7 @@ XD(register_heat_vertex_in_fluid)
    const double weight)
 {
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+  struct hit_filter_data filter_data;
   const float empirical_dst = 0.1f;
   const float range[2] = {0, FLT_MAX};
   float org[DIM];
@@ -50,7 +51,9 @@ XD(register_heat_vertex_in_fluid)
   fX(set)(dir, rwalk->hit.normal);
   if(rwalk->hit_side == SDIS_BACK) fX(minus)(dir, dir);
 
-  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, &rwalk->hit, &hit));
+  filter_data.XD(hit) = rwalk->hit;
+  filter_data.epsilon = 1.e-6;
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, &filter_data, &hit));
   dst = SXD_HIT_NONE(&hit) ? empirical_dst : hit.distance * 0.5f;
 
   vtx = rwalk->vtx;
