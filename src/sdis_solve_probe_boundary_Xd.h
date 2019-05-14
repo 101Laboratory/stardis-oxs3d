@@ -20,6 +20,7 @@
 #include "sdis_realisation.h"
 #include "sdis_scene_c.h"
 
+#include <rsys/clock_time.h>
 #include <star/ssp.h>
 #include <omp.h>
 
@@ -48,7 +49,8 @@ XD(solve_probe_boundary)
   struct sdis_green_function** greens = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
-  struct accum* accums = NULL;
+  struct accum* acc_temps = NULL;
+  struct accum* acc_times = NULL;
   int64_t irealisation = 0;
   size_t i;
   ATOMIC res = RES_OK;
@@ -131,8 +133,12 @@ XD(solve_probe_boundary)
   }
 
   /* Create the per thread accumulator */
-  accums = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*accums));
-  if(!accums) { res = RES_MEM_ERR; goto error; }
+  acc_temps = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_temps));
+  if(!acc_temps) { res = RES_MEM_ERR; goto error; }
+  acc_times = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_times));
+  if(!acc_times) { res = RES_MEM_ERR; goto error; }
 
   /* Create the per thread green function */
   if(out_green) {
@@ -154,18 +160,24 @@ XD(solve_probe_boundary)
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
-    struct accum* accum = &accums[ithread];
+    struct accum* acc_temp = &acc_temps[ithread];
+    struct accum* acc_time = &acc_times[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
     struct sdis_heat_path* pheat_path = NULL;
     struct sdis_heat_path heat_path;
     double w = NaN;
     double time;
-    res_T res_local;
+    res_T res_local = RES_OK;
+    res_T res_simul = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Begin time registration */
+    time_current(&t0);
 
     if(!out_green) {
       time = sample_time(rng, time_range);
@@ -182,19 +194,17 @@ XD(solve_probe_boundary)
       pgreen_path = &green_path;
     }
 
-    res_local = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
+    res_simul = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
       fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
-    if(res_local == RES_OK) {
-      accum->sum += w;
-      accum->sum2 += w*w;
-      ++accum->count;
-    } else if(res_local != RES_BAD_OP) {
-      ATOMIC_SET(&res, res_local);
+
+    /* Handle fatal error */
+    if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_simul);
       continue;
     }
 
     if(pheat_path) {
-      pheat_path->status = res_local == RES_OK
+      pheat_path->status = res_simul == RES_OK
         ? SDIS_HEAT_PATH_SUCCEED
         : SDIS_HEAT_PATH_FAILED;
 
@@ -206,18 +216,36 @@ XD(solve_probe_boundary)
         if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
       }
     }
+
+    /* Stop time registration */
+    time_sub(&t0, time_current(&t1), &t0);
+
+    /* Update accumulators */
+    if(res_simul == RES_OK) {
+      const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+      acc_temp->sum += w;    acc_temp->sum2 += w*w;       ++acc_temp->count;
+      acc_time->sum += usec; acc_time->sum2 += usec*usec; ++acc_time->count;
+    }
   }
   if(res != RES_OK) goto error;
 
-  /* Setup the estimated temperature */
+  /* Setup the estimated temperature and per realisation time */
   if(out_estimator) {
-    struct accum acc;
-    sum_accums(accums, scn->dev->nthreads, &acc);
-    estimator_setup_realisations_count(estimator, nrealisations, acc.count);
-    estimator_setup_temperature(estimator, acc.sum, acc.sum2);
+    struct accum acc_temp;
+    struct accum acc_time;
+
+    sum_accums(acc_temps, scn->dev->nthreads, &acc_temp);
+    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
+    ASSERT(acc_temp.count == acc_time.count);
+
+    estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
+    estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
+    estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
   }
 
   if(out_green) {
+    struct accum acc_time;
+
     /* Redux the per thread green function into the green of the 1st thread */
     green = greens[0]; /* Return the green of the 1st thread */
     greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
@@ -225,7 +253,8 @@ XD(solve_probe_boundary)
     if(res != RES_OK) goto error;
 
     /* Finalize the estimated green */
-    res = green_function_finalize(green, rng_proxy);
+    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
+    res = green_function_finalize(green, rng_proxy, &acc_time);
     if(res != RES_OK) goto error;
   }
 
@@ -242,7 +271,8 @@ exit:
     }
     MEM_RM(scn->dev->allocator, greens);
   }
-  if(accums) MEM_RM(scn->dev->allocator, accums);
+  if(acc_temps) MEM_RM(scn->dev->allocator, acc_temps);
+  if(acc_times) MEM_RM(scn->dev->allocator, acc_times);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;
@@ -279,6 +309,7 @@ XD(solve_probe_boundary_flux)
   enum sdis_side solid_side, fluid_side;
   struct sdis_interface_fragment frag;
   struct accum* acc_tp = NULL; /* Per thread temperature accumulator */
+  struct accum* acc_ti = NULL; /* Per thread realisation time */
   struct accum* acc_fl = NULL; /* Per thread flux accumulator */
   struct accum* acc_fc = NULL; /* Per thread convective flux accumulator */
   struct accum* acc_fr = NULL; /* Per thread radiative flux accumulator */
@@ -369,6 +400,7 @@ XD(solve_probe_boundary_flux)
     if(!Dst) { res = RES_MEM_ERR; goto error; }                                \
   } (void)0
   ALLOC_ACCUMS(acc_tp);
+  ALLOC_ACCUMS(acc_ti);
   ALLOC_ACCUMS(acc_fc);
   ALLOC_ACCUMS(acc_fl);
   ALLOC_ACCUMS(acc_fr);
@@ -387,18 +419,23 @@ XD(solve_probe_boundary_flux)
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
     struct accum* acc_temp = &acc_tp[ithread];
+    struct accum* acc_time = &acc_ti[ithread];
     struct accum* acc_flux = &acc_fl[ithread];
     struct accum* acc_fcon = &acc_fc[ithread];
     struct accum* acc_frad = &acc_fr[ithread];
     double time, epsilon, hc, hr;
     int flux_mask = 0;
     double T_brf[3] = { 0, 0, 0 };
-    res_T res_local;
+    res_T res_simul = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Begin time registration */
+    time_current(&t0);
 
     time = sample_time(rng, time_range);
 
@@ -412,9 +449,17 @@ XD(solve_probe_boundary_flux)
     flux_mask = 0;
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
-    res_local = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
+    res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
       solid_side, fp_to_meter, Tarad, Tref, flux_mask, T_brf);
-    if(res_local == RES_OK) {
+
+    /* Stop time registration */
+    time_sub(&t0, time_current(&t1), &t0);
+
+    if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_simul);
+      continue;
+    } else if(res_simul == RES_OK) { /* Update accumulators */
+      const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
       const double Tboundary = T_brf[0];
       const double Tradiative = T_brf[1];
       const double Tfluid = T_brf[2];
@@ -425,6 +470,10 @@ XD(solve_probe_boundary_flux)
       acc_temp->sum += Tboundary;
       acc_temp->sum2 += Tboundary*Tboundary;
       ++acc_temp->count;
+      /* Time */
+      acc_time->sum += usec;
+      acc_time->sum2 += usec*usec;
+      ++acc_time->count;
       /* Overwall flux */
       acc_flux->sum += w_total;
       acc_flux->sum2 += w_total*w_total;
@@ -437,25 +486,25 @@ XD(solve_probe_boundary_flux)
       acc_frad->sum += w_rad;
       acc_frad->sum2 += w_rad*w_rad;
       ++acc_frad->count;
-    } else if(res_local != RES_BAD_OP) {
-      ATOMIC_SET(&res, res_local);
-      continue;
     }
   }
   if(res != RES_OK) goto error;
 
   /* Redux the per thread accumulators  */
   sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);
+  sum_accums(acc_ti, scn->dev->nthreads, &acc_ti[0]);
   sum_accums(acc_fc, scn->dev->nthreads, &acc_fc[0]);
   sum_accums(acc_fr, scn->dev->nthreads, &acc_fr[0]);
   sum_accums(acc_fl, scn->dev->nthreads, &acc_fl[0]);
   ASSERT(acc_tp[0].count == acc_fl[0].count);
+  ASSERT(acc_tp[0].count == acc_ti[0].count);
   ASSERT(acc_tp[0].count == acc_fr[0].count);
   ASSERT(acc_tp[0].count == acc_fc[0].count);
 
   /* Setup the estimated values */
   estimator_setup_realisations_count(estimator, nrealisations, acc_tp[0].count);
   estimator_setup_temperature(estimator, acc_tp[0].sum, acc_tp[0].sum2);
+  estimator_setup_realisation_time(estimator, acc_ti[0].sum, acc_ti[0].sum2);
   estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc[0].sum, acc_fc[0].sum2);
   estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr[0].sum, acc_fr[0].sum2);
   estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl[0].sum, acc_fl[0].sum2);
@@ -466,6 +515,7 @@ exit:
     MEM_RM(scn->dev->allocator, rngs);
   }
   if(acc_tp) MEM_RM(scn->dev->allocator, acc_tp);
+  if(acc_ti) MEM_RM(scn->dev->allocator, acc_ti);
   if(acc_fc) MEM_RM(scn->dev->allocator, acc_fc);
   if(acc_fr) MEM_RM(scn->dev->allocator, acc_fr);
   if(acc_fl) MEM_RM(scn->dev->allocator, acc_fl);

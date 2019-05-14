@@ -32,12 +32,12 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.3 REQUIRED)
+find_package(Star2D 0.3.1 REQUIRED)
 find_package(Star3D 0.6 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc 0.2.2 REQUIRED)
 find_package(StarEnc2D 0.2.2 REQUIRED)
-find_package(RSys 0.8 REQUIRED)
+find_package(RSys 0.8.1 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
@@ -51,6 +51,8 @@ include_directories(
   ${StarEnc_INCLUDE_DIR}
   ${StarEnc2D_INCLUDE_DIR}
   ${RSys_INCLUDE_DIR})
+
+set(CMAKE_C_FLAGS "-fno-omit-frame-pointer")
 
 rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 

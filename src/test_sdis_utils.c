@@ -262,6 +262,10 @@ check_green_function(struct sdis_green_function* green)
   CHK(E + SE >= mc.E - mc.SE);
   CHK(E - SE <= mc.E + mc.SE);
 
+  OK(sdis_estimator_get_realisation_time(estimator, &mc));
+  printf("Green per realisation time (in usec) = %g +/- %g\n",
+    mc.E, mc.SE);
+
   OK(sdis_estimator_ref_put(estimator));
 }
 

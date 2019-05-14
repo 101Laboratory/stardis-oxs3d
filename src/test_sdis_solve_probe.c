@@ -249,6 +249,7 @@ main(int argc, char** argv)
   struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc F = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
@@ -379,9 +380,14 @@ main(int argc, char** argv)
   BA(sdis_estimator_get_temperature(NULL, &T));
   OK(sdis_estimator_get_temperature(estimator, &T));
 
+  BA(sdis_estimator_get_realisation_time(estimator, NULL));
+  BA(sdis_estimator_get_realisation_time(NULL, &time));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
+
   ref = 300;
   printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
     SPLIT3(pos), ref, T.E, T.SE);
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
   CHK(nfails + nreals == N);

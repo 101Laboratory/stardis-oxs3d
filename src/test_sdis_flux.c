@@ -135,6 +135,7 @@ solve(struct sdis_scene* scn, const double pos[])
   struct sdis_estimator* estimator2;
   struct sdis_green_function* green;
   struct sdis_mc T;
+  struct sdis_mc time;
   size_t nreals;
   size_t nfails;
   double ref;
@@ -152,6 +153,7 @@ solve(struct sdis_scene* scn, const double pos[])
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
 
   OK(sdis_scene_get_dimension(scn, &dim));
 
@@ -166,6 +168,7 @@ solve(struct sdis_scene* scn, const double pos[])
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
   printf("Elapsed time = %s\n\n", dump);
 
