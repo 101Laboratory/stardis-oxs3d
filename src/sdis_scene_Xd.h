@@ -1127,7 +1127,7 @@ XD(scene_get_medium)
   }
 
   if(iprim >= nprims) {
-    res = RES_BAD_ARG;
+    res = RES_BAD_OP;
     goto error;
   }
 

@@ -144,6 +144,7 @@ XD(sample_next_step_robust)
     if(hit0->distance > delta) {
       XD(move_pos)(dX(set)(pos_next, pos), dir0, delta);
       res = scene_get_medium_in_closed_boundaries(scn, pos_next, &mdm);
+      if(res == RES_BAD_OP) { mdm = NULL; res = RES_OK; }
       if(res != RES_OK) goto error;
     } else {
       struct sdis_interface* interf;

@@ -247,6 +247,7 @@ XD(select_reinjection_dir)
     if(SXD_HIT_NONE(&hit0)) {
       XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir0, (float)delta);
       res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm0);
+      if(res == RES_BAD_OP) { mdm0 = NULL; res = RES_OK; }
       if(res != RES_OK) goto error;
     } else {
       interf = scene_get_interface(scn, hit0.prim.prim_id);
@@ -258,6 +259,7 @@ XD(select_reinjection_dir)
     if(SXD_HIT_NONE(&hit1)) {
       XD(move_pos)(dX(set)(tmp, rwalk->vtx.P), dir1, (float)delta);
       res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm1);
+      if(res == RES_BAD_OP) { mdm1 = NULL; res = RES_OK; }
       if(res != RES_OK) goto error;
     } else {
       interf = scene_get_interface(scn, hit1.prim.prim_id);
@@ -407,6 +409,7 @@ XD(select_reinjection_dir_and_check_validity)
     XD(move_pos)(dX(set)(pos, rwalk->vtx.P), reinject_dir, reinject_dst);
     res = scene_get_medium_in_closed_boundaries
       (scn, pos, &reinject_mdm);
+    if(res == RES_BAD_OP) { reinject_mdm = NULL; res = RES_OK; }
     if(res != RES_OK) goto error;
 
     *is_valid = reinject_mdm == mdm;
