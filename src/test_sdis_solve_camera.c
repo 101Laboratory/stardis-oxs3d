@@ -433,39 +433,59 @@ geometry_add_shape
 }
 
 static void
-dump_image(const struct sdis_accum_buffer* buf)
+dump_image(const struct sdis_estimator_buffer* buf)
 {
-  struct sdis_accum_buffer_layout layout = SDIS_ACCUM_BUFFER_LAYOUT_NULL;
   struct image img;
   double* temps = NULL;
-  const struct sdis_accum* accums = NULL;
   double Tmax = -DBL_MAX;
   double Tmin =  DBL_MAX;
   double norm;
+  size_t definition[2];
   size_t i, ix, iy;
 
   CHK(buf != NULL);
-  OK(sdis_accum_buffer_get_layout(buf, &layout));
+  OK(sdis_estimator_buffer_get_definition(buf, definition));
 
-  temps = mem_alloc(layout.width*layout.height*sizeof(double));
+  temps = mem_alloc(definition[0]*definition[1]*sizeof(double));
   CHK(temps != NULL);
 
-  OK(sdis_accum_buffer_map(buf, &accums));
-
   /* Check the results validity */
-  FOR_EACH(i, 0, layout.height * layout.width) {
-    CHK(accums[i].nweights + accums[i].nfailures == SPP);
-    CHK(accums[i].nfailures <= SPP/100);
-    CHK(accums[i].sum_weights >= 0);
-    CHK(accums[i].sum_weights_sqr >= 0);
-  }
+  FOR_EACH(iy, 0, definition[1]) {
+    FOR_EACH(ix, 0, definition[0]) {
+      const struct sdis_estimator* estimator;
+      struct sdis_mc T;
+      struct sdis_mc time;
+      size_t nreals;
+      size_t nfails;
 
+      BA(sdis_estimator_buffer_at(NULL, ix, iy, &estimator));
+      BA(sdis_estimator_buffer_at(buf, definition[0]+1, iy, &estimator));
+      BA(sdis_estimator_buffer_at(buf, ix, definition[1]+1, &estimator));
+      BA(sdis_estimator_buffer_at(buf, ix, iy, NULL));
+      OK(sdis_estimator_buffer_at(buf, ix, iy, &estimator));
+
+      OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+      OK(sdis_estimator_get_failure_count(estimator, &nfails));
+      OK(sdis_estimator_get_temperature(estimator, &T));
+      OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+      CHK(nreals + nfails == SPP);
+      CHK(T.E > 0);
+      CHK(time.E > 0);
+    }
+  }
+  
   /* Compute the per pixel temperature */
-  FOR_EACH(iy, 0, layout.height) {
-    const struct sdis_accum* row_accums = accums + iy * layout.width;
-    double* row = temps + iy * layout.width;
-    FOR_EACH(ix, 0, layout.width) {
-      row[ix] = row_accums[ix].sum_weights / (double)row_accums[ix].nweights;
+  FOR_EACH(iy, 0, definition[1]) {
+    double* row = temps + iy * definition[0];
+    FOR_EACH(ix, 0, definition[0]) {
+      const struct sdis_estimator* estimator;
+      struct sdis_mc T;
+
+      OK(sdis_estimator_buffer_at(buf, ix, iy, &estimator));
+      OK(sdis_estimator_get_temperature(estimator, &T));
+
+      row[ix] = T.E;
       Tmax = MMAX(row[ix], Tmax);
       Tmin = MMIN(row[ix], Tmin);
     }
@@ -481,10 +501,10 @@ dump_image(const struct sdis_accum_buffer* buf)
   OK(image_init(NULL, &img));
   OK(image_setup(&img, IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*3, IMAGE_RGB8, NULL));
 
-  FOR_EACH(iy, 0, layout.height) {
-    const double* src_row = temps + iy*layout.width;
+  FOR_EACH(iy, 0, definition[1]) {
+    const double* src_row = temps + iy*definition[0];
     char* dst_row = img.pixels + iy*img.pitch;
-    FOR_EACH(ix, 0, layout.width) {
+    FOR_EACH(ix, 0, definition[0]) {
       unsigned char* pixels = (unsigned char*)
         (dst_row + ix * sizeof_image_format(img.format));
       const unsigned char T = (unsigned char)
@@ -511,10 +531,9 @@ main(int argc, char** argv)
   struct s3dut_mesh_data msh_data;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
-  struct sdis_accum_buffer* buf = NULL;
   struct sdis_camera* cam = NULL;
   struct sdis_device* dev = NULL;
-  struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator_buffer* buf = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid0 = NULL;
   struct sdis_medium* fluid1 = NULL;
@@ -526,6 +545,7 @@ main(int argc, char** argv)
   struct interf interface_param = INTERF_NULL;
   size_t ntris, npos;
   size_t nreals, nfails;
+  size_t definition[2];
   double pos[3];
   double tgt[3];
   double up[3];
@@ -604,47 +624,42 @@ main(int argc, char** argv)
   OK(sdis_camera_set_fov(cam, MDEG2RAD(70)));
   OK(sdis_camera_look_at(cam, pos, tgt, up));
 
-  /* Create the accum buffer */
-  OK(sdis_accum_buffer_create(dev, IMG_WIDTH, IMG_HEIGHT, &buf));
-
 #if 0
   dump_mesh(stdout, geom.positions, npos, geom.indices, ntris);
   exit(0);
 #endif
   BA(sdis_solve_camera(NULL, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, NULL, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, cam, NULL, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, cam, trange, 0, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, cam, trange, 1, 300, -1, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, 0, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, 0,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    0, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    0, SDIS_HEAT_PATH_NONE, &buf));
   BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, NULL, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, NULL));
+    SPP, SDIS_HEAT_PATH_NONE, NULL));
 
   trange[0] = -1;
   BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   trange[0] = 10; trange[1] = 1;
   BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
   trange[0] = trange[1] = INF;
 
   /* Launch the simulation */
   OK(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
 
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  /*OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
@@ -654,19 +669,23 @@ main(int argc, char** argv)
   fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
   fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
   fprintf(stderr, "#failures = %lu/%lu\n",
-    (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
+    (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));*/
+  BA(sdis_estimator_buffer_get_definition(NULL, definition));
+  BA(sdis_estimator_buffer_get_definition(buf, NULL));
+  OK(sdis_estimator_buffer_get_definition(buf, definition));
+  CHK(definition[0] == IMG_WIDTH);
+  CHK(definition[1] == IMG_HEIGHT);
 
   /* Write the image */
   dump_image(buf);
 
   /* Release memory */
-  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_buffer_ref_put(buf));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_camera_ref_put(cam));
   OK(sdis_interface_ref_put(interf0));
   OK(sdis_interface_ref_put(interf1));
   OK(sdis_device_ref_put(dev));
-  OK(sdis_accum_buffer_ref_put(buf));
   geometry_release(&geom);
 
   check_memory_allocator(&allocator);

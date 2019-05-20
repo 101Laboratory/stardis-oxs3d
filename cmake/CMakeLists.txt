@@ -65,11 +65,11 @@ set(VERSION_PATCH 1)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
-  sdis_accum_buffer.c
   sdis_camera.c
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
+  sdis_estimator_buffer.c
   sdis_green.c
   sdis_heat_path.c
   sdis_interface.c
@@ -171,7 +171,6 @@ if(NOT NO_TEST)
     register_test(${_name} ${_name})
   endfunction()
 
-  new_test(test_sdis_accum_buffer)
   new_test(test_sdis_camera)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)

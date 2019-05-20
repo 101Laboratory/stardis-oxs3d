@@ -56,11 +56,11 @@ struct senc_descriptor;
  * get or release a reference on the data, i.e. they increment or decrement the
  * reference counter, respectively. When this counter reaches 0, the object is
  * silently destroyed and cannot be used anymore. */
-struct sdis_accum_buffer;
 struct sdis_camera;
 struct sdis_data;
 struct sdis_device;
 struct sdis_estimator;
+struct sdis_estimator_buffer;
 struct sdis_green_function;
 struct sdis_interface;
 struct sdis_medium;
@@ -136,14 +136,6 @@ struct sdis_interface_fragment {
 #define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1, SDIS_SIDE_NULL__}
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
-
-/* Monte-Carlo accumulator */
-struct sdis_accum {
-  double sum_weights; /* Sum of Monte-Carlo weights */
-  double sum_weights_sqr; /* Sum of Monte-Carlo square weights */
-  size_t nweights; /* #accumulated weights */
-  size_t nfailures; /* #failures */
-};
 
 /* Monte-Carlo estimation */
 struct sdis_mc {
@@ -243,22 +235,6 @@ struct sdis_interface_shader {
   {NULL, 0, SDIS_INTERFACE_SIDE_SHADER_NULL__, SDIS_INTERFACE_SIDE_SHADER_NULL__}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
-
-struct sdis_accum_buffer_layout {
-  size_t width;
-  size_t height;
-};
-#define SDIS_ACCUM_BUFFER_LAYOUT_NULL__ {0, 0}
-static const struct sdis_accum_buffer_layout SDIS_ACCUM_BUFFER_LAYOUT_NULL =
-  SDIS_ACCUM_BUFFER_LAYOUT_NULL__;
-
-/* Functor use to write accumulations performed by sdis_solve_camera */
-typedef res_T
-(*sdis_write_accums_T)
-  (void* context, /* User data */
-   const size_t origin[2], /* Coordinates of the 1st accumulation in image plane */
-   const size_t naccums[2], /* #accumulations in X and Y */
-   const struct sdis_accum* accums); /* List of row ordered accumulations */
 
 /* Vertex of heat path v*/
 struct sdis_heat_vertex {
@@ -418,51 +394,27 @@ sdis_camera_look_at
    const double up[3]);
 
 /*******************************************************************************
- * A buffer of accumulations is a 2D array whose each cell stores an
- * Monte-Carlo accumulation, i.e. a sum of MC weights, the sum of their square
- * and the overall number of summed weights (see struct sdis_accum)
- ******************************************************************************/
+ * An estimator buffer is 2D array of estimators 
+******************************************************************************/
 SDIS_API res_T
-sdis_accum_buffer_create
-  (struct sdis_device* dev,
-   const size_t width,  /* #cells in X */
-   const size_t height, /* #cells in Y */
-   struct sdis_accum_buffer** buf);
+sdis_estimator_buffer_ref_get
+  (struct sdis_estimator_buffer* buf);
 
 SDIS_API res_T
-sdis_accum_buffer_ref_get
-  (struct sdis_accum_buffer* buf);
+sdis_estimator_buffer_ref_put
+  (struct sdis_estimator_buffer* buf);
 
 SDIS_API res_T
-sdis_accum_buffer_ref_put
-  (struct sdis_accum_buffer* buf);
+sdis_estimator_buffer_get_definition
+  (const struct sdis_estimator_buffer* buf,
+   size_t definition[2]);
 
 SDIS_API res_T
-sdis_accum_buffer_get_layout
-  (const struct sdis_accum_buffer* buf,
-   struct sdis_accum_buffer_layout* layout);
-
-/* Get a read only pointer toward the memory space of the accum buffer */
-SDIS_API res_T
-sdis_accum_buffer_map
-  (const struct sdis_accum_buffer* buf,
-   const struct sdis_accum** accums);
-
-SDIS_API res_T
-sdis_accum_buffer_unmap
-  (const struct sdis_accum_buffer* buf);
-
-/* Helper function that matches the `sdis_write_accums_T' functor type. One can
- * send this function directly to the sdis_solve_camera function, to fill the
- * accum buffer with the estimation of the radiative temperature that reaches
- * each pixel of an image whose definition matches the definition of the accum
- * buffer. */
-SDIS_API res_T
-sdis_accum_buffer_write
-  (void* buf, /* User data */
-   const size_t origin[2], /* Coordinates of the 1st accum in image plane */
-   const size_t naccum[2], /* #accum in X and Y */
-   const struct sdis_accum* accums); /* List of row ordered accum */
+sdis_estimator_buffer_at
+  (const struct sdis_estimator_buffer* buf,
+   const size_t x,
+   const size_t y,
+   const struct sdis_estimator** estimator);
 
 /*******************************************************************************
  * A medium encapsulates the properties of either a fluid or a solid.
@@ -927,10 +879,7 @@ sdis_solve_camera
    const size_t height, /* Image definition in Y */
    const size_t spp, /* #samples per pixel */
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
-   sdis_write_accums_T writer,
-   void* writer_data,
-   /* Estimator of the whole image. May be NULL */
-   struct sdis_estimator** estimator);
+   struct sdis_estimator_buffer** buf);
 
 SDIS_API res_T
 sdis_solve_medium

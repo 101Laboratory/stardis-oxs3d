@@ -17,6 +17,7 @@
 #include "sdis_camera.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_estimator_buffer_c.h"
 #include "sdis_interface_c.h"
 
 #include <star/ssp.h>
@@ -74,19 +75,15 @@ solve_pixel
    const size_t nrealisations,
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
-   struct accum* acc_temp,
-   struct accum* acc_time,
-   struct sdis_accum* accum,
    struct sdis_estimator* estimator)
 {
-  double sum_weights = 0;
-  double sum_weights_sqr = 0;
-  size_t N = 0; /* #realisations that do not fail */
+  struct accum acc_temp = ACCUM_NULL;
+  struct accum acc_time = ACCUM_NULL;
   size_t irealisation;
   res_T res = RES_OK;
   ASSERT(scn && mdm && rng && cam && ipix && nrealisations && Tref >= 0);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
-  ASSERT(acc_time && acc_temp && accum && estimator && time_range);
+  ASSERT(estimator && time_range);
 
   FOR_EACH(irealisation, 0, nrealisations) {
     struct time t0, t1;
@@ -146,21 +143,16 @@ solve_pixel
     if(res_simul == RES_OK) {
       /* Update global accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
-      acc_temp->sum += w;    acc_temp->sum2 += w*w;       ++acc_temp->count;
-      acc_time->sum += usec; acc_time->sum2 += usec*usec; ++acc_time->count;
-
-      /* Update per pixel accumulator */
-      sum_weights += w;
-      sum_weights_sqr += w*w;
-      ++N;
+      acc_temp.sum += w;    acc_temp.sum2 += w*w;       ++acc_temp.count;
+      acc_time.sum += usec; acc_time.sum2 += usec*usec; ++acc_time.count;
     }
   }
 
-  /* Setup per pixel accumulator */
-  accum->sum_weights = sum_weights;
-  accum->sum_weights_sqr = sum_weights_sqr;
-  accum->nweights = N;
-  accum->nfailures = nrealisations - N;
+  /* Setup the pixel estimator */
+  ASSERT(acc_temp.count == acc_time.count);
+  estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
+  estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
+  estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
 
 exit:
   return res;
@@ -183,16 +175,13 @@ solve_tile
    const size_t spp, /* #samples per pixel */
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
-   struct accum* acc_temp,
-   struct accum* acc_time,
-   struct sdis_accum* accums,
-   struct sdis_estimator* estimator)
+   struct sdis_estimator_buffer* buf)
 {
   size_t mcode; /* Morton code of the tile pixel */
   size_t npixels;
   res_T res = RES_OK;
-  ASSERT(scn && rng && mdm && cam && spp && origin && accums && Tref >= 0);
-  ASSERT(size &&size[0] && size[1] && acc_temp && acc_time && estimator);
+  ASSERT(scn && rng && mdm && cam && spp && origin && Tref >= 0);
+  ASSERT(size &&size[0] && size[1] && buf);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0 && time_range);
 
   /* Adjust the #pixels to process them wrt a morton order */
@@ -201,19 +190,21 @@ solve_tile
 
   FOR_EACH(mcode, 0, npixels) {
     size_t ipix[2];
-    struct sdis_accum* accum;
+    struct sdis_estimator* estimator;
 
     ipix[0] = morton2D_decode((uint32_t)(mcode>>0));
     if(ipix[0] >= size[0]) continue;
     ipix[1] = morton2D_decode((uint32_t)(mcode>>1));
     if(ipix[1] >= size[1]) continue;
 
-    accum = accums + ipix[1]*size[0] + ipix[0];
     ipix[0] = ipix[0] + origin[0];
     ipix[1] = ipix[1] + origin[1];
 
+    /* Fetch the pixel estimator */
+    estimator = estimator_buffer_grab(buf, ipix[0], ipix[1]);
+
     res = solve_pixel(scn, rng, mdm, cam, time_range, fp_to_meter, Tarad, Tref,
-      ipix, spp, register_paths, pix_sz, acc_temp, acc_time, accum, estimator);
+      ipix, spp, register_paths, pix_sz, estimator);
     if(res != RES_OK) goto error;
   }
 
@@ -418,18 +409,13 @@ sdis_solve_camera
    const size_t height, /* #pixels in Y */
    const size_t spp, /* #samples per pixel */
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
-   sdis_write_accums_T writer,
-   void* writer_data,
-   struct sdis_estimator** out_estimator)
+   struct sdis_estimator_buffer** out_buf)
 {
   #define TILE_SIZE 32 /* definition in X & Y of a tile */
   STATIC_ASSERT(IS_POW2(TILE_SIZE), TILE_SIZE_must_be_a_power_of_2);
 
-  struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator_buffer* buf = NULL;
   struct sdis_medium* medium = NULL;
-  struct darray_accum* tiles = NULL;
-  struct accum* acc_temps = NULL;
-  struct accum* acc_times = NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   size_t ntiles_x, ntiles_y, ntiles;
@@ -438,8 +424,8 @@ sdis_solve_camera
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !cam || fp_to_meter <= 0 || Tref < 0 || !width
-  || !height || !spp || !writer || !out_estimator) {
+  if(!scn || !cam || fp_to_meter <= 0 || Tref < 0 || !width || !height || !spp
+  || !out_buf) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -481,23 +467,6 @@ sdis_solve_camera
     if(res != RES_OK) goto error;
   }
 
-  /* Create the per thread accumulators */
-  acc_temps = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_temps));
-  if(!acc_temps) { res = RES_MEM_ERR; goto error; }
-  acc_times = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_times));
-  if(!acc_times) { res = RES_MEM_ERR; goto error; }
-
-  /* Allocate per thread buffer of accumulations */
-  tiles = darray_tile_data_get(&scn->dev->tiles);
-  ASSERT(darray_tile_size_get(&scn->dev->tiles) == scn->dev->nthreads);
-  FOR_EACH(i, 0, scn->dev->nthreads) {
-    const size_t naccums = TILE_SIZE * TILE_SIZE;
-    res = darray_accum_resize(tiles+i, naccums);
-    if(res != RES_OK) goto error;
-  }
-
   ntiles_x = (width  + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
   ntiles_y = (height + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
   ntiles = round_up_pow2(MMAX(ntiles_x, ntiles_y));
@@ -506,8 +475,8 @@ sdis_solve_camera
   pix_sz[0] = 1.0 / (double)width;
   pix_sz[1] = 1.0 / (double)height;
 
-  /* Create the estimator */
-  res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+  /* Create the global estimator */
+  res = estimator_buffer_create(scn->dev, width, height, &buf);
   if(res != RES_OK) goto error;
 
   omp_set_num_threads((int)scn->dev->nthreads);
@@ -516,10 +485,7 @@ sdis_solve_camera
     size_t tile_org[2] = {0, 0};
     size_t tile_sz[2] = {0, 0};
     const int ithread = omp_get_thread_num();
-    struct sdis_accum* accums = NULL;
     struct ssp_rng* rng = rngs[ithread];
-    struct accum* acc_temp = &acc_temps[ithread];
-    struct accum* acc_time = &acc_times[ithread];
     res_T res_local = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue;
@@ -535,40 +501,13 @@ sdis_solve_camera
     tile_sz[0] = MMIN(TILE_SIZE, width - tile_org[0]);
     tile_sz[1] = MMIN(TILE_SIZE, height - tile_org[1]);
 
-    /* Fetch the accumulations buffer */
-    accums = darray_accum_data_get(tiles+ithread);
-
     /* Draw the tile */
     res_local = solve_tile(scn, rng, medium, cam, time_range, fp_to_meter,
-      Tarad, Tref, tile_org, tile_sz, spp, register_paths, pix_sz, acc_temp,
-      acc_time, accums, estimator);
+      Tarad, Tref, tile_org, tile_sz, spp, register_paths, pix_sz, buf);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;
     }
-
-    /* Write the accumulations */
-    res_local = writer(writer_data, tile_org, tile_sz, accums);
-    if(res_local != RES_OK) {
-      ATOMIC_SET(&res, res_local);
-      continue;
-    }
-  }
-
-  /* Setup the estimated temperature and per realisation time for the whole
-   * image */
-  if(out_estimator) {
-    const size_t nrealisations = width*height*spp;
-    struct accum acc_temp;
-    struct accum acc_time;
-
-    sum_accums(acc_temps, scn->dev->nthreads, &acc_temp);
-    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
-    ASSERT(acc_temp.count == acc_time.count);
-
-    estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
-    estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
-    estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
   }
 
 exit:
@@ -578,10 +517,8 @@ exit:
     }
     MEM_RM(scn->dev->allocator, rngs);
   }
-  if(acc_temps) MEM_RM(scn->dev->allocator, acc_temps);
-  if(acc_times) MEM_RM(scn->dev->allocator, acc_times);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
-  if(out_estimator) *out_estimator = estimator;
+  if(out_buf) *out_buf = buf;
   return (res_T)res;
 error:
   goto exit;
