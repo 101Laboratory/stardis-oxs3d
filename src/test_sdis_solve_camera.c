@@ -529,6 +529,7 @@ main(int argc, char** argv)
   double pos[3];
   double tgt[3];
   double up[3];
+  double trange[2] = {INF, INF};
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -610,28 +611,38 @@ main(int argc, char** argv)
   dump_mesh(stdout, geom.positions, npos, geom.indices, ntris);
   exit(0);
 #endif
-  BA(sdis_solve_camera(NULL, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
-  BA(sdis_solve_camera(scn, NULL, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, INF, 0, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, INF, 1, 300, -1, IMG_WIDTH, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, 0, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, 0, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, 0,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, NULL, buf, &estimator));
-  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, NULL));
+  BA(sdis_solve_camera(NULL, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, NULL, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, NULL, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, trange, 0, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, -1, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, 0, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, 0,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    0, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, NULL, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, NULL));
+
+  trange[0] = -1;
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  trange[0] = 10; trange[1] = 1;
+  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  trange[0] = trange[1] = INF;
 
   /* Launch the simulation */
-  OK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  OK(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
+    SPP, SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
 
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
@@ -642,7 +653,7 @@ main(int argc, char** argv)
 
   fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
   fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
-  fprintf(stderr, "#failures = %lu/%lu\n", 
+  fprintf(stderr, "#failures = %lu/%lu\n",
     (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
 
   /* Write the image */

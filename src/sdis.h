@@ -919,7 +919,7 @@ SDIS_API res_T
 sdis_solve_camera
   (struct sdis_scene* scn,
    const struct sdis_camera* cam, /* Point of view */
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double ambient_radiative_temperature, /* In Kelvin */
    const double reference_temperature, /* In Kelvin */

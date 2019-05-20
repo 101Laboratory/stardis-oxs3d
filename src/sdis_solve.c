@@ -66,7 +66,7 @@ solve_pixel
    struct ssp_rng* rng,
    struct sdis_medium* mdm,
    const struct sdis_camera* cam,
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -86,7 +86,7 @@ solve_pixel
   res_T res = RES_OK;
   ASSERT(scn && mdm && rng && cam && ipix && nrealisations && Tref >= 0);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
-  ASSERT(acc_time && acc_temp && accum && estimator);
+  ASSERT(acc_time && acc_temp && accum && estimator && time_range);
 
   FOR_EACH(irealisation, 0, nrealisations) {
     struct time t0, t1;
@@ -96,11 +96,13 @@ solve_pixel
     double w = 0;
     struct sdis_heat_path* pheat_path = NULL;
     struct sdis_heat_path heat_path;
+    double time;
     res_T res_simul = RES_OK;
 
     /* Begin time registration */
     time_current(&t0);
 
+    time = sample_time(rng, time_range);
     if(register_paths) {
       heat_path_init(scn->dev->allocator, &heat_path);
       pheat_path = &heat_path;
@@ -172,7 +174,7 @@ solve_tile
    struct ssp_rng* rng,
    struct sdis_medium* mdm,
    const struct sdis_camera* cam,
-   const double time,
+   const double time_range[2],
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
@@ -191,7 +193,7 @@ solve_tile
   res_T res = RES_OK;
   ASSERT(scn && rng && mdm && cam && spp && origin && accums && Tref >= 0);
   ASSERT(size &&size[0] && size[1] && acc_temp && acc_time && estimator);
-  ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
+  ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0 && time_range);
 
   /* Adjust the #pixels to process them wrt a morton order */
   npixels = round_up_pow2(MMAX(size[0], size[1]));
@@ -210,8 +212,8 @@ solve_tile
     ipix[0] = ipix[0] + origin[0];
     ipix[1] = ipix[1] + origin[1];
 
-    res = solve_pixel(scn, rng, mdm, cam, time, fp_to_meter, Tarad, Tref, ipix,
-      spp, register_paths, pix_sz, acc_temp, acc_time, accum, estimator);
+    res = solve_pixel(scn, rng, mdm, cam, time_range, fp_to_meter, Tarad, Tref,
+      ipix, spp, register_paths, pix_sz, acc_temp, acc_time, accum, estimator);
     if(res != RES_OK) goto error;
   }
 
@@ -408,7 +410,7 @@ res_T
 sdis_solve_camera
   (struct sdis_scene* scn,
    const struct sdis_camera* cam,
-   const double time,
+   const double time_range[2],
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
@@ -436,13 +438,18 @@ sdis_solve_camera
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !cam || time < 0 || fp_to_meter <= 0 || Tref < 0 || !width
+  if(!scn || !cam || fp_to_meter <= 0 || Tref < 0 || !width
   || !height || !spp || !writer || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
   if(scene_is_2d(scn)) {
     log_err(scn->dev, "%s: 2D scene are not supported.\n", FUNC_NAME);
+    goto error;
+  }
+  if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+  || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+    res = RES_BAD_ARG;
     goto error;
   }
 
@@ -532,9 +539,9 @@ sdis_solve_camera
     accums = darray_accum_data_get(tiles+ithread);
 
     /* Draw the tile */
-    res_local = solve_tile(scn, rng, medium, cam, time, fp_to_meter, Tarad,
-      Tref, tile_org, tile_sz, spp, register_paths, pix_sz, acc_temp, acc_time,
-      accums, estimator);
+    res_local = solve_tile(scn, rng, medium, cam, time_range, fp_to_meter,
+      Tarad, Tref, tile_org, tile_sz, spp, register_paths, pix_sz, acc_temp,
+      acc_time, accums, estimator);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;
