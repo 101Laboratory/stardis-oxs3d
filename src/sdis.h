@@ -926,8 +926,11 @@ sdis_solve_camera
    const size_t width, /* Image definition in in X */
    const size_t height, /* Image definition in Y */
    const size_t spp, /* #samples per pixel */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    sdis_write_accums_T writer,
-   void* writer_data);
+   void* writer_data,
+   /* Estimator of the whole image. May be NULL */
+   struct sdis_estimator** estimator);
 
 SDIS_API res_T
 sdis_solve_medium

@@ -509,9 +509,12 @@ main(int argc, char** argv)
   struct geometry geom = GEOMETRY_NULL;
   struct s3dut_mesh* msh = NULL;
   struct s3dut_mesh_data msh_data;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_accum_buffer* buf = NULL;
   struct sdis_camera* cam = NULL;
   struct sdis_device* dev = NULL;
+  struct sdis_estimator* estimator = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid0 = NULL;
   struct sdis_medium* fluid1 = NULL;
@@ -522,6 +525,7 @@ main(int argc, char** argv)
   struct solid solid_param = SOLID_NULL;
   struct interf interface_param = INTERF_NULL;
   size_t ntris, npos;
+  size_t nreals, nfails;
   double pos[3];
   double tgt[3];
   double up[3];
@@ -606,15 +610,46 @@ main(int argc, char** argv)
   dump_mesh(stdout, geom.positions, npos, geom.indices, ntris);
   exit(0);
 #endif
+  BA(sdis_solve_camera(NULL, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, NULL, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, INF, 0, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, INF, 1, 300, -1, IMG_WIDTH, IMG_HEIGHT, SPP,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, 0, IMG_HEIGHT, SPP,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, 0, SPP,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, 0,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
+    SDIS_HEAT_PATH_NONE, NULL, buf, &estimator));
+  BA(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, NULL));
 
   /* Launch the simulation */
   OK(sdis_solve_camera(scn, cam, INF, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT, SPP,
-    sdis_accum_buffer_write, buf));
+    SDIS_HEAT_PATH_NONE, sdis_accum_buffer_write, buf, &estimator));
+
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+  CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
+
+  fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
+  fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
+  fprintf(stderr, "#failures = %lu/%lu\n", 
+    (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
 
   /* Write the image */
   dump_image(buf);
 
   /* Release memory */
+  OK(sdis_estimator_ref_put(estimator));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_camera_ref_put(cam));
   OK(sdis_interface_ref_put(interf0));

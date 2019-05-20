@@ -90,7 +90,7 @@ XD(solve_probe)
     if(res != RES_OK) goto error;
   }
 
-  /* Create the per thread accumulator */
+  /* Create the per thread accumulators */
   acc_temps = MEM_CALLOC
     (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_temps));
   if(!acc_temps) { res = RES_MEM_ERR; goto error; }

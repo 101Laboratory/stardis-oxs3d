@@ -32,6 +32,7 @@ ray_realisation_3d
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
@@ -50,8 +51,13 @@ ray_realisation_3d
 
   ctx.Tarad = Tarad;
   ctx.Tref3 = Tref*Tref*Tref;
+  ctx.heat_path = heat_path;
 
   f3_set_d3(dir, direction);
+
+  /* Register the starting position against the heat path */
+  res = register_heat_vertex(heat_path, &rwalk.vtx, 0, SDIS_HEAT_VERTEX_RADIATIVE);
+  if(res != RES_OK) goto error;
 
   res = trace_radiative_path_3d(scn, dir, fp_to_meter, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
