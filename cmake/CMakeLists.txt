@@ -16,9 +16,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(stardis C)
 enable_testing()
-if(POLICY CMP0054)
-  cmake_policy(SET CMP0054 OLD) # Disable OpenMP CMake warning
-endif()
 
 include(CMakeDependentOption)
 
