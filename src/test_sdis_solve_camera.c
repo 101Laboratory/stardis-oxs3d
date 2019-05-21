@@ -662,7 +662,7 @@ main(int argc, char** argv)
 
   /* Launch the simulation */
   OK(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_SUCCEED, &buf));
+    SPP, SDIS_HEAT_PATH_NONE, &buf));
 
   BA(sdis_estimator_buffer_get_realisation_count(NULL, &nreals));
   BA(sdis_estimator_buffer_get_realisation_count(buf, NULL));
