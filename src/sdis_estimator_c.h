@@ -37,8 +37,8 @@ enum flux_name {
 struct sdis_estimator {
   struct accum temperature;
   struct accum realisation_time;
-  struct accum fluxes[FLUX_NAMES_COUNT__];
-  size_t nrealisations;
+  struct accum fluxes[FLUX_NAMES_COUNT__]; 
+  size_t nrealisations; /* #successes */
   size_t nfailures;
 
   struct mutex* mutex;

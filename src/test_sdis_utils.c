@@ -270,7 +270,7 @@ check_green_function(struct sdis_green_function* green)
 }
 
 void
-dump_heat_paths(FILE* stream, struct sdis_estimator* estimator)
+dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
 {
   const struct sdis_heat_path* path;
   size_t ipath;

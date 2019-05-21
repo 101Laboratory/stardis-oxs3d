@@ -474,7 +474,7 @@ dump_image(const struct sdis_estimator_buffer* buf)
       CHK(time.E > 0);
     }
   }
-  
+
   /* Compute the per pixel temperature */
   FOR_EACH(iy, 0, definition[1]) {
     double* row = temps + iy * definition[0];
@@ -615,6 +615,11 @@ main(int argc, char** argv)
     geometry_get_interface, npos, geometry_get_position,
     &geom, &scn));
 
+#if 0
+  dump_mesh(stdout, geom.positions, sa_size(geom.positions)/3, geom.indices,
+    sa_size(geom.indices)/3);
+#endif
+
   /* Setup the camera */
   d3(pos, 3, 3, 3);
   d3(tgt, 0, 0, 0);
@@ -657,19 +662,31 @@ main(int argc, char** argv)
 
   /* Launch the simulation */
   OK(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
+    SPP, SDIS_HEAT_PATH_SUCCEED, &buf));
 
-  /*OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
+  BA(sdis_estimator_buffer_get_realisation_count(NULL, &nreals));
+  BA(sdis_estimator_buffer_get_realisation_count(buf, NULL));
+  OK(sdis_estimator_buffer_get_realisation_count(buf, &nreals));
+
+  BA(sdis_estimator_buffer_get_failure_count(NULL, &nfails));
+  BA(sdis_estimator_buffer_get_failure_count(buf, NULL));
+  OK(sdis_estimator_buffer_get_failure_count(buf, &nfails));
+
+  BA(sdis_estimator_buffer_get_temperature(NULL, &T));
+  BA(sdis_estimator_buffer_get_temperature(buf, NULL));
+  OK(sdis_estimator_buffer_get_temperature(buf, &T));
+
+  BA(sdis_estimator_buffer_get_realisation_time(NULL, &time));
+  BA(sdis_estimator_buffer_get_realisation_time(buf, NULL));
+  OK(sdis_estimator_buffer_get_realisation_time(buf, &time));
 
   CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
 
   fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
   fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
   fprintf(stderr, "#failures = %lu/%lu\n",
-    (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));*/
+    (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
+
   BA(sdis_estimator_buffer_get_definition(NULL, definition));
   BA(sdis_estimator_buffer_get_definition(buf, NULL));
   OK(sdis_estimator_buffer_get_definition(buf, definition));

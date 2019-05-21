@@ -292,7 +292,7 @@ check_green_function
 extern LOCAL_SYM void
 dump_heat_paths
   (FILE* stream,
-   struct sdis_estimator* estimator);
+   const struct sdis_estimator* estimator);
 
 #endif /* TEST_SDIS_UTILS_H */
 

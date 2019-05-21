@@ -416,6 +416,26 @@ sdis_estimator_buffer_at
    const size_t y,
    const struct sdis_estimator** estimator);
 
+SDIS_API res_T
+sdis_estimator_buffer_get_realisation_count
+  (const struct sdis_estimator_buffer* buf,
+   size_t* nrealisations); /* Successful ones */
+
+SDIS_API res_T
+sdis_estimator_buffer_get_failure_count
+  (const struct sdis_estimator_buffer* buf,
+   size_t* nfailures);
+
+SDIS_API res_T
+sdis_estimator_buffer_get_temperature
+  (const struct sdis_estimator_buffer* buf,
+   struct sdis_mc* temperature);
+
+SDIS_API res_T
+sdis_estimator_buffer_get_realisation_time
+  (const struct sdis_estimator_buffer* buf,
+   struct sdis_mc* time);
+
 /*******************************************************************************
  * A medium encapsulates the properties of either a fluid or a solid.
  ******************************************************************************/

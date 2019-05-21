@@ -416,11 +416,16 @@ sdis_solve_camera
 
   struct sdis_estimator_buffer* buf = NULL;
   struct sdis_medium* medium = NULL;
+  struct accum acc_temp = ACCUM_NULL;
+  struct accum acc_time = ACCUM_NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   size_t ntiles_x, ntiles_y, ntiles;
   double pix_sz[2]; /* Size of a pixel in the normalized image plane */
   int64_t mcode; /* Morton code of a tile */
+  size_t nrealisations;
+  size_t nsuccesses;
+  size_t ix, iy;
   size_t i;
   ATOMIC res = RES_OK;
 
@@ -509,6 +514,31 @@ sdis_solve_camera
       continue;
     }
   }
+
+  /* Setup the accumulators of the whole estimator buffer */
+  acc_temp = ACCUM_NULL;
+  acc_time = ACCUM_NULL;
+  nsuccesses = 0;
+  FOR_EACH(iy, 0, height) {
+    FOR_EACH(ix, 0, width) {
+      const struct sdis_estimator* estimator;
+      SDIS(estimator_buffer_at(buf, ix, iy, &estimator));
+      acc_temp.sum += estimator->temperature.sum;
+      acc_temp.sum2 += estimator->temperature.sum2;
+      acc_temp.count += estimator->temperature.count;
+      acc_time.sum += estimator->realisation_time.sum;
+      acc_time.sum2 += estimator->realisation_time.sum2;
+      acc_time.count += estimator->realisation_time.count;
+      nsuccesses += estimator->nrealisations;
+    }
+  }
+
+  nrealisations = width*height*spp;
+  ASSERT(acc_temp.count == acc_time.count);
+  ASSERT(acc_temp.count == nsuccesses);
+  estimator_buffer_setup_realisations_count(buf, nrealisations, nsuccesses);
+  estimator_buffer_setup_temperature(buf, acc_temp.sum, acc_temp.sum2);
+  estimator_buffer_setup_realisation_time(buf, acc_time.sum, acc_time.sum2);
 
 exit:
   if(rngs) {

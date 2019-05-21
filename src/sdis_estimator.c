@@ -82,11 +82,11 @@ sdis_estimator_get_failure_count
   return RES_OK;
 }
 
-#define SETUP_MC(McName, Acc) {                                                 \
-  (McName)->E = (Acc)->sum / (double)(Acc)->count;                              \
-  (McName)->V = (Acc)->sum2 / (double)(Acc)->count - (McName)->E*(McName)->E;   \
-  (McName)->V = MMAX((McName)->V, 0);                                           \
-  (McName)->SE = sqrt((McName)->V / (double)(Acc)->count);                      \
+#define SETUP_MC(Mc, Acc) {                                                    \
+  (Mc)->E = (Acc)->sum / (double)(Acc)->count;                                 \
+  (Mc)->V = (Acc)->sum2 / (double)(Acc)->count - (Mc)->E*(Mc)->E;              \
+  (Mc)->V = MMAX((Mc)->V, 0);                                                  \
+  (Mc)->SE = sqrt((Mc)->V / (double)(Acc)->count);                             \
 } (void)0
 
 res_T

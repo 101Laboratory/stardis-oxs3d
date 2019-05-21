@@ -19,9 +19,14 @@
 #include "sdis_estimator_buffer_c.h"
 
 struct sdis_estimator_buffer {
-  struct sdis_estimator** estimators; /* Row major estimators list */
+  struct sdis_estimator** estimators; /* Row major per pixe lestimators */
   size_t width;
   size_t height;
+
+  struct accum temperature;
+  struct accum realisation_time;
+  size_t nrealisations; /* #successes */
+  size_t nfailures;
 
   ref_T ref;
   struct sdis_device* dev;
@@ -94,6 +99,51 @@ sdis_estimator_buffer_at
   return RES_OK;
 }
 
+res_T
+sdis_estimator_buffer_get_realisation_count
+  (const struct sdis_estimator_buffer* buf, size_t* nrealisations)
+{
+  if(!buf || !nrealisations) return RES_BAD_ARG;
+  *nrealisations = buf->nrealisations;
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_buffer_get_failure_count
+  (const struct sdis_estimator_buffer* buf, size_t* nfailures)
+{
+  if(!buf || !nfailures) return RES_BAD_ARG;
+  *nfailures = buf->nfailures;
+  return RES_OK;
+}
+
+#define SETUP_MC(Mc, Acc) {                                                    \
+  (Mc)->E = (Acc)->sum / (double)(Acc)->count;                                 \
+  (Mc)->V = (Acc)->sum2 / (double)(Acc)->count - (Mc)->E*(Mc)->E;              \
+  (Mc)->V = MMAX((Mc)->V, 0);                                                  \
+  (Mc)->SE = sqrt((Mc)->V / (double)(Acc)->count);                             \
+} (void)0
+
+res_T
+sdis_estimator_buffer_get_temperature
+  (const struct sdis_estimator_buffer* buf, struct sdis_mc* mc)
+{
+  if(!buf || !mc) return RES_BAD_ARG;
+  SETUP_MC(mc, &buf->temperature);
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_buffer_get_realisation_time
+(const struct sdis_estimator_buffer* buf, struct sdis_mc* mc)
+{
+  if(!buf || !mc) return RES_BAD_ARG;
+  SETUP_MC(mc, &buf->realisation_time);
+  return RES_OK;
+}
+
+#undef SETUP_MC
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
@@ -155,5 +205,40 @@ estimator_buffer_grab
 {
   ASSERT(x < buf->width && y < buf->height);
   return buf->estimators[y*buf->width + x];
+}
+
+void
+estimator_buffer_setup_realisations_count
+  (struct sdis_estimator_buffer* buf,
+   const size_t nrealisations,
+   const size_t nsuccesses)
+{
+  ASSERT(buf && nrealisations && nsuccesses && nsuccesses<=nrealisations);
+  buf->nrealisations = nsuccesses;
+  buf->nfailures = nrealisations - nsuccesses;
+}
+
+void
+estimator_buffer_setup_temperature
+  (struct sdis_estimator_buffer* buf,
+   const double sum,
+   const double sum2)
+{
+  ASSERT(buf && buf->nrealisations);
+  buf->temperature.sum = sum;
+  buf->temperature.sum2 = sum2;
+  buf->temperature.count = buf->nrealisations;
+}
+
+void
+estimator_buffer_setup_realisation_time
+  (struct sdis_estimator_buffer* buf,
+   const double sum,
+   const double sum2)
+{
+  ASSERT(buf && buf->nrealisations);
+  buf->realisation_time.sum = sum;
+  buf->realisation_time.sum2 = sum2;
+  buf->realisation_time.count = buf->nrealisations;
 }
 

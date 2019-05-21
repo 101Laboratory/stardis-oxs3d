@@ -36,5 +36,23 @@ estimator_buffer_grab
    const size_t x,
    const size_t y);
 
+extern LOCAL_SYM void
+estimator_buffer_setup_realisations_count
+  (struct sdis_estimator_buffer* buf,
+   const size_t nrealisations,
+   const size_t nsuccesses);
+
+extern LOCAL_SYM void
+estimator_buffer_setup_temperature
+  (struct sdis_estimator_buffer* buf,
+   const double sum,
+   const double sum2);
+
+extern LOCAL_SYM void
+estimator_buffer_setup_realisation_time
+  (struct sdis_estimator_buffer* buf,
+   const double sum,
+   const double sum2);
+
 #endif /* SDIS_ESTIMATOR_BUFFER_C_H */
 
