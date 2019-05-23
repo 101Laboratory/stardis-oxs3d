@@ -360,6 +360,6 @@ dump_heat_paths(FILE* stream, struct sdis_estimator* estimator)
     }
   }
   fprintf(stream, "LOOKUP_TABLE path_type 2\n");
-  fprintf(stream, "0.0 0.0 1.0 1.0\n"); /* 0.0 = Bleu: success */
+  fprintf(stream, "0.0 0.0 1.0 1.0\n"); /* 0.0 = Blue: success */
   fprintf(stream, "1.0 0.0 0.0 1.0\n"); /* 1.0 = Red: failure */
 }
