@@ -599,6 +599,60 @@ error:
 }
 
 res_T
+sdis_green_function_get_power_terms_count
+  (const struct sdis_green_path* path_handle,
+   size_t* nterms)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !nterms) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__; (void)green;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+
+  *nterms = darray_power_term_size_get(&path->power_terms);
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+sdis_green_function_get_flux_terms_count
+  (const struct sdis_green_path* path_handle,
+   size_t* nterms)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !nterms) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__; (void)green;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+
+  *nterms = darray_flux_term_size_get(&path->flux_terms);
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
 sdis_green_path_for_each_power_term
   (struct sdis_green_path* path_handle,
    sdis_process_medium_power_term_T func,

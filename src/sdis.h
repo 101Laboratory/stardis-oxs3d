@@ -805,6 +805,18 @@ sdis_green_path_get_limit_point
   (struct sdis_green_path* path,
    struct sdis_point* pt);
 
+/* Retrieve the number of "power terms" associated to a path. */
+SDIS_API res_T
+sdis_green_function_get_power_terms_count
+  (const struct sdis_green_path* path,
+   size_t* nterms);
+
+/* Retrieve the number of "flux terms" associated to a path. */
+SDIS_API res_T
+sdis_green_function_get_flux_terms_count
+  (const struct sdis_green_path* path,
+   size_t* nterms);
+
 /* Iterate over all "power terms" associated to the path. Multiply each term
  * by the power of their associated medium, that is assumed to be constant in
  * time and space, gives the medium power registered along the path. */
