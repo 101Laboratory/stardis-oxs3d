@@ -82,12 +82,19 @@ sdis_estimator_get_failure_count
   return RES_OK;
 }
 
+#define SETUP_MC(Mc, Acc) {                                                    \
+  (Mc)->E = (Acc)->sum / (double)(Acc)->count;                                 \
+  (Mc)->V = (Acc)->sum2 / (double)(Acc)->count - (Mc)->E*(Mc)->E;              \
+  (Mc)->V = MMAX((Mc)->V, 0);                                                  \
+  (Mc)->SE = sqrt((Mc)->V / (double)(Acc)->count);                             \
+} (void)0
+
 res_T
 sdis_estimator_get_temperature
   (const struct sdis_estimator* estimator, struct sdis_mc* mc)
 {
   if(!estimator || !mc) return RES_BAD_ARG;
-  *mc = estimator->temperature;
+  SETUP_MC(mc, &estimator->temperature);
   return RES_OK;
 }
 
@@ -96,7 +103,7 @@ sdis_estimator_get_realisation_time
   (const struct sdis_estimator* estimator, struct sdis_mc* mc)
 {
   if(!estimator || !mc) return RES_BAD_ARG;
-  *mc = estimator->realisation_time;
+  SETUP_MC(mc, &estimator->realisation_time);
   return RES_OK;
 }
 
@@ -107,7 +114,7 @@ sdis_estimator_get_convective_flux
   if(!estimator || !flux ||estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
   ASSERT(estimator->fluxes);
-  *flux = estimator->fluxes[FLUX_CONVECTIVE];
+  SETUP_MC(flux, &estimator->fluxes[FLUX_CONVECTIVE]);
   return RES_OK;
 }
 
@@ -118,7 +125,7 @@ sdis_estimator_get_radiative_flux
   if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
   ASSERT(estimator->fluxes);
-  *flux = estimator->fluxes[FLUX_RADIATIVE];
+  SETUP_MC(flux, &estimator->fluxes[FLUX_RADIATIVE]);
   return RES_OK;
 }
 
@@ -129,9 +136,11 @@ sdis_estimator_get_total_flux
   if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
   ASSERT(estimator->fluxes);
-  *flux = estimator->fluxes[FLUX_TOTAL];
+  SETUP_MC(flux, &estimator->fluxes[FLUX_TOTAL]);
   return RES_OK;
 }
+
+#undef SETUP_MC
 
 res_T
 sdis_estimator_get_paths_count

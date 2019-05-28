@@ -17,6 +17,7 @@
 #define SDIS_ESTIMATOR_C_H
 
 #include "sdis_heat_path.h"
+#include "sdis_misc.h"
 
 #include <rsys/math.h>
 #include <rsys/ref_count.h>
@@ -34,10 +35,10 @@ enum flux_name {
 };
 
 struct sdis_estimator {
-  struct sdis_mc temperature;
-  struct sdis_mc realisation_time;
-  struct sdis_mc fluxes[FLUX_NAMES_COUNT__];
-  size_t nrealisations;
+  struct accum temperature;
+  struct accum realisation_time;
+  struct accum fluxes[FLUX_NAMES_COUNT__]; 
+  size_t nrealisations; /* #successes */
   size_t nfailures;
 
   struct mutex* mutex;
@@ -77,13 +78,6 @@ estimator_setup_realisations_count
   estimator->nfailures = nrealisations - nsuccesses;
 }
 
-#define SETUP_MC(McName, Sum, Sum2, Count) {                                   \
-  (McName).E = (Sum) / (double)(Count);                                        \
-  (McName).V = (Sum2) / (double)(Count) - (McName).E*(McName).E;               \
-  (McName).V = MMAX((McName).V, 0);                                            \
-  (McName).SE = sqrt((McName).V / (double)(Count));                            \
-} (void)0
-
 static INLINE void
 estimator_setup_temperature
   (struct sdis_estimator* estim,
@@ -91,7 +85,9 @@ estimator_setup_temperature
    const double sum2)
 {
   ASSERT(estim && estim->nrealisations);
-  SETUP_MC(estim->temperature, sum, sum2, estim->nrealisations);
+  estim->temperature.sum = sum;
+  estim->temperature.sum2 = sum2;
+  estim->temperature.count = estim->nrealisations;
 }
 
 static INLINE void
@@ -101,7 +97,9 @@ estimator_setup_realisation_time
    const double sum2)
 {
   ASSERT(estim && estim->nrealisations);
-  SETUP_MC(estim->realisation_time, sum, sum2, estim->nrealisations);
+  estim->realisation_time.sum = sum;
+  estim->realisation_time.sum2 = sum2;
+  estim->realisation_time.count = estim->nrealisations;
 }
 
 static INLINE void
@@ -112,10 +110,10 @@ estimator_setup_flux
    const double sum2)
 {
   ASSERT(estim && (unsigned)name < FLUX_NAMES_COUNT__ && estim->nrealisations);
-  SETUP_MC(estim->fluxes[name], sum, sum2, estim->nrealisations);
+  estim->fluxes[name].sum = sum;
+  estim->fluxes[name].sum2 = sum2;
+  estim->fluxes[name].count = estim->nrealisations;
 }
-
-#undef SETUP_MC
 
 #endif /* SDIS_PROBE_ESTIMATOR_C_H */
 
