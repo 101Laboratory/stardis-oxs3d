@@ -49,7 +49,9 @@ include_directories(
   ${StarEnc2D_INCLUDE_DIR}
   ${RSys_INCLUDE_DIR})
 
+if(CMAKE_COMPILER_IS_GNUCC)
 set(CMAKE_C_FLAGS "-fno-omit-frame-pointer")
+endif()
 
 rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 
