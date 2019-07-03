@@ -25,6 +25,19 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.8
+
+- Drastically improve the robustness of the solver~: far less realisations are
+  now rejected.
+- Add the estimation of the time spent per realisation estimate. Add the
+  `sdis_estimator_get_realisation_time` function that returns this estimate.
+- Add the `sdis_estimator_buffer` API~: it manages a two dimensional array of
+  regular estimators and provides global estimations over the whole estimators
+  saved into the buffer.
+- Update the signature of the `sdis_solve_camera` function~: it now returns a
+  `sdis_estimator_buffer`. It now also supports time integration as well as
+  heat paths registration.
+
 ### Version 0.7
 
 #### Add Green function support
