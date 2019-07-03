@@ -203,6 +203,7 @@ main(int argc, char** argv)
   struct s3dut_mesh* msh0 = NULL;
   struct s3dut_mesh* msh1 = NULL;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid0 = NULL;
   struct sdis_medium* solid1 = NULL;
@@ -362,8 +363,10 @@ main(int argc, char** argv)
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
   printf("Shape0 temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, N);
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+  printf("#failures = %lu/%lu\n\n", (unsigned long)nfails, N);
   CHK(eq_eps(T.E, Tf0, T.SE));
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
@@ -372,8 +375,10 @@ main(int argc, char** argv)
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
   printf("Shape1 temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, N);
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+  printf("#failures = %lu/%lu\n\n", (unsigned long)nfails, N);
   CHK(eq_eps(T.E, Tf1, T.SE));
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
@@ -398,10 +403,12 @@ main(int argc, char** argv)
   BA(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
   OK(sdis_solve_medium(scn, Np, solid0, trange, 1.f, -1, 0, 0, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   ref = Tf0 * v0/v + Tf1 * v1/v;
   printf("Shape0 + Shape1 temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, Np);
   CHK(eq_eps(T.E, ref, T.SE*3));
 

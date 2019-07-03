@@ -16,9 +16,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(stardis C)
 enable_testing()
-if(POLICY CMP0054)
-  cmake_policy(SET CMP0054 OLD) # Disable OpenMP CMake warning
-endif()
 
 include(CMakeDependentOption)
 
@@ -32,12 +29,12 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ################################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.3 REQUIRED)
+find_package(Star2D 0.3.1 REQUIRED)
 find_package(Star3D 0.6 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc 0.2.2 REQUIRED)
 find_package(StarEnc2D 0.2.2 REQUIRED)
-find_package(RSys 0.6.1 REQUIRED)
+find_package(RSys 0.8.1 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
@@ -58,16 +55,16 @@ rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
 # Configure and define targets
 ################################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 7)
-set(VERSION_PATCH 1)
+set(VERSION_MINOR 8)
+set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
-  sdis_accum_buffer.c
   sdis_camera.c
   sdis_data.c
   sdis_device.c
   sdis_estimator.c
+  sdis_estimator_buffer.c
   sdis_green.c
   sdis_heat_path.c
   sdis_interface.c
@@ -169,7 +166,6 @@ if(NOT NO_TEST)
     register_test(${_name} ${_name})
   endfunction()
 
-  new_test(test_sdis_accum_buffer)
   new_test(test_sdis_camera)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
@@ -181,6 +177,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_interface)
   new_test(test_sdis_medium)
   new_test(test_sdis_scene)
+  new_test(test_sdis_solid_random_walk_robustness)
   new_test(test_sdis_solve_camera)
   new_test(test_sdis_solve_probe)
   new_test(test_sdis_solve_probe2)
@@ -193,7 +190,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_medium)
   new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_volumic_power)
-  new_test(test_sdis_volumic_power4_2d)
+  new_test(test_sdis_volumic_power4)
 
   # Additionnal tests
   build_test(test_sdis_volumic_power2)
@@ -206,6 +203,7 @@ if(NOT NO_TEST)
     add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
   endif()
 
+  target_link_libraries(test_sdis_solid_random_walk_robustness Star3DUT)
   target_link_libraries(test_sdis_solve_medium Star3DUT)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})

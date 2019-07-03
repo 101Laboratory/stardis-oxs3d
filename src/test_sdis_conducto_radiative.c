@@ -384,6 +384,7 @@ main(int argc, char** argv)
   OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
+    struct sdis_mc time = SDIS_MC_NULL;
     struct sdis_estimator* estimator;
     struct sdis_estimator* estimator2;
     struct sdis_green_function* green;
@@ -402,16 +403,18 @@ main(int argc, char** argv)
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
 
     u = (pos[0] + 1) / thickness;
     ref = u * Ts1 + (1-u) * Ts0;
     printf("Temperature at (%g, %g, %g)  = %g ~ %g +/- %g\n",
       SPLIT3(pos), ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
     CHK(nfails + nreals == N);
     CHK(nfails < N/1000);
-    CHK(eq_eps(T.E, ref, 2*T.SE) == 1);
+    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     /* Check green function */
     OK(sdis_solve_probe_green_function(scn, N, pos, 1, -1, Tref, &green));
@@ -426,6 +429,8 @@ main(int argc, char** argv)
     OK(sdis_solve_probe(scn, 10, pos, time_range, 1, -1, Tref,
       SDIS_HEAT_PATH_ALL, &estimator));
     OK(sdis_estimator_ref_put(estimator));
+
+    printf("\n");
   }
 
   /* Release memory */

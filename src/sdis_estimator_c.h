@@ -17,6 +17,7 @@
 #define SDIS_ESTIMATOR_C_H
 
 #include "sdis_heat_path.h"
+#include "sdis_misc.h"
 
 #include <rsys/math.h>
 #include <rsys/ref_count.h>
@@ -34,9 +35,10 @@ enum flux_name {
 };
 
 struct sdis_estimator {
-  struct sdis_mc temperature;
-  struct sdis_mc fluxes[FLUX_NAMES_COUNT__];
-  size_t nrealisations;
+  struct accum temperature;
+  struct accum realisation_time;
+  struct accum fluxes[FLUX_NAMES_COUNT__]; 
+  size_t nrealisations; /* #successes */
   size_t nfailures;
 
   struct mutex* mutex;
@@ -82,13 +84,22 @@ estimator_setup_temperature
    const double sum,
    const double sum2)
 {
-  double N;
   ASSERT(estim && estim->nrealisations);
-  N = (double)estim->nrealisations;
-  estim->temperature.E = sum/N;
-  estim->temperature.V = sum2/N - estim->temperature.E*estim->temperature.E;
-  estim->temperature.V = MMAX(estim->temperature.V, 0);
-  estim->temperature.SE = sqrt(estim->temperature.V/N);
+  estim->temperature.sum = sum;
+  estim->temperature.sum2 = sum2;
+  estim->temperature.count = estim->nrealisations;
+}
+
+static INLINE void
+estimator_setup_realisation_time
+  (struct sdis_estimator* estim,
+   const double sum,
+   const double sum2)
+{
+  ASSERT(estim && estim->nrealisations);
+  estim->realisation_time.sum = sum;
+  estim->realisation_time.sum2 = sum2;
+  estim->realisation_time.count = estim->nrealisations;
 }
 
 static INLINE void
@@ -98,13 +109,10 @@ estimator_setup_flux
    const double sum,
    const double sum2)
 {
-  double N;
   ASSERT(estim && (unsigned)name < FLUX_NAMES_COUNT__ && estim->nrealisations);
-  N = (double)estim->nrealisations;
-  estim->fluxes[name].E = sum/N;
-  estim->fluxes[name].V = sum2/N - estim->fluxes[name].E*estim->fluxes[name].E;
-  estim->fluxes[name].V = MMAX(estim->fluxes[name].V, 0);
-  estim->fluxes[name].SE = sqrt(estim->fluxes[name].V/N);
+  estim->fluxes[name].sum = sum;
+  estim->fluxes[name].sum2 = sum2;
+  estim->fluxes[name].count = estim->nrealisations;
 }
 
 #endif /* SDIS_PROBE_ESTIMATOR_C_H */

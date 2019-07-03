@@ -20,6 +20,14 @@
 #include <rsys/float3.h>
 #include <star/ssp.h>
 
+struct accum {
+  double sum; /* Sum of MC weights */
+  double sum2; /* Sum of square MC weights */
+  size_t count; /* #accumulated MC weights */
+};
+#define ACCUM_NULL__ {0,0,0}
+static const struct accum ACCUM_NULL = ACCUM_NULL__;
+
 /* Empirical scale factor to apply to the upper bound of the ray range in order
  * to handle numerical imprecisions */
 #define RAY_RANGE_MAX_SCALE 1.001f
@@ -30,6 +38,24 @@
 #define RES_BAD_OP_IRRECOVERABLE (-RES_BAD_OP)
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
+
+static INLINE void
+sum_accums
+  (const struct accum accums[],
+   const size_t naccums,
+   struct accum* accum)
+{
+  struct accum acc = ACCUM_NULL;
+  size_t i;
+  ASSERT(accums && naccums && accum);
+
+  FOR_EACH(i, 0, naccums) {
+    acc.sum += accums[i].sum;
+    acc.sum2 += accums[i].sum2;
+    acc.count += accums[i].count;
+  }
+  *accum = acc;
+}
 
 /* Reflect the V wrt the normal N. By convention V points outward the surface */
 static FINLINE float*

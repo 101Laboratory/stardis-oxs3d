@@ -31,6 +31,12 @@ struct prim_prop {
   unsigned back_enclosure; /* Id of the back facing enclosure */
 };
 
+struct hit_filter_data {
+  struct s2d_hit hit_2d;
+  struct s3d_hit hit_3d;
+  double epsilon; /* Threshold defining roughly equal intersections */
+};
+
 struct get_medium_info {
   /* Targeted position */
   float pos_tgt[3];
@@ -93,6 +99,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->S_over_V = 0;
   enc->V = 0;
   enc->hc_upper_bound = 0;
+  enc->medium_id = UINT_MAX;
 }
 
 static INLINE void
@@ -117,6 +124,7 @@ enclosure_copy(struct enclosure* dst, const struct enclosure* src)
   dst->S_over_V = src->S_over_V;
   dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
+  dst->medium_id = src->medium_id;
   return darray_uint_copy(&dst->local2global, &src->local2global);
 }
 
@@ -139,6 +147,7 @@ enclosure_copy_and_release(struct enclosure* dst, struct enclosure* src)
   dst->S_over_V = src->S_over_V;
   dst->V = src->V;
   dst->hc_upper_bound = src->hc_upper_bound;
+  dst->medium_id = src->medium_id;
   return RES_OK;
 }
 
@@ -221,6 +230,22 @@ scene_get_medium
   (const struct sdis_scene* scene,
    const double position[],
    struct get_medium_info* info, /* May be NULL */
+   struct sdis_medium** medium);
+
+/* This function assumes that the tested position lies into finite enclosure.
+ * The medium into which it lies is thus retrieved by tracing a random ray
+ * around the current position. For possible infinite enclosure, one has to use
+ * the `scene_get_medium' function instead that, in counterpart, can be more
+ * time consuming.
+ *
+ * Note that actually, the function internally calls scene_get_medium if no
+ * valid medium is found with the regular procedure.  This may be due to
+ * numerical issues or wrong assumptions on the current medium (its boundaries
+ * are opened to infinity). */
+extern LOCAL_SYM res_T
+scene_get_medium_in_closed_boundaries
+  (const struct sdis_scene* scn,
+   const double position[],
    struct sdis_medium** medium);
 
 static INLINE void

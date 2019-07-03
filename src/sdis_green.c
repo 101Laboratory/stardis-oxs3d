@@ -192,6 +192,8 @@ struct sdis_green_function {
   size_t npaths_valid;
   size_t npaths_invalid;
 
+  struct accum realisation_time; /* Time per realisation */
+
   struct ssp_rng_type rng_type;
   FILE* rng_state;
 
@@ -489,6 +491,8 @@ sdis_green_function_solve
   /* Setup the estimated temperature */
   estimator_setup_realisations_count(estimator, npaths, N);
   estimator_setup_temperature(estimator, accum, accum2);
+  estimator_setup_realisation_time
+    (estimator, green->realisation_time.sum, green->realisation_time.sum2);
 
 exit:
   if(rng) SSP(rng_ref_put(rng));
@@ -587,6 +591,60 @@ sdis_green_path_get_limit_point
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+sdis_green_function_get_power_terms_count
+  (const struct sdis_green_path* path_handle,
+   size_t* nterms)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !nterms) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__; (void)green;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+
+  *nterms = darray_power_term_size_get(&path->power_terms);
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+sdis_green_function_get_flux_terms_count
+  (const struct sdis_green_path* path_handle,
+   size_t* nterms)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !nterms) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__; (void)green;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+
+  *nterms = darray_flux_term_size_get(&path->flux_terms);
 
 exit:
   return res;
@@ -781,7 +839,7 @@ green_function_redux_and_clear
 {
   size_t i;
   res_T res = RES_OK;
-  ASSERT(dst && greens && ngreens);
+  ASSERT(dst && greens);
 
   FOR_EACH(i, 0, ngreens) {
     res = green_function_merge_and_clear(dst, greens[i]);
@@ -797,12 +855,13 @@ error:
 res_T
 green_function_finalize
   (struct sdis_green_function* green,
-   struct ssp_rng_proxy* proxy)
+   struct ssp_rng_proxy* proxy,
+   const struct accum* time)
 {
   size_t i, n;
   res_T res = RES_OK;
 
-  if(!green || !proxy) {
+  if(!green || !proxy || !time) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -820,6 +879,9 @@ green_function_finalize
     green->npaths_valid += path->limit_type != SDIS_POINT_NONE;
   }
   green->npaths_invalid = n - green->npaths_valid;
+
+  ASSERT(green->npaths_valid == time->count);
+  green->realisation_time = *time;
 
 exit:
   return res;

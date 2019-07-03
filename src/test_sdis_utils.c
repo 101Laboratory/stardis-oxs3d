@@ -262,11 +262,15 @@ check_green_function(struct sdis_green_function* green)
   CHK(E + SE >= mc.E - mc.SE);
   CHK(E - SE <= mc.E + mc.SE);
 
+  OK(sdis_estimator_get_realisation_time(estimator, &mc));
+  printf("Green per realisation time (in usec) = %g +/- %g\n",
+    mc.E, mc.SE);
+
   OK(sdis_estimator_ref_put(estimator));
 }
 
 void
-dump_heat_paths(FILE* stream, struct sdis_estimator* estimator)
+dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
 {
   const struct sdis_heat_path* path;
   size_t ipath;
@@ -356,6 +360,6 @@ dump_heat_paths(FILE* stream, struct sdis_estimator* estimator)
     }
   }
   fprintf(stream, "LOOKUP_TABLE path_type 2\n");
-  fprintf(stream, "0.0 0.0 1.0 1.0\n"); /* 0.0 = Bleu: success */
+  fprintf(stream, "0.0 0.0 1.0 1.0\n"); /* 0.0 = Blue: success */
   fprintf(stream, "1.0 0.0 0.0 1.0\n"); /* 1.0 = Red: failure */
 }

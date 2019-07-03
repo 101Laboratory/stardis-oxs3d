@@ -20,6 +20,7 @@
 #include "sdis_scene_c.h"
 
 #include <rsys/algorithm.h>
+#include <rsys/clock_time.h>
 #include <rsys/dynamic_array.h>
 
 #include "sdis_Xd_begin.h"
@@ -215,7 +216,8 @@ XD(solve_medium)
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   struct sdis_estimator* estimator = NULL;
-  struct accum* accums = NULL;
+  struct accum* acc_temps = NULL;
+  struct accum* acc_times = NULL;
   int64_t irealisation;
   int cumul_is_init = 0;
   size_t i;
@@ -257,9 +259,13 @@ XD(solve_medium)
     if(res != RES_OK) goto error;
   }
 
-  /* Create the per thread accumulator */
-  accums = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*accums));
-  if(!accums) { res = RES_MEM_ERR; goto error; }
+  /* Create the per thread accumulators */
+  acc_temps = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_temps));
+  if(!acc_temps) { res = RES_MEM_ERR; goto error; }
+  acc_times = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_times));
+  if(!acc_times) { res = RES_MEM_ERR; goto error; }
 
   /* Compute the enclosure cumulative */
   darray_enclosure_cumul_init(scn->dev->allocator, &cumul);
@@ -286,9 +292,11 @@ XD(solve_medium)
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
-    struct accum* accum = accums + ithread;
+    struct accum* acc_temp = &acc_temps[ithread];
+    struct accum* acc_time = &acc_times[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
     const struct enclosure* enc = NULL;
@@ -298,8 +306,11 @@ XD(solve_medium)
     double time;
     double pos[DIM];
     res_T res_local = RES_OK;
+    res_T res_simul = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    time_current(&t0);
 
     if(!out_green) {
       /* Sample the time */
@@ -331,19 +342,17 @@ XD(solve_medium)
     }
 
     /* Run a probe realisation */
-    res_local = XD(probe_realisation)((size_t)irealisation, scn, rng, mdm, pos,
+    res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng, mdm, pos,
       time, fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &weight);
-    if(res_local != RES_OK) {
-      if(res_local != RES_BAD_OP) { ATOMIC_SET(&res, res_local); continue; }
-    } else {
-      accum->sum += weight;
-      accum->sum2 += weight*weight;
-      ++accum->count;
+
+    if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
+      ATOMIC_SET(&res, res_simul);
+      continue;
     }
 
     /* Finalize the registered path */
     if(pheat_path) {
-      pheat_path->status = res_local == RES_OK
+      pheat_path->status = res_simul == RES_OK
         ? SDIS_HEAT_PATH_SUCCEED
         : SDIS_HEAT_PATH_FAILED;
 
@@ -355,18 +364,36 @@ XD(solve_medium)
         if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
       }
     }
+
+    /* Stop time registration */
+    time_sub(&t0, time_current(&t1), &t0);
+
+    /* Update accumulators */
+    if(res_simul == RES_OK) {
+      const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+      acc_temp->sum += weight; acc_temp->sum2 += weight*weight; ++acc_temp->count;
+      acc_time->sum += usec;   acc_time->sum2 += usec*usec;     ++acc_time->count;
+    }
   }
   if(res != RES_OK) goto error;
 
   /* Setup the estimated temperature */
   if(out_estimator) {
-    struct accum acc;
-    sum_accums(accums, scn->dev->nthreads, &acc);
-    estimator_setup_realisations_count(estimator, nrealisations, acc.count);
-    estimator_setup_temperature(estimator, acc.sum, acc.sum2);
+    struct accum acc_temp;
+    struct accum acc_time;
+
+    sum_accums(acc_temps, scn->dev->nthreads, &acc_temp);
+    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
+    ASSERT(acc_temp.count == acc_time.count);
+
+    estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
+    estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
+    estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
   }
 
   if(out_green) {
+    struct accum acc_time;
+
     /* Redux the per thread green function into the green of the 1st thread */
     green = greens[0]; /* Return the green of the 1st thread */
     greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
@@ -374,7 +401,8 @@ XD(solve_medium)
     if(res != RES_OK) goto error;
 
     /* Finalize the estimated green */
-    res = green_function_finalize(green, rng_proxy);
+    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
+    res = green_function_finalize(green, rng_proxy, &acc_time);
     if(res != RES_OK) goto error;
   }
 
@@ -391,7 +419,8 @@ exit:
     }
     MEM_RM(scn->dev->allocator, greens);
   }
-  if(accums) MEM_RM(scn->dev->allocator, accums);
+  if(acc_temps) MEM_RM(scn->dev->allocator, acc_temps);
+  if(acc_times) MEM_RM(scn->dev->allocator, acc_times);
   if(cumul_is_init) darray_enclosure_cumul_release(&cumul);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;

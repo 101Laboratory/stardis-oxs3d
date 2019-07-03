@@ -17,6 +17,7 @@
 #include "sdis_camera.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_estimator_buffer_c.h"
 #include "sdis_interface_c.h"
 
 #include <star/ssp.h>
@@ -66,28 +67,43 @@ solve_pixel
    struct ssp_rng* rng,
    struct sdis_medium* mdm,
    const struct sdis_camera* cam,
-   const double time, /* Observation time */
+   const double time_range[2], /* Observation time */
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
    const size_t ipix[2], /* Pixel coordinate in the image plane */
    const size_t nrealisations,
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
-   struct sdis_accum* accum)
+   struct sdis_estimator* estimator)
 {
-  double sum_weights = 0;
-  double sum_weights_sqr = 0;
-  size_t N = 0; /* #realisations that do not fail */
+  struct accum acc_temp = ACCUM_NULL;
+  struct accum acc_time = ACCUM_NULL;
   size_t irealisation;
   res_T res = RES_OK;
   ASSERT(scn && mdm && rng && cam && ipix && nrealisations && Tref >= 0);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
+  ASSERT(estimator && time_range);
 
   FOR_EACH(irealisation, 0, nrealisations) {
+    struct time t0, t1;
     double samp[2]; /* Pixel sample */
     double ray_pos[3];
     double ray_dir[3];
     double w = 0;
+    struct sdis_heat_path* pheat_path = NULL;
+    struct sdis_heat_path heat_path;
+    double time;
+    res_T res_simul = RES_OK;
+
+    /* Begin time registration */
+    time_current(&t0);
+
+    time = sample_time(rng, time_range);
+    if(register_paths) {
+      heat_path_init(scn->dev->allocator, &heat_path);
+      pheat_path = &heat_path;
+    }
 
     /* Generate a sample into the pixel to estimate */
     samp[0] = ((double)ipix[0] + ssp_rng_canonical(rng)) * pix_sz[0];
@@ -98,23 +114,45 @@ solve_pixel
     camera_ray(cam, samp, ray_pos, ray_dir);
 
     /* Launch the realisation */
-    res = ray_realisation_3d(scn, rng, mdm, ray_pos, ray_dir,
-      time, fp_to_meter, Tarad, Tref, &w);
-    if(res == RES_OK) {
-      sum_weights += w;
-      sum_weights_sqr += w*w;
-      ++N;
-    } else if(res == RES_BAD_OP) {
-      res = RES_OK;
-    } else {
+    res_simul = ray_realisation_3d(scn, rng, mdm, ray_pos, ray_dir,
+      time, fp_to_meter, Tarad, Tref, pheat_path, &w);
+
+    /* Handle fatal error */
+    if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
+      res = res_simul;
       goto error;
+    }
+
+    if(pheat_path) {
+      pheat_path->status = res_simul == RES_OK
+        ? SDIS_HEAT_PATH_SUCCEED
+        : SDIS_HEAT_PATH_FAILED;
+
+      /* Check if the path must be saved regarding the register_paths mask */
+      if(!(register_paths & (int)pheat_path->status)) {
+        heat_path_release(pheat_path);
+      } else { /* Register the sampled path */
+        res = estimator_add_and_release_heat_path(estimator, pheat_path);
+        if(res != RES_OK) goto error;
+      }
+    }
+
+    /* Stop time registration */
+    time_sub(&t0, time_current(&t1), &t0);
+
+    if(res_simul == RES_OK) {
+      /* Update global accumulators */
+      const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+      acc_temp.sum += w;    acc_temp.sum2 += w*w;       ++acc_temp.count;
+      acc_time.sum += usec; acc_time.sum2 += usec*usec; ++acc_time.count;
     }
   }
 
-  accum->sum_weights = sum_weights;
-  accum->sum_weights_sqr = sum_weights_sqr;
-  accum->nweights = N;
-  accum->nfailures = nrealisations - N;
+  /* Setup the pixel estimator */
+  ASSERT(acc_temp.count == acc_time.count);
+  estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
+  estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
+  estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
 
 exit:
   return res;
@@ -128,22 +166,23 @@ solve_tile
    struct ssp_rng* rng,
    struct sdis_medium* mdm,
    const struct sdis_camera* cam,
-   const double time,
+   const double time_range[2],
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
    const size_t origin[2], /* Tile origin in image plane */
    const size_t size[2], /* #pixels in X and Y */
    const size_t spp, /* #samples per pixel */
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
-   struct sdis_accum* accums)
+   struct sdis_estimator_buffer* buf)
 {
   size_t mcode; /* Morton code of the tile pixel */
   size_t npixels;
   res_T res = RES_OK;
-  ASSERT(scn && rng && mdm && cam && spp && origin && accums && Tref >= 0);
-  ASSERT(size &&size[0] && size[1]);
-  ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
+  ASSERT(scn && rng && mdm && cam && spp && origin && Tref >= 0);
+  ASSERT(size &&size[0] && size[1] && buf);
+  ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0 && time_range);
 
   /* Adjust the #pixels to process them wrt a morton order */
   npixels = round_up_pow2(MMAX(size[0], size[1]));
@@ -151,19 +190,21 @@ solve_tile
 
   FOR_EACH(mcode, 0, npixels) {
     size_t ipix[2];
-    struct sdis_accum* accum;
+    struct sdis_estimator* estimator;
 
     ipix[0] = morton2D_decode((uint32_t)(mcode>>0));
     if(ipix[0] >= size[0]) continue;
     ipix[1] = morton2D_decode((uint32_t)(mcode>>1));
     if(ipix[1] >= size[1]) continue;
 
-    accum = accums + ipix[1]*size[0] + ipix[0];
     ipix[0] = ipix[0] + origin[0];
     ipix[1] = ipix[1] + origin[1];
 
-    res = solve_pixel(scn, rng, mdm, cam, time, fp_to_meter, Tarad, Tref, ipix,
-      spp, pix_sz, accum);
+    /* Fetch the pixel estimator */
+    estimator = estimator_buffer_grab(buf, ipix[0], ipix[1]);
+
+    res = solve_pixel(scn, rng, mdm, cam, time_range, fp_to_meter, Tarad, Tref,
+      ipix, spp, register_paths, pix_sz, estimator);
     if(res != RES_OK) goto error;
   }
 
@@ -360,37 +401,46 @@ res_T
 sdis_solve_camera
   (struct sdis_scene* scn,
    const struct sdis_camera* cam,
-   const double time,
+   const double time_range[2],
    const double fp_to_meter, /* Scale from floating point units to meters */
    const double Tarad, /* In Kelvin */
    const double Tref, /* In Kelvin */
    const size_t width, /* #pixels in X */
    const size_t height, /* #pixels in Y */
    const size_t spp, /* #samples per pixel */
-   sdis_write_accums_T writer,
-   void* writer_data)
+   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   struct sdis_estimator_buffer** out_buf)
 {
   #define TILE_SIZE 32 /* definition in X & Y of a tile */
   STATIC_ASSERT(IS_POW2(TILE_SIZE), TILE_SIZE_must_be_a_power_of_2);
 
+  struct sdis_estimator_buffer* buf = NULL;
   struct sdis_medium* medium = NULL;
-  struct darray_accum* tiles = NULL;
+  struct accum acc_temp = ACCUM_NULL;
+  struct accum acc_time = ACCUM_NULL;
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
   size_t ntiles_x, ntiles_y, ntiles;
   double pix_sz[2]; /* Size of a pixel in the normalized image plane */
   int64_t mcode; /* Morton code of a tile */
+  size_t nrealisations;
+  size_t nsuccesses;
+  size_t ix, iy;
   size_t i;
   ATOMIC res = RES_OK;
 
-  if(!scn || !cam || time < 0 || fp_to_meter <= 0 || Tref < 0 || !width
-  || !height || !spp || !writer) {
+  if(!scn || !cam || fp_to_meter <= 0 || Tref < 0 || !width || !height || !spp
+  || !out_buf) {
     res = RES_BAD_ARG;
     goto error;
   }
-
   if(scene_is_2d(scn)) {
     log_err(scn->dev, "%s: 2D scene are not supported.\n", FUNC_NAME);
+    goto error;
+  }
+  if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
+  || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+    res = RES_BAD_ARG;
     goto error;
   }
 
@@ -422,15 +472,6 @@ sdis_solve_camera
     if(res != RES_OK) goto error;
   }
 
-  /* Allocate per thread buffer of accumulations */
-  tiles = darray_tile_data_get(&scn->dev->tiles);
-  ASSERT(darray_tile_size_get(&scn->dev->tiles) == scn->dev->nthreads);
-  FOR_EACH(i, 0, scn->dev->nthreads) {
-    const size_t naccums = TILE_SIZE * TILE_SIZE;
-    res = darray_accum_resize(tiles+i, naccums);
-    if(res != RES_OK) goto error;
-  }
-
   ntiles_x = (width  + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
   ntiles_y = (height + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
   ntiles = round_up_pow2(MMAX(ntiles_x, ntiles_y));
@@ -439,13 +480,16 @@ sdis_solve_camera
   pix_sz[0] = 1.0 / (double)width;
   pix_sz[1] = 1.0 / (double)height;
 
+  /* Create the global estimator */
+  res = estimator_buffer_create(scn->dev, width, height, &buf);
+  if(res != RES_OK) goto error;
+
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static, 1/*chunk size*/)
   for(mcode = 0; mcode < (int64_t)ntiles; ++mcode) {
     size_t tile_org[2] = {0, 0};
     size_t tile_sz[2] = {0, 0};
     const int ithread = omp_get_thread_num();
-    struct sdis_accum* accums = NULL;
     struct ssp_rng* rng = rngs[ithread];
     res_T res_local = RES_OK;
 
@@ -462,24 +506,39 @@ sdis_solve_camera
     tile_sz[0] = MMIN(TILE_SIZE, width - tile_org[0]);
     tile_sz[1] = MMIN(TILE_SIZE, height - tile_org[1]);
 
-    /* Fetch the accumulations buffer */
-    accums = darray_accum_data_get(tiles+ithread);
-
     /* Draw the tile */
-    res_local = solve_tile(scn, rng, medium, cam, time, fp_to_meter, Tarad,
-      Tref, tile_org, tile_sz, spp, pix_sz, accums);
-    if(res_local != RES_OK) {
-      ATOMIC_SET(&res, res_local);
-      continue;
-    }
-
-    /* Write the accumulations */
-    res_local = writer(writer_data, tile_org, tile_sz, accums);
+    res_local = solve_tile(scn, rng, medium, cam, time_range, fp_to_meter,
+      Tarad, Tref, tile_org, tile_sz, spp, register_paths, pix_sz, buf);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;
     }
   }
+
+  /* Setup the accumulators of the whole estimator buffer */
+  acc_temp = ACCUM_NULL;
+  acc_time = ACCUM_NULL;
+  nsuccesses = 0;
+  FOR_EACH(iy, 0, height) {
+    FOR_EACH(ix, 0, width) {
+      const struct sdis_estimator* estimator;
+      SDIS(estimator_buffer_at(buf, ix, iy, &estimator));
+      acc_temp.sum += estimator->temperature.sum;
+      acc_temp.sum2 += estimator->temperature.sum2;
+      acc_temp.count += estimator->temperature.count;
+      acc_time.sum += estimator->realisation_time.sum;
+      acc_time.sum2 += estimator->realisation_time.sum2;
+      acc_time.count += estimator->realisation_time.count;
+      nsuccesses += estimator->nrealisations;
+    }
+  }
+
+  nrealisations = width*height*spp;
+  ASSERT(acc_temp.count == acc_time.count);
+  ASSERT(acc_temp.count == nsuccesses);
+  estimator_buffer_setup_realisations_count(buf, nrealisations, nsuccesses);
+  estimator_buffer_setup_temperature(buf, acc_temp.sum, acc_temp.sum2);
+  estimator_buffer_setup_realisation_time(buf, acc_time.sum, acc_time.sum2);
 
 exit:
   if(rngs) {
@@ -489,6 +548,7 @@ exit:
     MEM_RM(scn->dev->allocator, rngs);
   }
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_buf) *out_buf = buf;
   return (res_T)res;
 error:
   goto exit;

@@ -148,15 +148,18 @@ check_estimator
    const double ref)
 {
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
   size_t nreals;
   size_t nfails;
   CHK(estimator && nrealisations);
 
   OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   printf("%g ~ %g +/- %g\n", ref, T.E, T.SE);
-  printf("#failures = %lu/%lu\n",
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+  printf("#failures = %lu/%lu\n\n",
     (unsigned long)nfails, (unsigned long)nrealisations);
   CHK(nfails + nreals == nrealisations);
   CHK(nfails < N/1000);

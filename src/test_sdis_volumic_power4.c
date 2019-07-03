@@ -22,12 +22,13 @@
 #define Power 10000.0
 #define H 50.0
 #define LAMBDA 100.0
-#define DELTA (1.0/2.0)
-#define N 10000
+#define DELTA 0.4/*(1.0/2.0)*/
+#define N 100000
+#define LENGTH 10000.0
 
 /*
  * The 2D scene is a solid slabs stretched along the X dimension to simulate a
- * 1D case. The slab has a volumic power and has a convective exchange with 
+ * 1D case. The slab has a volumic power and has a convective exchange with
  * surrounding fluid whose temperature is fixed to Tf.
  *
  *
@@ -47,49 +48,52 @@
  *
  */
 
-static const double vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
- -1000000.5,-0.5,
- -1000000.5, 0.5,
-  1000000.5, 0.5,
-  1000000.5,-0.5
+static const double vertices_2d[4/*#vertices*/*2/*#coords per vertex*/] = {
+  LENGTH,-0.5,
+ -LENGTH,-0.5,
+ -LENGTH, 0.5,
+  LENGTH, 0.5
 };
-static const size_t nvertices = sizeof(vertices)/sizeof(double[2]);
 
-static const size_t indices[4/*#segments*/*2/*#indices per segment*/]= {
-  0, 1,
-  1, 2,
-  2, 3,
-  3, 0
+static const double vertices_3d[8/*#vertices*/*3/*#coords per vertex*/] = {
+ -LENGTH,-0.5,-LENGTH,
+  LENGTH,-0.5,-LENGTH,
+ -LENGTH, 0.5,-LENGTH,
+  LENGTH, 0.5,-LENGTH,
+ -LENGTH,-0.5, LENGTH,
+  LENGTH,-0.5, LENGTH,
+ -LENGTH, 0.5, LENGTH,
+  LENGTH, 0.5, LENGTH
 };
-static const size_t nsegments = sizeof(indices)/sizeof(size_t[2]);
 
 /*******************************************************************************
  * Geometry
  ******************************************************************************/
 static void
-get_indices(const size_t iseg, size_t ids[2], void* context)
-{
-  (void)context;
-  CHK(ids);
-  ids[0] = indices[iseg*2+0];
-  ids[1] = indices[iseg*2+1];
-}
-
-static void
-get_position(const size_t ivert, double pos[2], void* context)
+get_position_2d(const size_t ivert, double pos[2], void* context)
 {
   (void)context;
   CHK(pos);
-  pos[0] = vertices[ivert*2+0];
-  pos[1] = vertices[ivert*2+1];
+  pos[0] = vertices_2d[ivert*2+0];
+  pos[1] = vertices_2d[ivert*2+1];
 }
 
 static void
-get_interface(const size_t iseg, struct sdis_interface** bound, void* context)
+get_position_3d(const size_t ivert, double pos[3], void* context)
+{
+  (void)context;
+  CHK(pos);
+  pos[0] = vertices_3d[ivert*3+0];
+  pos[1] = vertices_3d[ivert*3+1];
+  pos[2] = vertices_3d[ivert*3+2];
+}
+
+static void
+get_interface(const size_t iprim, struct sdis_interface** bound, void* context)
 {
   struct sdis_interface** interfaces = context;
   CHK(context && bound);
-  *bound = interfaces[iseg];
+  *bound = interfaces[iprim];
 }
 
 /*******************************************************************************
@@ -210,7 +214,8 @@ main(int argc, char** argv)
   struct sdis_medium* fluid1 = NULL;
   struct sdis_medium* fluid2 = NULL;
   struct sdis_medium* solid = NULL;
-  struct sdis_scene* scn = NULL;
+  struct sdis_scene* scn_2d = NULL;
+  struct sdis_scene* scn_3d = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_fluid_shader fluid_shader = SDIS_FLUID_SHADER_NULL;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
@@ -218,10 +223,10 @@ main(int argc, char** argv)
   struct sdis_interface* interf_adiabatic = NULL;
   struct sdis_interface* interf_solid_fluid1 = NULL;
   struct sdis_interface* interf_solid_fluid2 = NULL;
-  struct sdis_interface* interfaces[4/*#segment*/];
+  struct sdis_interface* interfaces[12/*#max primitives*/];
   struct sdis_mc T = SDIS_MC_NULL;
   size_t nreals, nfails;
-  double pos[2];
+  double pos[3];
   double time_range[2] = { INF, INF };
   double Tref;
   double x;
@@ -309,20 +314,32 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(fluid2));
   OK(sdis_medium_ref_put(solid));
 
-  /* Map the interfaces to their square segments */
-  interfaces[0] = interf_adiabatic;
-  interfaces[1] = interf_solid_fluid1;
-  interfaces[2] = interf_adiabatic;
-  interfaces[3] = interf_solid_fluid2;
-
 #if 0
   dump_segments(stdout, vertices, nvertices, indices, nsegments);
   exit(0);
 #endif
 
-  /* Create the scene */
-  OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+  /* Map the interfaces to their square segments */
+  interfaces[0] = interf_solid_fluid2; /* Bottom */
+  interfaces[1] = interf_adiabatic; /* Left */
+  interfaces[2] = interf_solid_fluid1; /* Top */
+  interfaces[3] = interf_adiabatic; /* Right */
+
+  /* Create the 2D scene */
+  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices, get_interface,
+    square_nvertices, get_position_2d, interfaces, &scn_2d));
+
+  /* Map the interfaces to their box triangles */
+  interfaces[0] = interfaces[1] = interf_adiabatic; /* Front */
+  interfaces[2] = interfaces[3] = interf_adiabatic; /* Left */
+  interfaces[4] = interfaces[5] = interf_adiabatic; /* Back */
+  interfaces[6] = interfaces[7] = interf_adiabatic; /* Right */
+  interfaces[8] = interfaces[9] = interf_solid_fluid1; /* Top */
+  interfaces[10]= interfaces[11]= interf_solid_fluid2; /* Bottom */
+
+  /* Create the 3D scene */
+  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices, get_interface,
+    box_nvertices, get_position_3d, interfaces, &scn_3d));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_adiabatic));
@@ -330,13 +347,16 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_solid_fluid2));
 
   pos[0] = 0;
-  pos[1] = 0.25;
+  pos[1] = 0;
+  pos[2] = 0;
 
   x = pos[1];
   Tref = -Power / (2*LAMBDA) * x*x + Tf + Power/(2*H) + Power/(8*LAMBDA);
 
+  printf(">>> 2D\n");
+
   time_current(&t0);
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn_2d, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
   time_sub(&t0, time_current(&t1), &t0);
   time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
   printf("Elapsed time = %s\n", dump);
@@ -352,7 +372,27 @@ main(int argc, char** argv)
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, Tref, T.SE*3));
 
-  OK(sdis_scene_ref_put(scn));
+  printf("\n>>> 3D\n");
+
+  time_current(&t0);
+  OK(sdis_solve_probe(scn_3d, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
+  time_sub(&t0, time_current(&t1), &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+  printf("Elapsed time = %s\n", dump);
+
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g %g]\n",
+    SPLIT2(pos), Tref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  OK(sdis_estimator_ref_put(estimator));
+  CHK(nfails + nreals == N);
+  CHK(nfails < N/1000);
+  CHK(eq_eps(T.E, Tref, T.SE*3));
+
+  OK(sdis_scene_ref_put(scn_2d));
+  OK(sdis_scene_ref_put(scn_3d));
   OK(sdis_device_ref_put(dev));
 
   check_memory_allocator(&allocator);

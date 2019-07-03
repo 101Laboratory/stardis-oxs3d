@@ -45,9 +45,9 @@ XD(compute_temperature)
   }* stack = NULL;
   size_t istack = 0;
 #endif
-  /* Maximum accepted #failures before stopping the realisation */
   struct sdis_heat_vertex* heat_vtx = NULL;
-  const size_t MAX_FAILS = 10;
+  /* Maximum accepted #failures before stopping the realisation */
+  const size_t MAX_FAILS = 1;
   res_T res = RES_OK;
   ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
 
@@ -121,8 +121,8 @@ XD(probe_realisation)
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double ambient_radiative_temperature,
    const double reference_temperature,
-   struct green_path_handle* green_path,
-   struct sdis_heat_path* heat_path,
+   struct green_path_handle* green_path, /* May be NULL */
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
@@ -213,8 +213,8 @@ XD(boundary_realisation)
    const double fp_to_meter,
    const double Tarad,
    const double Tref,
-   struct green_path_handle* green_path,
-   struct sdis_heat_path* heat_path,
+   struct green_path_handle* green_path, /* May be NULL */
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;

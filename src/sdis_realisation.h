@@ -46,8 +46,8 @@ probe_realisation_2d
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double ambient_radiative_temperature,
    const double reference_temperature,
-   struct green_path_handle* green_path,
-   struct sdis_heat_path* heat_path,
+   struct green_path_handle* green_path, /* May be NULL */
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
 
 extern LOCAL_SYM res_T
@@ -61,8 +61,8 @@ probe_realisation_3d
    const double fp_to_meter,/* Scale factor from floating point unit to meter */
    const double ambient_radiative_temperature,
    const double reference_temperature,
-   struct green_path_handle* green_path,
-   struct sdis_heat_path* heat_path,
+   struct green_path_handle* green_path, /* May be NULL */
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
 
 /*******************************************************************************
@@ -79,8 +79,8 @@ boundary_realisation_2d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
-   struct green_path_handle* green_path,
-   struct sdis_heat_path* heat_path,
+   struct green_path_handle* green_path, /* May be NULL */
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
 
 extern LOCAL_SYM res_T
@@ -94,8 +94,8 @@ boundary_realisation_3d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
-   struct green_path_handle* green_path,
-   struct sdis_heat_path* heat_path,
+   struct green_path_handle* green_path, /* May be NULL */
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
 
 extern LOCAL_SYM res_T
@@ -140,6 +140,7 @@ ray_realisation_3d
    const double fp_to_meter,
    const double ambient_radiative_temperature,
    const double reference_temperature,
+   struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
 
 #endif /* SDIS_REALISATION_H */

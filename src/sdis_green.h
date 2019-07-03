@@ -19,6 +19,7 @@
 #include <rsys/rsys.h>
 
 /* Forward declaration */
+struct accum;
 struct sdis_green_function;
 struct ssp_rng_proxy;
 struct green_path;
@@ -53,7 +54,8 @@ green_function_redux_and_clear
 extern LOCAL_SYM res_T
 green_function_finalize
   (struct sdis_green_function* green,
-   struct ssp_rng_proxy* rng_proxy); /* Proxy RNG used to estimate the function */
+   struct ssp_rng_proxy* rng_proxy, /* Proxy RNG used to estimate the function */
+   const struct accum* time); /* Accumulator of the realisation time */
 
 extern LOCAL_SYM res_T
 green_function_create_path

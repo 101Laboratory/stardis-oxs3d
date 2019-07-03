@@ -177,6 +177,7 @@ main(int argc, char** argv)
 {
   struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc mc_time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
@@ -283,7 +284,7 @@ main(int argc, char** argv)
   nu = (HC0 + HC1 + HC2 + HC3 + HC4 + HC5) / (RHO * CP);
   Tinf = (HC0 * T0 + HC1 * T1 + HC2 * T2 + HC3 * T3 + HC4 * T4 + HC5 * T5)
     / (HC0 + HC1 + HC2 + HC3 + HC4 + HC5);
-  printf("Temperature of the box at (%g %g %g)\n", SPLIT3(pos));
+  printf(">>> Temperature of the box at (%g %g %g)\n\n", SPLIT3(pos));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double)i / nu : INF;
     double time_range[2];
@@ -298,7 +299,9 @@ main(int argc, char** argv)
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
     OK(sdis_estimator_get_temperature(estimator, &T));
-    printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
+    OK(sdis_estimator_get_realisation_time(estimator, &mc_time));
+    printf("Temperature at %g = %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", mc_time.E, mc_time.SE);
     if(nfails)
       printf("#failures = %lu/%lu\n", (unsigned long)nfails,(unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
@@ -313,12 +316,13 @@ main(int argc, char** argv)
     }
 
     OK(sdis_estimator_ref_put(estimator));
+    printf("\n");
   }
 
   /* Test in 2D for various time values. */
   nu = (HC0 + HC1 + HC2 + HC3) / (RHO * CP);
   Tinf = (HC0 * T0 + HC1 * T1 + HC2 * T2 + HC3 * T3) / (HC0 + HC1 + HC2 + HC3);
-  printf("Temperature of the square at (%g %g)\n", SPLIT2(pos));
+  printf(">>> Temperature of the square at (%g %g)\n\n", SPLIT2(pos));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double)i / nu : INF;
     double time_range[2];
@@ -332,7 +336,9 @@ main(int argc, char** argv)
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
     OK(sdis_estimator_get_temperature(estimator, &T));
-    printf("  t=%g : %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
+    OK(sdis_estimator_get_realisation_time(estimator, &mc_time));
+    printf("Temperature at %g = %g ~ %g +/- %g\n", time, ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", mc_time.E, mc_time.SE);
     if(nfails)
       printf("#failures = %lu/%lu\n", (unsigned long)nfails,(unsigned long)N);
     CHK(eq_eps(T.E, ref, T.SE * 3));
@@ -347,6 +353,7 @@ main(int argc, char** argv)
     }
 
     OK(sdis_estimator_ref_put(estimator));
+    printf("\n");
   }
 
   OK(sdis_scene_ref_put(box_scn));

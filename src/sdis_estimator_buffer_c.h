@@ -1,0 +1,58 @@
+/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>. */
+
+#ifndef SDIS_ESTIMATOR_BUFFER_C_H
+#define SDIS_ESTIMATOR_BUFFER_C_H
+
+#include <rsys/rsys.h>
+
+/* Forward declaration */
+struct sdis_device;
+struct sdis_estimator;
+struct sdis_estimator_buffer;
+
+extern LOCAL_SYM res_T
+estimator_buffer_create
+  (struct sdis_device* dev,
+   const size_t width,
+   const size_t height,
+   struct sdis_estimator_buffer** buf);
+
+extern LOCAL_SYM struct sdis_estimator*
+estimator_buffer_grab
+  (const struct sdis_estimator_buffer* buf,
+   const size_t x,
+   const size_t y);
+
+extern LOCAL_SYM void
+estimator_buffer_setup_realisations_count
+  (struct sdis_estimator_buffer* buf,
+   const size_t nrealisations,
+   const size_t nsuccesses);
+
+extern LOCAL_SYM void
+estimator_buffer_setup_temperature
+  (struct sdis_estimator_buffer* buf,
+   const double sum,
+   const double sum2);
+
+extern LOCAL_SYM void
+estimator_buffer_setup_realisation_time
+  (struct sdis_estimator_buffer* buf,
+   const double sum,
+   const double sum2);
+
+#endif /* SDIS_ESTIMATOR_BUFFER_C_H */
+

@@ -54,7 +54,6 @@ device_release(ref_T* ref)
   ASSERT(flist_name_is_empty(&dev->media_names));
   flist_name_release(&dev->interfaces_names);
   flist_name_release(&dev->media_names);
-  darray_tile_release(&dev->tiles);
   MEM_RM(dev->allocator, dev);
 }
 
@@ -98,14 +97,6 @@ sdis_device_create
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
-  darray_tile_init(allocator, &dev->tiles);
-
-  res = darray_tile_resize(&dev->tiles, dev->nthreads);
-  if(res != RES_OK) {
-    log_err(dev,
-      "%s: could not allocate the per thread buffer of estimations.\n", FUNC_NAME);
-    goto error;
-  }
 
   res = s2d_device_create(log, allocator, 0, &dev->s2d);
   if(res != RES_OK) {
