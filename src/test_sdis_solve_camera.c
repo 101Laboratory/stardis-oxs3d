@@ -441,7 +441,7 @@ dump_image(const struct sdis_estimator_buffer* buf)
   double Tmin =  DBL_MAX;
   double norm;
   size_t definition[2];
-  size_t i, ix, iy;
+  size_t ix, iy;
 
   CHK(buf != NULL);
   OK(sdis_estimator_buffer_get_definition(buf, definition));
