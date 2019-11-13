@@ -30,7 +30,7 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 ################################################################################
 find_package(RCMake 0.4 REQUIRED)
 find_package(Star2D 0.3.1 REQUIRED)
-find_package(Star3D 0.6 REQUIRED)
+find_package(Star3D 0.6.2 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc 0.4.2 REQUIRED)
 find_package(StarEnc2D 0.4.2 REQUIRED)
