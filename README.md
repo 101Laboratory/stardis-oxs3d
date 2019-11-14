@@ -25,6 +25,12 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.8.1
+
+- Fix a solver issue that led to reject valid sampled paths.
+- Bump the version of the Star-Enclosure[2D] libraries to 0.4.2. These versions
+  fix a numerical issue that might led to an infinite loop at the scene creation.
+
 ### Version 0.8
 
 - Drastically improve the robustness of the solver~: far less realisations are
