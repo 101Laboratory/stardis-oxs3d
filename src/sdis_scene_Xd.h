@@ -570,8 +570,8 @@ XD(run_analyze)
   geom.position = position;
   geom.data = ctx;
   res = sencXd(scene_add_geometry)
-    (senc_scn, (unsigned)nprims, XD(geometry_indices), geometry_media, NULL,
-     (unsigned)nverts, XD(geometry_position), &geom);
+    (senc_scn, (unsigned)nprims, XD(geometry_indices), geometry_media,
+     (unsigned)nverts, XD(geometry_position), NULL, NULL, &geom);
   if(res != RES_OK) goto error;
 
   /* Launch the scene analyze */
@@ -624,7 +624,7 @@ XD(setup_properties)
     size_t ninterfaces;
 
 #if DIM == 2
-    /* Retrieve the triangle id in user space */
+    /* Retrieve the segment id in user space */
     SENCXD(descriptor_get_global_segment_global_id(desc, iprim, &iprim_adjusted));
     /* Fetch the enclosures that the segment splits */
     SENCXD(descriptor_get_global_segment_enclosures(desc, iprim, enclosures));
@@ -835,12 +835,13 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   res = darray_uint_resize(&enc_data->local2global, nprims);
   if(res != RES_OK) goto error;
   FOR_EACH(iprim, 0, nprims) {
+    enum sencXd(side) side;
 #if DIM == 2
     senc2d_enclosure_get_segment_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
+      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim, &side);
 #else
     senc_enclosure_get_triangle_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim);
+      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim, &side);
 #endif
   }
 

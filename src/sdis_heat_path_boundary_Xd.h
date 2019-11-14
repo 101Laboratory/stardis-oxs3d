@@ -345,7 +345,9 @@ XD(select_reinjection_dir)
      * randomly selected by the sample_reinjection_dir procedure and adjust
      * the displacement distance. */
     dir = dir0;
-    if(dst0 < dst1) {
+
+    /* Define the reinjection distance along dir0 and its corresponding hit  */
+    if(dst0 <= dst1) {
       dst = dst0;
       hit = hit0;
     } else {
