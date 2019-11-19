@@ -918,6 +918,9 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
           indices[0]+1, indices[1]+1, indices[2]+1);
       }
   #endif
+#else
+      log_warn(scn->dev, "Found internal enclosure with %u materials.\n",
+        header.enclosed_media_count);
 #endif
       SENCXD(enclosure_ref_put(enc));
       enc = NULL;
