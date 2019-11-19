@@ -552,7 +552,7 @@ XD(run_analyze)
   ASSERT(scn && nprims && indices && interf && nverts && position && out_desc);
 
   res = sencXd(device_create)(scn->dev->logger, scn->dev->allocator,
-    1/*scn->dev->nthreads*/, scn->dev->verbose, &senc);
+    scn->dev->nthreads, scn->dev->verbose, &senc);
   if(res != RES_OK) goto error;
 
   res = sencXd(scene_create)(senc,
