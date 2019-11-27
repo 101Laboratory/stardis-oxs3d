@@ -25,6 +25,15 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.8.2
+
+- Fix an issue when the `sdis_solve_boundary_flux` function was invoked on a
+  boundary with radiative transfer: several sampled paths were rejected due to
+  data inconsistencies.
+- Fix a memory leak when the scene creation failed.
+- Enable parallelism on Star-Enclosure[2D] to improve the performances of the
+  enclosure extraction on the setup of the Stardis scene.
+
 ### Version 0.8.1
 
 - Fix a solver issue that led to reject valid sampled paths.
