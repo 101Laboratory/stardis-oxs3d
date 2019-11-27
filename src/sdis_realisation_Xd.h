@@ -298,6 +298,9 @@ XD(boundary_flux_realisation)
   struct XD(temperature) T;
   struct sXd(attrib) attr;
   struct sXd(primitive) prim;
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* fluid_mdm = NULL;
+
 #if SDIS_XD_DIMENSION == 2
   float st;
 #else
@@ -354,9 +357,13 @@ XD(boundary_flux_realisation)
   if(res != RES_OK) return res;
   weight[0] = T.value;
 
+  /* Fetch the fluid medium */
+  interf = scene_get_interface(scn, (unsigned)iprim);
+  fluid_mdm = interface_get_medium(interf, fluid_side);
+
   /* Compute radiative temperature */
   if(compute_radiative) {
-    RESET_WALK(fluid_side, NULL);
+    RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(radiative_path);
     res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) return res;
@@ -365,10 +372,7 @@ XD(boundary_flux_realisation)
 
   /* Compute fluid temperature */
   if(compute_convective) {
-    struct sdis_interface* interf = scene_get_interface(scn, (unsigned)iprim);
-    struct sdis_medium* mdm = interface_get_medium(interf, fluid_side);
-
-    RESET_WALK(fluid_side, mdm);
+    RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(convective_path);
     res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) return res;

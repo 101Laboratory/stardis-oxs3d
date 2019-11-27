@@ -552,7 +552,7 @@ XD(run_analyze)
   ASSERT(scn && nprims && indices && interf && nverts && position && out_desc);
 
   res = sencXd(device_create)(scn->dev->logger, scn->dev->allocator,
-    1/*scn->dev->nthreads*/, scn->dev->verbose, &senc);
+    scn->dev->nthreads, scn->dev->verbose, &senc);
   if(res != RES_OK) goto error;
 
   res = sencXd(scene_create)(senc,
@@ -896,6 +896,8 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
       double tmp[DIM];
       unsigned indices[DIM];
       unsigned i;
+      log_warn(scn->dev, "# Found internal enclosure with %u materials:\n",
+        header.enclosed_media_count);
   #if DIM == 2
       FOR_EACH(i, 0, header.vertices_count) {
         SENCXD(enclosure_get_vertex(enc, i, tmp));
@@ -916,7 +918,12 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
           indices[0]+1, indices[1]+1, indices[2]+1);
       }
   #endif
+#else
+      log_warn(scn->dev, "Found internal enclosure with %u materials.\n",
+        header.enclosed_media_count);
 #endif
+      SENCXD(enclosure_ref_put(enc));
+      enc = NULL;
       res = RES_BAD_ARG;
       goto error;
     }
@@ -1012,6 +1019,7 @@ exit:
   if(out_scn) *out_scn = scn;
   return res;
 error:
+  if(desc) SENCXD(descriptor_ref_put(desc));
   if(scn) {
     SDIS(scene_ref_put(scn));
     scn = NULL;
