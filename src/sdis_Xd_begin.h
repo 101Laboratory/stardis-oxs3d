@@ -60,7 +60,6 @@ static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
 
 /* Star-XD macros generic to SDIS_XD_DIMENSION */
 #define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
-#define sXd_dev CONCAT(CONCAT(s, DIM), d)
 #define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
 #define SXD_HIT_NULL CONCAT(CONCAT(S,DIM), D_HIT_NULL)
 #define SXD_HIT_NULL__ CONCAT(CONCAT(S, DIM), D_HIT_NULL__)
@@ -70,6 +69,7 @@ static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
 #define SXD CONCAT(CONCAT(S, DIM), D)
 #define SXD_FLOAT2 CONCAT(CONCAT(S, DIM), D_FLOAT2)
 #define SXD_FLOAT3 CONCAT(CONCAT(S, DIM), D_FLOAT3)
+#define SXD_FLOATX CONCAT(CONCAT(CONCAT(S,DIM), D_FLOAT), DIM)
 #define SXD_SAMPLE CONCAT(CONCAT(S, DIM), D_SAMPLE)
 
 /* Vector macros generic to SDIS_XD_DIMENSION */

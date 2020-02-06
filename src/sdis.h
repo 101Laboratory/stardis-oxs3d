@@ -47,8 +47,8 @@
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
-struct senc2d_descriptor;
-struct senc_descriptor;
+struct senc2d_scene;
+struct senc3d_scene;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
  * ref counted. Once created the caller implicitly owns the created data, i.e.
@@ -630,23 +630,17 @@ sdis_scene_boundary_project_position
    const double pos[3],
    double uv[]);
 
-/* Get the descriptor of the 3D scene's enclosures */
+/* Get the 2D scene's enclosures. Only defined for a 2D scene. */
 SDIS_API res_T
-sdis_scene_get_analysis
+sdis_scene_get_senc2d_scene
   (struct sdis_scene* scn,
-   struct senc_descriptor** descriptor);
+   struct senc2d_scene** senc2d_scn);
 
-/* Get the descriptor of the 2D scene's enclosures */
+/* Get the 3D scene's enclosures. Only defined for a 3D scene. */
 SDIS_API res_T
-sdis_scene_2d_get_analysis
+sdis_scene_get_senc3d_scene
   (struct sdis_scene* scn,
-   struct senc2d_descriptor** descriptor);
-
-/* Release the descriptor of the scene's enclosures; subsequent attempts to get
- * it will fail. */
-SDIS_API res_T
-sdis_scene_release_analysis
-  (struct sdis_scene* scn);
+   struct senc3d_scene** senc3d_scn);
 
 SDIS_API res_T
 sdis_scene_get_dimension

@@ -25,15 +25,15 @@ option(NO_TEST "Do not build tests" OFF)
 CMAKE_DEPENDENT_OPTION(ALL_TESTS
   "Perform basic and advanced tests" OFF "NOT NO_TEST" OFF)
 
-################################################################################
+###############################################################################
 # Check dependencies
-################################################################################
+###############################################################################
 find_package(RCMake 0.4 REQUIRED)
 find_package(Star2D 0.3.1 REQUIRED)
 find_package(Star3D 0.6.2 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
-find_package(StarEnc 0.4.2 REQUIRED)
 find_package(StarEnc2D 0.4.2 REQUIRED)
+find_package(StarEnc3D 0.4.2 REQUIRED)
 find_package(RSys 0.8.1 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
@@ -45,15 +45,16 @@ include_directories(
   ${Star2D_INCLUDE_DIR}
   ${Star3D_INCLUDE_DIR}
   ${StarSP_INCLUDE_DIR}
-  ${StarEnc_INCLUDE_DIR}
   ${StarEnc2D_INCLUDE_DIR}
+  ${StarEnc3D_INCLUDE_DIR}
   ${RSys_INCLUDE_DIR})
 
-rcmake_append_runtime_dirs(_runtime_dirs RSys Star3D StarSP StarEnc StarEnc2D)
+rcmake_append_runtime_dirs(_runtime_dirs
+  RSys Star2D Star3D StarSP StarEnc2D StarEnc3D)
 
-################################################################################
+###############################################################################
 # Configure and define targets
-################################################################################
+###############################################################################
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 8)
 set(VERSION_PATCH 2)
@@ -115,7 +116,8 @@ if(MSVC)
   ### disable verbose warnings:
   # warning C4127: conditional expression is constant
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4127")
-  # warning C4204: nonstandard extension used : non-constant aggregate initializer
+  # warning C4204:
+  #   nonstandard extension used : non-constant aggregate initializer
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4204")
   # warning C4938: Floating point reduction variable may cause inconsistent
   # results under /fp:strict or #pragma fenv_access
@@ -126,7 +128,8 @@ add_library(sdis SHARED
   ${SDIS_FILES_SRC}
   ${SDIS_FILES_INC}
   ${SDIS_FILES_INC_API})
-target_link_libraries(sdis RSys Star2D Star3D StarSP StarEnc StarEnc2D ${MATH_LIB})
+target_link_libraries(sdis
+  RSys Star2D Star3D StarSP StarEnc2D StarEnc3D ${MATH_LIB})
 
 set_target_properties(sdis PROPERTIES
   DEFINE_SYMBOL SDIS_SHARED_BUILD
@@ -141,9 +144,9 @@ endif()
 
 rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
 
-################################################################################
+###############################################################################
 # Add tests
-################################################################################
+###############################################################################
 if(NOT NO_TEST)
   find_package(Star3DUT REQUIRED 0.2.0)
 
@@ -209,11 +212,14 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
+  
+  rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)
+
 endif()
 
-################################################################################
+###############################################################################
 # Define output & install directories
-################################################################################
+###############################################################################
 install(TARGETS sdis
   ARCHIVE DESTINATION bin
   LIBRARY DESTINATION lib
