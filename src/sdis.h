@@ -525,6 +525,9 @@ sdis_interface_get_id
  * references an absolute 3D position. The physical properties of an interface
  * is defined by the interface of the triangle.
  *
+ * No duplicate is allowed, either vertex or triangle. No degenerated triangle
+ * is allowed.
+ *
  * Note that each triangle has 2 sides: a front and a back side. By convention,
  * the front side of a triangle is the side where its vertices are clock wise
  * ordered.  The back side of a triangle is the exact opposite: it is the side
@@ -537,9 +540,9 @@ sdis_scene_create
   (struct sdis_device* dev,
    const size_t ntris, /* #triangles */
    void (*indices) /* Retrieve the indices toward the vertices of `itri' */
-    (const size_t itri, size_t ids[3], void*),
+    (const size_t itri, size_t ids[3], void* ctx),
    void (*interf) /* Get the interface of the triangle `itri' */
-    (const size_t itri, struct sdis_interface** bound, void*),
+    (const size_t itri, struct sdis_interface** bound, void* ctx),
    const size_t nverts, /* #vertices */
    void (*position) /* Retrieve the position of the vertex `ivert' */
     (const size_t ivert, double pos[3], void* ctx),
@@ -550,6 +553,9 @@ sdis_scene_create
  * line segments: each segment is composed of 2 indices where each index
  * references an absolute 2D position. The physical properties of an interface
  * is defined by the interface of the segment.
+ *
+ * No duplicate is allowed, either vertex or segment. No degenerated segment is
+ * allowed.
  *
  * Note that each segment has 2 sides: a front and a back side. By convention,
  * the front side of a segment is the side where its vertices are clock wise
@@ -563,9 +569,9 @@ sdis_scene_2d_create
   (struct sdis_device* dev,
    const size_t nsegs, /* #segments */
    void (*indices) /* Retrieve the indices toward the vertices of `iseg' */
-    (const size_t iseg, size_t ids[2], void*),
+    (const size_t iseg, size_t ids[2], void* ctx),
    void (*interf) /* Get the interface of the segment `iseg' */
-    (const size_t iseg, struct sdis_interface** bound, void*),
+    (const size_t iseg, struct sdis_interface** bound, void* ctx),
    const size_t nverts, /* #vertices */
    void (*position) /* Retrieve the position of the vertex `ivert' */
     (const size_t ivert, double pos[2], void* ctx),

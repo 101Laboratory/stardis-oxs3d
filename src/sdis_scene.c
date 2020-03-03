@@ -132,8 +132,8 @@ res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
    const size_t nsegs, /* #segments */
-   void (*indices)(const size_t itri, size_t ids[2], void*),
-   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
+   void (*indices)(const size_t iseg, size_t ids[2], void*),
+   void (*interf)(const size_t iseg, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[2], void* ctx),
    void* ctx,
