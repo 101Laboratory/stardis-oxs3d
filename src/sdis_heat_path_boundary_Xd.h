@@ -114,9 +114,9 @@ XD(move_away_primitive_boundaries)
   float min_dst, max_dst;
   float cos_a1, cos_a2;
   float len;
-  int imax;
-  int imin;
-  int imid;
+  int imax = 0;
+  int imin = 0;
+  int imid = 0;
   int i;
   ASSERT(rwalk && delta > 0 && !S3D_HIT_NONE(&rwalk->hit));
 
@@ -482,7 +482,7 @@ XD(solid_solid_boundary_path)
   float dir0[DIM], dir1[DIM], dir2[DIM], dir3[DIM];
   float dir_front[DIM], dir_back[DIM];
   float* dir;
-  float reinject_dst_front, reinject_dst_back;
+  float reinject_dst_front = 0, reinject_dst_back = 0;
   float reinject_dst;
   /* In 2D it is useless to try to resample a reinjection direction since there
    * is only one possible direction */
