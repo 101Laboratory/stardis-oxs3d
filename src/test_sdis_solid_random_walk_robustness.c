@@ -354,7 +354,7 @@ main(int argc, char** argv)
   /* Launch probe estimation with trilinear profile set at interfaces */
   interf_param->profile = PROFILE_TRILINEAR;
   OK(sdis_solve_probe(scn, Nreals, probe, time, 1.0, -1, 0,
-    SDIS_HEAT_PATH_FAILED, &estimator));
+    SDIS_HEAT_PATH_FAILURE, &estimator));
   print_estimation_result(estimator, trilinear_temperature(probe));
   OK(sdis_estimator_ref_put(estimator));
 
@@ -362,7 +362,7 @@ main(int argc, char** argv)
   interf_param->profile = PROFILE_VOLUMETRIC_POWER;
   solid_param->power = Pw;
   OK(sdis_solve_probe(scn, Nreals, probe, time, 1.0, -1, 0,
-    SDIS_HEAT_PATH_FAILED, &estimator));
+    SDIS_HEAT_PATH_FAILURE, &estimator));
   print_estimation_result(estimator, volumetric_temperature(probe, upper));
   solid_param->power = SDIS_VOLUMIC_POWER_NONE;
   OK(sdis_estimator_ref_put(estimator));
@@ -370,7 +370,7 @@ main(int argc, char** argv)
   /* Launch medium integration */
   interf_param->profile = PROFILE_UNKNOWN;
   OK(sdis_solve_medium(scn, Nreals, solid, time, 1.0, -1, 0,
-    SDIS_HEAT_PATH_FAILED, &estimator));
+    SDIS_HEAT_PATH_FAILURE, &estimator));
   print_estimation_result(estimator, Tfluid);
   /*dump_heat_paths(stdout, estimator);*/
   OK(sdis_estimator_ref_put(estimator));

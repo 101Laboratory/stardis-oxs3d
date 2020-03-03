@@ -290,8 +290,8 @@ XD(solve_boundary)
     /* Register heat path */
     if(pheat_path) {
       pheat_path->status = res_simul == RES_OK
-        ? SDIS_HEAT_PATH_SUCCEED
-        : SDIS_HEAT_PATH_FAILED;
+        ? SDIS_HEAT_PATH_SUCCESS
+        : SDIS_HEAT_PATH_FAILURE;
 
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
