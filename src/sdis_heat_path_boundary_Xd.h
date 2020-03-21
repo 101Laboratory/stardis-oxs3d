@@ -300,7 +300,7 @@ XD(select_reinjection_dir)
   } while(dst0 == -1 && dst1 == -1 && ++iattempt < MAX_ATTEMPTS);
 
   if(dst0 == -1 && dst1 == -1) { /* No valid reinjection */
-   log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
+   log_warn(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -554,8 +554,8 @@ XD(solid_solid_boundary_path)
   /* Could not find a valid reinjection */
   if(iattempt >= MAX_ATTEMPTS) {
     *rwalk = rwalk_saved;
-    log_err(scn->dev,
-      "%s: could not find a valid soid/solid reinjection at {%g, %g, %g}.\n",
+    log_warn(scn->dev,
+      "%s: could not find a valid solid/solid reinjection at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -718,7 +718,7 @@ XD(solid_fluid_boundary_path)
   /* Could not find a valid reinjecton */
   if(iattempt >= MAX_ATTEMPTS) {
     *rwalk = rwalk_saved;
-    log_err(scn->dev,
+    log_warn(scn->dev,
       "%s: could not find a valid solid/fluid reinjection at {%g, %g %g}.\n",
       FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
@@ -867,7 +867,7 @@ XD(solid_boundary_with_flux_path)
   /* Could not find a valid reinjecton */
   if(iattempt >= MAX_ATTEMPTS) {
     *rwalk = rwalk_saved;
-    log_err(scn->dev,
+    log_warn(scn->dev,
       "%s: could not find a valid solid/fluid with flux reinjection "
       "at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
