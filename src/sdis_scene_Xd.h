@@ -820,13 +820,20 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
     /* As paths don't go in infinite enclosures we can accept models are broken
      * there. But nowhere else. */
     if(header.enclosed_media_count != 1 && !header.is_infinite) {
-#ifndef NDEBUG
       /* Dump the problematic enclosure. */
       double tmp[DIM];
       unsigned indices[DIM];
       unsigned i;
       log_warn(scn->dev, "# Found internal enclosure with %u materials:\n",
         header.enclosed_media_count);
+      FOR_EACH(i, 0, header.enclosed_media_count) {
+        unsigned imed;
+        const struct sdis_medium* med;
+        SENCXD(enclosure_get_medium(enc, i, &imed));
+        med = darray_medium_cdata_get(&scn->media)[imed];
+        log_warn(scn->dev, "# %u (%s)\n",
+          imed, (med->type == SDIS_SOLID ? "solid" : "fluid"));
+      }
       FOR_EACH(i, 0, header.vertices_count) {
         SENCXD(enclosure_get_vertex(enc, i, tmp));
   #if DIM == 2
@@ -844,10 +851,6 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
           indices[0]+1, indices[1]+1, indices[2]+1);
   #endif
       }
-#else
-      log_warn(scn->dev, "Found internal enclosure with %u materials.\n",
-        header.enclosed_media_count);
-#endif
       SENCXD(enclosure_ref_put(enc));
       enc = NULL;
       res = RES_BAD_ARG;
