@@ -188,11 +188,11 @@ XD(convective_path)
       goto exit;
     }
 
-    /* At t=0, the initial condition should have been reached. */
+    /* At t=t0, the initial condition should have been reached. */
     log_err(scn->dev,
       "%s: undefined initial condition. "
-      "Time is 0 but the temperature remains unknown.\n",
-      FUNC_NAME);
+      "Time is %g but the temperature remains unknown.\n",
+      FUNC_NAME, rwalk->vtx.time);
     res = RES_BAD_OP;
     goto error;
   }
