@@ -62,12 +62,11 @@ XD(boundary_get_position)(const unsigned ivert, float pos[DIM], void* context)
   iprim = (unsigned)ctx->primitives[iprim_id];
   SXD(scene_view_get_primitive(ctx->view, iprim, &prim));
 #if DIM == 2
-  s2d_segment_get_vertex_attrib(&prim, iprim_vert, S2D_POSITION, &attr);
-  ASSERT(attr.type == S2D_FLOAT2);
+  s2d_segment_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr);
 #else
-  s3d_triangle_get_vertex_attrib(&prim, iprim_vert, S3D_POSITION, &attr);
-  ASSERT(attr.type == S3D_FLOAT3);
+  s3d_triangle_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr);
 #endif
+  ASSERT(attr.type == SXD_FLOATX);
   fX(set)(pos, attr.value);
 }
 
@@ -144,9 +143,9 @@ XD(solve_boundary)
 
   /* Create the Star-XD shape of the boundary */
 #if SDIS_XD_DIMENSION == 2
-  res = s2d_shape_create_line_segments(scn->dev->sXd_dev, &shape);
+  res = s2d_shape_create_line_segments(scn->dev->sXd(dev), &shape);
 #else
-  res = s3d_shape_create_mesh(scn->dev->sXd_dev, &shape);
+  res = s3d_shape_create_mesh(scn->dev->sXd(dev), &shape);
 #endif
   if(res != RES_OK) goto error;
 
@@ -168,7 +167,7 @@ XD(solve_boundary)
   if(res != RES_OK) goto error;
 
   /* Create and setup the boundary Star-XD scene */
-  res = sXd(scene_create)(scn->dev->sXd_dev, &scene);
+  res = sXd(scene_create)(scn->dev->sXd(dev), &scene);
   if(res != RES_OK) goto error;
   res = sXd(scene_attach_shape)(scene, shape);
   if(res != RES_OK) goto error;
@@ -291,8 +290,8 @@ XD(solve_boundary)
     /* Register heat path */
     if(pheat_path) {
       pheat_path->status = res_simul == RES_OK
-        ? SDIS_HEAT_PATH_SUCCEED
-        : SDIS_HEAT_PATH_FAILED;
+        ? SDIS_HEAT_PATH_SUCCESS
+        : SDIS_HEAT_PATH_FAILURE;
 
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
@@ -438,9 +437,9 @@ XD(solve_boundary_flux)
 
   /* Create the Star-XD shape of the boundary */
 #if SDIS_XD_DIMENSION == 2
-  res = s2d_shape_create_line_segments(scn->dev->s2d, &shape);
+  res = s2d_shape_create_line_segments(scn->dev->sXd(dev), &shape);
 #else
-  res = s3d_shape_create_mesh(scn->dev->s3d, &shape);
+  res = s3d_shape_create_mesh(scn->dev->sXd(dev), &shape);
 #endif
   if(res != RES_OK) goto error;
 
@@ -463,7 +462,7 @@ XD(solve_boundary_flux)
   if(res != RES_OK) goto error;
 
   /* Create and setup the boundary Star-XD scene */
-  res = sXd(scene_create)(scn->dev->sXd_dev, &scene);
+  res = sXd(scene_create)(scn->dev->sXd(dev), &scene);
   if(res != RES_OK) goto error;
   res = sXd(scene_attach_shape)(scene, shape);
   if(res != RES_OK) goto error;

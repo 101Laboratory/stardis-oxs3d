@@ -167,7 +167,7 @@ XD(trace_radiative_path)
       if(outside && chk_mdm->type == SDIS_FLUID) {
         rwalk->mdm = chk_mdm;
       } else {
-        log_err(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
+        log_warn(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
           FUNC_NAME, SPLIT3(rwalk->vtx.P));
         res = RES_BAD_OP;
         goto error;

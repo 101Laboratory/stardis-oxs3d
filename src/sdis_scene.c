@@ -104,8 +104,8 @@ scene_release(ref_T * ref)
   htable_d_release(&scn->tmp_hc_ub);
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
-  if(scn->senc_descriptor) SENC(descriptor_ref_put(scn->senc_descriptor));
-  if(scn->senc2d_descriptor) SENC2D(descriptor_ref_put(scn->senc2d_descriptor));
+  if(scn->senc2d_scn) SENC2D(scene_ref_put(scn->senc2d_scn));
+  if(scn->senc3d_scn) SENC3D(scene_ref_put(scn->senc3d_scn));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }
@@ -132,8 +132,8 @@ res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
    const size_t nsegs, /* #segments */
-   void (*indices)(const size_t itri, size_t ids[2], void*),
-   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
+   void (*indices)(const size_t iseg, size_t ids[2], void*),
+   void (*interf)(const size_t iseg, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[2], void* ctx),
    void* ctx,
@@ -276,37 +276,26 @@ sdis_scene_boundary_project_position
 }
 
 res_T
-sdis_scene_2d_get_analysis
+sdis_scene_get_senc2d_scene
   (struct sdis_scene* scn,
-   struct senc2d_descriptor** descriptor)
+   struct senc2d_scene** senc2d_scn)
 {
-  if(!scn || !descriptor) return RES_BAD_ARG;
-  if(!scn->senc2d_descriptor) return RES_BAD_ARG; /* Scene is 3D */
-  SENC2D(descriptor_ref_get(scn->senc2d_descriptor));
-  *descriptor = scn->senc2d_descriptor;
+  if(!scn || !senc2d_scn) return RES_BAD_ARG;
+  if(!scn->senc2d_scn) return RES_BAD_ARG; /* Scene is 3D */
+  SENC2D(scene_ref_get(scn->senc2d_scn));
+  *senc2d_scn = scn->senc2d_scn;
   return RES_OK;
 }
 
 res_T
-sdis_scene_get_analysis
+sdis_scene_get_senc3d_scene
   (struct sdis_scene* scn,
-   struct senc_descriptor** descriptor)
+   struct senc3d_scene** senc3d_scn)
 {
-  if(!scn || !descriptor) return RES_BAD_ARG;
-  if(!scn->senc_descriptor) return RES_BAD_ARG; /* Scene is 2D */
-  SENC(descriptor_ref_get(scn->senc_descriptor));
-  *descriptor = scn->senc_descriptor;
-  return RES_OK;
-}
-
-res_T
-sdis_scene_release_analysis(struct sdis_scene* scn)
-{
-  if(!scn) return RES_BAD_ARG;
-  if(scn->senc2d_descriptor) SENC2D(descriptor_ref_put(scn->senc2d_descriptor));
-  if(scn->senc_descriptor) SENC(descriptor_ref_put(scn->senc_descriptor));
-  scn->senc_descriptor = NULL;
-  scn->senc2d_descriptor = NULL;
+  if(!scn || !senc3d_scn) return RES_BAD_ARG;
+  if(!scn->senc3d_scn) return RES_BAD_ARG; /* Scene is 2D */
+  SENC3D(scene_ref_get(scn->senc3d_scn));
+  *senc3d_scn = scn->senc3d_scn;
   return RES_OK;
 }
 

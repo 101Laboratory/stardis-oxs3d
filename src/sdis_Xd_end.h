@@ -21,7 +21,6 @@
 #undef DIM
 
 #undef sXd
-#undef sXd_dev
 #undef SXD_HIT_NONE
 #undef SXD_HIT_NULL
 #undef SXD_HIT_NULL__
@@ -31,6 +30,7 @@
 #undef SXD
 #undef SXD_FLOAT2
 #undef SXD_FLOAT3
+#undef SXD_FLOATX
 #undef SXD_SAMPLE
 
 #undef dX

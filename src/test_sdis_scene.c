@@ -19,8 +19,8 @@
 #include <rsys/double2.h>
 #include <rsys/double3.h>
 #include <rsys/math.h>
-#include<star/senc.h>
 #include<star/senc2d.h>
+#include<star/senc3d.h>
 
 struct context {
   const double* positions;
@@ -93,10 +93,14 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   double lower[3], upper[3];
   double uv0[2], uv1[2], pos[3], pos1[3];
   struct context ctx;
-  struct senc_descriptor* descriptor;
-  struct senc2d_descriptor* descriptor2d;
+  struct senc2d_scene* scn2d;
+  struct senc3d_scene* scn3d;
   size_t ntris, npos;
   size_t i;
+  size_t duplicated_indices[] = { 0, 1, 2, 0, 2, 1 };
+  size_t degenerated_indices[] = { 0, 1, 1 };
+  double duplicated_vertices[] = { 0, 0, 0, 1, 1, 1, 0, 0, 0 };
+  size_t dup_vrtx_indices[] = { 0, 1, 2 };
   enum sdis_scene_dimension dim;
 
   ctx.positions = box_vertices;
@@ -116,6 +120,20 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(CREATE(dev, ntris, IDS, NULL, npos, POS, &ctx, &scn));
   BA(CREATE(dev, ntris, IDS, IFA, 0, POS, &ctx, &scn));
   BA(CREATE(dev, ntris, IDS, IFA, npos, NULL, &ctx, &scn));
+  /* Duplicated vertex */
+  ctx.positions = duplicated_vertices;
+  ctx.indices = dup_vrtx_indices;
+  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
+  /* Duplicated triangle */
+  ctx.positions = box_vertices;
+  ctx.indices = duplicated_indices;
+  BA(CREATE(dev, 2, IDS, IFA, npos, POS, &ctx, &scn));
+  /* Degenerated triangle */
+  ctx.indices = degenerated_indices;
+  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
+
+  ctx.positions = box_vertices;
+  ctx.indices = box_indices;
   OK(CREATE(dev, ntris, IDS, IFA, npos, POS, &ctx, &scn));
 
   #undef CREATE
@@ -172,19 +190,13 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_get_boundary_position(scn, 6, uv1, pos1));
   CHK(!d3_eq_eps(pos1, pos, 1.e-6));
 
-  BA(sdis_scene_get_analysis(NULL, NULL));
-  BA(sdis_scene_get_analysis(scn, NULL));
-  BA(sdis_scene_get_analysis(NULL, &descriptor));
-  OK(sdis_scene_get_analysis(scn, &descriptor));
-  OK(senc_descriptor_ref_put(descriptor));
+  BA(sdis_scene_get_senc3d_scene(NULL, NULL));
+  BA(sdis_scene_get_senc3d_scene(scn, NULL));
+  BA(sdis_scene_get_senc3d_scene(NULL, &scn3d));
+  OK(sdis_scene_get_senc3d_scene(scn, &scn3d));
+  OK(senc3d_scene_ref_put(scn3d));
   /* No 2D available */
-  BA(sdis_scene_2d_get_analysis(scn, &descriptor2d));
-  BA(sdis_scene_release_analysis(NULL));
-  OK(sdis_scene_release_analysis(scn));
-  /* Already released */
-  OK(sdis_scene_release_analysis(scn));
-  /* Descriptor released: cannot get it anymore */
-  BA(sdis_scene_get_analysis(scn, &descriptor));
+  BA(sdis_scene_get_senc2d_scene(scn, &scn2d));
 
   BA(sdis_scene_ref_get(NULL));
   OK(sdis_scene_ref_get(scn));
@@ -200,10 +212,14 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   double lower[2], upper[2];
   double u0, u1, pos[2];
   struct context ctx;
-  struct senc2d_descriptor* descriptor;
-  struct senc_descriptor* descriptor3d;
+  struct senc2d_scene* scn2d;
+  struct senc3d_scene* scn3d;
   size_t nsegs, npos;
   size_t i;
+  size_t duplicated_indices[] = { 0, 1, 1, 0 };
+  size_t degenerated_indices[] = { 0, 0 };
+  double duplicated_vertices[] = { 0, 0, 0, 0 };
+  size_t dup_vrtx_indices[] = { 0, 1 };
   enum sdis_scene_dimension dim;
 
   ctx.positions = square_vertices;
@@ -223,6 +239,20 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(CREATE(dev, nsegs, IDS, NULL, npos, POS, &ctx, &scn));
   BA(CREATE(dev, nsegs, IDS, IFA, 0, POS, &ctx, &scn));
   BA(CREATE(dev, nsegs, IDS, IFA, npos, NULL, &ctx, &scn));
+  /* Duplicated vertex */
+  ctx.positions = duplicated_vertices;
+  ctx.indices = dup_vrtx_indices;
+  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
+  /* Duplicated segment */
+  ctx.positions = square_vertices;
+  ctx.indices = duplicated_indices;
+  BA(CREATE(dev, 2, IDS, IFA, npos, POS, &ctx, &scn));
+  /* Degenerated segment */
+  ctx.indices = degenerated_indices;
+  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
+
+  ctx.positions = square_vertices;
+  ctx.indices = square_indices;
   OK(CREATE(dev, nsegs, IDS, IFA, npos, POS, &ctx, &scn));
 
   #undef CREATE
@@ -280,20 +310,18 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_boundary_project_position(scn, 3, pos, &u0));
   CHK(eq_eps(u0, 1, 1.e-6));
 
-  BA(sdis_scene_2d_get_analysis(NULL, NULL));
-  BA(sdis_scene_2d_get_analysis(scn, NULL));
-  BA(sdis_scene_2d_get_analysis(NULL, &descriptor));
-  OK(sdis_scene_2d_get_analysis(scn, &descriptor));
-  OK(senc2d_descriptor_ref_put(descriptor));
+  BA(sdis_scene_get_senc2d_scene(NULL, NULL));
+  BA(sdis_scene_get_senc2d_scene(scn, NULL));
+  BA(sdis_scene_get_senc2d_scene(NULL, &scn2d));
+  OK(sdis_scene_get_senc2d_scene(scn, &scn2d));
+  OK(senc2d_scene_ref_put(scn2d));
   /* No 3D available */
-  BA(sdis_scene_get_analysis(scn, &descriptor3d));
-  BA(sdis_scene_release_analysis(NULL));
-  OK(sdis_scene_release_analysis(scn));
-  /* Already released */
-  OK(sdis_scene_release_analysis(scn));
-  /* Descriptor released: cannot get it anymore */
-  BA(sdis_scene_2d_get_analysis(scn, &descriptor));
+  BA(sdis_scene_get_senc3d_scene(scn, &scn3d));
 
+  BA(sdis_scene_ref_get(NULL));
+  OK(sdis_scene_ref_get(scn));
+  BA(sdis_scene_ref_put(NULL));
+  OK(sdis_scene_ref_put(scn));
   OK(sdis_scene_ref_put(scn));
 }
 

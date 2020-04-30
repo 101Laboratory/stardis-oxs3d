@@ -48,8 +48,8 @@ device_release(ref_T* ref)
   struct sdis_device* dev;
   ASSERT(ref);
   dev = CONTAINER_OF(ref, struct sdis_device, ref);
-  if(dev->s2d) S2D(device_ref_put(dev->s2d));
-  if(dev->s3d) S3D(device_ref_put(dev->s3d));
+  if(dev->s2d_dev) S2D(device_ref_put(dev->s2d_dev));
+  if(dev->s3d_dev) S3D(device_ref_put(dev->s3d_dev));
   ASSERT(flist_name_is_empty(&dev->interfaces_names));
   ASSERT(flist_name_is_empty(&dev->media_names));
   flist_name_release(&dev->interfaces_names);
@@ -98,13 +98,13 @@ sdis_device_create
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
 
-  res = s2d_device_create(log, allocator, 0, &dev->s2d);
+  res = s2d_device_create(log, allocator, 0, &dev->s2d_dev);
   if(res != RES_OK) {
     log_err(dev,
       "%s: could not create the Star-2D device on Stardis.\n", FUNC_NAME);
   }
 
-  res = s3d_device_create(log, allocator, 0, &dev->s3d);
+  res = s3d_device_create(log, allocator, 0, &dev->s3d_dev);
   if(res != RES_OK) {
     log_err(dev,
       "%s: could not create the Star-3D device on Stardis.\n", FUNC_NAME);

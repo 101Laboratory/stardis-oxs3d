@@ -86,6 +86,7 @@ XD(convective_path)
   double cp; /* Calorific capacity */
   double tmp;
   double r;
+  int path_started_in_fluid;
 #if SDIS_XD_DIMENSION == 2
   float st;
 #else
@@ -112,7 +113,8 @@ XD(convective_path)
     goto exit;
   }
 
-  if(SXD_HIT_NONE(&rwalk->hit)) { /* The path begins in the fluid */
+  path_started_in_fluid = SXD_HIT_NONE(&rwalk->hit);
+  if(path_started_in_fluid) { /* The path begins in the fluid */
     const float range[2] = {0, FLT_MAX};
     float dir[DIM] = {0};
     float org[DIM];
@@ -123,7 +125,6 @@ XD(convective_path)
     /* Init the path hit field required to define the current enclosure and
      * fetch the interface data */
     SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, NULL, &rwalk->hit));
-    rwalk->hit_side = fX(dot)(rwalk->hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
 
     if(SXD_HIT_NONE(&rwalk->hit)) {
       log_err(scn->dev,
@@ -132,6 +133,8 @@ XD(convective_path)
       res = RES_BAD_OP;
       goto error;
     }
+
+    rwalk->hit_side = fX(dot)(rwalk->hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
   }
 
   /* Fetch the current interface and its associated enclosures */
@@ -166,7 +169,7 @@ XD(convective_path)
    * is the initial condition. */
   if(enc->hc_upper_bound == 0) {
     /* Cannot be in the fluid without starting there. */
-    ASSERT(SXD_HIT_NONE(&rwalk->hit));
+    ASSERT(path_started_in_fluid);
 
     if(ctx->green_path) {
       log_err(scn->dev,
@@ -185,11 +188,11 @@ XD(convective_path)
       goto exit;
     }
 
-    /* At t=0, the initial condition should have been reached. */
+    /* At t=t0, the initial condition should have been reached. */
     log_err(scn->dev,
       "%s: undefined initial condition. "
-      "Time is 0 but the temperature remains unknown.\n",
-      FUNC_NAME);
+      "Time is %g but the temperature remains unknown.\n",
+      FUNC_NAME, rwalk->vtx.time);
     res = RES_BAD_OP;
     goto error;
   }

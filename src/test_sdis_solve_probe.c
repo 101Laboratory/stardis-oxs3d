@@ -206,11 +206,11 @@ process_heat_path(const struct sdis_heat_path* path, void* context)
   BA(sdis_heat_path_get_status(NULL, &status));
   BA(sdis_heat_path_get_status(path, NULL));
   OK(sdis_heat_path_get_status(path, &status));
-  CHK(status == SDIS_HEAT_PATH_SUCCEED || status == SDIS_HEAT_PATH_FAILED);
+  CHK(status == SDIS_HEAT_PATH_SUCCESS || status == SDIS_HEAT_PATH_FAILURE);
 
   switch(status) {
-    case SDIS_HEAT_PATH_FAILED: ++ctx->nfailures; break;
-    case SDIS_HEAT_PATH_SUCCEED: ++ctx->nsuccesses; break;
+    case SDIS_HEAT_PATH_FAILURE: ++ctx->nfailures; break;
+    case SDIS_HEAT_PATH_SUCCESS: ++ctx->nsuccesses; break;
     default: FATAL("Unreachable code.\n"); break;
   }
 

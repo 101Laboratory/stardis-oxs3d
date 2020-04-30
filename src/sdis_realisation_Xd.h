@@ -174,7 +174,7 @@ XD(probe_realisation)
     /* The initial condition should have been reached */
     log_err(scn->dev,
       "%s: undefined initial condition. "
-      "The time is %f but the temperature remains unknown.\n",
+      "The time is %g but the temperature remains unknown.\n",
       FUNC_NAME, t0);
     res = RES_BAD_OP;
     goto error;

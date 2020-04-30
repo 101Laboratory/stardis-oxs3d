@@ -47,8 +47,8 @@
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
-struct senc2d_descriptor;
-struct senc_descriptor;
+struct senc2d_scene;
+struct senc3d_scene;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
  * ref counted. Once created the caller implicitly owns the created data, i.e.
@@ -106,9 +106,9 @@ enum sdis_heat_vertex_type {
 };
 
 enum sdis_heat_path_flag {
-  SDIS_HEAT_PATH_SUCCEED = BIT(0),
-  SDIS_HEAT_PATH_FAILED = BIT(1),
-  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCEED | SDIS_HEAT_PATH_FAILED,
+  SDIS_HEAT_PATH_SUCCESS = BIT(0),
+  SDIS_HEAT_PATH_FAILURE = BIT(1),
+  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCESS | SDIS_HEAT_PATH_FAILURE,
   SDIS_HEAT_PATH_NONE = 0
 };
 
@@ -525,6 +525,9 @@ sdis_interface_get_id
  * references an absolute 3D position. The physical properties of an interface
  * is defined by the interface of the triangle.
  *
+ * No duplicate is allowed, either vertex or triangle. No degenerated triangle
+ * is allowed.
+ *
  * Note that each triangle has 2 sides: a front and a back side. By convention,
  * the front side of a triangle is the side where its vertices are clock wise
  * ordered.  The back side of a triangle is the exact opposite: it is the side
@@ -537,9 +540,9 @@ sdis_scene_create
   (struct sdis_device* dev,
    const size_t ntris, /* #triangles */
    void (*indices) /* Retrieve the indices toward the vertices of `itri' */
-    (const size_t itri, size_t ids[3], void*),
+    (const size_t itri, size_t ids[3], void* ctx),
    void (*interf) /* Get the interface of the triangle `itri' */
-    (const size_t itri, struct sdis_interface** bound, void*),
+    (const size_t itri, struct sdis_interface** bound, void* ctx),
    const size_t nverts, /* #vertices */
    void (*position) /* Retrieve the position of the vertex `ivert' */
     (const size_t ivert, double pos[3], void* ctx),
@@ -550,6 +553,9 @@ sdis_scene_create
  * line segments: each segment is composed of 2 indices where each index
  * references an absolute 2D position. The physical properties of an interface
  * is defined by the interface of the segment.
+ *
+ * No duplicate is allowed, either vertex or segment. No degenerated segment is
+ * allowed.
  *
  * Note that each segment has 2 sides: a front and a back side. By convention,
  * the front side of a segment is the side where its vertices are clock wise
@@ -563,9 +569,9 @@ sdis_scene_2d_create
   (struct sdis_device* dev,
    const size_t nsegs, /* #segments */
    void (*indices) /* Retrieve the indices toward the vertices of `iseg' */
-    (const size_t iseg, size_t ids[2], void*),
+    (const size_t iseg, size_t ids[2], void* ctx),
    void (*interf) /* Get the interface of the segment `iseg' */
-    (const size_t iseg, struct sdis_interface** bound, void*),
+    (const size_t iseg, struct sdis_interface** bound, void* ctx),
    const size_t nverts, /* #vertices */
    void (*position) /* Retrieve the position of the vertex `ivert' */
     (const size_t ivert, double pos[2], void* ctx),
@@ -630,23 +636,17 @@ sdis_scene_boundary_project_position
    const double pos[3],
    double uv[]);
 
-/* Get the descriptor of the 3D scene's enclosures */
+/* Get the 2D scene's enclosures. Only defined for a 2D scene. */
 SDIS_API res_T
-sdis_scene_get_analysis
+sdis_scene_get_senc2d_scene
   (struct sdis_scene* scn,
-   struct senc_descriptor** descriptor);
+   struct senc2d_scene** senc2d_scn);
 
-/* Get the descriptor of the 2D scene's enclosures */
+/* Get the 3D scene's enclosures. Only defined for a 3D scene. */
 SDIS_API res_T
-sdis_scene_2d_get_analysis
+sdis_scene_get_senc3d_scene
   (struct sdis_scene* scn,
-   struct senc2d_descriptor** descriptor);
-
-/* Release the descriptor of the scene's enclosures; subsequent attempts to get
- * it will fail. */
-SDIS_API res_T
-sdis_scene_release_analysis
-  (struct sdis_scene* scn);
+   struct senc3d_scene** senc3d_scn);
 
 SDIS_API res_T
 sdis_scene_get_dimension

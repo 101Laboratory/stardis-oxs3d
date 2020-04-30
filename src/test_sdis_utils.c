@@ -354,8 +354,8 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
     OK(sdis_estimator_get_path(estimator, ipath, &path));
     OK(sdis_heat_path_get_status(path, &status));
     switch(status) {
-      case SDIS_HEAT_PATH_SUCCEED: fprintf(stream, "0.0\n"); break;
-      case SDIS_HEAT_PATH_FAILED: fprintf(stream, "1.0\n"); break;
+      case SDIS_HEAT_PATH_SUCCESS: fprintf(stream, "0.0\n"); break;
+      case SDIS_HEAT_PATH_FAILURE: fprintf(stream, "1.0\n"); break;
       default: FATAL("Unreachable code.\n"); break;
     }
   }
