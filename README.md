@@ -11,8 +11,8 @@ It also depends on the
 [RSys](https://gitlab.com/vaplv/rsys/),
 [Star-2D](https://gitlab.com/meso-star/star-2d/),
 [Star-3D](https://gitlab.com/meso-star/star-3d/),
-[Star-Enclosures](https://gitlab.com/meso-star/star-enclosures/),
-[Star-Enclosures2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
+[Star-Enclosures-3D](https://gitlab.com/meso-star/star-enclosures-3d/),
+[Star-Enclosures-2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
 [Star-SP](https://gitlab.com/meso-star/star-sp/) libraries as well as on the
 [OpenMP](http://www.openmp.org) 2.0 specification to parallelize its
 computations.
