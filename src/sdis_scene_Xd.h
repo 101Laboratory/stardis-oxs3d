@@ -532,6 +532,7 @@ XD(run_analyze)
   struct geometry geom;
   struct sencXd(device)* senc = NULL;
   struct sencXd(scene)* senc3d_scn = NULL;
+  unsigned count;
   res_T res = RES_OK;
   ASSERT(scn && nprims && indices && interf && nverts && position && out_scn);
 
@@ -549,6 +550,10 @@ XD(run_analyze)
     (unsigned)nprims, XD(geometry_indices), geometry_media,
     (unsigned)nverts, XD(geometry_position), &geom, &senc3d_scn);
   if(res != RES_OK) goto error;
+  /* With il-formed scenes, scene creation can success without being able
+   * to extract enclosures; in this case just fail */
+  res = sencXd(scene_get_enclosure_count(senc3d_scn, &count));
+  if(res != RES_OK) goto error;
 
 exit:
   if(senc) SENCXD(device_ref_put(senc));
@@ -560,7 +565,6 @@ error:
     senc3d_scn = NULL;
   }
   goto exit;
-
 }
 
 /* Register the media and the interfaces, map each primitive to its interface
