@@ -19,6 +19,7 @@
 #define SDIS_SCENE_XD_H
 
 #include "sdis_interface_c.h"
+#include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
 

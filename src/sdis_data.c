@@ -15,6 +15,7 @@
 
 #include "sdis.h"
 #include "sdis_device_c.h"
+#include "sdis_log.h"
 
 #include <rsys/math.h>
 #include <rsys/mem_allocator.h>

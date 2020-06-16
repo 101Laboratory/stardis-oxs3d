@@ -17,6 +17,7 @@
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
 #include "sdis_estimator_buffer_c.h"
+#include "sdis_log.h"
 
 struct sdis_estimator_buffer {
   struct sdis_estimator** estimators; /* Row major per pixe lestimators */

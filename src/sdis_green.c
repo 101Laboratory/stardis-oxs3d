@@ -16,6 +16,7 @@
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
 #include "sdis_green.h"
+#include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_interface_c.h"

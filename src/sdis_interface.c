@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "sdis_device_c.h"
 #include "sdis_interface_c.h"
+#include "sdis_log.h"
 #include "sdis_scene_c.h"
 
 #include <rsys/double2.h>

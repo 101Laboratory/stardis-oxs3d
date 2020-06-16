@@ -20,6 +20,7 @@
 
 #include <rsys/dynamic_array.h>
 #include <rsys/free_list.h>
+#include <rsys/logger.h>
 #include <rsys/ref_count.h>
 
 struct name { FITEM; };
@@ -28,6 +29,7 @@ struct name { FITEM; };
 
 struct sdis_device {
   struct logger* logger;
+  struct logger logger__; /* Default logger */
   struct mem_allocator* allocator;
   unsigned nthreads;
   int verbose;
@@ -40,30 +42,6 @@ struct sdis_device {
 
   ref_T ref;
 };
-
-/* Conditionally log a message on the LOG_ERROR stream of the device logger,
- * with respect to the device verbose flag */
-extern LOCAL_SYM void
-log_err
-  (struct sdis_device* dev,
-   const char* msg,
-   ...)
-#ifdef COMPILER_GCC
-  __attribute((format(printf, 2, 3)))
-#endif
-;
-
-/* Conditionally log a message on the LOG_WARNING stream of the device logger,
- * with respect to the device verbose flag */
-extern LOCAL_SYM void
-log_warn
-  (struct sdis_device* dev,
-   const char* msg,
-   ...)
-#ifdef COMPILER_GCC
-    __attribute((format(printf, 2, 3)))
-#endif
-;
 
 #endif /* SDIS_DEVICE_C_H */
 

@@ -341,7 +341,7 @@ main(int argc, char** argv)
   interface_shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, 1, 0, &dev));
+  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
 
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
