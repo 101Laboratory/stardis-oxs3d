@@ -16,6 +16,8 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <string.h>
+
 #define UNKNOWN_TEMPERATURE -1
 
 /*******************************************************************************
@@ -23,21 +25,25 @@
  ******************************************************************************/
 struct context {
   struct sdis_interface* interfs[12];
+  const double* boxsz;
 };
 
 static void
 get_scaled_position(const size_t ivert, double pos[3], void* context)
 {
+  struct context* ctx = context;
+  CHK(ctx);
   box_get_position(ivert, pos, context);
-  pos[0] *= 0.3;
-  pos[1] *= 0.1;
-  pos[2] *= 0.2;
+  pos[0] *= ctx->boxsz[0];
+  pos[1] *= ctx->boxsz[1];
+  pos[2] *= ctx->boxsz[2];
 }
 
 static void
 get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 {
   struct context* ctx = context;
+  CHK(ctx);
   *bound = ctx->interfs[itri];
 }
 
@@ -135,6 +141,196 @@ create_interface
 }
 
 /*******************************************************************************
+ * Analytical solution
+ ******************************************************************************/
+static void
+fourier_pq
+  (const size_t nterms_pq,
+   const double pos[3],
+   const double sz[3],
+   const int i0,
+   const int i1,
+   const int i2,
+   double green[2])
+{
+  size_t p, q;
+  CHK(green);
+
+  green[0] = 0;
+  green[1] = 0;
+
+  FOR_EACH(p, 0, nterms_pq+1) {
+    FOR_EACH(q, 0, nterms_pq+1) {
+      const double p2 = (double)(2*p + 1);
+      const double q2 = (double)(2*q + 1);
+      double L_sqr, L, tmp;
+      L_sqr = PI * PI * ((p2*p2)/(sz[i1]*sz[i1]) + (q2*q2)/(sz[i2]*sz[i2]));
+      L = sqrt(L_sqr);
+      tmp = sin(PI*p2*pos[i1]/sz[i1])
+          * sin(PI*q2*pos[i2]/sz[i2])
+          / (sinh(sz[i0]*L)*(p2*q2));
+      if(tmp != 0) {
+        green[0] += sinh(L*(sz[i0]-pos[i0]))*tmp;
+        green[1] += sinh(L*pos[i0])*tmp;
+      }
+    }
+  }
+}
+
+/* This function computes the Green function between a given probe
+ * position/time in a parallelepipedic box and each face of this box (within
+ * the model of a homogeneous boundary condition on each face). */
+static void
+green_analytical
+  (const double box_size[3],
+   const double probe[3],
+   const double time,
+   const double rho,
+   const double cp,
+   const double lambda,
+   double green[7])
+{
+  const size_t nterms_fs = 20; /* #terms in the Fourier expansion series */
+  const size_t nterms_pq = 100; /* #terms in double p/q sums */
+  const size_t nt_pq = (nterms_fs - 1)/2;
+  double Gs[7], Gi[7], Gtmp[7];
+  size_t i, m, n, o, p, q;
+  double a, b, c;
+  double alpha;
+
+  CHK(box_size && probe && time >= 0 && green);
+
+  if(time == 0) {
+    memset(green, 0, sizeof(double[7]));
+    green[6] = 1;
+    return;
+  }
+
+  memset(Gs, 0, sizeof(double[7]));
+  memset(Gi, 0, sizeof(double[7]));
+  memset(Gtmp, 0, sizeof(double[7]));
+
+  /* Steady state solution */
+  fourier_pq(nterms_pq, probe, box_size, 0, 1, 2, Gtmp+0); /* Faces 0 and 1 */
+  fourier_pq(nterms_pq, probe, box_size, 1, 0, 2, Gtmp+2); /* Faces 2 and 3 */
+  fourier_pq(nterms_pq, probe, box_size, 2, 1, 0, Gtmp+4); /* Faces 4 and 5 */
+  FOR_EACH(i, 0, 6) Gs[i] += 16 * Gtmp[i] / (PI * PI);
+
+  alpha=lambda/(rho*cp);
+  a=box_size[0];
+  b=box_size[1];
+  c=box_size[2];
+
+  /* Transient solution */
+  FOR_EACH(m, 0, nterms_fs+1) {
+    const double beta = PI*(double)m/a;
+    const double beta_sqr = beta*beta;
+    const int m_is_even = (m%2 == 0);
+
+    FOR_EACH(n, 0, nterms_fs+1) {
+      const double gamma = PI*(double)n/b;
+      const double gamma_sqr = gamma * gamma;
+      const int n_is_even = (n%2==0);
+
+      FOR_EACH(o, 0, nterms_fs+1) {
+        const double eta = PI*(double)o/c;
+        const double eta_sqr = eta*eta;
+        const double zeta = alpha*(beta_sqr+gamma_sqr+eta_sqr);
+        const int o_is_even = (o%2==0);
+        double Fxyzt;
+
+        memset(Gtmp, 0, sizeof(double[7]));
+        FOR_EACH(p, 0, nt_pq+1) {
+          FOR_EACH(q, 0, nt_pq+1) {
+            const double p2 = (double)(2*p + 1);
+            const double q2 = (double)(2*q + 1);
+            const double Lx_sqr = PI*PI*((p2*p2)/(b*b)+(q2*q2)/(c*c));
+            const double Ly_sqr = PI*PI*((p2*p2)/(a*a)+(q2*q2)/(c*c));
+            const double Lz_sqr = PI*PI*((p2*p2)/(b*b)+(q2*q2)/(a*a));
+            const double pq = p2*q2;
+            double itg[11] = {0};
+
+            itg[1] = 2*q-o+1 == 0 ? -c/2.0 : 0;
+            itg[2] = eta / (eta_sqr+Lz_sqr);
+            itg[4] = 2*p-n+1 == 0 ? -b/2.0 : 0;
+            itg[5] = gamma / (gamma_sqr+Ly_sqr);
+            itg[7] = beta / (beta_sqr+Lx_sqr);
+            itg[9] = 2*p-m+1 == 0 ? -a/2.0 : 0;
+            itg[10] = 2*q-m+1 == 0 ? -a/2.0 : 0;
+
+            if((2*q-o+1==0) && (2*p-n+1==0)) {
+              const double z1 = itg[1]*itg[4]*itg[7];
+              Gtmp[0] += z1/pq;
+              Gtmp[1] += (z1*pow(-1.0,(double)(m+1)))/pq;
+            }
+            if((2*q-o+1==0) && (2*p-m+1==0)) {
+              const double z2 = itg[1]*itg[9]*itg[5];
+              Gtmp[2] += z2/pq;
+              Gtmp[3] += (z2*pow(-1.0,(double)(n+1)))/pq;
+            }
+            if((2*p-n+1==0) && (2*q-m+1==0)) {
+              const double z3 = itg[4]*itg[10]*itg[2];
+              Gtmp[4] += z3/pq;
+              Gtmp[5] += (z3*pow(-1.0,(double)(o+1)))/pq;
+            }
+          }
+        }
+        Fxyzt =
+          sin(probe[0]*beta)
+        * sin(probe[1]*gamma)
+        * sin(probe[2]*eta)
+        * exp(-zeta*time);
+
+        FOR_EACH(i, 0, 6) {
+          Gi[i] += Gtmp[i] * Fxyzt;
+        }
+        if((!m_is_even) && (!n_is_even) && (!o_is_even)) {
+          Gi[6] += 8.0 * Fxyzt/(beta*gamma*eta);
+        }
+      }
+    }
+  }
+
+  /* Gi[i], i=0,5: Green of boundary index i */
+  FOR_EACH(i, 0, 6) {
+    Gi[i] = -128.0 * Gi[i]/(a*b*c*PI*PI);
+  }
+
+  /* Gi[6]: Green of the initial condition */
+  Gi[6] = 8.0*Gi[6]/(a*b*c);
+
+  /* Computing total Green function */
+  FOR_EACH(i, 0, 7) {
+    green[i] = Gs[i] + Gi[i];
+  }
+}
+
+static double
+temperature_analytical
+  (const double temperature_bounds[6],
+   const double temperature_init,
+   const double box_size[3],
+   const double probe[3],
+   const double time,
+   const double rho,
+   const double cp,
+   const double lambda)
+{
+  double green[7];
+  double temperature = 0;
+  size_t i;
+  CHK(temperature_bounds && temperature_init && box_size[3] && probe);
+  green_analytical(box_size, probe, time, rho, cp, lambda, green);
+
+  FOR_EACH(i, 0, 6) {
+    printf("Green for face %lu: %g\n", (unsigned long)i, green[i]);
+    temperature += green[i] * temperature_bounds[i];
+  }
+  temperature += green[6] * temperature_init;
+  return temperature;
+}
+
+/*******************************************************************************
  * Main function
  ******************************************************************************/
 int
@@ -154,11 +350,31 @@ main(int argc, char** argv)
   struct sdis_mc temperature = SDIS_MC_NULL;
   struct solid* solid_param = NULL;
   struct context ctx;
-  const size_t nrealisations = 10000;
+  const size_t nrealisations = 100000;
   size_t nfails = 0;
   double probe[3];
   double time[2];
+  double Tbounds[6];
+  double Tinit;
+  double Tref;
+  double boxsz[3];
+  double rho, cp, lambda;
   (void)argc, (void)argv;
+
+  /* System description */
+  rho = 1700;
+  cp = 800;
+  lambda = 1.15;
+  Tbounds[0] = 280; /* Xmin */
+  Tbounds[1] = 290; /* Xmax */
+  Tbounds[2] = 310; /* Ymin */
+  Tbounds[3] = 270; /* Ymax */
+  Tbounds[4] = 300; /* Zmin */
+  Tbounds[5] = 320; /* Zmax */
+  Tinit = 300;
+  boxsz[0] = 0.3;
+  boxsz[1] = 0.1;
+  boxsz[2] = 0.2;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
   OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
@@ -178,11 +394,11 @@ main(int argc, char** argv)
   OK(sdis_data_create
     (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
   solid_param = sdis_data_get(data);
-  solid_param->rho = 1700;
-  solid_param->cp = 800;
-  solid_param->lambda = 1.15;
+  solid_param->rho = rho;
+  solid_param->cp = cp;
+  solid_param->lambda = lambda;
   solid_param->delta = 1.0/20.0;
-  solid_param->init_temperature = 300;
+  solid_param->init_temperature = Tinit;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
 
@@ -190,12 +406,12 @@ main(int argc, char** argv)
   interf_shader.front.temperature = interface_get_temperature;
 
   /* Create the interfaces */
-  interfs[0] = create_interface(dev, solid, fluid, &interf_shader, 280);/*Xmin*/
-  interfs[1] = create_interface(dev, solid, fluid, &interf_shader, 290);/*Xmax*/
-  interfs[2] = create_interface(dev, solid, fluid, &interf_shader, 310);/*Ymin*/
-  interfs[3] = create_interface(dev, solid, fluid, &interf_shader, 270);/*Ymax*/
-  interfs[4] = create_interface(dev, solid, fluid, &interf_shader, 300);/*Zmin*/
-  interfs[5] = create_interface(dev, solid, fluid, &interf_shader, 320);/*Zmax*/
+  interfs[0] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[0]);
+  interfs[1] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[1]);
+  interfs[2] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[2]);
+  interfs[3] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[3]);
+  interfs[4] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[4]);
+  interfs[5] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[5]);
 
   /* Setup the scene context */
   ctx.interfs[0]  = ctx.interfs[1]  = interfs[4]; /* Zmin */
@@ -204,6 +420,7 @@ main(int argc, char** argv)
   ctx.interfs[6]  = ctx.interfs[7]  = interfs[1]; /* Xmax */
   ctx.interfs[8]  = ctx.interfs[9]  = interfs[3]; /* Ymax */
   ctx.interfs[10] = ctx.interfs[11] = interfs[2]; /* Ymin */
+  ctx.boxsz = boxsz;
 
   /* Create the box scene */
   OK(sdis_scene_create(dev, box_ntriangles, box_get_indices, get_interface,
@@ -219,10 +436,16 @@ main(int argc, char** argv)
 
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &temperature));
-  printf("Temperature at (%g, %g, %g) m at %g s ~ %g +/- %g\n",
-    SPLIT3(probe), time[0], temperature.E, temperature.SE);
+
+  Tref = temperature_analytical
+    (Tbounds, Tinit, boxsz, probe, time[0], rho, cp, lambda);
+
+  printf("Temperature at (%g, %g, %g) m at %g s = %g ~ %g +/- %g\n",
+    SPLIT3(probe), time[0], Tref, temperature.E, temperature.SE);
   printf("#failures = %lu/%lu\n",
     (unsigned long)nfails, (unsigned long)nrealisations);
+
+  CHK(eq_eps(Tref, temperature.E, temperature.SE*3));
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_interface_ref_put(interfs[0]));
