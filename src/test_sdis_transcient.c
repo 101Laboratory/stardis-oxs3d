@@ -319,7 +319,7 @@ temperature_analytical
   double green[7];
   double temperature = 0;
   size_t i;
-  CHK(temperature_bounds && temperature_init && box_size[3] && probe);
+  CHK(temperature_bounds && temperature_init && box_size && probe);
   green_analytical(box_size, probe, time, rho, cp, lambda, green);
 
   FOR_EACH(i, 0, 6) {
