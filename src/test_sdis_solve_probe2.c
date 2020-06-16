@@ -219,9 +219,9 @@ main(int argc, char** argv)
 
   /* Setup the per primitive scene interfaces */
   CHK(sizeof(interfaces)/sizeof(struct sdis_interface*) == box_ntriangles);
-  interfaces[0] = interfaces[1] = T300; /* Front face */
+  interfaces[0] = interfaces[1] = T300; /* Back face */
   interfaces[2] = interfaces[3] = Tnone; /* Left face */
-  interfaces[4] = interfaces[5] = T350; /* Back face */
+  interfaces[4] = interfaces[5] = T350; /* Front face */
   interfaces[6] = interfaces[7] = Tnone; /* Right face */
   interfaces[8] = interfaces[9] = Tnone; /* Top face */
   interfaces[10] = interfaces[11] = Tnone; /* Bottom face */

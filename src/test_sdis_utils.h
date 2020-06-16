@@ -18,6 +18,7 @@
 
 #include "sdis.h"
 
+#include <rsys/double33.h>
 #include <rsys/mem_allocator.h>
 #include <stdio.h>
 
@@ -52,9 +53,9 @@ static const size_t box_nvertices = sizeof(box_vertices) / sizeof(double[3]);
  *  Front, right      Back, left and     Z
  * and Top faces       bottom faces */
 static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
-  0, 2, 1, 1, 2, 3, /* Front face */
+  0, 2, 1, 1, 2, 3, /* Back face */
   0, 4, 2, 2, 4, 6, /* Left face*/
-  4, 5, 6, 6, 5, 7, /* Back face */
+  4, 5, 6, 6, 5, 7, /* Front face */
   3, 7, 1, 1, 7, 5, /* Right face */
   2, 6, 3, 3, 6, 7, /* Top face */
   0, 1, 4, 4, 1, 5  /* Bottom face */
