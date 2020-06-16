@@ -54,6 +54,8 @@ XD(solve_probe_boundary)
   struct accum* acc_times = NULL;
   int64_t irealisation = 0;
   size_t i;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
@@ -172,6 +174,8 @@ XD(solve_probe_boundary)
     struct sdis_heat_path heat_path;
     double w = NaN;
     double time;
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
 
@@ -227,8 +231,24 @@ XD(solve_probe_boundary)
       acc_temp->sum += w;    acc_temp->sum2 += w*w;       ++acc_temp->count;
       acc_time->sum += usec; acc_time->sum2 += usec*usec; ++acc_time->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev,
+        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary temperature: %3d%%",
+        progress);
+    }
   }
   if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev,
+    "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary temperature: %3d%%\n",
+    progress);
 
   /* Setup the estimated temperature and per realisation time */
   if(out_estimator) {
@@ -316,6 +336,8 @@ XD(solve_probe_boundary_flux)
   struct accum* acc_fr = NULL; /* Per thread radiative flux accumulator */
   int64_t irealisation = 0;
   size_t i;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
@@ -431,6 +453,8 @@ XD(solve_probe_boundary_flux)
     double time, epsilon, hc, hr;
     int flux_mask = 0;
     double T_brf[3] = { 0, 0, 0 };
+    size_t n;
+    int pcent;
     res_T res_simul = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
@@ -488,8 +512,24 @@ XD(solve_probe_boundary_flux)
       acc_frad->sum2 += w_rad*w_rad;
       ++acc_frad->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev,
+        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary flux: %3d%%",
+        progress);
+    }
   }
   if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev,
+    "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary flux: %3d%%\n",
+    progress);
 
   /* Redux the per thread accumulators  */
   sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);

@@ -103,6 +103,8 @@ XD(solve_boundary)
   size_t i;
   size_t view_nprims;
   int64_t irealisation;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
@@ -230,6 +232,8 @@ XD(solve_boundary)
     double uv[DIM-1];
     float st[DIM-1];
     double time;
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
 
@@ -311,7 +315,24 @@ XD(solve_boundary)
       acc_temp->sum += w;    acc_temp->sum2 += w*w;       ++acc_temp->count;
       acc_time->sum += usec; acc_time->sum2 += usec*usec; ++acc_time->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev,
+        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary temperature: %3d%%",
+        progress);
+    }
   }
+  if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev,
+    "\033[2K\r"MSG_INFO_PREFIX"Solving boundary temperature: %3d%%\n",
+    progress);
 
   /* Setup the estimated temperature */
   if(out_estimator) {
@@ -405,6 +426,8 @@ XD(solve_boundary_flux)
   size_t i;
   size_t view_nprims;
   int64_t irealisation;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
@@ -521,6 +544,8 @@ XD(solve_boundary_flux)
     float st[DIM - 1];
     double time;
     int flux_mask = 0;
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
 
@@ -621,8 +646,22 @@ XD(solve_boundary_flux)
       acc_frad->sum2 += w_rad*w_rad;
       ++acc_frad->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev,
+        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary flux: %3d%%", progress);
+    }
   }
   if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev,
+    "\033[2K\r"MSG_INFO_PREFIX"Solving boundary flux: %3d%%\n", progress);
 
   /* Redux the per thread accumulators  */
   sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);

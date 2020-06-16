@@ -93,7 +93,7 @@ sdis_device_create
   } else {
     setup_log_default(dev);
   }
-  log_info(dev, "use %lu %s.\n", (unsigned long)dev->nthreads,
+  log_info(dev, "Use %lu %s.\n", (unsigned long)dev->nthreads,
     dev->nthreads == 1 ? "thread" : "threads");
 
   res = s2d_device_create(log, allocator, 0, &dev->s2d_dev);

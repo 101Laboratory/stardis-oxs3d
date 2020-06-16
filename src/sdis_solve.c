@@ -427,6 +427,8 @@ sdis_solve_camera
   size_t nsuccesses;
   size_t ix, iy;
   size_t i;
+  int progress = 0;
+  ATOMIC nsolved_tiles = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !cam || fp_to_meter <= 0 || Tref < 0 || !width || !height || !spp
@@ -491,6 +493,8 @@ sdis_solve_camera
     size_t tile_sz[2] = {0, 0};
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue;
@@ -513,7 +517,24 @@ sdis_solve_camera
       ATOMIC_SET(&res, res_local);
       continue;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_tiles);
+    pcent = (int)((double)n*100.0 / (double)(ntiles_x*ntiles_y) + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev,
+        "\033[2K\r"MSG_INFO_PREFIX"Infrared rendering: %3d%%",
+        progress);
+    }
   }
+  if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev,
+    "\033[2K\r"MSG_INFO_PREFIX"Infrared rendering: %3d%%\n",
+    progress);
 
   /* Setup the accumulators of the whole estimator buffer */
   acc_temp = ACCUM_NULL;

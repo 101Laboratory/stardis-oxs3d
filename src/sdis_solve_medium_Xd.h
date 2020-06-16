@@ -221,6 +221,8 @@ XD(solve_medium)
   int64_t irealisation;
   int cumul_is_init = 0;
   size_t i;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
   if(!scn || !mdm || !nrealisations || nrealisations > INT64_MAX
@@ -305,6 +307,8 @@ XD(solve_medium)
     double weight;
     double time;
     double pos[DIM];
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
 
@@ -374,8 +378,24 @@ XD(solve_medium)
       acc_temp->sum += weight; acc_temp->sum2 += weight*weight; ++acc_temp->count;
       acc_time->sum += usec;   acc_time->sum2 += usec*usec;     ++acc_time->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev,
+        "\033[2K\r"MSG_INFO_PREFIX"Solving medium temperature: %3d%%",
+        progress);
+    }
   }
   if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev,
+    "\033[2K\r"MSG_INFO_PREFIX"Solving medium temperature: %3d%%\n",
+    progress);
 
   /* Setup the estimated temperature */
   if(out_estimator) {
