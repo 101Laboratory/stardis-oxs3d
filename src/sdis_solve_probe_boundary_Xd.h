@@ -238,17 +238,13 @@ XD(solve_probe_boundary)
     #pragma omp critical
     if(pcent > progress) {
       progress = pcent;
-      log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary temperature: %3d%%\r",
-        progress);
+      log_info(scn->dev, "Solving probe boundary temperature: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;
 
   /* Add a new line after the progress status */
-  log_info(scn->dev,
-    "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary temperature: %3d%%\n",
-    progress);
+  log_info(scn->dev, "Solving probe boundary temperature: %3d%%\n", progress);
 
   /* Setup the estimated temperature and per realisation time */
   if(out_estimator) {
@@ -519,17 +515,13 @@ XD(solve_probe_boundary_flux)
     #pragma omp critical
     if(pcent > progress) {
       progress = pcent;
-      log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary flux: %3d%%\r",
-        progress);
+      log_info(scn->dev, "Solving probe boundary flux: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;
 
   /* Add a new line after the progress status */
-  log_info(scn->dev,
-    "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary flux: %3d%%\n",
-    progress);
+  log_info(scn->dev, "Solving probe boundary flux: %3d%%\n", progress);
 
   /* Redux the per thread accumulators  */
   sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);

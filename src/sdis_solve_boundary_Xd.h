@@ -322,17 +322,13 @@ XD(solve_boundary)
     #pragma omp critical
     if(pcent > progress) {
       progress = pcent;
-      log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary temperature: %3d%%\r",
-        progress);
+      log_info(scn->dev, "Solving boundary temperature: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;
 
   /* Add a new line after the progress status */
-  log_info(scn->dev,
-    "\033[2K\r"MSG_INFO_PREFIX"Solving boundary temperature: %3d%%\n",
-    progress);
+  log_info(scn->dev, "Solving boundary temperature: %3d%%\n", progress);
 
   /* Setup the estimated temperature */
   if(out_estimator) {
@@ -614,7 +610,7 @@ XD(solve_boundary_flux)
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);
 
-    if(res_simul != RES_OK && res_simul != RES_BAD_OP) { 
+    if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
       continue;
     } else if(res_simul == RES_OK) { /* Update accumulators */
@@ -653,15 +649,13 @@ XD(solve_boundary_flux)
     #pragma omp critical
     if(pcent > progress) {
       progress = pcent;
-      log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary flux: %3d%%\r", progress);
+      log_info(scn->dev, "Solving boundary flux: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;
 
   /* Add a new line after the progress status */
-  log_info(scn->dev,
-    "\033[2K\r"MSG_INFO_PREFIX"Solving boundary flux: %3d%%\n", progress);
+  log_info(scn->dev, "Solving boundary flux: %3d%%\n", progress);
 
   /* Redux the per thread accumulators  */
   sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);

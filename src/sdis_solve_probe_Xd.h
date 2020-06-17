@@ -201,15 +201,13 @@ XD(solve_probe)
     #pragma omp critical
     if(pcent > progress) {
       progress = pcent;
-      log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving probe temperature: %3d%%\r", progress);
+      log_info(scn->dev, "Solving probe temperature: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;
 
   /* Add a new line after the progress status */
-  log_info(scn->dev,
-    "\033[2K\r"MSG_INFO_PREFIX"Solving probe temperature: %3d%%\n", progress);
+  log_info(scn->dev, "Solving probe temperature: %3d%%\n", progress);
 
   /* Setup the estimated temperature and per realisation time */
   if(out_estimator) {

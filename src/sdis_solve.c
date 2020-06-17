@@ -524,17 +524,13 @@ sdis_solve_camera
     #pragma omp critical
     if(pcent > progress) {
       progress = pcent;
-      log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Infrared rendering: %3d%%\r",
-        progress);
+      log_info(scn->dev, "Infrared rendering: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;
 
   /* Add a new line after the progress status */
-  log_info(scn->dev,
-    "\033[2K\r"MSG_INFO_PREFIX"Infrared rendering: %3d%%\n",
-    progress);
+  log_info(scn->dev, "Infrared rendering: %3d%%\n", progress);
 
   /* Setup the accumulators of the whole estimator buffer */
   acc_temp = ACCUM_NULL;
