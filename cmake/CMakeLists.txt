@@ -213,7 +213,6 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
-
   
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)
 

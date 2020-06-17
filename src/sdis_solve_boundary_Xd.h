@@ -323,7 +323,7 @@ XD(solve_boundary)
     if(pcent > progress) {
       progress = pcent;
       log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary temperature: %3d%%",
+        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary temperature: %3d%%\r",
         progress);
     }
   }
@@ -654,7 +654,7 @@ XD(solve_boundary_flux)
     if(pcent > progress) {
       progress = pcent;
       log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary flux: %3d%%", progress);
+        "\033[2K\r"MSG_INFO_PREFIX"Solving boundary flux: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;

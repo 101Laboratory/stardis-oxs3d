@@ -30,7 +30,7 @@
 #define UNKOWN_TEMPERATURE -1
 #define IMG_WIDTH 640
 #define IMG_HEIGHT 480
-#define SPP 4 /* #Samples per pixel, i.e. #realisations per pixel */
+#define SPP 1024 /* #Samples per pixel, i.e. #realisations per pixel */
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The

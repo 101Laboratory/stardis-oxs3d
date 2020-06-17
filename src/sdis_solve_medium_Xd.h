@@ -386,7 +386,7 @@ XD(solve_medium)
     if(pcent > progress) {
       progress = pcent;
       log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving medium temperature: %3d%%",
+        "\033[2K\r"MSG_INFO_PREFIX"Solving medium temperature: %3d%%\r",
         progress);
     }
   }

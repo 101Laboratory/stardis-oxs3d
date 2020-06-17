@@ -525,7 +525,7 @@ sdis_solve_camera
     if(pcent > progress) {
       progress = pcent;
       log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Infrared rendering: %3d%%",
+        "\033[2K\r"MSG_INFO_PREFIX"Infrared rendering: %3d%%\r",
         progress);
     }
   }

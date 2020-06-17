@@ -202,7 +202,7 @@ XD(solve_probe)
     if(pcent > progress) {
       progress = pcent;
       log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving probe temperature: %3d%%", progress);
+        "\033[2K\r"MSG_INFO_PREFIX"Solving probe temperature: %3d%%\r", progress);
     }
   }
   if(res != RES_OK) goto error;

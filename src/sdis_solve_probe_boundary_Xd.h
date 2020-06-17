@@ -239,7 +239,7 @@ XD(solve_probe_boundary)
     if(pcent > progress) {
       progress = pcent;
       log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary temperature: %3d%%",
+        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary temperature: %3d%%\r",
         progress);
     }
   }
@@ -520,7 +520,7 @@ XD(solve_probe_boundary_flux)
     if(pcent > progress) {
       progress = pcent;
       log_info(scn->dev,
-        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary flux: %3d%%",
+        "\033[2K\r"MSG_INFO_PREFIX"Solving probe boundary flux: %3d%%\r",
         progress);
     }
   }
