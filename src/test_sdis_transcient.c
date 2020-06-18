@@ -397,7 +397,7 @@ main(int argc, char** argv)
   solid_param->rho = rho;
   solid_param->cp = cp;
   solid_param->lambda = lambda;
-  solid_param->delta = 1.0/20.0;
+  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solid_param->init_temperature = Tinit;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
