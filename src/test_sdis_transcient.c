@@ -20,23 +20,82 @@
 
 #define UNKNOWN_TEMPERATURE -1
 
+/*
+ * The scene is composed of a solid cuboid whose temperature is fixed on its 6
+ * faces. The test consist in checking that the estimated temperature at a
+ * given temperature and time is compatible with the reference temperature
+ * computed by analytically evaluating the green function.
+ *
+ * The test is performed on 2 scenes that actually represent the same system.
+ * The first scene is simply the cuboid, as it. The second scene is the same
+ * cuboid but this time formed by 2 sub cuboid with strictly the same physical
+ * properties.
+ */
+
+static const double vertices[12/*#vertices*/*3/*#coords per vertex*/] = {
+  0.0, 0.0, 0.0,
+  0.5, 0.0, 0.0,
+  0.0, 1.0, 0.0,
+  0.5, 1.0, 0.0,
+  0.0, 0.0, 1.0,
+  0.5, 0.0, 1.0,
+  0.0, 1.0, 1.0,
+  0.5, 1.0, 1.0,
+  1.0, 0.0, 0.0,
+  1.0, 1.0, 0.0,
+  1.0, 0.0, 1.0,
+  1.0, 1.0, 1.0
+};
+static const size_t nvertices = sizeof(vertices) / sizeof(double[3]);
+
+/* The following array lists the indices toward the 3D vertices of each
+ * triangle.
+ *        ,2---,3       ,3---,9  |      ,2----3       ,3----9
+ *      ,' | ,'/|     ,' | ,'/|  |    ,'/| \  |     ,'/| \  |          Y
+ *    6----7' / |   7---11' / |  |  6' / |  \ |   7' / |  \ |          |
+ *    |',  | / ,1   |',  | / ,8  |  | / ,0---,1   | / ,1---,8          o--X
+ *    |  ',|/,'     |  ',|/,'    |  |/,' | ,'     |/,' | ,'           /
+ *    4----5        5---10       |  4----5'       5---10'            Z
+ */
+static const size_t indices[22/*#triangles*/*3/*#indices per triangle*/] = {
+  0, 4, 2, 2, 4, 6, /* X min */
+  3, 7, 5, 5, 1, 3, /* X mid */ 
+  9,11,10,10, 8, 9, /* X max */
+  0, 5, 4, 0, 1, 5, 1,10, 5, 1, 8,10, /* Y min */
+  2, 6, 7, 2, 7, 3, 3, 7,11, 3,11, 9, /* Y max */
+  0, 2, 1, 1, 2, 3, 1, 3, 8, 8, 3, 9, /* Z min */
+  4, 5, 6, 6, 5, 7, 5,10, 7, 7,10,11  /* Z max */
+};
+static const size_t ntriangles = sizeof(indices) / sizeof(size_t[3]);
+
 /*******************************************************************************
- * Geometry functions
+ * Box geometry functions
  ******************************************************************************/
 struct context {
-  struct sdis_interface* interfs[12];
-  const double* boxsz;
+  const double* vertices;
+  const size_t* indices;
+  struct sdis_interface* interfs[22];
+  const double* scale;
 };
 
 static void
-get_scaled_position(const size_t ivert, double pos[3], void* context)
+get_position(const size_t ivert, double pos[3], void* context)
 {
   struct context* ctx = context;
   CHK(ctx);
-  box_get_position(ivert, pos, context);
-  pos[0] *= ctx->boxsz[0];
-  pos[1] *= ctx->boxsz[1];
-  pos[2] *= ctx->boxsz[2];
+  pos[0] = ctx->vertices[ivert*3+0] * ctx->scale[0];
+  pos[1] = ctx->vertices[ivert*3+1] * ctx->scale[1];
+  pos[2] = ctx->vertices[ivert*3+2] * ctx->scale[2];
+}
+
+static void
+get_indices(const size_t itri, size_t ids[3], void* context)
+{
+  struct context* ctx = context;
+  CHK(ctx);
+  ids[0] = ctx->indices[itri*3+0];
+  ids[1] = ctx->indices[itri*3+1];
+  ids[2] = ctx->indices[itri*3+2];
 }
 
 static void
@@ -339,18 +398,19 @@ main(int argc, char** argv)
   struct mem_allocator allocator;
   struct sdis_device* dev = NULL;
   struct sdis_scene* box_scn = NULL;
+  struct sdis_scene* box2_scn = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_data* data = NULL;
   struct sdis_fluid_shader fluid_shader = SDIS_FLUID_SHADER_NULL;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
-  struct sdis_interface* interfs[6] = {NULL};
+  struct sdis_interface* interfs[7] = {NULL};
   struct sdis_estimator* estimator = NULL;
   struct sdis_mc temperature = SDIS_MC_NULL;
   struct solid* solid_param = NULL;
   struct context ctx;
-  const size_t nrealisations = 100000;
+  const size_t nrealisations = 10000;
   size_t nfails = 0;
   double probe[3];
   double time[2];
@@ -412,52 +472,89 @@ main(int argc, char** argv)
   interfs[3] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[3]);
   interfs[4] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[4]);
   interfs[5] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[5]);
+  interfs[6] = create_interface(dev, solid, solid, &interf_shader, UNKNOWN_TEMPERATURE);
 
-  /* Setup the scene context */
+  /* Setup the box scene context */
+  ctx.indices = box_indices;
+  ctx.vertices = box_vertices;
   ctx.interfs[0]  = ctx.interfs[1]  = interfs[4]; /* Zmin */
   ctx.interfs[2]  = ctx.interfs[3]  = interfs[0]; /* Xmin */
   ctx.interfs[4]  = ctx.interfs[5]  = interfs[5]; /* Zmax */
   ctx.interfs[6]  = ctx.interfs[7]  = interfs[1]; /* Xmax */
   ctx.interfs[8]  = ctx.interfs[9]  = interfs[3]; /* Ymax */
   ctx.interfs[10] = ctx.interfs[11] = interfs[2]; /* Ymin */
-  ctx.boxsz = boxsz;
+  ctx.scale = boxsz;
 
   /* Create the box scene */
-  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices, get_interface,
-    box_nvertices, get_scaled_position, &ctx, &box_scn));
+  OK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
+    box_nvertices, get_position, &ctx, &box_scn));
+
+  /* Setup the box2 scene context */
+  ctx.indices = indices;
+  ctx.vertices = vertices;
+  ctx.interfs[0]  = ctx.interfs[1]  = interfs[0]; /* Xmin */
+  ctx.interfs[2]  = ctx.interfs[3]  = interfs[6]; /* Xmid */
+  ctx.interfs[4]  = ctx.interfs[5]  = interfs[1]; /* Xmax */
+  ctx.interfs[6]  = ctx.interfs[7]  = interfs[2]; /* Ymin */
+  ctx.interfs[8]  = ctx.interfs[9]  = interfs[2]; /* Ymin */
+  ctx.interfs[10] = ctx.interfs[11] = interfs[3]; /* Ymax */
+  ctx.interfs[12] = ctx.interfs[13] = interfs[3]; /* Ymax */
+  ctx.interfs[14] = ctx.interfs[15] = interfs[4]; /* Zmin */
+  ctx.interfs[16] = ctx.interfs[17] = interfs[4]; /* Zmin */
+  ctx.interfs[18] = ctx.interfs[19] = interfs[5]; /* Zmax */
+  ctx.interfs[20] = ctx.interfs[21] = interfs[5]; /* Zmax */
+  ctx.scale = boxsz;
+
+  /* Create the box scene */
+  OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
+    nvertices, get_position, &ctx, &box2_scn));
 
   /* Setup and run the simulation */
   probe[0] = 0.1;
   probe[1] = 0.06;
   probe[2] = 0.130;
   time[0] = time[1] = 1000; /* Observation time range */
-  OK(sdis_solve_probe(box_scn, nrealisations, probe, time, 1, 0, 290,
-    SDIS_HEAT_PATH_NONE, &estimator));
 
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &temperature));
-
+  /* Compute the solution */
   Tref = temperature_analytical
     (Tbounds, Tinit, boxsz, probe, time[0], rho, cp, lambda);
 
+  /* Run simulation on regular scene */
+  OK(sdis_solve_probe(box_scn, nrealisations, probe, time, 1, 0, 290,
+    SDIS_HEAT_PATH_NONE, &estimator));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &temperature));
   printf("Temperature at (%g, %g, %g) m at %g s = %g ~ %g +/- %g\n",
     SPLIT3(probe), time[0], Tref, temperature.E, temperature.SE);
   printf("#failures = %lu/%lu\n",
     (unsigned long)nfails, (unsigned long)nrealisations);
-
   CHK(eq_eps(Tref, temperature.E, temperature.SE*3));
-
   OK(sdis_estimator_ref_put(estimator));
+
+  /* Run simulation on split scene */
+  OK(sdis_solve_probe(box2_scn, nrealisations, probe, time, 1, 0, 290,
+    SDIS_HEAT_PATH_NONE, &estimator));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &temperature));
+  printf("Temperature at (%g, %g, %g) m at %g s = %g ~ %g +/- %g\n",
+  SPLIT3(probe), time[0], Tref, temperature.E, temperature.SE);
+  printf("#failures = %lu/%lu\n",
+    (unsigned long)nfails, (unsigned long)nrealisations);
+  CHK(eq_eps(Tref, temperature.E, temperature.SE*3));
+  OK(sdis_estimator_ref_put(estimator));
+
   OK(sdis_interface_ref_put(interfs[0]));
   OK(sdis_interface_ref_put(interfs[1]));
   OK(sdis_interface_ref_put(interfs[2]));
   OK(sdis_interface_ref_put(interfs[3]));
   OK(sdis_interface_ref_put(interfs[4]));
   OK(sdis_interface_ref_put(interfs[5]));
+  OK(sdis_interface_ref_put(interfs[6]));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_device_ref_put(dev));
   OK(sdis_scene_ref_put(box_scn));
+  OK(sdis_scene_ref_put(box2_scn));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);
