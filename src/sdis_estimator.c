@@ -16,7 +16,11 @@
 #include "sdis.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_log.h"
 
+#include <star/ssp.h>
+
+#include <rsys/cstr.h>
 #include <rsys/mutex.h>
 
 /*******************************************************************************
@@ -32,6 +36,7 @@ estimator_release(ref_T* ref)
   dev = estimator->dev;
   darray_heat_path_release(&estimator->paths);
   if(estimator->mutex) mutex_destroy(estimator->mutex);
+  if(estimator->rng) SSP(rng_ref_put(estimator->rng));
   MEM_RM(dev->allocator, estimator);
   SDIS(device_ref_put(dev));
 }
@@ -192,6 +197,16 @@ error:
   goto exit;
 }
 
+res_T
+sdis_estimator_get_rng_state
+  (const struct sdis_estimator* estimator,
+   struct ssp_rng** rng_state)
+{
+  if(!estimator || !rng_state) return RES_BAD_ARG;
+  *rng_state = estimator->rng;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
@@ -265,6 +280,68 @@ exit:
   mutex_unlock(estimator->mutex);
   return res;
 error:
+  goto exit;
+}
+
+res_T
+estimator_save_rng_state
+  (struct sdis_estimator* estimator,
+   const struct ssp_rng_proxy* proxy)
+{
+  struct ssp_rng_type rng_type;
+  FILE* stream = NULL;
+  res_T res = RES_OK;
+  ASSERT(estimator && proxy);
+
+  /* Release the previous RNG state if any */
+  if(estimator->rng) {
+    SSP(rng_ref_put(estimator->rng));
+    estimator->rng = NULL;
+  }
+
+  stream = tmpfile();
+  if(!stream) {
+    log_err(estimator->dev, 
+      "Could not open a temporary stream to store "
+      "the RNG state of the estimation.\n");
+    res = RES_IO_ERR;
+    goto error;
+  }
+
+  SSP(rng_proxy_get_type(proxy, &rng_type));
+  res = ssp_rng_create(estimator->dev->allocator, &rng_type, &estimator->rng);
+  if(res != RES_OK) {
+    log_err(estimator->dev,
+      "Could not create the RNG to save the RNG state of the estimation "
+      "-- %s\n", res_to_cstr(res));
+    goto error;
+  }
+
+  res = ssp_rng_proxy_write(proxy, stream);
+  if(res != RES_OK) {
+    log_err(estimator->dev,
+      "Could not serialize the RNG state of the estimation -- %s\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+  rewind(stream);
+  res = ssp_rng_read(estimator->rng, stream);
+  if(res != RES_OK) {
+    log_err(estimator->dev, 
+      "Could not save the RNG state of the estimation -- %s\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+exit:
+  if(stream) fclose(stream);
+  return res;
+error:
+  if(estimator->rng) {
+    SSP(rng_ref_put(estimator->rng));
+    estimator->rng = NULL;
+  }
   goto exit;
 }
 

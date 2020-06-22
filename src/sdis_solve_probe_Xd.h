@@ -221,6 +221,8 @@ XD(solve_probe)
     estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
     estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
     estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+    res = estimator_save_rng_state(estimator, rng_proxy);
+    if(res != RES_OK) goto error;
   }
 
   if(out_green) {

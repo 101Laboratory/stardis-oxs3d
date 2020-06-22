@@ -258,6 +258,8 @@ XD(solve_probe_boundary)
     estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
     estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
     estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+    res = estimator_save_rng_state(estimator, rng_proxy);
+    if(res != RES_OK) goto error;
   }
 
   if(out_green) {
@@ -541,6 +543,9 @@ XD(solve_probe_boundary_flux)
   estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc[0].sum, acc_fc[0].sum2);
   estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr[0].sum, acc_fr[0].sum2);
   estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl[0].sum, acc_fl[0].sum2);
+
+  res = estimator_save_rng_state(estimator, rng_proxy);
+  if(res != RES_OK) goto error;
 
 exit:
   if(rngs) {

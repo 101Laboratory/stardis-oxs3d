@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <star/ssp.h>
 #include <rsys/math.h>
 
 /*
@@ -268,6 +269,7 @@ main(int argc, char** argv)
   struct fluid* fluid_param;
   struct solid* solid_param;
   struct interf* interface_param;
+  struct ssp_rng* rng_state = NULL;
   enum sdis_estimator_type type;
   double pos[3];
   double time_range[2];
@@ -453,6 +455,10 @@ main(int argc, char** argv)
   BA(sdis_estimator_for_each_path(NULL, process_heat_path, &dump_ctx));
   BA(sdis_estimator_for_each_path(estimator, NULL, &dump_ctx));
   OK(sdis_estimator_for_each_path(estimator, process_heat_path, &dump_ctx));
+
+  BA(sdis_estimator_get_rng_state(NULL, &rng_state));
+  BA(sdis_estimator_get_rng_state(estimator, NULL));
+  OK(sdis_estimator_get_rng_state(estimator, &rng_state));
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_scene_ref_put(scn));

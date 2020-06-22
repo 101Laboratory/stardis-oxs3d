@@ -49,6 +49,7 @@ struct logger;
 struct mem_allocator;
 struct senc2d_scene;
 struct senc3d_scene;
+struct ssp_rng;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
  * ref counted. Once created the caller implicitly owns the created data, i.e.
@@ -729,6 +730,12 @@ sdis_estimator_for_each_path
   (const struct sdis_estimator* estimator,
    sdis_process_heat_path_T func,
    void* context);
+
+/* Retrieve the RNG state at the end of the simulation. */
+SDIS_API res_T
+sdis_estimator_get_rng_state
+  (const struct sdis_estimator* estimator,
+   struct ssp_rng** rng_state);
 
 /*******************************************************************************
  * The green function saves the estimation of the propagator
