@@ -228,7 +228,7 @@ XD(boundary_realisation)
   float st[2];
 #endif
   res_T res = RES_OK;
-  ASSERT(uv && fp_to_meter > 0 && weight && Tref >= 0 && time >= 0);
+  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0);
 
   T.func = XD(boundary_path);
   rwalk.hit_side = side;

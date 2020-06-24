@@ -33,15 +33,7 @@
 static res_T
 XD(solve_probe_boundary)
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_green_function** out_green,
    struct sdis_estimator** out_estimator)
 {
@@ -52,14 +44,16 @@ XD(solve_probe_boundary)
   struct ssp_rng** rngs = NULL;
   struct accum* acc_temps = NULL;
   struct accum* acc_times = NULL;
+  size_t nrealisations = 0;
   int64_t irealisation = 0;
   size_t i;
   int progress = 0;
+  int register_paths = SDIS_HEAT_PATH_NONE;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
-  || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)) {
+  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
+  || args->fp_to_meter <= 0 || ((unsigned)args->side >= SDIS_SIDE_NULL__)) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -68,8 +62,10 @@ XD(solve_probe_boundary)
     goto error;
   }
   if(out_estimator) {
-    if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+    if(args->time_range[0] < 0
+    || args->time_range[1] < args->time_range[0]
+    || (  args->time_range[1] > DBL_MAX
+       && args->time_range[0] != args->time_range[1])) {
       res = RES_BAD_ARG;
       goto error;
     }
@@ -82,12 +78,12 @@ XD(solve_probe_boundary)
 #endif
 
   /* Check the primitive identifier */
-  if(iprim >= scene_get_primitives_count(scn)) {
+  if(args->iprim >= scene_get_primitives_count(scn)) {
     log_err(scn->dev,
       "%s: invalid primitive identifier `%lu'. "
       "It must be in the [0 %lu] range.\n",
       FUNC_NAME,
-      (unsigned long)iprim,
+      (unsigned long)args->iprim,
       (unsigned long)scene_get_primitives_count(scn)-1);
     res = RES_BAD_ARG;
     goto error;
@@ -96,25 +92,25 @@ XD(solve_probe_boundary)
   /* Check parametric coordinates */
 #if SDIS_XD_DIMENSION  == 2
   {
-    const double v = CLAMP(1.0 - uv[0], 0, 1);
-    if(uv[0] < 0 || uv[0] > 1 || !eq_eps(uv[0] + v, 1, 1.e-6)) {
+    const double v = CLAMP(1.0 - args->uv[0], 0, 1);
+    if(args->uv[0] < 0 || args->uv[0] > 1 || !eq_eps(args->uv[0]+v, 1, 1.e-6)) {
       log_err(scn->dev,
         "%s: invalid parametric coordinates %g."
         "u + (1-u) must be equal to 1 with u [0, 1].\n",
-        FUNC_NAME, uv[0]);
+        FUNC_NAME, args->uv[0]);
       res = RES_BAD_ARG;
       goto error;
     }
   }
 #else /* SDIS_XD_DIMENSION == 3 */
   {
-    const double w = CLAMP(1 - uv[0] - uv[1], 0, 1);
-    if(uv[0] < 0 || uv[1] < 0 || uv[0] > 1 || uv[1] > 1
-    || !eq_eps(w + uv[0] + uv[1], 1, 1.e-6)) {
+    const double w = CLAMP(1 - args->uv[0] - args->uv[1], 0, 1);
+    if(args->uv[0] < 0 || args->uv[1] < 0 || args->uv[0] > 1 || args->uv[1] > 1
+    || !eq_eps(w + args->uv[0] + args->uv[1], 1, 1.e-6)) {
       log_err(scn->dev,
         "%s: invalid parametric coordinates [%g, %g]. "
         "u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
-        FUNC_NAME, uv[0], uv[1]);
+        FUNC_NAME, args->uv[0], args->uv[1]);
       res = RES_BAD_ARG;
       goto error;
     }
@@ -122,9 +118,15 @@ XD(solve_probe_boundary)
 #endif
 
   /* Create the proxy RNG */
-  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
-    scn->dev->nthreads, &rng_proxy);
-  if(res != RES_OK) goto error;
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
   /* Create the per thread RNG */
   rngs = MEM_CALLOC
@@ -160,6 +162,8 @@ XD(solve_probe_boundary)
   }
 
   /* Here we go! Launch the Monte Carlo estimation */
+  nrealisations = args->nrealisations;
+  register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
@@ -185,7 +189,7 @@ XD(solve_probe_boundary)
     time_current(&t0);
 
     if(!out_green) {
-      time = sample_time(rng, time_range);
+      time = sample_time(rng, args->time_range);
       if(register_paths) {
         heat_path_init(scn->dev->allocator, &heat_path);
         pheat_path = &heat_path;
@@ -202,8 +206,9 @@ XD(solve_probe_boundary)
       pgreen_path = &green_path;
     }
 
-    res_simul = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
-      fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
+    res_simul = XD(boundary_realisation)(scn, rng, args->iprim, args->uv, time,
+      args->side, args->fp_to_meter, args->ambient_radiative_temperature,
+      args->reference_temperature, pgreen_path, pheat_path, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {

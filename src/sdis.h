@@ -297,6 +297,34 @@ struct sdis_solve_probe_args {
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
 
+struct sdis_solve_probe_boundary_args {
+  size_t nrealisations; /* #realisations */
+  size_t iprim; /* Identifier of the primitive on which the probe lies */
+  double uv[2]; /* Parametric coordinates of the probe onto the primitve */
+  double time_range[2]; /* Observation time */
+  enum sdis_side side; /* Side of iprim on which the probe lies */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__ {                             \
+  10000, /* #realisations */                                                   \
+  0, /* Primitive identifier */                                                \
+  {0,0}, /* UV */                                                              \
+  {DBL_MAX,DBL_MAX},                                                           \
+  SDIS_SIDE_NULL__,                                                            \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  SDIS_HEAT_PATH_NONE,                                                         \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_probe_boundary_args
+SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
+SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__;
+
 /* Functor used to process the paths registered against the green function */
 typedef res_T
 (*sdis_process_green_path_T)
@@ -874,15 +902,7 @@ sdis_solve_probe
 SDIS_API res_T
 sdis_solve_probe_boundary
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -979,13 +999,7 @@ sdis_solve_probe_green_function
 SDIS_API res_T
 sdis_solve_probe_boundary_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_green_function** green);
 
 SDIS_API res_T

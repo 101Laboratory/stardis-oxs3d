@@ -191,16 +191,16 @@ main(int argc, char** argv)
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
+  struct sdis_solve_probe_boundary_args solve_args =
+    SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
   struct interf* interf_props = NULL;
   struct fluid* fluid_param;
-  double uv[2];
   double pos[3];
   double time_range[2] = { INF, INF };
   double tr[2];
   double ref;
   size_t prims[4];
   enum sdis_side sides[4];
-  size_t iprim;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -297,39 +297,55 @@ main(int argc, char** argv)
 
   #define SOLVE sdis_solve_probe_boundary
   #define GREEN sdis_solve_probe_boundary_green_function
-  #define F SDIS_FRONT
-  uv[0] = 0.3;
-  uv[1] = 0.3;
-  iprim = 6;
 
-  BA(SOLVE(NULL, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, 0, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, 12, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, NULL, time_range, F, 1.0, 0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, NULL, F, 1.0, 0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, time_range, -1, 1.0, 0, 0, 0, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, NULL));
-  tr[0] = tr[1] = -1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, 0, NULL));
-  tr[0] = 1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, 0, NULL));
-  tr[1] = 0;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, F, 1.0, 0, 0, 0, NULL));
+  solve_args.nrealisations = N;
+  solve_args.uv[0] = 0.3;
+  solve_args.uv[1] = 0.3;
+  solve_args.iprim = 6;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+  solve_args.side = SDIS_FRONT;
 
-  OK(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
-  OK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos));
+  BA(SOLVE(NULL, &solve_args, &estimator));
+  BA(SOLVE(box_scn, NULL, &estimator));
+  BA(SOLVE(box_scn, &solve_args, NULL));
+  solve_args.nrealisations = 0;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.iprim = 12;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.iprim = 6;
+  solve_args.side = SDIS_SIDE_NULL__;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.side = SDIS_FRONT;
+  solve_args.time_range[0] = solve_args.time_range[1] = -1;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.time_range[0] = 1;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.time_range[1] = 0;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.time_range[0] = solve_args.time_range[1] = INF;
+
+  OK(SOLVE(box_scn, &solve_args, &estimator));
+  OK(sdis_scene_get_boundary_position
+    (box_scn, solve_args.iprim, solve_args.uv, pos));
   printf("Boundary temperature of the box at (%g %g %g) = ", SPLIT3(pos));
   check_estimator(estimator, N, ref);
 
-  BA(GREEN(NULL, N, iprim, uv, F, 1, 0, 0, &green));
-  BA(GREEN(box_scn, 0, iprim, uv, F, 1, 0, 0, &green));
-  BA(GREEN(box_scn, N, 12, uv, F, 1, 0, 0, &green));
-  BA(GREEN(box_scn, N, iprim, NULL, F, 1, 0, 0, &green));
-  BA(GREEN(box_scn, N, iprim, uv, -1, 1, 0, 0, &green));
-  BA(GREEN(box_scn, N, iprim, uv, F, 0, 0, 0, &green));
-  BA(GREEN(box_scn, N, iprim, uv, F, 1, 0, 0, NULL));
+  BA(GREEN(NULL, &solve_args, &green));
+  BA(GREEN(box_scn, NULL, &green));
+  BA(GREEN(box_scn, &solve_args, NULL));
+  solve_args.nrealisations = 0;
+  BA(GREEN(box_scn, &solve_args, &green));
+  solve_args.nrealisations = N;
+  solve_args.iprim = 12;
+  BA(GREEN(box_scn, &solve_args, &green));
+  solve_args.iprim = 6;
+  solve_args.side = SDIS_SIDE_NULL__;
+  BA(GREEN(box_scn, &solve_args, &green));
+  solve_args.side = SDIS_FRONT;
+  OK(GREEN(box_scn, &solve_args, &green));
 
-  OK(GREEN(box_scn, N, iprim, uv, F, 1, 0, 0, &green));
   check_green_function(green);
   OK(sdis_green_function_solve(green, time_range, &estimator2));
   check_estimator(estimator2, N, ref);
@@ -339,27 +355,29 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator2));
 
   /* Dump paths */
-  OK(SOLVE(box_scn, N_dump, iprim, uv, time_range, F, 1.0, 0, 0,
-    SDIS_HEAT_PATH_ALL, &estimator));
+  solve_args.nrealisations = N_dump;
+  solve_args.register_paths = SDIS_HEAT_PATH_ALL;
+  OK(SOLVE(box_scn, &solve_args, &estimator));
   dump_heat_paths(fp, estimator);
   OK(sdis_estimator_ref_put(estimator));
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  BA(SOLVE(box_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(box_scn, &solve_args, &estimator));
   fluid_param->temperature = Tf;
 
-  uv[0] = 0.5;
-  iprim = 3;
-  BA(SOLVE(square_scn, N, 4, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
-  OK(SOLVE(square_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
-  OK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos));
-  printf("Boundary temperature of the square at (%g %g) = ", SPLIT2(pos));
-  check_estimator(estimator, N, ref);
+  solve_args.nrealisations = N;
+  solve_args.register_paths = SDIS_HEAT_PATH_NONE;
+  solve_args.uv[0] = 0.5;
+  solve_args.iprim = 4;
 
-  OK(GREEN(square_scn, N, iprim, uv, F, 1, 0, 0, &green));
+  BA(SOLVE(square_scn, &solve_args, &estimator));
+  solve_args.iprim = 3;
+  OK(SOLVE(square_scn, &solve_args, &estimator));
+
+  OK(GREEN(square_scn, &solve_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
   check_estimator(estimator2, N, ref);
 
   OK(sdis_estimator_ref_put(estimator));
@@ -368,7 +386,7 @@ main(int argc, char** argv)
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
-  BA(SOLVE(square_scn, N, iprim, uv, time_range, F, 1.0, 0, 0, 0, &estimator));
+  BA(SOLVE(square_scn, &solve_args, &estimator));
   fluid_param->temperature = Tf;
 
   #undef F
