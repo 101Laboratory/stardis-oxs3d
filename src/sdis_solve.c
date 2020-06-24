@@ -220,42 +220,28 @@ error:
 res_T
 sdis_solve_probe
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   const double position[3],
-   const double time_range[2],
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double Tarad, /* Ambient radiative temperature */
-   const double Tref, /* Reference temperature */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_args* args,
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_2d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_probe_2d(scn, args, NULL, out_estimator);
   } else {
-    return solve_probe_3d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_probe_3d(scn, args, NULL, out_estimator);
   }
 }
 
 res_T
 sdis_solve_probe_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   const double position[3],
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double Tarad, /* Ambient radiative temperature */
-   const double Tref, /* Reference temperature */
+   const struct sdis_solve_probe_args* args,
    struct sdis_green_function** out_green)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_2d(scn, nrealisations, position, NULL,
-      fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, out_green, NULL);
+    return solve_probe_2d(scn, args, out_green, NULL);
   } else {
-    return solve_probe_3d(scn, nrealisations, position, NULL,
-      fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, out_green, NULL);
+    return solve_probe_3d(scn, args, out_green, NULL);
   }
 }
 

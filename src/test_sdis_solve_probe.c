@@ -264,6 +264,7 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct dump_path_context dump_ctx = DUMP_PATH_CONTEXT_NULL;
   struct context ctx;
   struct fluid* fluid_param;
@@ -271,8 +272,6 @@ main(int argc, char** argv)
   struct interf* interface_param;
   struct ssp_rng* rng_state = NULL;
   enum sdis_estimator_type type;
-  double pos[3];
-  double time_range[2];
   double ref;
   const size_t N = 1000;
   const size_t N_dump = 10;
@@ -340,17 +339,23 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf));
 
   /* Test the solver */
-  pos[0] = 0.5;
-  pos[1] = 0.5;
-  pos[2] = 0.5;
-  time_range[0] = time_range[1] = INF;
-  BA(sdis_solve_probe(NULL, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, 0, pos, time_range, 1.0, 0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, N, NULL, time_range, 1.0, 0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, 0, 0, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 0, 0, -1, 0, &estimator));
-  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, NULL));
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.position[0] = 0.5;
+  solve_args.position[1] = 0.5;
+  solve_args.position[2] = 0.5;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+
+  BA(sdis_solve_probe(NULL, &solve_args, &estimator));
+  BA(sdis_solve_probe(scn, NULL, &estimator));
+  BA(sdis_solve_probe(scn, &solve_args, NULL));
+  solve_args.nrealisations = 0;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.fp_to_meter = 0;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+  solve_args.fp_to_meter = 1;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
 
   BA(sdis_estimator_get_type(estimator, NULL));
   BA(sdis_estimator_get_type(NULL, &type));
@@ -388,7 +393,7 @@ main(int argc, char** argv)
 
   ref = 300;
   printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(pos), ref, T.E, T.SE);
+    SPLIT3(solve_args.position), ref, T.E, T.SE);
   printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -404,23 +409,26 @@ main(int argc, char** argv)
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = -1;
-  BA(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
 
   fluid_param->temperature = 300;
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
 
-  BA(sdis_solve_probe_green_function(NULL, N, pos, 1.0, 0, 0, &green));
-  BA(sdis_solve_probe_green_function(scn, 0, pos, 1.0, 0, 0, &green));
-  BA(sdis_solve_probe_green_function(scn, N, NULL, 1.0, 0, 0, &green));
-  BA(sdis_solve_probe_green_function(scn, N, pos, 0.0, 0, 0, &green));
-  BA(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, -1, &green));
-  BA(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, NULL));
-  OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, &green));
+  BA(sdis_solve_probe_green_function(NULL, &solve_args, &green));
+  BA(sdis_solve_probe_green_function(scn, NULL, &green));
+  BA(sdis_solve_probe_green_function(scn, &solve_args, NULL));
+  solve_args.nrealisations = 0;
+  BA(sdis_solve_probe_green_function(scn, &solve_args, &green));
+  solve_args.nrealisations = N;
+  solve_args.fp_to_meter = 0;
+  BA(sdis_solve_probe_green_function(scn, &solve_args, &green));
+  solve_args.fp_to_meter = 1;
+  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
 
-  BA(sdis_green_function_solve(NULL, time_range, &estimator2));
+  BA(sdis_green_function_solve(NULL, solve_args.time_range, &estimator2));
   BA(sdis_green_function_solve(green, NULL, &estimator2));
-  BA(sdis_green_function_solve(green, time_range, NULL));
-  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  BA(sdis_green_function_solve(green, solve_args.time_range, NULL));
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
 
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
@@ -434,15 +442,16 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
 
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
   BA(sdis_estimator_get_paths_count(NULL, &n));
   BA(sdis_estimator_get_paths_count(estimator, NULL));
   OK(sdis_estimator_get_paths_count(estimator, &n));
   CHK(n == 0);
   OK(sdis_estimator_ref_put(estimator));
 
-  OK(sdis_solve_probe(scn, N_dump, pos, time_range, 1.0, 0, 0,
-    SDIS_HEAT_PATH_ALL, &estimator));
+  solve_args.nrealisations = N_dump;
+  solve_args.register_paths = SDIS_HEAT_PATH_ALL;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_paths_count(estimator, &n));
   CHK(n == N_dump);
 

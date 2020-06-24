@@ -226,7 +226,7 @@ XD(solve_medium)
   ATOMIC res = RES_OK;
 
   if(!scn || !mdm || !nrealisations || nrealisations > INT64_MAX
-  || fp_to_meter <= 0 || Tref <  0) {
+  || fp_to_meter <= 0) {
     res = RES_BAD_ARG;
     goto error;
   }

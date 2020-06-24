@@ -417,7 +417,6 @@ main(int argc, char** argv)
   BA(sdis_solve_medium_green_function(scn, 0, solid0, 1.0, 0, 0, &green));
   BA(sdis_solve_medium_green_function(scn, Np, NULL, 1.0, 0, 0, &green));
   BA(sdis_solve_medium_green_function(scn, Np, solid0, 0.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, -1, &green));
   BA(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, NULL));
   BA(sdis_solve_medium_green_function(scn, Np, solid1, 1.0, 0, 0, &green));
   OK(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, &green));

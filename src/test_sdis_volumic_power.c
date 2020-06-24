@@ -156,6 +156,7 @@ solve(struct sdis_scene* scn, const double pos[])
   struct sdis_estimator* estimator;
   struct sdis_estimator* estimator2;
   struct sdis_green_function* green;
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T;
   size_t nreals;
   size_t nfails;
@@ -168,16 +169,23 @@ solve(struct sdis_scene* scn, const double pos[])
   x = pos[0] - 0.5;
   ref = P0 / (2*LAMBDA) * (1.0/4.0 - x*x) + T0;
 
+  OK(sdis_scene_get_dimension(scn, &dim));
+
+  solve_args.nrealisations = N;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+  solve_args.position[0] = pos[0];
+  solve_args.position[1] = pos[1];
+  solve_args.position[2] = dim == SDIS_SCENE_2D ? 0 : pos[2];
+
   time_current(&t0);
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
   time_sub(&t0, time_current(&t1), &t0);
   time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
 
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
-
-  OK(sdis_scene_get_dimension(scn, &dim));
 
   switch(dim) {
     case SDIS_SCENE_2D:
@@ -198,7 +206,7 @@ solve(struct sdis_scene* scn, const double pos[])
   CHK(eq_eps(T.E, ref, T.SE*3));
 
   time_current(&t0);
-  OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, 0, 0, &green));
+  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
   time_current(&t1);
   OK(sdis_green_function_solve(green, time_range, &estimator2));
   time_current(&t2);

@@ -188,7 +188,7 @@ main(int argc, char** argv)
   struct sdis_interface_shader interf_shader = DUMMY_INTERFACE_SHADER;
   struct sdis_interface* box_interfaces[12/*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
-  double pos[3];
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   double ref;
   double Tinf;
   double nu;
@@ -262,23 +262,28 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_T4));
   OK(sdis_interface_ref_put(interf_T5));
 
-  d3_splat(pos, 0.25);
+  solve_args.nrealisations = N;
+  solve_args.position[0] = 0.25;
+  solve_args.position[1] = 0.25;
+  solve_args.position[2] = 0.25;
 
   /* Test in 3D for various time values. */
   nu = (6 * H) / (RHO*CP);
   Tinf = (H*(T0 + T1 + T2 + T3 + T4 + T5)) / (6 * H);
-  printf(">>> Temperature of the box at (%g %g %g)\n\n", SPLIT3(pos));
+  printf(">>> Temperature of the box at (%g %g %g)\n\n",
+    SPLIT3(solve_args.position));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double)i / nu : INF;
-    double time_range[2];
-    time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
+
+    solve_args.time_range[0] = time;
+    solve_args.time_range[1] = time;
 
     /* Setup stationary state */
     *((int*)sdis_data_get(is_stationary)) = IS_INF(time);
 
     /* Solve in 3D */
-    OK(sdis_solve_probe(box_scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+    OK(sdis_solve_probe(box_scn, &solve_args, &estimator));
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_time(estimator, &mc_time));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -291,8 +296,8 @@ main(int argc, char** argv)
     CHK(eq_eps(T.E, ref, T.SE * 3));
 
     if(IS_INF(time)) { /* Check green function */
-      OK(sdis_solve_probe_green_function(box_scn, N, pos, 1.0, 0, 0, &green));
-      OK(sdis_green_function_solve(green, time_range, &estimator2));
+      OK(sdis_solve_probe_green_function(box_scn, &solve_args, &green));
+      OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
       check_green_function(green);
       check_estimator_eq(estimator, estimator2);
       OK(sdis_estimator_ref_put(estimator2));
@@ -306,18 +311,20 @@ main(int argc, char** argv)
   /* Test in 2D for various time values. */
   nu = (4 * H) / (RHO*CP);
   Tinf = (H * (T0 + T1 + T2 + T3)) / (4 * H);
-  printf(">>> Temperature of the square at (%g %g)\n\n", SPLIT2(pos));
+  printf(">>> Temperature of the square at (%g %g)\n\n",
+    SPLIT2(solve_args.position));
   FOR_EACH(i, 0, 5) {
     double time = i ? (double)i / nu : INF;
-    double time_range[2];
-    time_range[0] = time_range[1] = time;
     ref = Tf_0 * exp(-nu * time) + Tinf * (1 - exp(-nu * time));
+
+    solve_args.time_range[0] = time;
+    solve_args.time_range[1] = time;
 
     /* Setup stationnary state */
     *((int*)sdis_data_get(is_stationary)) = IS_INF(time);
 
     /* Solve in 2D */
-    OK(sdis_solve_probe(square_scn, N, pos, time_range, 1.0, 0, 0, 0, &estimator));
+    OK(sdis_solve_probe(square_scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     CHK(nfails + nreals == N);
@@ -330,8 +337,8 @@ main(int argc, char** argv)
     CHK(eq_eps(T.E, ref, T.SE * 3));
 
     if(IS_INF(time)) { /* Check green function */
-      OK(sdis_solve_probe_green_function(square_scn, N, pos, 1.0, 0, 0, &green));
-      OK(sdis_green_function_solve(green, time_range, &estimator2));
+      OK(sdis_solve_probe_green_function(square_scn, &solve_args, &green));
+      OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
       check_green_function(green);
       check_estimator_eq(estimator, estimator2);
       OK(sdis_estimator_ref_put(estimator2));

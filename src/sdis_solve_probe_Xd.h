@@ -33,13 +33,7 @@
 static res_T
 XD(solve_probe)
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   const double position[3],
-   const double time_range[2],
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double Tarad, /* Ambient radiative temperature */
-   const double Tref, /* Reference temperature */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_args* args,
    struct sdis_green_function** out_green, /* May be NULL <=> No green func */
    struct sdis_estimator** out_estimator) /* May be NULL <=> No estimator */
 {
@@ -51,14 +45,16 @@ XD(solve_probe)
   struct ssp_rng** rngs = NULL;
   struct accum* acc_temps = NULL;
   struct accum* acc_times = NULL;
+  size_t nrealisations = 0;
   int64_t irealisation = 0;
   size_t i;
   int progress = 0;
+  int register_paths = SDIS_HEAT_PATH_NONE;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !position
-  || fp_to_meter <= 0 || Tref < 0) {
+  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
+  || args->fp_to_meter <= 0) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -67,12 +63,15 @@ XD(solve_probe)
     goto error;
   }
   if(out_estimator) {
-    if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+    if(args->time_range[0] < 0
+    || args->time_range[1] < args->time_range[0]
+    || (  args->time_range[1] > DBL_MAX
+       && args->time_range[0] != args->time_range[1])) {
       res = RES_BAD_ARG;
       goto error;
     }
   }
+
 
 #if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
@@ -81,9 +80,15 @@ XD(solve_probe)
 #endif
 
   /* Create the proxy RNG */
-  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
-    scn->dev->nthreads, &rng_proxy);
-  if(res != RES_OK) goto error;
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
   /* Create the per thread RNG */
   rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
@@ -102,7 +107,7 @@ XD(solve_probe)
   if(!acc_times) { res = RES_MEM_ERR; goto error; }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, position, NULL, &medium);
+  res = scene_get_medium(scn, args->position, NULL, &medium);
   if(res != RES_OK) goto error;
 
   /* Create the per thread green function */
@@ -122,6 +127,8 @@ XD(solve_probe)
   }
 
   /* Here we go! Launch the Monte Carlo estimation */
+  nrealisations = args->nrealisations;
+  register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
@@ -147,7 +154,7 @@ XD(solve_probe)
     time_current(&t0);
 
     if(!out_green) {
-      time = sample_time(rng, time_range);
+      time = sample_time(rng, args->time_range);
       if(register_paths) {
         heat_path_init(scn->dev->allocator, &heat_path);
         pheat_path = &heat_path;
@@ -163,7 +170,9 @@ XD(solve_probe)
     }
 
     res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng, medium,
-      position, time, fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
+      args->position, time, args->fp_to_meter,
+      args->ambient_radiative_temperature, args->reference_temperature,
+      pgreen_path, pheat_path, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {

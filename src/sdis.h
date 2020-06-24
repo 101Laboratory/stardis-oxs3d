@@ -274,6 +274,29 @@ struct sdis_point {
 #define SDIS_POINT_NULL__ { {{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
 static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
 
+struct sdis_solve_probe_args {
+  size_t nrealisations; /* #realisations */
+  double position[3]; /* Probe position */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_PROBE_ARGS_DEFAULT__ {                                      \
+  10000, /* #realisations */                                                   \
+  {0,0,0}, /* Position  */                                                     \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1.0, /* FP to meter */                                                       \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
+
 /* Functor used to process the paths registered against the green function */
 typedef res_T
 (*sdis_process_green_path_T)
@@ -395,7 +418,7 @@ sdis_camera_look_at
    const double up[3]);
 
 /*******************************************************************************
- * An estimator buffer is 2D array of estimators 
+ * An estimator buffer is 2D array of estimators
 ******************************************************************************/
 SDIS_API res_T
 sdis_estimator_buffer_ref_get
@@ -845,13 +868,7 @@ sdis_heat_path_for_each_vertex
 SDIS_API res_T
 sdis_solve_probe
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const double position[3], /* Probe position */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -956,11 +973,7 @@ sdis_solve_medium
 SDIS_API res_T
 sdis_solve_probe_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const double position[3], /* Probe position */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_probe_args* args,
    struct sdis_green_function** green);
 
 SDIS_API res_T
