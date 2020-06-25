@@ -70,47 +70,18 @@ struct sdis_scene;
 /* Forward declaration of non ref counted types */
 struct sdis_heat_path;
 
+/*******************************************************************************
+ * Miscellaneous data types
+ ******************************************************************************/
 enum sdis_side {
   SDIS_FRONT,
   SDIS_BACK,
   SDIS_SIDE_NULL__
 };
 
-enum sdis_medium_type {
-  SDIS_FLUID,
-  SDIS_SOLID,
-  SDIS_MEDIUM_TYPES_COUNT__
-};
-
-enum sdis_estimator_type {
-  SDIS_ESTIMATOR_TEMPERATURE,
-  SDIS_ESTIMATOR_FLUX,
-  SDIS_ESTIMATOR_TYPES_COUNT__
-};
-
 enum sdis_scene_dimension {
   SDIS_SCENE_2D,
   SDIS_SCENE_3D
-};
-
-enum sdis_point_type {
-  SDIS_FRAGMENT,
-  SDIS_VERTEX,
-  SDIS_POINT_TYPES_COUNT__,
-  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
-};
-
-enum sdis_heat_vertex_type {
-  SDIS_HEAT_VERTEX_CONDUCTION,
-  SDIS_HEAT_VERTEX_CONVECTION,
-  SDIS_HEAT_VERTEX_RADIATIVE
-};
-
-enum sdis_heat_path_flag {
-  SDIS_HEAT_PATH_SUCCESS = BIT(0),
-  SDIS_HEAT_PATH_FAILURE = BIT(1),
-  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCESS | SDIS_HEAT_PATH_FAILURE,
-  SDIS_HEAT_PATH_NONE = 0
 };
 
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
@@ -138,6 +109,15 @@ struct sdis_interface_fragment {
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
+/*******************************************************************************
+ * Estimation data types
+ ******************************************************************************/
+enum sdis_estimator_type {
+  SDIS_ESTIMATOR_TEMPERATURE,
+  SDIS_ESTIMATOR_FLUX,
+  SDIS_ESTIMATOR_TYPES_COUNT__
+};
+
 /* Monte-Carlo estimation */
 struct sdis_mc {
   double E; /* Expected value */
@@ -146,6 +126,15 @@ struct sdis_mc {
 };
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
+
+/*******************************************************************************
+ * Data type used to describe physical properties
+ ******************************************************************************/
+enum sdis_medium_type {
+  SDIS_FLUID,
+  SDIS_SOLID,
+  SDIS_MEDIUM_TYPES_COUNT__
+};
 
 /* Functor type used to retrieve the spatio temporal physical properties of a
  * medium. */
@@ -237,6 +226,22 @@ struct sdis_interface_shader {
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
+/*******************************************************************************
+ * Registered heat path data types
+ ******************************************************************************/
+enum sdis_heat_vertex_type {
+  SDIS_HEAT_VERTEX_CONDUCTION,
+  SDIS_HEAT_VERTEX_CONVECTION,
+  SDIS_HEAT_VERTEX_RADIATIVE
+};
+
+enum sdis_heat_path_flag {
+  SDIS_HEAT_PATH_SUCCESS = BIT(0),
+  SDIS_HEAT_PATH_FAILURE = BIT(1),
+  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCESS | SDIS_HEAT_PATH_FAILURE,
+  SDIS_HEAT_PATH_NONE = 0
+};
+
 /* Vertex of heat path v*/
 struct sdis_heat_vertex {
   double P[3];
@@ -248,6 +253,28 @@ struct sdis_heat_vertex {
 static const struct sdis_heat_vertex SDIS_HEAT_VERTEX_NULL =
   SDIS_HEAT_VERTEX_NULL__;
 
+/* Functor used to process a heat path registered against the estimator */
+typedef res_T
+(*sdis_process_heat_path_T)
+  (const struct sdis_heat_path* path,
+   void* context);
+
+/* Functor used to process the vertices of a heat path */
+typedef res_T
+(*sdis_process_heat_vertex_T)
+  (const struct sdis_heat_vertex* vertex,
+   void* context);
+
+/*******************************************************************************
+ * Green function data types
+ ******************************************************************************/
+enum sdis_point_type {
+  SDIS_FRAGMENT,
+  SDIS_VERTEX,
+  SDIS_POINT_TYPES_COUNT__,
+  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
+};
+
 /* Path used to estimate the green function */
 struct sdis_green_path {
   /* Internal data. Should not be accessed */
@@ -258,22 +285,49 @@ struct sdis_green_path {
 static const struct sdis_green_path SDIS_GREEN_PATH_NULL =
   SDIS_GREEN_PATH_NULL__;
 
+/* Spatio temporal point */
 struct sdis_point {
   union {
     struct {
       struct sdis_medium* medium;
       struct sdis_rwalk_vertex vertex;
-    } mdmvert;
+    } mdmvert; /* Medium and a vertex into it */
     struct {
       struct sdis_interface* intface;
       struct sdis_interface_fragment fragment;
-    } itfrag;
+    } itfrag; /* Interface and a fragmetn onto it */
   } data;
   enum sdis_point_type type;
 };
 #define SDIS_POINT_NULL__ { {{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
 static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
 
+/* Functor used to process the paths registered against the green function */
+typedef res_T
+(*sdis_process_green_path_T)
+  (struct sdis_green_path* path,
+   void* context);
+
+/* Functor used to process the power factor registered along a green path for a
+ * given medium */
+typedef res_T
+(*sdis_process_medium_power_term_T)
+  (struct sdis_medium* medium,
+   const double power_term,
+   void* context);
+
+/* Functor used to process the flux factor registered along a green path for a
+ * given interface side */
+typedef res_T
+(*sdis_process_interface_flux_term_T)
+  (struct sdis_interface* interf,
+   const enum sdis_side side,
+   const double flux_term,
+   void* context);
+
+/*******************************************************************************
+ * Data types of the input simulation parameters
+ ******************************************************************************/
 struct sdis_solve_probe_args {
   size_t nrealisations; /* #realisations */
   double position[3]; /* Probe position */
@@ -297,6 +351,7 @@ struct sdis_solve_probe_args {
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
 
+/* Arguments of a probe simulation */
 struct sdis_solve_probe_boundary_args {
   size_t nrealisations; /* #realisations */
   size_t iprim; /* Identifier of the primitive on which the probe lies */
@@ -351,41 +406,6 @@ struct sdis_solve_boundary_args {
 }
 static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__;
-
-/* Functor used to process the paths registered against the green function */
-typedef res_T
-(*sdis_process_green_path_T)
-  (struct sdis_green_path* path,
-   void* context);
-
-/* Functor used to process the power factor registered along a green path for a
- * given medium */
-typedef res_T
-(*sdis_process_medium_power_term_T)
-  (struct sdis_medium* medium,
-   const double power_term,
-   void* context);
-
-/* Functor used to process the flux factor registered along a green path for a
- * given interface side */
-typedef res_T
-(*sdis_process_interface_flux_term_T)
-  (struct sdis_interface* interf,
-   const enum sdis_side side,
-   const double flux_term,
-   void* context);
-
-/* Functor used to process a heat path registered against the estimator */
-typedef res_T
-(*sdis_process_heat_path_T)
-  (const struct sdis_heat_path* path,
-   void* context);
-
-/* Functor used to process the vertices of a heat path */
-typedef res_T
-(*sdis_process_heat_vertex_T)
-  (const struct sdis_heat_vertex* vertex,
-   void* context);
 
 BEGIN_DECLS
 
