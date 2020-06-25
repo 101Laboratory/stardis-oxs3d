@@ -390,6 +390,18 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
 
   solve_args.medium = solid1;
+
+  /* Check simulation error handling when paths are registered */
+  solve_args.nrealisations = 10;
+  solve_args.register_paths = SDIS_HEAT_PATH_ALL;
+  fluid_param->temperature = -1;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  fluid_param->temperature = Tf1;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator));
+  OK(sdis_estimator_ref_put(estimator));
+  solve_args.nrealisations = N;
+  solve_args.register_paths = SDIS_HEAT_PATH_NONE;
+
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
