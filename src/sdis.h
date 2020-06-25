@@ -407,6 +407,29 @@ struct sdis_solve_boundary_args {
 static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__;
 
+struct sdis_solve_medium_args {
+  size_t nrealisations; /* #realisations */
+  struct sdis_medium* medium; /* Medium to solve */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__ {                                     \
+  10000, /* #realisations */                                                   \
+  NULL, /* Medium */                                                           \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Refernce temperature */                                               \
+  SDIS_HEAT_PATH_NONE,                                                         \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
+  SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__;
+
 BEGIN_DECLS
 
 /*******************************************************************************
@@ -999,13 +1022,7 @@ sdis_solve_camera
 SDIS_API res_T
 sdis_solve_medium
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_medium_args* args,
    struct sdis_estimator** estimator);
 
 /*******************************************************************************
@@ -1050,11 +1067,7 @@ sdis_solve_boundary_green_function
 SDIS_API res_T
 sdis_solve_medium_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_medium_args* args,
    struct sdis_green_function** green);
 
 END_DECLS

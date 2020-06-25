@@ -522,42 +522,28 @@ error:
 res_T
 sdis_solve_medium
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_medium_args* args,
    struct sdis_estimator** estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_medium_2d(scn, nrealisations, medium, time_range, fp_to_meter,
-      Tarad, Tref, register_paths, NULL, estimator);
+    return solve_medium_2d(scn, args, NULL, estimator);
   } else {
-    return solve_medium_3d(scn, nrealisations, medium, time_range, fp_to_meter,
-      Tarad, Tref, register_paths, NULL, estimator);
+    return solve_medium_3d(scn, args, NULL, estimator);
   }
 }
 
 res_T
 sdis_solve_medium_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_medium_args* args,
    struct sdis_green_function** green)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_medium_2d(scn, nrealisations, medium, NULL, fp_to_meter, Tarad,
-      Tref, SDIS_HEAT_PATH_NONE, green, NULL);
+    return solve_medium_2d(scn, args, green, NULL);
   } else {
-    return solve_medium_3d(scn, nrealisations, medium, NULL, fp_to_meter, Tarad,
-      Tref, SDIS_HEAT_PATH_NONE, green, NULL);
+    return solve_medium_3d(scn, args, green, NULL);
   }
 }
 

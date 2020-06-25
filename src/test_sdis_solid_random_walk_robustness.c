@@ -274,6 +274,7 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_solve_medium_args solve_mdm_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
   struct interf* interf_param = NULL;
   struct solid* solid_param = NULL;
   struct context ctx;
@@ -372,16 +373,11 @@ main(int argc, char** argv)
 
   /* Launch medium integration */
   interf_param->profile = PROFILE_UNKNOWN;
-  OK(sdis_solve_medium
-    (scn,
-     solve_args.nrealisations,
-     solid,
-     solve_args.time_range,
-     solve_args.fp_to_meter,
-     solve_args.ambient_radiative_temperature,
-     solve_args.reference_temperature,
-     solve_args.register_paths,
-     &estimator));
+  solve_mdm_args.nrealisations = Nreals;
+  solve_mdm_args.medium = solid;
+  solve_mdm_args.time_range[0] = INF;
+  solve_mdm_args.time_range[1] = INF;
+  OK(sdis_solve_medium(scn, &solve_mdm_args, &estimator));
 
   print_estimation_result(estimator, Tfluid);
   /*dump_heat_paths(stdout, estimator);*/

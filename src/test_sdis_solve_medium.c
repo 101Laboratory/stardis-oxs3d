@@ -223,8 +223,8 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_solve_medium_args solve_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
   struct context ctx;
-  const double trange[2] = {INF, INF};
   double ref;
   double v, v0, v1;
   size_t nreals;
@@ -352,13 +352,31 @@ main(int argc, char** argv)
   OK(sdis_scene_get_medium_spread(scn, fluid1, &v));
   CHK(v == 0);
 
-  BA(sdis_solve_medium(NULL, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, 0, solid0, trange, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, NULL, trange, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, NULL, 1.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, trange, 0.f, -1, 0, 0, &estimator));
-  BA(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, 0, NULL));
-  OK(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.medium = solid0;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+
+  BA(sdis_solve_medium(NULL, &solve_args, &estimator));
+  BA(sdis_solve_medium(scn, NULL, &estimator));
+  BA(sdis_solve_medium(scn, &solve_args, NULL));
+  solve_args.nrealisations = 0;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.medium = NULL;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.medium = solid0;
+  solve_args.fp_to_meter = 0;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.fp_to_meter = 1;
+  solve_args.time_range[0] = solve_args.time_range[1] = -1;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.time_range[0] = 1;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.time_range[1] = 0;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.time_range[0] = solve_args.time_range[1] = INF;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator));
 
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
@@ -371,7 +389,8 @@ main(int argc, char** argv)
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
 
-  OK(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
+  solve_args.medium = solid1;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
@@ -383,13 +402,6 @@ main(int argc, char** argv)
   CHK(nreals + nfails == N);
   OK(sdis_estimator_ref_put(estimator));
 
-#if 0
-  OK(sdis_solve_medium(scn, 1, solid1, trange, 1.f, -1, 0,
-    SDIS_HEAT_PATH_ALL, &estimator));
-  dump_heat_paths(stderr, estimator);
-  OK(sdis_estimator_ref_put(estimator));
-#endif
-
   /* Create a new scene with the same medium in the 2 super shapes */
   OK(sdis_scene_ref_put(scn));
   ctx.interf0 = solid0_fluid0;
@@ -400,8 +412,11 @@ main(int argc, char** argv)
   OK(sdis_scene_get_medium_spread(scn, solid0, &v));
   CHK(eq_eps(v, v0+v1, 1.e-6));
 
-  BA(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
-  OK(sdis_solve_medium(scn, Np, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  solve_args.medium = solid1;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.medium = solid0;
+  solve_args.nrealisations = Np;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -413,15 +428,23 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, T.SE*3));
 
   /* Solve green */
-  BA(sdis_solve_medium_green_function(NULL, Np, solid0, 1.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, 0, solid0, 1.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, NULL, 1.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, solid0, 0.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, NULL));
-  BA(sdis_solve_medium_green_function(scn, Np, solid1, 1.0, 0, 0, &green));
-  OK(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, &green));
+  BA(sdis_solve_medium_green_function(NULL, &solve_args, &green));
+  BA(sdis_solve_medium_green_function(scn, NULL, &green));
+  BA(sdis_solve_medium_green_function(scn, &solve_args, NULL));
+  solve_args.nrealisations = 0;
+  BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
+  solve_args.nrealisations = Np;
+  solve_args.medium = NULL;
+  BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
+  solve_args.medium = solid1;
+  BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
+  solve_args.medium = solid0;
+  solve_args.fp_to_meter = 0;
+  BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
+  solve_args.fp_to_meter = 1;
+  OK(sdis_solve_medium_green_function(scn, &solve_args, &green));
 
-  OK(sdis_green_function_solve(green, trange, &estimator2));
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 

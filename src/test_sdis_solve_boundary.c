@@ -482,6 +482,8 @@ main(int argc, char** argv)
   /* Check simulation error handling when paths are registered */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
   BA(SOLVE(box_scn, &bound_args, &estimator));
+
+  /* Dump path */
   fluid_param->temperature = Tf;
   OK(SOLVE(box_scn, &bound_args, &estimator));
   dump_heat_paths(fp, estimator);

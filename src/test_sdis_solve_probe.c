@@ -355,6 +355,13 @@ main(int argc, char** argv)
   solve_args.fp_to_meter = 0;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
   solve_args.fp_to_meter = 1;
+  solve_args.time_range[0] = solve_args.time_range[1] = -1;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+  solve_args.time_range[0] = 1;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+  solve_args.time_range[1] = 0;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+  solve_args.time_range[0] = solve_args.time_range[1] = INF;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
 
   BA(sdis_estimator_get_type(estimator, NULL));
