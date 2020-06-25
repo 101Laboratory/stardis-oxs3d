@@ -451,6 +451,12 @@ main(int argc, char** argv)
 
   solve_args.nrealisations = N_dump;
   solve_args.register_paths = SDIS_HEAT_PATH_ALL;
+
+  /* Check simulation error handling when paths are registered */
+  fluid_param->temperature = -1;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+
+  fluid_param->temperature = 300;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_paths_count(estimator, &n));
   CHK(n == N_dump);

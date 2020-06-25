@@ -201,7 +201,7 @@ XD(solve_probe_boundary)
       res_local = green_function_create_path(greens[ithread], &green_path);
       if(res_local != RES_OK) {
         ATOMIC_SET(&res, res_local);
-        goto realisation_error;
+        goto error_it;
       }
       pgreen_path = &green_path;
     }
@@ -213,7 +213,7 @@ XD(solve_probe_boundary)
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
-      goto realisation_error;
+      goto error_it;
     }
 
     if(pheat_path) {
@@ -230,7 +230,7 @@ XD(solve_probe_boundary)
         res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
         if(res_local != RES_OK) {
           ATOMIC_SET(&res, res_local);
-          goto realisation_error;
+          goto error_it;
         }
         pheat_path = NULL;
       }
@@ -255,11 +255,11 @@ XD(solve_probe_boundary)
       log_info(scn->dev, "Solving probe boundary temperature: %3d%%\r", progress);
     }
 
-  realisation_exit:
+  exit_it:
     if(pheat_path) heat_path_release(pheat_path);
     continue;
-  realisation_error:
-    goto realisation_exit;
+  error_it:
+    goto exit_it;
   }
   if(res != RES_OK) goto error;
 
