@@ -234,14 +234,14 @@ main(int argc, char** argv)
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
-  struct sdis_solve_probe_boundary_flux_args solve_args =
+  struct sdis_solve_probe_boundary_flux_args probe_args =
     SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT;
+  struct sdis_solve_boundary_flux_args bound_args =
+    SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT;
   struct interf* interf_props = NULL;
   struct fluid* fluid_param;
   enum sdis_estimator_type type;
   double pos[3];
-  double time_range[2] = {INF, INF};
-  double tr[2];
   double analyticT, analyticCF, analyticRF, analyticTF;
   size_t prims[2];
   (void)argc, (void)argv;
@@ -345,53 +345,53 @@ main(int argc, char** argv)
   analyticTF = analyticCF + analyticRF;
 
   #define SOLVE sdis_solve_probe_boundary_flux
-  solve_args.nrealisations = N;
-  solve_args.iprim = 6;
-  solve_args.uv[0] = 0.3;
-  solve_args.uv[1] = 0.3;
-  solve_args.time_range[0] = INF;
-  solve_args.time_range[1] = INF;
-  solve_args.ambient_radiative_temperature = Trad;
-  solve_args.reference_temperature = Tref;
-  BA(SOLVE(NULL, &solve_args, &estimator));
+  probe_args.nrealisations = N;
+  probe_args.iprim = 6;
+  probe_args.uv[0] = 0.3;
+  probe_args.uv[1] = 0.3;
+  probe_args.time_range[0] = INF;
+  probe_args.time_range[1] = INF;
+  probe_args.ambient_radiative_temperature = Trad;
+  probe_args.reference_temperature = Tref;
+  BA(SOLVE(NULL, &probe_args, &estimator));
   BA(SOLVE(box_scn, NULL, &estimator));
-  BA(SOLVE(box_scn, &solve_args, NULL));
-  solve_args.nrealisations = 0;
-  BA(SOLVE(box_scn, &solve_args, &estimator));
-  solve_args.nrealisations = N;
-  solve_args.iprim = 12;
-  BA(SOLVE(box_scn, &solve_args, &estimator));
-  solve_args.iprim = 6;
-  solve_args.uv[0] = solve_args.uv[1] = 1;
-  BA(SOLVE(box_scn, &solve_args, &estimator));
-  solve_args.uv[0] = solve_args.uv[1] = 0.3;
-  solve_args.time_range[0] = solve_args.time_range[1] = -1;
-  BA(SOLVE(box_scn, &solve_args, &estimator));
-  solve_args.time_range[0] = 1;
-  BA(SOLVE(box_scn, &solve_args, &estimator));
-  solve_args.time_range[1] = 0;
-  BA(SOLVE(box_scn, &solve_args, &estimator));
-  solve_args.time_range[1] = INF;
-  BA(SOLVE(box_scn, &solve_args, &estimator));
-  solve_args.time_range[0] = INF;
-  OK(SOLVE(box_scn, &solve_args, &estimator));
+  BA(SOLVE(box_scn, &probe_args, NULL));
+  probe_args.nrealisations = 0;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.nrealisations = N;
+  probe_args.iprim = 12;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.iprim = 6;
+  probe_args.uv[0] = probe_args.uv[1] = 1;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.uv[0] = probe_args.uv[1] = 0.3;
+  probe_args.time_range[0] = probe_args.time_range[1] = -1;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.time_range[0] = 1;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.time_range[1] = 0;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.time_range[1] = INF;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.time_range[0] = INF;
+  OK(SOLVE(box_scn, &probe_args, &estimator));
 
   OK(sdis_estimator_get_type(estimator, &type));
   CHK(type == SDIS_ESTIMATOR_FLUX);
 
   OK(sdis_scene_get_boundary_position
-    (box_scn, solve_args.iprim, solve_args.uv, pos));
+    (box_scn, probe_args.iprim, probe_args.uv, pos));
   printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
 
-  solve_args.uv[0] = 0.5;
-  solve_args.iprim = 4;
-  BA(SOLVE(square_scn, &solve_args, &estimator));
-  solve_args.iprim = 3;
-  OK(SOLVE(square_scn, &solve_args, &estimator));
+  probe_args.uv[0] = 0.5;
+  probe_args.iprim = 4;
+  BA(SOLVE(square_scn, &probe_args, &estimator));
+  probe_args.iprim = 3;
+  OK(SOLVE(square_scn, &probe_args, &estimator));
   OK(sdis_scene_get_boundary_position
-    (square_scn, solve_args.iprim, solve_args.uv, pos));
+    (square_scn, probe_args.iprim, probe_args.uv, pos));
   printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
@@ -402,38 +402,52 @@ main(int argc, char** argv)
   #define SOLVE sdis_solve_boundary_flux
   prims[0] = 6;
   prims[1] = 7;
-  BA(SOLVE(NULL, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, 0, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, NULL, 2, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, prims, 0, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, prims, 2, NULL, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, NULL));
-  tr[0] = tr[1] = -1;
-  BA(SOLVE(box_scn, N, prims, 2, tr, 1.0, Trad, Tref, NULL));
-  tr[0] = 1;
-  BA(SOLVE(box_scn, N, prims, 2, tr, 1.0, Trad, Tref, NULL));
-  tr[1] = 0;
-  BA(SOLVE(box_scn, N, prims, 2, tr, 1.0, Trad, Tref, NULL));
+  bound_args.nrealisations = N;
+  bound_args.primitives = prims;
+  bound_args.nprimitives = 2;
+  bound_args.time_range[0] = INF;
+  bound_args.time_range[1] = INF;
+  bound_args.ambient_radiative_temperature = Trad;
+  bound_args.reference_temperature = Tref;
+
+  BA(SOLVE(NULL, &bound_args, &estimator));
+  BA(SOLVE(box_scn, NULL, &estimator));
+  BA(SOLVE(box_scn, &bound_args, NULL));
+  bound_args.primitives = NULL;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  bound_args.primitives = prims;
+  bound_args.nprimitives = 0;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  bound_args.nprimitives = 2;
+  bound_args.time_range[0] = bound_args.time_range[1] = -1;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  bound_args.time_range[0] = 1;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  bound_args.time_range[1] = 0;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  bound_args.time_range[1] = INF;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  bound_args.time_range[0] = INF;
+  prims[0] = 12;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  prims[0] = 6;
+  OK(SOLVE(box_scn, &bound_args, &estimator));
 
   /* Average temperature on the right side of the box */
-  OK(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
   printf("Average values of the right side of the box = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Average temperature on the right side of the square */
+  prims[0] = 4;
+  bound_args.nprimitives = 1;
+  BA(SOLVE(square_scn, &bound_args, &estimator));
   prims[0] = 3;
-  OK(SOLVE(square_scn, N, prims, 1, time_range, 1.0, Trad, Tref, &estimator));
+  OK(SOLVE(square_scn, &bound_args, &estimator));
   printf("Average values of the right side of the square = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
-
-  /* Check out of bound prims */
-  prims[0] = 12;
-  BA(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
-  prims[0] = 4;
-  BA(SOLVE(square_scn, N, prims, 1, time_range, 1.0, Trad, Tref, &estimator));
-
+  
   /* Average temperature on the left side of the box */
   prims[0] = 2;
   prims[1] = 3;
@@ -443,14 +457,16 @@ main(int argc, char** argv)
   analyticRF = Hrad * (analyticT - Trad);
   analyticTF = analyticCF + analyticRF;
 
-  OK(SOLVE(box_scn, N, prims, 2, time_range, 1.0, Trad, Tref, &estimator));
+  bound_args.nprimitives = 2;
+  OK(SOLVE(box_scn, &bound_args, &estimator));
   printf("Average values of the left side of the box = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Average temperature on the left/right side of the square */
   prims[0] = 1;
-  OK(SOLVE(square_scn, N, prims, 1, time_range, 1.0, Trad, Tref, &estimator));
+  bound_args.nprimitives = 1;
+  OK(SOLVE(square_scn, &bound_args, &estimator));
   printf("Average values of the left side of the square = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));

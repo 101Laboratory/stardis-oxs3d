@@ -318,22 +318,14 @@ sdis_solve_probe_boundary_flux
 res_T
 sdis_solve_boundary_flux
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const size_t nprimitives, /* #primitives */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_boundary_flux_args* args,
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_boundary_flux_2d(scn, nrealisations, primitives, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+    return solve_boundary_flux_2d(scn, args, out_estimator);
   } else {
-    return solve_boundary_flux_3d(scn, nrealisations, primitives, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+    return solve_boundary_flux_3d(scn, args, out_estimator);
   }
 }
 
