@@ -430,6 +430,30 @@ struct sdis_solve_medium_args {
 static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
   SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__;
 
+struct sdis_solve_probe_boundary_flux_args {
+  size_t nrealisations; /* #realisations */
+  size_t iprim; /* Identifier of the primitive on which the probe lies */
+  double uv[2]; /* Parametric coordinates of the probe onto the primitve */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
+  10000, /* #realisations */                                                   \
+  0, /* Primitive identifier */                                                \
+  {0,0}, /* UV */                                                              \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Refernce temperature */                                               \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_probe_boundary_flux_args
+SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__;
+
 BEGIN_DECLS
 
 /*******************************************************************************
@@ -984,13 +1008,7 @@ sdis_solve_boundary
 SDIS_API res_T
 sdis_solve_probe_boundary_flux
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_probe_boundary_flux_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T

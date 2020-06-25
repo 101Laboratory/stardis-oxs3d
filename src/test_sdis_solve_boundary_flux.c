@@ -234,16 +234,16 @@ main(int argc, char** argv)
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
+  struct sdis_solve_probe_boundary_flux_args solve_args =
+    SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT;
   struct interf* interf_props = NULL;
   struct fluid* fluid_param;
   enum sdis_estimator_type type;
-  double uv[2];
   double pos[3];
-  double time_range[2] = { INF, INF };
+  double time_range[2] = {INF, INF};
   double tr[2];
   double analyticT, analyticCF, analyticRF, analyticTF;
   size_t prims[2];
-  size_t iprim;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -345,46 +345,60 @@ main(int argc, char** argv)
   analyticTF = analyticCF + analyticRF;
 
   #define SOLVE sdis_solve_probe_boundary_flux
-  uv[0] = 0.3;
-  uv[1] = 0.3;
-  iprim = 6;
+  solve_args.nrealisations = N;
+  solve_args.iprim = 6;
+  solve_args.uv[0] = 0.3;
+  solve_args.uv[1] = 0.3;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+  solve_args.ambient_radiative_temperature = Trad;
+  solve_args.reference_temperature = Tref;
+  BA(SOLVE(NULL, &solve_args, &estimator));
+  BA(SOLVE(box_scn, NULL, &estimator));
+  BA(SOLVE(box_scn, &solve_args, NULL));
+  solve_args.nrealisations = 0;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.iprim = 12;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.iprim = 6;
+  solve_args.uv[0] = solve_args.uv[1] = 1;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.uv[0] = solve_args.uv[1] = 0.3;
+  solve_args.time_range[0] = solve_args.time_range[1] = -1;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.time_range[0] = 1;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.time_range[1] = 0;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.time_range[1] = INF;
+  BA(SOLVE(box_scn, &solve_args, &estimator));
+  solve_args.time_range[0] = INF;
+  OK(SOLVE(box_scn, &solve_args, &estimator));
 
-  BA(SOLVE(NULL, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, 0, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, 12, uv, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, iprim, NULL, time_range, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, NULL, 1.0, Trad, Tref, &estimator));
-  BA(SOLVE(box_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, NULL));
-  tr[0] = tr[1] = -1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
-  tr[0] = 1;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
-  tr[1] = 0;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
-  tr[1] = INF;
-  BA(SOLVE(box_scn, N, iprim, uv, tr, 1.0, Trad, Tref, &estimator));
-
-  OK(SOLVE(box_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
   OK(sdis_estimator_get_type(estimator, &type));
   CHK(type == SDIS_ESTIMATOR_FLUX);
 
-  OK(sdis_scene_get_boundary_position(box_scn, iprim, uv, pos));
+  OK(sdis_scene_get_boundary_position
+    (box_scn, solve_args.iprim, solve_args.uv, pos));
   printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
 
-  uv[0] = 0.5;
-  iprim = 3;
-  BA(SOLVE(square_scn, N, 4, uv, time_range, 1.0, Trad, Tref, &estimator));
-  OK(SOLVE(square_scn, N, iprim, uv, time_range, 1.0, Trad, Tref, &estimator));
-  OK(sdis_scene_get_boundary_position(square_scn, iprim, uv, pos));
+  solve_args.uv[0] = 0.5;
+  solve_args.iprim = 4;
+  BA(SOLVE(square_scn, &solve_args, &estimator));
+  solve_args.iprim = 3;
+  OK(SOLVE(square_scn, &solve_args, &estimator));
+  OK(sdis_scene_get_boundary_position
+    (square_scn, solve_args.iprim, solve_args.uv, pos));
   printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
 
   #undef F
   #undef SOLVE
-  
+
   #define SOLVE sdis_solve_boundary_flux
   prims[0] = 6;
   prims[1] = 7;
