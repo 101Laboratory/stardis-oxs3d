@@ -190,12 +190,14 @@ XD(solve_probe)
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
         heat_path_release(pheat_path);
+        pheat_path = NULL;
       } else { /* Register the sampled path */
         res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
         if(res_local != RES_OK) {
           ATOMIC_SET(&res, res_local);
           goto error_it;
         }
+        pheat_path = NULL;
       }
     }
 

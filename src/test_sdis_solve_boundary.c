@@ -478,6 +478,11 @@ main(int argc, char** argv)
   /* Dump path */
   bound_args.nrealisations = N_dump;
   bound_args.register_paths = SDIS_HEAT_PATH_ALL;
+
+  /* Check simulation error handling when paths are registered */
+  fluid_param->temperature = UNKNOWN_TEMPERATURE;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  fluid_param->temperature = Tf;
   OK(SOLVE(box_scn, &bound_args, &estimator));
   dump_heat_paths(fp, estimator);
   OK(sdis_estimator_ref_put(estimator));

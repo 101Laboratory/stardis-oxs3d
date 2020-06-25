@@ -267,7 +267,10 @@ XD(solve_boundary)
        * function. Simply takes 0 as relative time */
       time = 0;
       res_local = green_function_create_path(greens[ithread], &green_path);
-      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      if(res_local != RES_OK) {
+        ATOMIC_SET(&res, res_local);
+        goto error_it;
+      }
       pgreen_path = &green_path;
     }
 
@@ -288,7 +291,10 @@ XD(solve_boundary)
        &prim, st);
     d2_set_f2(uv, st);
 #endif
-    if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+    if(res_local != RES_OK) {
+      ATOMIC_SET(&res, res_local);
+      goto error_it;
+    }
 
     /* Map from boundary scene to sdis scene */
     ASSERT(prim.prim_id < args->nprimitives);
@@ -303,7 +309,7 @@ XD(solve_boundary)
     /* Fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
-      continue;
+      goto error_it;
     }
 
     /* Register heat path */
@@ -315,9 +321,14 @@ XD(solve_boundary)
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
         heat_path_release(pheat_path);
+        pheat_path = NULL;
       } else { /* Register the sampled path */
         res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
-        if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+        if(res_local != RES_OK) {
+          ATOMIC_SET(&res, res_local);
+          goto error_it;
+        }
+        pheat_path = NULL;
       }
     }
 
@@ -339,6 +350,11 @@ XD(solve_boundary)
       progress = pcent;
       log_info(scn->dev, "Solving boundary temperature: %3d%%\r", progress);
     }
+  exit_it:
+    if(pheat_path) heat_path_release(pheat_path);
+    continue;
+  error_it:
+    goto exit_it;
   }
   if(res != RES_OK) goto error;
 
