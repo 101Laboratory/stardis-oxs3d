@@ -81,10 +81,10 @@ XD(compute_temperature)
      * boundary. Indeed, one knows the "right" type of the first vertex only
      * after the boundary_path execution that defines the sub path to resolve
      * from the submitted boundary position. Note that if the boundary
-     * temperature is know, the type is let as it. */
-    if(heat_vtx && !T->done) {
-      if(heat_path_get_last_vertex(ctx->heat_path) != heat_vtx) {
-        /* Path was reinjected into a solid */
+     * temperature is known, the type is let as it. */
+    if(heat_vtx && !T->done && T->func != XD(boundary_path)) {
+      heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
+      if(T->func == XD(conductive_path)) {
         heat_vtx->type = SDIS_HEAT_VERTEX_CONDUCTION;
       } else if(T->func == XD(convective_path)) {
         heat_vtx->type = SDIS_HEAT_VERTEX_CONVECTION;
