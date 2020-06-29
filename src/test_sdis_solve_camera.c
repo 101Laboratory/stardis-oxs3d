@@ -541,6 +541,7 @@ main(int argc, char** argv)
   struct sdis_interface* interf1 = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
+  struct ssp_rng* rng_state = NULL;
   struct fluid fluid_param = FLUID_NULL;
   struct solid solid_param = SOLID_NULL;
   struct interf interface_param = INTERF_NULL;
@@ -679,6 +680,10 @@ main(int argc, char** argv)
   BA(sdis_estimator_buffer_get_realisation_time(NULL, &time));
   BA(sdis_estimator_buffer_get_realisation_time(buf, NULL));
   OK(sdis_estimator_buffer_get_realisation_time(buf, &time));
+
+  BA(sdis_estimator_buffer_get_rng_state(NULL, &rng_state));
+  BA(sdis_estimator_buffer_get_rng_state(buf, NULL));
+  OK(sdis_estimator_buffer_get_rng_state(buf, &rng_state));
 
   CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
 

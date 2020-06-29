@@ -398,6 +398,10 @@ main(int argc, char** argv)
   BA(sdis_estimator_get_realisation_time(NULL, &time));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
 
+  BA(sdis_estimator_get_rng_state(NULL, &rng_state));
+  BA(sdis_estimator_get_rng_state(estimator, NULL));
+  OK(sdis_estimator_get_rng_state(estimator, &rng_state));
+
   ref = 300;
   printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
     SPLIT3(solve_args.position), ref, T.E, T.SE);
@@ -477,10 +481,6 @@ main(int argc, char** argv)
   BA(sdis_estimator_for_each_path(NULL, process_heat_path, &dump_ctx));
   BA(sdis_estimator_for_each_path(estimator, NULL, &dump_ctx));
   OK(sdis_estimator_for_each_path(estimator, process_heat_path, &dump_ctx));
-
-  BA(sdis_estimator_get_rng_state(NULL, &rng_state));
-  BA(sdis_estimator_get_rng_state(estimator, NULL));
-  OK(sdis_estimator_get_rng_state(estimator, &rng_state));
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_scene_ref_put(scn));
