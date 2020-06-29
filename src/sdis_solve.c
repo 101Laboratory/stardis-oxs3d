@@ -79,6 +79,7 @@ solve_pixel
 {
   struct accum acc_temp = ACCUM_NULL;
   struct accum acc_time = ACCUM_NULL;
+  struct sdis_heat_path* pheat_path = NULL;
   size_t irealisation;
   res_T res = RES_OK;
   ASSERT(scn && mdm && rng && cam && ipix && nrealisations && Tref >= 0);
@@ -91,7 +92,6 @@ solve_pixel
     double ray_pos[3];
     double ray_dir[3];
     double w = 0;
-    struct sdis_heat_path* pheat_path = NULL;
     struct sdis_heat_path heat_path;
     double time;
     res_T res_simul = RES_OK;
@@ -131,9 +131,11 @@ solve_pixel
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
         heat_path_release(pheat_path);
+        pheat_path = NULL;
       } else { /* Register the sampled path */
         res = estimator_add_and_release_heat_path(estimator, pheat_path);
         if(res != RES_OK) goto error;
+        pheat_path = NULL;
       }
     }
 
@@ -155,6 +157,7 @@ solve_pixel
   estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
 
 exit:
+  if(pheat_path) heat_path_release(pheat_path);
   return res;
 error:
   goto exit;
@@ -503,6 +506,7 @@ exit:
   if(out_buf) *out_buf = buf;
   return (res_T)res;
 error:
+  if(buf) SDIS(estimator_buffer_ref_put(buf));
   goto exit;
 }
 

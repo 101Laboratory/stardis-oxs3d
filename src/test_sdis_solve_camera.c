@@ -695,9 +695,17 @@ main(int argc, char** argv)
 
   /* Write the image */
   dump_image(buf);
+  OK(sdis_estimator_buffer_ref_put(buf));
+
+  pfluid_param = sdis_data_get(sdis_medium_get_data(fluid1));
+  pfluid_param->temperature = UNKOWN_TEMPERATURE;
+
+  /* Check simulation error handling */
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.register_paths = SDIS_HEAT_PATH_ALL;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
 
   /* Release memory */
-  OK(sdis_estimator_buffer_ref_put(buf));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid0));
   OK(sdis_medium_ref_put(fluid1));
