@@ -478,6 +478,29 @@ static const struct sdis_solve_boundary_flux_args
 SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
   SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__;
 
+struct sdis_solve_camera_args {
+  struct sdis_camera* cam; /* Point of view */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  size_t image_resolution[2]; /* Image resolution */
+  size_t spp; /* #samples per pixel */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+};
+#define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
+  NULL, /* Camera */                                                           \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  {512,512}, /* Image resolution */                                            \
+  256, /* #realisations per pixel */                                           \
+  SDIS_HEAT_PATH_NONE                                                          \
+}
+static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
+  SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
+
 BEGIN_DECLS
 
 /*******************************************************************************
@@ -1044,15 +1067,7 @@ sdis_solve_boundary_flux
 SDIS_API res_T
 sdis_solve_camera
   (struct sdis_scene* scn,
-   const struct sdis_camera* cam, /* Point of view */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const size_t width, /* Image definition in in X */
-   const size_t height, /* Image definition in Y */
-   const size_t spp, /* #samples per pixel */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_camera_args* args,
    struct sdis_estimator_buffer** buf);
 
 SDIS_API res_T
