@@ -35,7 +35,7 @@
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
  * emissivity of the cube is 1 and its convection coefficient with the
- * surrounding fluid at 290Kk is 0.1. At the center of the cube there is a spherical
+ * surrounding fluid at 300K is 0.1. At the center of the cube there is a spherical
  * fluid cavity whose temperature is 350K. The convection coefficient between
  * the solid and the cavity is 1 and the emissivity of this interface is null.
  * The ambient radiative temperature of the system is 300K.
@@ -563,7 +563,7 @@ main(int argc, char** argv)
   create_fluid(dev, &fluid_param, &fluid0);
 
   /* Create the fluid1 */
-  fluid_param.temperature = 290;
+  fluid_param.temperature = 300;
   fluid_param.rho = 0;
   fluid_param.cp = 0;
   create_fluid(dev, &fluid_param, &fluid1);

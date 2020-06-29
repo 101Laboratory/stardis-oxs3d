@@ -23,6 +23,7 @@
 
 #include <star/s2d.h>
 #include <star/s3d.h>
+#include <star/ssp.h>
 
 #include <omp.h>
 
@@ -138,3 +139,59 @@ sdis_device_ref_put(struct sdis_device* dev)
   return RES_OK;
 }
 
+/*******************************************************************************
+ * Local functions
+ ******************************************************************************/
+res_T
+create_rng_from_rng_proxy
+  (struct sdis_device* dev,
+   const struct ssp_rng_proxy* proxy,
+   struct ssp_rng** out_rng)
+{
+  struct ssp_rng_type rng_type;
+  struct ssp_rng* rng = NULL;
+  FILE* stream = NULL;
+  res_T res = RES_OK;
+  ASSERT(dev && proxy && out_rng);
+
+  stream = tmpfile();
+  if(!stream) {
+    log_err(dev,
+      "Could not open a temporary stream to store the RNG state.\n");
+    res = RES_IO_ERR;
+    goto error;
+  }
+
+  SSP(rng_proxy_get_type(proxy, &rng_type));
+  res = ssp_rng_create(dev->allocator, &rng_type, &rng);
+  if(res != RES_OK) {
+    log_err(dev, "Could not create the RNG -- %s\n", res_to_cstr(res));
+    goto error;
+  }
+
+  res = ssp_rng_proxy_write(proxy, stream);
+  if(res != RES_OK) {
+    log_err(dev, "Could not serialize the RNG state -- %s\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+  rewind(stream);
+  res = ssp_rng_read(rng, stream);
+  if(res != RES_OK) {
+    log_err(dev, "Could not read the serialized RNG state -- %s\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+exit:
+  if(out_rng) *out_rng = rng;
+  if(stream) fclose(stream);
+  return res;
+error:
+  if(rng) {
+    SSP(rng_ref_put(rng));
+    rng = NULL;
+  }
+  goto exit;
+}

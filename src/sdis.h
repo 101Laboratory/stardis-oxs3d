@@ -629,6 +629,11 @@ sdis_estimator_buffer_get_realisation_time
   (const struct sdis_estimator_buffer* buf,
    struct sdis_mc* time);
 
+SDIS_API res_T
+sdis_estimator_buffer_get_rng_state
+  (const struct sdis_estimator_buffer* buf,
+   struct ssp_rng** rng_state);
+
 /*******************************************************************************
  * A medium encapsulates the properties of either a fluid or a solid.
  ******************************************************************************/
@@ -927,6 +932,8 @@ sdis_estimator_for_each_path
 SDIS_API res_T
 sdis_estimator_get_rng_state
   (const struct sdis_estimator* estimator,
+   /* The returned value may be NULL as for instance an estimator retrieved
+    * from an estimator buffer */
    struct ssp_rng** rng_state);
 
 /*******************************************************************************

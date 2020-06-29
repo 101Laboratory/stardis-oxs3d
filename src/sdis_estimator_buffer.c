@@ -19,6 +19,8 @@
 #include "sdis_estimator_buffer_c.h"
 #include "sdis_log.h"
 
+#include <star/ssp.h>
+
 struct sdis_estimator_buffer {
   struct sdis_estimator** estimators; /* Row major per pixe lestimators */
   size_t width;
@@ -28,6 +30,9 @@ struct sdis_estimator_buffer {
   struct accum realisation_time;
   size_t nrealisations; /* #successes */
   size_t nfailures;
+
+  /* State of the RNG after the simulation */
+  struct ssp_rng* rng;
 
   ref_T ref;
   struct sdis_device* dev;
@@ -54,6 +59,7 @@ estimator_buffer_release(ref_T* ref)
     MEM_RM(dev->allocator, buf->estimators);
   }
 
+  if(buf->rng) SSP(rng_ref_put(buf->rng));
   MEM_RM(dev->allocator, buf);
   SDIS(device_ref_put(dev));
 }
@@ -136,10 +142,19 @@ sdis_estimator_buffer_get_temperature
 
 res_T
 sdis_estimator_buffer_get_realisation_time
-(const struct sdis_estimator_buffer* buf, struct sdis_mc* mc)
+  (const struct sdis_estimator_buffer* buf, struct sdis_mc* mc)
 {
   if(!buf || !mc) return RES_BAD_ARG;
   SETUP_MC(mc, &buf->realisation_time);
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_buffer_get_rng_state
+  (const struct sdis_estimator_buffer* buf, struct ssp_rng** rng_state)
+{
+  if(!buf || !rng_state) return RES_BAD_ARG;
+  *rng_state = buf->rng;
   return RES_OK;
 }
 
@@ -241,5 +256,20 @@ estimator_buffer_setup_realisation_time
   buf->realisation_time.sum = sum;
   buf->realisation_time.sum2 = sum2;
   buf->realisation_time.count = buf->nrealisations;
+}
+
+res_T
+estimator_buffer_save_rng_state
+  (struct sdis_estimator_buffer* buf,
+   const struct ssp_rng_proxy* proxy)
+{
+  ASSERT(buf && proxy);
+
+  /* Release the previous RNG state if any */
+  if(buf->rng) {
+    SSP(rng_ref_put(buf->rng));
+    buf->rng = NULL;
+  }
+  return create_rng_from_rng_proxy(buf->dev, proxy, &buf->rng);
 }
 

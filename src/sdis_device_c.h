@@ -23,6 +23,10 @@
 #include <rsys/logger.h>
 #include <rsys/ref_count.h>
 
+/* Forward declarations */
+struct ssp_rng;
+struct ssp_rng_proxy;
+
 struct name { FITEM; };
 #define FITEM_TYPE name
 #include <rsys/free_list.h>
@@ -42,6 +46,12 @@ struct sdis_device {
 
   ref_T ref;
 };
+
+extern LOCAL_SYM res_T
+create_rng_from_rng_proxy
+  (struct sdis_device* dev,
+   const struct ssp_rng_proxy* proxy,
+   struct ssp_rng** out_rng);
 
 #endif /* SDIS_DEVICE_C_H */
 

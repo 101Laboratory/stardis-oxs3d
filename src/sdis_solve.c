@@ -494,6 +494,8 @@ sdis_solve_camera
   estimator_buffer_setup_realisations_count(buf, nrealisations, nsuccesses);
   estimator_buffer_setup_temperature(buf, acc_temp.sum, acc_temp.sum2);
   estimator_buffer_setup_realisation_time(buf, acc_time.sum, acc_time.sum2);
+  res = estimator_buffer_save_rng_state(buf, rng_proxy);
+  if(res != RES_OK) goto error;
 
 exit:
   if(rngs) {
