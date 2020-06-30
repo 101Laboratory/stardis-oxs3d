@@ -782,7 +782,6 @@ green_function_merge_and_clear
   size_t npaths_dst;
   size_t npaths;
   size_t i;
-  unsigned id;
   res_T res = RES_OK;
   ASSERT(dst && src);
 
@@ -808,8 +807,7 @@ green_function_merge_and_clear
   while(!htable_medium_iterator_eq(&it_medium, &end_medium)) {
     struct sdis_medium* medium;
     medium = *htable_medium_iterator_data_get(&it_medium);
-    id = medium_get_id(medium);
-    res = htable_medium_set(&dst->media, &id, &medium);
+    res = ensure_medium_registration(dst, medium);
     if(res != RES_OK) goto error;
     htable_medium_iterator_next(&it_medium);
   }
@@ -819,8 +817,7 @@ green_function_merge_and_clear
   while(!htable_interf_iterator_eq(&it_interf, &end_interf)) {
     struct sdis_interface* interf;
     interf = *htable_interf_iterator_data_get(&it_interf);
-    id = interface_get_id(interf);
-    res = htable_interf_set(&dst->interfaces, &id, &interf);
+    res = ensure_interface_registration(dst, interf);
     if(res != RES_OK) goto error;
     htable_interf_iterator_next(&it_interf);
   }
