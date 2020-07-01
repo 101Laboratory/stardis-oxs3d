@@ -39,16 +39,6 @@ static const struct accum ACCUM_NULL = ACCUM_NULL__;
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
 
-static INLINE struct accum*
-accum_add(struct accum* dst, const struct accum* a, const struct accum* b)
-{
-  ASSERT(dst && a && b);
-  dst->sum = a->sum + b->sum;
-  dst->sum2 = a->sum2 + b->sum2;
-  dst->count = a->count + b->count;
-  return dst;
-}
-
 static INLINE void
 sum_accums
   (const struct accum accums[],

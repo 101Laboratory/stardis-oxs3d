@@ -249,7 +249,6 @@ main(int argc, char** argv)
 {
   struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
-  struct sdis_mc T2 = SDIS_MC_NULL;
   struct sdis_mc F = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
@@ -451,18 +450,6 @@ main(int argc, char** argv)
   OK(sdis_green_function_ref_put(green));
   OK(sdis_green_function_ref_put(green));
 
-  OK(sdis_estimator_ref_put(estimator2));
-  OK(sdis_estimator_get_rng_state(estimator, &rng_state));
-  solve_args.rng_state = rng_state;
-  OK(sdis_solve_probe(scn, &solve_args, &estimator2));
-
-  BA(sdis_estimator_accum(NULL, estimator2));
-  BA(sdis_estimator_accum(estimator, NULL));
-  OK(sdis_estimator_accum(estimator, estimator2));
-
-  OK(sdis_estimator_get_temperature(estimator, &T2));
-  CHK(eq_eps(T2.E, ref, T2.SE));
-
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
 
@@ -473,7 +460,6 @@ main(int argc, char** argv)
   CHK(n == 0);
   OK(sdis_estimator_ref_put(estimator));
 
-  solve_args.rng_state = NULL;
   solve_args.nrealisations = N_dump;
   solve_args.register_paths = SDIS_HEAT_PATH_ALL;
 
