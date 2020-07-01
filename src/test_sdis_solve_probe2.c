@@ -146,6 +146,7 @@ main(int argc, char** argv)
 {
   struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc T2 = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_data* data = NULL;
@@ -268,6 +269,16 @@ main(int argc, char** argv)
   OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
+
+  /* Pursue the estimation */
+  OK(sdis_estimator_ref_put(estimator2));
+  OK(sdis_estimator_get_rng_state(estimator, &solve_args.rng_state));
+  solve_args.nrealisations *= 3;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator2));
+  OK(sdis_estimator_accum(estimator, estimator2));
+  OK(sdis_estimator_get_temperature(estimator, &T2));
+  CHK(eq_eps(T2.E, ref, 3*T2.SE));
+  CHK(eq_eps(T2.SE, T.SE*0.5, 1e-4));
 
   /* Release data */
   OK(sdis_estimator_ref_put(estimator));

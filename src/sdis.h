@@ -936,6 +936,11 @@ sdis_estimator_get_rng_state
     * from an estimator buffer */
    struct ssp_rng** rng_state);
 
+SDIS_API res_T
+sdis_estimator_accum
+  (struct sdis_estimator* dst,
+   const struct sdis_estimator* src);
+
 /*******************************************************************************
  * The green function saves the estimation of the propagator
  ******************************************************************************/

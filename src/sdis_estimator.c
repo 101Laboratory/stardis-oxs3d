@@ -207,6 +207,74 @@ sdis_estimator_get_rng_state
   return RES_OK;
 }
 
+res_T
+sdis_estimator_accum
+  (struct sdis_estimator* dst,
+   const struct sdis_estimator* src)
+{
+  res_T res = RES_OK;
+  struct sdis_heat_path* dst_paths = NULL;
+  const struct sdis_heat_path* src_paths = NULL;
+  size_t ndst_paths = 0;
+  size_t nsrc_paths = 0;
+  size_t i;
+
+  if(!dst || !src) { res = RES_BAD_ARG; goto error; }
+
+  if(dst->type != src->type) {
+    log_err(dst->dev, "%s: estimators are mutually incompatibles.\n",
+      FUNC_NAME);
+    res = RES_OK;
+    goto error;
+  }
+
+  /* Begin the function by the copy of the registered paths since if an error
+   * occurs on dynamic array allocation, nothing has to be rewind */
+  ndst_paths = darray_heat_path_size_get(&dst->paths);
+  nsrc_paths = darray_heat_path_size_get(&src->paths);
+  res = darray_heat_path_resize(&dst->paths, ndst_paths + nsrc_paths);
+  if(res != RES_OK) {
+    log_err(dst->dev,
+      "%s: could not allocate the list of registered paths -- %s.\n",
+      FUNC_NAME, res_to_cstr(res));
+    goto error;
+  }
+  dst_paths = darray_heat_path_data_get(&dst->paths);
+  src_paths = darray_heat_path_cdata_get(&src->paths);
+  FOR_EACH(i, 0, nsrc_paths) {
+    res = heat_path_copy(&dst_paths[ndst_paths + i], &src_paths[i]);
+    ASSERT(res == RES_OK);
+  }
+
+  switch(dst->type) {
+    case SDIS_ESTIMATOR_TEMPERATURE:
+      accum_add(&dst->temperature, &dst->temperature, &src->temperature);
+      break;
+    case SDIS_ESTIMATOR_FLUX:
+      FOR_EACH(i, 0, FLUX_NAMES_COUNT__) {
+        accum_add(&dst->fluxes[i], &dst->fluxes[i], &src->fluxes[i]);
+      }
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+
+  accum_add(&dst->realisation_time, &dst->realisation_time, &src->realisation_time);
+  dst->nrealisations += src->nrealisations;
+  dst->nfailures += src->nfailures;
+
+  /* Relese the rng state on the `dst' estimator since nothing can be said onto
+   * it after the accumulation */
+  if(dst->rng) {
+    SSP(rng_ref_put(dst->rng));
+    dst->rng = NULL;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
