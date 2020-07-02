@@ -79,6 +79,7 @@ solve_pixel
 {
   struct accum acc_temp = ACCUM_NULL;
   struct accum acc_time = ACCUM_NULL;
+  struct sdis_heat_path* pheat_path = NULL;
   size_t irealisation;
   res_T res = RES_OK;
   ASSERT(scn && mdm && rng && cam && ipix && nrealisations && Tref >= 0);
@@ -91,7 +92,6 @@ solve_pixel
     double ray_pos[3];
     double ray_dir[3];
     double w = 0;
-    struct sdis_heat_path* pheat_path = NULL;
     struct sdis_heat_path heat_path;
     double time;
     res_T res_simul = RES_OK;
@@ -131,9 +131,11 @@ solve_pixel
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
         heat_path_release(pheat_path);
+        pheat_path = NULL;
       } else { /* Register the sampled path */
         res = estimator_add_and_release_heat_path(estimator, pheat_path);
         if(res != RES_OK) goto error;
+        pheat_path = NULL;
       }
     }
 
@@ -155,6 +157,7 @@ solve_pixel
   estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
 
 exit:
+  if(pheat_path) heat_path_release(pheat_path);
   return res;
 error:
   goto exit;
@@ -220,195 +223,119 @@ error:
 res_T
 sdis_solve_probe
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   const double position[3],
-   const double time_range[2],
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double Tarad, /* Ambient radiative temperature */
-   const double Tref, /* Reference temperature */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_args* args,
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_2d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_probe_2d(scn, args, NULL, out_estimator);
   } else {
-    return solve_probe_3d(scn, nrealisations, position, time_range,
-      fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_probe_3d(scn, args, NULL, out_estimator);
   }
 }
 
 res_T
 sdis_solve_probe_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   const double position[3],
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double Tarad, /* Ambient radiative temperature */
-   const double Tref, /* Reference temperature */
+   const struct sdis_solve_probe_args* args,
    struct sdis_green_function** out_green)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_2d(scn, nrealisations, position, NULL,
-      fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, out_green, NULL);
+    return solve_probe_2d(scn, args, out_green, NULL);
   } else {
-    return solve_probe_3d(scn, nrealisations, position, NULL,
-      fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, out_green, NULL);
+    return solve_probe_3d(scn, args, out_green, NULL);
   }
 }
 
 res_T
 sdis_solve_probe_boundary
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_boundary_2d(scn, nrealisations, iprim, uv, time_range,
-      side, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_probe_boundary_2d(scn, args, NULL, out_estimator);
   } else {
-    return solve_probe_boundary_3d(scn, nrealisations, iprim, uv, time_range,
-      side, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_probe_boundary_3d(scn, args, NULL, out_estimator);
   }
 }
 
 res_T
 sdis_solve_probe_boundary_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_green_function** green)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_boundary_2d(scn, nrealisations, iprim, uv, NULL,
-      side, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green, NULL);
+    return solve_probe_boundary_2d(scn, args, green, NULL);
   } else {
-    return solve_probe_boundary_3d(scn, nrealisations, iprim, uv, NULL,
-      side, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green, NULL);
+    return solve_probe_boundary_3d(scn, args, green, NULL);
   }
 }
 
 res_T
 sdis_solve_boundary
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const enum sdis_side sides[], /* Per primitive side to consider */
-   const size_t nprimitives, /* #primitives */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_boundary_args* args,
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_boundary_2d(scn, nrealisations, primitives, sides, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_boundary_2d(scn, args, NULL, out_estimator);
   } else {
-    return solve_boundary_3d(scn, nrealisations, primitives, sides, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, register_paths, NULL, out_estimator);
+    return solve_boundary_3d(scn, args, NULL, out_estimator);
   }
 }
 
 res_T
 sdis_solve_boundary_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const enum sdis_side sides[], /* Per primitive side to consider */
-   const size_t nprimitives, /* #primitives */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_boundary_args* args,
    struct sdis_green_function** green)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_boundary_2d(scn, nrealisations, primitives, sides,
-      nprimitives, NULL, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green,
-      NULL);
+    return solve_boundary_2d(scn, args, green, NULL);
   } else {
-    return solve_boundary_3d(scn, nrealisations, primitives, sides,
-      nprimitives, NULL, fp_to_meter, Tarad, Tref, SDIS_HEAT_PATH_NONE, green,
-      NULL);
+    return solve_boundary_3d(scn, args, green, NULL);
   }
 }
 
 res_T
 sdis_solve_probe_boundary_flux
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_probe_boundary_flux_args* args,
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_boundary_flux_2d(scn, nrealisations, iprim, uv,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+    return solve_probe_boundary_flux_2d(scn, args, out_estimator);
   } else {
-    return solve_probe_boundary_flux_3d(scn, nrealisations, iprim, uv,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+    return solve_probe_boundary_flux_3d(scn, args, out_estimator);
   }
 }
 
 res_T
 sdis_solve_boundary_flux
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const size_t nprimitives, /* #primitives */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_boundary_flux_args* args,
    struct sdis_estimator** out_estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_boundary_flux_2d(scn, nrealisations, primitives, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+    return solve_boundary_flux_2d(scn, args, out_estimator);
   } else {
-    return solve_boundary_flux_3d(scn, nrealisations, primitives, nprimitives,
-      time_range, fp_to_meter, Tarad, Tref, out_estimator);
+    return solve_boundary_flux_3d(scn, args, out_estimator);
   }
 }
 
 res_T
 sdis_solve_camera
   (struct sdis_scene* scn,
-   const struct sdis_camera* cam,
-   const double time_range[2],
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const size_t width, /* #pixels in X */
-   const size_t height, /* #pixels in Y */
-   const size_t spp, /* #samples per pixel */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_camera_args* args,
    struct sdis_estimator_buffer** out_buf)
 {
   #define TILE_SIZE 32 /* definition in X & Y of a tile */
@@ -431,28 +358,36 @@ sdis_solve_camera
   ATOMIC nsolved_tiles = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !cam || fp_to_meter <= 0 || Tref < 0 || !width || !height || !spp
-  || !out_buf) {
+  if(!scn
+  || !args
+  || !out_buf
+  || !args->cam
+  || args->fp_to_meter <= 0
+  || !args->image_resolution[0]
+  || !args->image_resolution[1]
+  || !args->spp
+  || args->ambient_radiative_temperature < 0
+  || args->reference_temperature < 0
+  || args->time_range[0] < 0
+  || args->time_range[1] < args->time_range[0]
+  || (  args->time_range[1] > DBL_MAX
+     && args->time_range[0] != args->time_range[1])) {
     res = RES_BAD_ARG;
     goto error;
   }
+
   if(scene_is_2d(scn)) {
     log_err(scn->dev, "%s: 2D scene are not supported.\n", FUNC_NAME);
     goto error;
   }
-  if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-  || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, cam->position, NULL, &medium);
+  res = scene_get_medium(scn, args->cam->position, NULL, &medium);
   if(res != RES_OK) goto error;
 
   if(medium->type != SDIS_FLUID) {
     log_err(scn->dev, "%s: the camera position `%g %g %g' is not in a fluid.\n",
-      FUNC_NAME, SPLIT3(cam->position));
+      FUNC_NAME, SPLIT3(args->cam->position));
     res = RES_BAD_ARG;
     goto error;
   }
@@ -474,16 +409,17 @@ sdis_solve_camera
     if(res != RES_OK) goto error;
   }
 
-  ntiles_x = (width  + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
-  ntiles_y = (height + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
+  ntiles_x = (args->image_resolution[0] + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
+  ntiles_y = (args->image_resolution[1] + (TILE_SIZE-1)/*ceil*/)/TILE_SIZE;
   ntiles = round_up_pow2(MMAX(ntiles_x, ntiles_y));
   ntiles *= ntiles;
 
-  pix_sz[0] = 1.0 / (double)width;
-  pix_sz[1] = 1.0 / (double)height;
+  pix_sz[0] = 1.0 / (double)args->image_resolution[0];
+  pix_sz[1] = 1.0 / (double)args->image_resolution[1];
 
   /* Create the global estimator */
-  res = estimator_buffer_create(scn->dev, width, height, &buf);
+  res = estimator_buffer_create
+    (scn->dev, args->image_resolution[0], args->image_resolution[1], &buf);
   if(res != RES_OK) goto error;
 
   omp_set_num_threads((int)scn->dev->nthreads);
@@ -507,12 +443,14 @@ sdis_solve_camera
     /* Setup the tile coordinates in the image plane */
     tile_org[0] *= TILE_SIZE;
     tile_org[1] *= TILE_SIZE;
-    tile_sz[0] = MMIN(TILE_SIZE, width - tile_org[0]);
-    tile_sz[1] = MMIN(TILE_SIZE, height - tile_org[1]);
+    tile_sz[0] = MMIN(TILE_SIZE, args->image_resolution[0] - tile_org[0]);
+    tile_sz[1] = MMIN(TILE_SIZE, args->image_resolution[1] - tile_org[1]);
 
     /* Draw the tile */
-    res_local = solve_tile(scn, rng, medium, cam, time_range, fp_to_meter,
-      Tarad, Tref, tile_org, tile_sz, spp, register_paths, pix_sz, buf);
+    res_local = solve_tile(scn, rng, medium, args->cam, args->time_range,
+      args->fp_to_meter, args->ambient_radiative_temperature,
+      args->reference_temperature, tile_org, tile_sz, args->spp,
+      args->register_paths, pix_sz, buf);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;
@@ -536,8 +474,8 @@ sdis_solve_camera
   acc_temp = ACCUM_NULL;
   acc_time = ACCUM_NULL;
   nsuccesses = 0;
-  FOR_EACH(iy, 0, height) {
-    FOR_EACH(ix, 0, width) {
+  FOR_EACH(iy, 0, args->image_resolution[1]) {
+    FOR_EACH(ix, 0, args->image_resolution[0]) {
       const struct sdis_estimator* estimator;
       SDIS(estimator_buffer_at(buf, ix, iy, &estimator));
       acc_temp.sum += estimator->temperature.sum;
@@ -550,12 +488,14 @@ sdis_solve_camera
     }
   }
 
-  nrealisations = width*height*spp;
+  nrealisations = args->image_resolution[0]*args->image_resolution[1]*args->spp;
   ASSERT(acc_temp.count == acc_time.count);
   ASSERT(acc_temp.count == nsuccesses);
   estimator_buffer_setup_realisations_count(buf, nrealisations, nsuccesses);
   estimator_buffer_setup_temperature(buf, acc_temp.sum, acc_temp.sum2);
   estimator_buffer_setup_realisation_time(buf, acc_time.sum, acc_time.sum2);
+  res = estimator_buffer_save_rng_state(buf, rng_proxy);
+  if(res != RES_OK) goto error;
 
 exit:
   if(rngs) {
@@ -568,48 +508,35 @@ exit:
   if(out_buf) *out_buf = buf;
   return (res_T)res;
 error:
+  if(buf) SDIS(estimator_buffer_ref_put(buf));
   goto exit;
 }
 
 res_T
 sdis_solve_medium
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_medium_args* args,
    struct sdis_estimator** estimator)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_medium_2d(scn, nrealisations, medium, time_range, fp_to_meter,
-      Tarad, Tref, register_paths, NULL, estimator);
+    return solve_medium_2d(scn, args, NULL, estimator);
   } else {
-    return solve_medium_3d(scn, nrealisations, medium, time_range, fp_to_meter,
-      Tarad, Tref, register_paths, NULL, estimator);
+    return solve_medium_3d(scn, args, NULL, estimator);
   }
 }
 
 res_T
 sdis_solve_medium_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_medium_args* args,
    struct sdis_green_function** green)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_medium_2d(scn, nrealisations, medium, NULL, fp_to_meter, Tarad,
-      Tref, SDIS_HEAT_PATH_NONE, green, NULL);
+    return solve_medium_2d(scn, args, green, NULL);
   } else {
-    return solve_medium_3d(scn, nrealisations, medium, NULL, fp_to_meter, Tarad,
-      Tref, SDIS_HEAT_PATH_NONE, green, NULL);
+    return solve_medium_3d(scn, args, green, NULL);
   }
 }
 

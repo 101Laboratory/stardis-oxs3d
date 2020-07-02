@@ -49,6 +49,7 @@ struct logger;
 struct mem_allocator;
 struct senc2d_scene;
 struct senc3d_scene;
+struct ssp_rng;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
  * ref counted. Once created the caller implicitly owns the created data, i.e.
@@ -69,47 +70,18 @@ struct sdis_scene;
 /* Forward declaration of non ref counted types */
 struct sdis_heat_path;
 
+/*******************************************************************************
+ * Miscellaneous data types
+ ******************************************************************************/
 enum sdis_side {
   SDIS_FRONT,
   SDIS_BACK,
   SDIS_SIDE_NULL__
 };
 
-enum sdis_medium_type {
-  SDIS_FLUID,
-  SDIS_SOLID,
-  SDIS_MEDIUM_TYPES_COUNT__
-};
-
-enum sdis_estimator_type {
-  SDIS_ESTIMATOR_TEMPERATURE,
-  SDIS_ESTIMATOR_FLUX,
-  SDIS_ESTIMATOR_TYPES_COUNT__
-};
-
 enum sdis_scene_dimension {
   SDIS_SCENE_2D,
   SDIS_SCENE_3D
-};
-
-enum sdis_point_type {
-  SDIS_FRAGMENT,
-  SDIS_VERTEX,
-  SDIS_POINT_TYPES_COUNT__,
-  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
-};
-
-enum sdis_heat_vertex_type {
-  SDIS_HEAT_VERTEX_CONDUCTION,
-  SDIS_HEAT_VERTEX_CONVECTION,
-  SDIS_HEAT_VERTEX_RADIATIVE
-};
-
-enum sdis_heat_path_flag {
-  SDIS_HEAT_PATH_SUCCESS = BIT(0),
-  SDIS_HEAT_PATH_FAILURE = BIT(1),
-  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCESS | SDIS_HEAT_PATH_FAILURE,
-  SDIS_HEAT_PATH_NONE = 0
 };
 
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
@@ -137,6 +109,15 @@ struct sdis_interface_fragment {
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
+/*******************************************************************************
+ * Estimation data types
+ ******************************************************************************/
+enum sdis_estimator_type {
+  SDIS_ESTIMATOR_TEMPERATURE,
+  SDIS_ESTIMATOR_FLUX,
+  SDIS_ESTIMATOR_TYPES_COUNT__
+};
+
 /* Monte-Carlo estimation */
 struct sdis_mc {
   double E; /* Expected value */
@@ -145,6 +126,15 @@ struct sdis_mc {
 };
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
+
+/*******************************************************************************
+ * Data type used to describe physical properties
+ ******************************************************************************/
+enum sdis_medium_type {
+  SDIS_FLUID,
+  SDIS_SOLID,
+  SDIS_MEDIUM_TYPES_COUNT__
+};
 
 /* Functor type used to retrieve the spatio temporal physical properties of a
  * medium. */
@@ -236,6 +226,22 @@ struct sdis_interface_shader {
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
+/*******************************************************************************
+ * Registered heat path data types
+ ******************************************************************************/
+enum sdis_heat_vertex_type {
+  SDIS_HEAT_VERTEX_CONDUCTION,
+  SDIS_HEAT_VERTEX_CONVECTION,
+  SDIS_HEAT_VERTEX_RADIATIVE
+};
+
+enum sdis_heat_path_flag {
+  SDIS_HEAT_PATH_SUCCESS = BIT(0),
+  SDIS_HEAT_PATH_FAILURE = BIT(1),
+  SDIS_HEAT_PATH_ALL = SDIS_HEAT_PATH_SUCCESS | SDIS_HEAT_PATH_FAILURE,
+  SDIS_HEAT_PATH_NONE = 0
+};
+
 /* Vertex of heat path v*/
 struct sdis_heat_vertex {
   double P[3];
@@ -247,6 +253,28 @@ struct sdis_heat_vertex {
 static const struct sdis_heat_vertex SDIS_HEAT_VERTEX_NULL =
   SDIS_HEAT_VERTEX_NULL__;
 
+/* Functor used to process a heat path registered against the estimator */
+typedef res_T
+(*sdis_process_heat_path_T)
+  (const struct sdis_heat_path* path,
+   void* context);
+
+/* Functor used to process the vertices of a heat path */
+typedef res_T
+(*sdis_process_heat_vertex_T)
+  (const struct sdis_heat_vertex* vertex,
+   void* context);
+
+/*******************************************************************************
+ * Green function data types
+ ******************************************************************************/
+enum sdis_point_type {
+  SDIS_FRAGMENT,
+  SDIS_VERTEX,
+  SDIS_POINT_TYPES_COUNT__,
+  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
+};
+
 /* Path used to estimate the green function */
 struct sdis_green_path {
   /* Internal data. Should not be accessed */
@@ -257,16 +285,17 @@ struct sdis_green_path {
 static const struct sdis_green_path SDIS_GREEN_PATH_NULL =
   SDIS_GREEN_PATH_NULL__;
 
+/* Spatio temporal point */
 struct sdis_point {
   union {
     struct {
       struct sdis_medium* medium;
       struct sdis_rwalk_vertex vertex;
-    } mdmvert;
+    } mdmvert; /* Medium and a vertex into it */
     struct {
       struct sdis_interface* intface;
       struct sdis_interface_fragment fragment;
-    } itfrag;
+    } itfrag; /* Interface and a fragmetn onto it */
   } data;
   enum sdis_point_type type;
 };
@@ -296,17 +325,181 @@ typedef res_T
    const double flux_term,
    void* context);
 
-/* Functor used to process a heat path registered against the estimator */
-typedef res_T
-(*sdis_process_heat_path_T)
-  (const struct sdis_heat_path* path,
-   void* context);
+/*******************************************************************************
+ * Data types of the input simulation parameters
+ ******************************************************************************/
+struct sdis_solve_probe_args {
+  size_t nrealisations; /* #realisations */
+  double position[3]; /* Probe position */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_PROBE_ARGS_DEFAULT__ {                                      \
+  10000, /* #realisations */                                                   \
+  {0,0,0}, /* Position  */                                                     \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1.0, /* FP to meter */                                                       \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
 
-/* Functor used to process the vertices of a heat path */
-typedef res_T
-(*sdis_process_heat_vertex_T)
-  (const struct sdis_heat_vertex* vertex,
-   void* context);
+/* Arguments of a probe simulation */
+struct sdis_solve_probe_boundary_args {
+  size_t nrealisations; /* #realisations */
+  size_t iprim; /* Identifier of the primitive on which the probe lies */
+  double uv[2]; /* Parametric coordinates of the probe onto the primitve */
+  double time_range[2]; /* Observation time */
+  enum sdis_side side; /* Side of iprim on which the probe lies */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__ {                             \
+  10000, /* #realisations */                                                   \
+  0, /* Primitive identifier */                                                \
+  {0,0}, /* UV */                                                              \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  SDIS_SIDE_NULL__,                                                            \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  SDIS_HEAT_PATH_NONE,                                                         \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_probe_boundary_args
+SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__;
+
+struct sdis_solve_boundary_args {
+  size_t nrealisations; /* #realisations */
+  const size_t* primitives; /* List of boundary primitives to handle */
+  const enum sdis_side* sides; /* Per primitive side to consider */
+  size_t nprimitives; /* #primitives */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__ {                                   \
+  10000, /* #realisations */                                                   \
+  NULL, /* List or primitive ids */                                            \
+  NULL, /* Per primitive side */                                               \
+  0, /* #primitives */                                                         \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  SDIS_HEAT_PATH_NONE,                                                         \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
+  SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__;
+
+struct sdis_solve_medium_args {
+  size_t nrealisations; /* #realisations */
+  struct sdis_medium* medium; /* Medium to solve */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__ {                                     \
+  10000, /* #realisations */                                                   \
+  NULL, /* Medium */                                                           \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  SDIS_HEAT_PATH_NONE,                                                         \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
+  SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__;
+
+struct sdis_solve_probe_boundary_flux_args {
+  size_t nrealisations; /* #realisations */
+  size_t iprim; /* Identifier of the primitive on which the probe lies */
+  double uv[2]; /* Parametric coordinates of the probe onto the primitve */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
+  10000, /* #realisations */                                                   \
+  0, /* Primitive identifier */                                                \
+  {0,0}, /* UV */                                                              \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_probe_boundary_flux_args
+SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__;
+
+struct sdis_solve_boundary_flux_args {
+  size_t nrealisations; /* #realisations */
+  const size_t* primitives; /* List of boundary primitives to handle */
+  size_t nprimitives; /* #primitives */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                              \
+  10000, /* #realisations */                                                   \
+  NULL, /* List or primitive ids */                                            \
+  0, /* #primitives */                                                         \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_solve_boundary_flux_args
+SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
+  SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__;
+
+struct sdis_solve_camera_args {
+  struct sdis_camera* cam; /* Point of view */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature; /* In Kelvin */
+  size_t image_resolution[2]; /* Image resolution */
+  size_t spp; /* #samples per pixel */
+  int register_paths; /* Combination of enum sdis_heat_path_flag */
+};
+#define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
+  NULL, /* Camera */                                                           \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  -1, /* Ambient radiative temperature */                                      \
+  -1, /* Reference temperature */                                              \
+  {512,512}, /* Image resolution */                                            \
+  256, /* #realisations per pixel */                                           \
+  SDIS_HEAT_PATH_NONE                                                          \
+}
+static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
+  SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
 
 BEGIN_DECLS
 
@@ -394,7 +587,7 @@ sdis_camera_look_at
    const double up[3]);
 
 /*******************************************************************************
- * An estimator buffer is 2D array of estimators 
+ * An estimator buffer is 2D array of estimators
 ******************************************************************************/
 SDIS_API res_T
 sdis_estimator_buffer_ref_get
@@ -435,6 +628,11 @@ SDIS_API res_T
 sdis_estimator_buffer_get_realisation_time
   (const struct sdis_estimator_buffer* buf,
    struct sdis_mc* time);
+
+SDIS_API res_T
+sdis_estimator_buffer_get_rng_state
+  (const struct sdis_estimator_buffer* buf,
+   struct ssp_rng** rng_state);
 
 /*******************************************************************************
  * A medium encapsulates the properties of either a fluid or a solid.
@@ -730,6 +928,14 @@ sdis_estimator_for_each_path
    sdis_process_heat_path_T func,
    void* context);
 
+/* Retrieve the RNG state at the end of the simulation. */
+SDIS_API res_T
+sdis_estimator_get_rng_state
+  (const struct sdis_estimator* estimator,
+   /* The returned value may be NULL as for instance an estimator retrieved
+    * from an estimator buffer */
+   struct ssp_rng** rng_state);
+
 /*******************************************************************************
  * The green function saves the estimation of the propagator
  ******************************************************************************/
@@ -838,91 +1044,43 @@ sdis_heat_path_for_each_vertex
 SDIS_API res_T
 sdis_solve_probe
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const double position[3], /* Probe position */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
 sdis_solve_probe_boundary
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
 sdis_solve_boundary
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const enum sdis_side sides[], /* Per primitive side to consider */
-   const size_t nprimitives, /* #primitives */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_boundary_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
 sdis_solve_probe_boundary_flux
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_probe_boundary_flux_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
 sdis_solve_boundary_flux
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const size_t nprimitives, /* #primitives */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_boundary_flux_args* args,
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
 sdis_solve_camera
   (struct sdis_scene* scn,
-   const struct sdis_camera* cam, /* Point of view */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const size_t width, /* Image definition in in X */
-   const size_t height, /* Image definition in Y */
-   const size_t spp, /* #samples per pixel */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_camera_args* args,
    struct sdis_estimator_buffer** buf);
 
 SDIS_API res_T
 sdis_solve_medium
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_medium_args* args,
    struct sdis_estimator** estimator);
 
 /*******************************************************************************
@@ -949,45 +1107,25 @@ sdis_solve_medium
 SDIS_API res_T
 sdis_solve_probe_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const double position[3], /* Probe position */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_probe_args* args,
    struct sdis_green_function** green);
 
 SDIS_API res_T
 sdis_solve_probe_boundary_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_green_function** green);
 
 SDIS_API res_T
 sdis_solve_boundary_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const enum sdis_side sides[], /* Per primitive side to consider */
-   const size_t nprimitives, /* #primitives */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_boundary_args* args,
    struct sdis_green_function** green);
 
 SDIS_API res_T
 sdis_solve_medium_green_function
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   struct sdis_medium* medium, /* Medium to solve */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double ambient_radiative_temperature, /* In Kelvin */
-   const double reference_temperature, /* In Kelvin */
+   const struct sdis_solve_medium_args* args,
    struct sdis_green_function** green);
 
 END_DECLS

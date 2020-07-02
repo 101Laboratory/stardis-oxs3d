@@ -16,7 +16,11 @@
 #include "sdis.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_log.h"
 
+#include <star/ssp.h>
+
+#include <rsys/cstr.h>
 #include <rsys/mutex.h>
 
 /*******************************************************************************
@@ -32,6 +36,7 @@ estimator_release(ref_T* ref)
   dev = estimator->dev;
   darray_heat_path_release(&estimator->paths);
   if(estimator->mutex) mutex_destroy(estimator->mutex);
+  if(estimator->rng) SSP(rng_ref_put(estimator->rng));
   MEM_RM(dev->allocator, estimator);
   SDIS(device_ref_put(dev));
 }
@@ -192,6 +197,16 @@ error:
   goto exit;
 }
 
+res_T
+sdis_estimator_get_rng_state
+  (const struct sdis_estimator* estimator,
+   struct ssp_rng** rng_state)
+{
+  if(!estimator || !rng_state) return RES_BAD_ARG;
+  *rng_state = estimator->rng;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
@@ -266,5 +281,19 @@ exit:
   return res;
 error:
   goto exit;
+}
+
+res_T
+estimator_save_rng_state
+  (struct sdis_estimator* estimator,
+   const struct ssp_rng_proxy* proxy)
+{
+  ASSERT(estimator && proxy);
+  /* Release the previous RNG state if any */
+  if(estimator->rng) {
+    SSP(rng_ref_put(estimator->rng));
+    estimator->rng = NULL;
+  }
+  return create_rng_from_rng_proxy(estimator->dev, proxy, &estimator->rng);
 }
 

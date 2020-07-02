@@ -159,10 +159,9 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
   struct sdis_interface* interfaces[4];
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct context ctx;
   struct interf* interface_param = NULL;
-  double pos[2];
-  double time_range[2];
   double ref;
   const size_t N = 10000;
   size_t nreals;
@@ -186,14 +185,14 @@ main(int argc, char** argv)
 
   /* Create the fluid/solid interface with no limit conidition */
   interface_shader.convection_coef = null_interface_value;
-  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL; 
-  interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL; 
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
+  interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
   OK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &Tnone));
 
   interface_shader.convection_coef = null_interface_value;
-  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL; 
-  interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL; 
+  interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
+  interface_shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
   interface_shader.front.temperature = interface_get_temperature;
 
   /* Create the fluid/solid interface with a fixed temperature of 300K */
@@ -238,20 +237,23 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(T350));
 
   /* Launch the solver */
-  pos[0] = 0.5;
-  pos[1] = 0.5;
-  time_range[0] = time_range[1] = INF;
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.0, -1, 0, 0, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.position[0] = 0.5;
+  solve_args.position[1] = 0.5;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
+
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-
   /* Print the estimation results */
-  ref = 350 * pos[0] + (1-pos[0]) * 300;
+  ref = 350 * solve_args.position[0] + (1-solve_args.position[0]) * 300;
   printf("Temperature at (%g, %g) = %g ~ %g +/- %g\n",
-    SPLIT2(pos), ref, T.E, T.SE);
+    SPLIT2(solve_args.position), ref, T.E, T.SE);
   printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -261,8 +263,8 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, T.SE*2));
 
   /* Check green function */
-  OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, -1, 0, &green));
-  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 

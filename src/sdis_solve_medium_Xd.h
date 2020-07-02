@@ -200,13 +200,7 @@ error:
 static res_T
 XD(solve_medium)
   (struct sdis_scene* scn,
-   const size_t nrealisations,
-   struct sdis_medium* mdm,
-   const double time_range[2],
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double Tarad, /* Ambient radiative temperature */
-   const double Tref, /* Reference temperature */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_medium_args* args,
    struct sdis_green_function** out_green, /* May be NULL <=> No green func */
    struct sdis_estimator** out_estimator) /* May be NULL <=> No estimator */
 {
@@ -218,15 +212,17 @@ XD(solve_medium)
   struct sdis_estimator* estimator = NULL;
   struct accum* acc_temps = NULL;
   struct accum* acc_times = NULL;
+  size_t nrealisations = 0;
   int64_t irealisation;
   int cumul_is_init = 0;
   size_t i;
   int progress = 0;
+  int register_paths = SDIS_HEAT_PATH_NONE;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !mdm || !nrealisations || nrealisations > INT64_MAX
-  || fp_to_meter <= 0 || Tref <  0) {
+  if(!scn || !args || !args->medium || !args->nrealisations
+  || args->nrealisations > INT64_MAX || args->fp_to_meter <= 0) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -235,8 +231,10 @@ XD(solve_medium)
     goto error;
   }
   if(out_estimator) {
-    if(!time_range || time_range[0] < 0 || time_range[0] > time_range[1]
-    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+    if(args->time_range[0] < 0
+    || args->time_range[0] > args->time_range[1]
+    || (  args->time_range[1] > DBL_MAX
+       && args->time_range[0] != args->time_range[1])) {
       res = RES_BAD_ARG;
       goto error;
     }
@@ -249,9 +247,15 @@ XD(solve_medium)
 #endif
 
   /* Create the proxy RNG */
-  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
-    scn->dev->nthreads, &rng_proxy);
-  if(res != RES_OK) goto error;
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
   /* Create the per thread RNG */
   rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
@@ -272,7 +276,7 @@ XD(solve_medium)
   /* Compute the enclosure cumulative */
   darray_enclosure_cumul_init(scn->dev->allocator, &cumul);
   cumul_is_init = 1;
-  res = compute_medium_enclosure_cumulative(scn, mdm, &cumul);
+  res = compute_medium_enclosure_cumulative(scn, args->medium, &cumul);
   if(res != RES_OK) goto error;
 
   if(out_green) {
@@ -291,6 +295,8 @@ XD(solve_medium)
     if(res != RES_OK) goto error;
   }
 
+  nrealisations = args->nrealisations;
+  register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
@@ -318,7 +324,7 @@ XD(solve_medium)
 
     if(!out_green) {
       /* Sample the time */
-      time = sample_time(rng, time_range);
+      time = sample_time(rng, args->time_range);
 
       /* Prepare path registration if necessary */
       if(register_paths) {
@@ -330,7 +336,10 @@ XD(solve_medium)
        * function. Simply takes 0 as relative time */
       time = 0;
       res_local = green_function_create_path(greens[ithread], &green_path);
-      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      if(res_local != RES_OK) {
+        ATOMIC_SET(&res, res_local);
+        goto error_it;
+      }
 
       pgreen_path = &green_path;
     }
@@ -342,16 +351,18 @@ XD(solve_medium)
     if(res_local != RES_OK) {
       log_err(scn->dev, "%s: could not sample a medium position.\n", FUNC_NAME);
       ATOMIC_SET(&res, res_local);
-      continue;
+      goto error_it;
     }
 
     /* Run a probe realisation */
-    res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng, mdm, pos,
-      time, fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &weight);
+    res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng,
+      args->medium, pos, time, args->fp_to_meter,
+      args->ambient_radiative_temperature, args->reference_temperature,
+      pgreen_path, pheat_path, &weight);
 
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
-      continue;
+      goto error_it;
     }
 
     /* Finalize the registered path */
@@ -363,10 +374,15 @@ XD(solve_medium)
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
         heat_path_release(pheat_path);
+        pheat_path = NULL;
       } else { /* Register the sampled path */
         res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
-        if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+        if(res_local != RES_OK) {
+          ATOMIC_SET(&res, res_local);
+          goto error_it;
+        }
       }
+      pheat_path = NULL;
     }
 
     /* Stop time registration */
@@ -387,6 +403,11 @@ XD(solve_medium)
       progress = pcent;
       log_info(scn->dev, "Solving medium temperature: %3d%%\r", progress);
     }
+  exit_it:
+    if(pheat_path) heat_path_release(pheat_path);
+    continue;
+  error_it:
+    goto exit_it;
   }
   if(res != RES_OK) goto error;
 
@@ -405,6 +426,8 @@ XD(solve_medium)
     estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
     estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
     estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+    res = estimator_save_rng_state(estimator, rng_proxy);
+    if(res != RES_OK) goto error;
   }
 
   if(out_green) {

@@ -54,5 +54,10 @@ estimator_buffer_setup_realisation_time
    const double sum,
    const double sum2);
 
+extern LOCAL_SYM res_T
+estimator_buffer_save_rng_state
+  (struct sdis_estimator_buffer* buf,
+   const struct ssp_rng_proxy* proxy);
+
 #endif /* SDIS_ESTIMATOR_BUFFER_C_H */
 

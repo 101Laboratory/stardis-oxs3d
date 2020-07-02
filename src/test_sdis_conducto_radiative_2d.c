@@ -394,26 +394,29 @@ main(int argc, char** argv)
     struct sdis_estimator* estimator;
     struct sdis_estimator* estimator2;
     struct sdis_green_function* green;
-    double pos[2];
-    double time_range[2] = { INF, INF };
+    struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
     double ref, u;
     size_t nreals = 0;
     size_t nfails = 0;
     const size_t N = 10000;
 
-    pos[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
-    pos[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
+    solve_args.nrealisations = N;
+    solve_args.position[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
+    solve_args.position[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
+    solve_args.time_range[0] = INF;
+    solve_args.time_range[1] = INF;
+    solve_args.reference_temperature = Tref;
 
-    OK(sdis_solve_probe(scn, 10000, pos, time_range, 1, -1, Tref, 0, &estimator));
+    OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-    u = (pos[0] + 1) / thickness;
+    u = (solve_args.position[0] + 1) / thickness;
     ref = u * Ts1 + (1-u) * Ts0;
     printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
-      SPLIT2(pos), ref, T.E, T.SE);
+      SPLIT2(solve_args.position), ref, T.E, T.SE);
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -422,8 +425,8 @@ main(int argc, char** argv)
     CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     /* Check green function */
-    OK(sdis_solve_probe_green_function(scn, 10000, pos, 1, -1, Tref, &green));
-    OK(sdis_green_function_solve(green, time_range, &estimator2));
+    OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+    OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
     check_green_function(green);
     check_estimator_eq(estimator, estimator2);
 
@@ -431,8 +434,10 @@ main(int argc, char** argv)
     OK(sdis_estimator_ref_put(estimator2));
     OK(sdis_green_function_ref_put(green));
 
-    OK(sdis_solve_probe
-      (scn, 10, pos, time_range, 1, -1, Tref, SDIS_HEAT_PATH_ALL, &estimator));
+    solve_args.nrealisations = 10;
+    solve_args.register_paths = SDIS_HEAT_PATH_ALL;
+
+    OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_ref_put(estimator));
 
     printf("\n");

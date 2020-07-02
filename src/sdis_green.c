@@ -179,7 +179,7 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
 #define HTABLE_DATA struct sdis_interface*
 #include <rsys/hash_table.h>
 
-/* Generate the hash table that maps and id to a medium */
+/* Generate the hash table that maps an id to a medium */
 #define HTABLE_NAME medium
 #define HTABLE_KEY unsigned
 #define HTABLE_DATA struct sdis_medium*

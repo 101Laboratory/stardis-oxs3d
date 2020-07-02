@@ -250,18 +250,22 @@ check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
 {
   struct sdis_estimator* estimator = NULL;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   size_t nreals;
   size_t nfails;
   double pos[2] = {0,0};
-  double time_range[2] = { INF, INF };
   size_t i;
+
+  solve_args.nrealisations = N;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
 
   FOR_EACH(i, 0, nrefs) {
     double Tc;
-    pos[0] = refs[i].pos[0];
-    pos[1] = refs[i].pos[1];
+    solve_args.position[0] = refs[i].pos[0];
+    solve_args.position[1] = refs[i].pos[1];
 
-    OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
+    OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
