@@ -25,6 +25,17 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.9.0
+
+- Update the API of the solve functions: the parameters of the simulation are
+  now grouped into a unique data structure rather than separately submitted as
+  function arguments. Thank to this structure and its default value, updating
+  input parameters should now affect marginally the calling code.
+- Improve the logger. Add a prefix to the printed text to indicate the type of
+  the message (info, error or warning). Add a progress message during
+  simulation.
+- Bump the version of the Star-Enclosures <2D|3D> dependencies to 0.5
+
 ### Version 0.8.2
 
 - Fix an issue when the `sdis_solve_boundary_flux` function was invoked on a
