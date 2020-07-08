@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2019 |Meso|Star>
+# Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,8 +32,8 @@ find_package(RCMake 0.4 REQUIRED)
 find_package(Star2D 0.3.1 REQUIRED)
 find_package(Star3D 0.6.2 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
-find_package(StarEnc2D 0.4.2 REQUIRED)
-find_package(StarEnc3D 0.4.2 REQUIRED)
+find_package(StarEnc2D 0.5 REQUIRED)
+find_package(StarEnc3D 0.5 REQUIRED)
 find_package(RSys 0.8.1 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
@@ -56,8 +56,8 @@ rcmake_append_runtime_dirs(_runtime_dirs
 # Configure and define targets
 ###############################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 8)
-set(VERSION_PATCH 2)
+set(VERSION_MINOR 9)
+set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC

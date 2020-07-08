@@ -25,6 +25,17 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.9.0
+
+- Update the API of the solve functions: the parameters of the simulation are
+  now grouped into a unique data structure rather than separately submitted as
+  function arguments. Thank to this structure and its default value, updating
+  input parameters should now affect marginally the calling code.
+- Improve the logger. Add a prefix to the printed text to indicate the type of
+  the message (info, error or warning). Add a progress message during
+  simulation.
+- Bump the version of the Star-Enclosures <2D|3D> dependencies to 0.5
+
 ### Version 0.8.2
 
 - Fix an issue when the `sdis_solve_boundary_flux` function was invoked on a
@@ -213,7 +224,7 @@ First version and implementation of the Stardis solver API.
 
 ## License
 
-Copyright (C) 2016-2019 |Meso|Star> (<contact@meso-star.com>). Stardis is free
+Copyright (C) 2016-2020 |Meso|Star> (<contact@meso-star.com>). Stardis is free
 software released under the GPLv3+ license: GNU GPL version 3 or later. You are
 welcome to redistribute it under certain conditions; refer to the COPYING files
 for details.
