@@ -224,7 +224,7 @@ First version and implementation of the Stardis solver API.
 
 ## License
 
-Copyright (C) 2016-2019 |Meso|Star> (<contact@meso-star.com>). Stardis is free
+Copyright (C) 2016-2020 |Meso|Star> (<contact@meso-star.com>). Stardis is free
 software released under the GPLv3+ license: GNU GPL version 3 or later. You are
 welcome to redistribute it under certain conditions; refer to the COPYING files
 for details.
