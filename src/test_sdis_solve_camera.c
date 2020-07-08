@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
  * emissivity of the cube is 1 and its convection coefficient with the
- * surrounding fluid is null. At the center of the cube there is a spherical
+ * surrounding fluid at 300K is 0.1. At the center of the cube there is a spherical
  * fluid cavity whose temperature is 350K. The convection coefficient between
  * the solid and the cavity is 1 and the emissivity of this interface is null.
  * The ambient radiative temperature of the system is 300K.
@@ -540,16 +540,18 @@ main(int argc, char** argv)
   struct sdis_interface* interf0 = NULL;
   struct sdis_interface* interf1 = NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
+  struct ssp_rng* rng_state = NULL;
   struct fluid fluid_param = FLUID_NULL;
   struct solid solid_param = SOLID_NULL;
   struct interf interface_param = INTERF_NULL;
+  struct fluid* pfluid_param = NULL;
   size_t ntris, npos;
   size_t nreals, nfails;
   size_t definition[2];
   double pos[3];
   double tgt[3];
   double up[3];
-  double trange[2] = {INF, INF};
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -562,7 +564,7 @@ main(int argc, char** argv)
   create_fluid(dev, &fluid_param, &fluid0);
 
   /* Create the fluid1 */
-  fluid_param.temperature = UNKOWN_TEMPERATURE;
+  fluid_param.temperature = 300;
   fluid_param.rho = 0;
   fluid_param.cp = 0;
   create_fluid(dev, &fluid_param, &fluid1);
@@ -583,16 +585,11 @@ main(int argc, char** argv)
   create_interface(dev, solid, fluid0, &interface_param, &interf0);
 
   /* Create the fluid1/solid interface */
-  interface_param.hc = 0;
+  interface_param.hc = 0.1;
   interface_param.epsilon = 1;
   interface_param.specular_fraction = 1;
   interface_param.temperature = UNKOWN_TEMPERATURE;
   create_interface(dev, fluid1, solid, &interface_param, &interf1);
-
-  /* Release the ownership onto the media */
-  OK(sdis_medium_ref_put(solid));
-  OK(sdis_medium_ref_put(fluid0));
-  OK(sdis_medium_ref_put(fluid1));
 
   /* Setup the cube geometry  */
   OK(s3dut_create_cuboid(&allocator, 2, 2, 2, &msh));
@@ -633,36 +630,40 @@ main(int argc, char** argv)
   dump_mesh(stdout, geom.positions, npos, geom.indices, ntris);
   exit(0);
 #endif
-  BA(sdis_solve_camera(NULL, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, NULL, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, cam, NULL, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, cam, trange, 0, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, -1, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, 0, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, 0,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    0, SDIS_HEAT_PATH_NONE, &buf));
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, NULL));
+  solve_args.cam = cam;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[0] = INF;
+  solve_args.image_resolution[0] = IMG_WIDTH;
+  solve_args.image_resolution[1] = IMG_HEIGHT;
+  solve_args.ambient_radiative_temperature = 300;
+  solve_args.reference_temperature = 300;
+  solve_args.spp = SPP;
 
-  trange[0] = -1;
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  trange[0] = 10; trange[1] = 1;
-  BA(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
-  trange[0] = trange[1] = INF;
+  BA(sdis_solve_camera(NULL, &solve_args, &buf));
+  BA(sdis_solve_camera(scn, NULL, &buf));
+  BA(sdis_solve_camera(scn, &solve_args, NULL));
+  solve_args.cam = NULL;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.cam = cam;
+  solve_args.fp_to_meter = 0;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.fp_to_meter = 1;
+  solve_args.ambient_radiative_temperature = -1;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.ambient_radiative_temperature = 300;
+  solve_args.reference_temperature = -1;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.reference_temperature = 300;
+  solve_args.time_range[0] = solve_args.time_range[1] = -1;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.time_range[0] = 1;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.time_range[1] = 0;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.time_range[0] = solve_args.time_range[1] = INF;
 
   /* Launch the simulation */
-  OK(sdis_solve_camera(scn, cam, trange, 1, 300, 300, IMG_WIDTH, IMG_HEIGHT,
-    SPP, SDIS_HEAT_PATH_NONE, &buf));
+  OK(sdis_solve_camera(scn, &solve_args, &buf));
 
   BA(sdis_estimator_buffer_get_realisation_count(NULL, &nreals));
   BA(sdis_estimator_buffer_get_realisation_count(buf, NULL));
@@ -680,6 +681,10 @@ main(int argc, char** argv)
   BA(sdis_estimator_buffer_get_realisation_time(buf, NULL));
   OK(sdis_estimator_buffer_get_realisation_time(buf, &time));
 
+  BA(sdis_estimator_buffer_get_rng_state(NULL, &rng_state));
+  BA(sdis_estimator_buffer_get_rng_state(buf, NULL));
+  OK(sdis_estimator_buffer_get_rng_state(buf, &rng_state));
+
   CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
 
   fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
@@ -695,9 +700,20 @@ main(int argc, char** argv)
 
   /* Write the image */
   dump_image(buf);
+  OK(sdis_estimator_buffer_ref_put(buf));
+
+  pfluid_param = sdis_data_get(sdis_medium_get_data(fluid1));
+  pfluid_param->temperature = UNKOWN_TEMPERATURE;
+
+  /* Check simulation error handling */
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  solve_args.register_paths = SDIS_HEAT_PATH_ALL;
+  BA(sdis_solve_camera(scn, &solve_args, &buf));
 
   /* Release memory */
-  OK(sdis_estimator_buffer_ref_put(buf));
+  OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(fluid0));
+  OK(sdis_medium_ref_put(fluid1));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_camera_ref_put(cam));
   OK(sdis_interface_ref_put(interf0));

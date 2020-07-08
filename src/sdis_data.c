@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 
 #include "sdis.h"
 #include "sdis_device_c.h"
+#include "sdis_log.h"
 
 #include <rsys/math.h>
 #include <rsys/mem_allocator.h>

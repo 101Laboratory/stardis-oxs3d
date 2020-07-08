@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,12 +62,11 @@ XD(boundary_get_position)(const unsigned ivert, float pos[DIM], void* context)
   iprim = (unsigned)ctx->primitives[iprim_id];
   SXD(scene_view_get_primitive(ctx->view, iprim, &prim));
 #if DIM == 2
-  s2d_segment_get_vertex_attrib(&prim, iprim_vert, S2D_POSITION, &attr);
-  ASSERT(attr.type == S2D_FLOAT2);
+  s2d_segment_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr);
 #else
-  s3d_triangle_get_vertex_attrib(&prim, iprim_vert, S3D_POSITION, &attr);
-  ASSERT(attr.type == S3D_FLOAT3);
+  s3d_triangle_get_vertex_attrib(&prim, iprim_vert, SXD_POSITION, &attr);
 #endif
+  ASSERT(attr.type == SXD_FLOATX);
   fX(set)(pos, attr.value);
 }
 
@@ -77,15 +76,7 @@ XD(boundary_get_position)(const unsigned ivert, float pos[DIM], void* context)
 static res_T
 XD(solve_boundary)
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const enum sdis_side sides[], /* Per primitive side to consider */
-   const size_t nprimitives, /* #primitives */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_boundary_args* args,
    struct sdis_green_function** out_green,
    struct sdis_estimator** out_estimator)
 {
@@ -101,13 +92,18 @@ XD(solve_boundary)
   struct ssp_rng** rngs = NULL;
   struct accum* acc_temps = NULL;
   struct accum* acc_times = NULL;
+  size_t nrealisations = 0;
+  int64_t irealisation = 0;
   size_t i;
   size_t view_nprims;
-  int64_t irealisation;
+  int progress = 0;
+  int register_paths = SDIS_HEAT_PATH_NONE;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
-  || !sides || !nprimitives || fp_to_meter <= 0 || Tref < 0) {
+  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
+  || !args->primitives || !args->sides || !args->nprimitives
+  || args->fp_to_meter <= 0) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -116,8 +112,10 @@ XD(solve_boundary)
     goto error;
   }
   if(out_estimator) {
-    if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+    if(args->time_range[0] < 0
+    || args->time_range[1] < args->time_range[0]
+    || (  args->time_range[1] > DBL_MAX
+       && args->time_range[0] != args->time_range[1])) {
       res = RES_BAD_ARG;
       goto error;
     }
@@ -130,13 +128,20 @@ XD(solve_boundary)
 #endif
 
   SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
-  FOR_EACH(i, 0, nprimitives) {
-    if(primitives[i] >= view_nprims) {
+  FOR_EACH(i, 0, args->nprimitives) {
+    if(args->primitives[i] >= view_nprims) {
       log_err(scn->dev,
         "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
         FUNC_NAME,
-        (unsigned long)primitives[i],
+        (unsigned long)args->primitives[i],
         (unsigned long)scene_get_primitives_count(scn)-1);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+    if((unsigned)args->sides[i] >= SDIS_SIDE_NULL__) {
+      log_err(scn->dev,
+        "%s: invalid side for the primitive `%lu'.\n",
+        FUNC_NAME, (unsigned long)args->primitives[i]);
       res = RES_BAD_ARG;
       goto error;
     }
@@ -144,31 +149,33 @@ XD(solve_boundary)
 
   /* Create the Star-XD shape of the boundary */
 #if SDIS_XD_DIMENSION == 2
-  res = s2d_shape_create_line_segments(scn->dev->sXd_dev, &shape);
+  res = s2d_shape_create_line_segments(scn->dev->sXd(dev), &shape);
 #else
-  res = s3d_shape_create_mesh(scn->dev->sXd_dev, &shape);
+  res = s3d_shape_create_mesh(scn->dev->sXd(dev), &shape);
 #endif
   if(res != RES_OK) goto error;
 
   /* Initialise the boundary shape with the triangles/segments of the
    * submitted primitives  */
-  ctx.primitives = primitives;
+  ctx.primitives = args->primitives;
   ctx.view = scn->sXd(view);
   vdata.usage = SXD_POSITION;
   vdata.get = XD(boundary_get_position);
 #if SDIS_XD_DIMENSION == 2
   vdata.type = S2D_FLOAT2;
-  res = s2d_line_segments_setup_indexed_vertices(shape, (unsigned)nprimitives,
-    boundary_get_indices_2d, (unsigned)(nprimitives*2), &vdata, 1, &ctx);
+  res = s2d_line_segments_setup_indexed_vertices(shape,
+    (unsigned)args->nprimitives, boundary_get_indices_2d,
+    (unsigned)(args->nprimitives*2), &vdata, 1, &ctx);
 #else
   vdata.type = S3D_FLOAT3;
-  res = s3d_mesh_setup_indexed_vertices(shape, (unsigned)nprimitives,
-    boundary_get_indices_3d, (unsigned)(nprimitives*3), &vdata, 1, &ctx);
+  res = s3d_mesh_setup_indexed_vertices(shape,
+    (unsigned)args->nprimitives, boundary_get_indices_3d,
+    (unsigned)(args->nprimitives*3), &vdata, 1, &ctx);
 #endif
   if(res != RES_OK) goto error;
 
   /* Create and setup the boundary Star-XD scene */
-  res = sXd(scene_create)(scn->dev->sXd_dev, &scene);
+  res = sXd(scene_create)(scn->dev->sXd(dev), &scene);
   if(res != RES_OK) goto error;
   res = sXd(scene_attach_shape)(scene, shape);
   if(res != RES_OK) goto error;
@@ -176,9 +183,15 @@ XD(solve_boundary)
   if(res != RES_OK) goto error;
 
   /* Create the proxy RNG */
-  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
-    scn->dev->nthreads, &rng_proxy);
-  if(res != RES_OK) goto error;
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
   /* Create the per thread RNG */
   rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
@@ -212,6 +225,8 @@ XD(solve_boundary)
     if(res != RES_OK) goto error;
   }
 
+  nrealisations = args->nrealisations;
+  register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation=0; irealisation<(int64_t)nrealisations; ++irealisation) {
@@ -231,6 +246,8 @@ XD(solve_boundary)
     double uv[DIM-1];
     float st[DIM-1];
     double time;
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
 
@@ -240,7 +257,7 @@ XD(solve_boundary)
     time_current(&t0);
 
     if(!out_green) {
-      time = sample_time(rng, time_range);
+      time = sample_time(rng, args->time_range);
       if(register_paths) {
         heat_path_init(scn->dev->allocator, &heat_path);
         pheat_path = &heat_path;
@@ -250,7 +267,10 @@ XD(solve_boundary)
        * function. Simply takes 0 as relative time */
       time = 0;
       res_local = green_function_create_path(greens[ithread], &green_path);
-      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      if(res_local != RES_OK) {
+        ATOMIC_SET(&res, res_local);
+        goto error_it;
+      }
       pgreen_path = &green_path;
     }
 
@@ -271,35 +291,44 @@ XD(solve_boundary)
        &prim, st);
     d2_set_f2(uv, st);
 #endif
-    if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+    if(res_local != RES_OK) {
+      ATOMIC_SET(&res, res_local);
+      goto error_it;
+    }
 
     /* Map from boundary scene to sdis scene */
-    ASSERT(prim.prim_id < nprimitives);
-    iprim = primitives[prim.prim_id];
-    side = sides[prim.prim_id];
+    ASSERT(prim.prim_id < args->nprimitives);
+    iprim = args->primitives[prim.prim_id];
+    side = args->sides[prim.prim_id];
 
     /* Invoke the boundary realisation */
     res_simul = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
-      fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
+      args->fp_to_meter, args->ambient_radiative_temperature,
+      args->reference_temperature, pgreen_path, pheat_path, &w);
 
     /* Fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
-      continue;
+      goto error_it;
     }
 
     /* Register heat path */
     if(pheat_path) {
       pheat_path->status = res_simul == RES_OK
-        ? SDIS_HEAT_PATH_SUCCEED
-        : SDIS_HEAT_PATH_FAILED;
+        ? SDIS_HEAT_PATH_SUCCESS
+        : SDIS_HEAT_PATH_FAILURE;
 
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
         heat_path_release(pheat_path);
+        pheat_path = NULL;
       } else { /* Register the sampled path */
         res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
-        if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+        if(res_local != RES_OK) {
+          ATOMIC_SET(&res, res_local);
+          goto error_it;
+        }
+        pheat_path = NULL;
       }
     }
 
@@ -312,7 +341,25 @@ XD(solve_boundary)
       acc_temp->sum += w;    acc_temp->sum2 += w*w;       ++acc_temp->count;
       acc_time->sum += usec; acc_time->sum2 += usec*usec; ++acc_time->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev, "Solving boundary temperature: %3d%%\r", progress);
+    }
+  exit_it:
+    if(pheat_path) heat_path_release(pheat_path);
+    continue;
+  error_it:
+    goto exit_it;
   }
+  if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev, "Solving boundary temperature: %3d%%\n", progress);
 
   /* Setup the estimated temperature */
   if(out_estimator) {
@@ -326,6 +373,8 @@ XD(solve_boundary)
     estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
     estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
     estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+    res = estimator_save_rng_state(estimator, rng_proxy);
+    if(res != RES_OK) goto error;
   }
 
   /* Setup the green function */
@@ -381,13 +430,7 @@ error:
 static res_T
 XD(solve_boundary_flux)
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t primitives[], /* List of boundary primitives to handle */
-   const size_t nprimitives, /* #primitives */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_boundary_flux_args* args,
    struct sdis_estimator** out_estimator)
 {
   struct XD(boundary_context) ctx = XD(BOUNDARY_CONTEXT_NULL);
@@ -403,15 +446,24 @@ XD(solve_boundary_flux)
   struct accum* acc_fl = NULL; /* Per thread flux accumulator */
   struct accum* acc_fc = NULL; /* Per thread convective flux accumulator */
   struct accum* acc_fr = NULL; /* Per thread radiative flux accumulator */
+  size_t nrealisations = 0;
+  int64_t irealisation;
   size_t i;
   size_t view_nprims;
-  int64_t irealisation;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !primitives
-  || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-  || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
-  || !nprimitives || fp_to_meter < 0 || Tref < 0
+  if(!scn
+  || !args
+  || !args->nrealisations
+  || args->nrealisations > INT64_MAX
+  || !args->primitives
+  || args->time_range[0] < 0
+  || args->time_range[1] < args->time_range[0]
+  || (args->time_range[1] > DBL_MAX && args->time_range[0] != args->time_range[1])
+  || !args->nprimitives
+  || args->fp_to_meter < 0
   || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
@@ -424,12 +476,12 @@ XD(solve_boundary_flux)
 #endif
 
   SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
-  FOR_EACH(i, 0, nprimitives) {
-    if(primitives[i] >= view_nprims) {
+  FOR_EACH(i, 0, args->nprimitives) {
+    if(args->primitives[i] >= view_nprims) {
       log_err(scn->dev,
         "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
         FUNC_NAME,
-        (unsigned long)primitives[i],
+        (unsigned long)args->primitives[i],
         (unsigned long)scene_get_primitives_count(scn)-1);
       res = RES_BAD_ARG;
       goto error;
@@ -438,32 +490,33 @@ XD(solve_boundary_flux)
 
   /* Create the Star-XD shape of the boundary */
 #if SDIS_XD_DIMENSION == 2
-  res = s2d_shape_create_line_segments(scn->dev->s2d, &shape);
+  res = s2d_shape_create_line_segments(scn->dev->sXd(dev), &shape);
 #else
-  res = s3d_shape_create_mesh(scn->dev->s3d, &shape);
+  res = s3d_shape_create_mesh(scn->dev->sXd(dev), &shape);
 #endif
   if(res != RES_OK) goto error;
 
   /* Initialise the boundary shape with the triangles/segments of the
    * submitted primitives  */
-  ctx.primitives = primitives;
+  ctx.primitives = args->primitives;
   ctx.view = scn->sXd(view);
   vdata.get = XD(boundary_get_position);
 #if SDIS_XD_DIMENSION == 2
   vdata.usage = S2D_POSITION;
   vdata.type = S2D_FLOAT2;
-  res = s2d_line_segments_setup_indexed_vertices(shape, (unsigned)nprimitives,
-    XD(boundary_get_indices), (unsigned)(nprimitives*2), &vdata, 1, &ctx);
+  res = s2d_line_segments_setup_indexed_vertices(shape,
+    (unsigned)args->nprimitives, XD(boundary_get_indices),
+    (unsigned)(args->nprimitives*2), &vdata, 1, &ctx);
 #else /* DIM == 3 */
   vdata.usage = S3D_POSITION;
   vdata.type = S3D_FLOAT3;
-  res = s3d_mesh_setup_indexed_vertices(shape, (unsigned)nprimitives,
-    XD(boundary_get_indices), (unsigned)(nprimitives*3), &vdata, 1, &ctx);
+  res = s3d_mesh_setup_indexed_vertices(shape, (unsigned)args->nprimitives,
+    XD(boundary_get_indices), (unsigned)(args->nprimitives*3), &vdata, 1, &ctx);
 #endif
   if(res != RES_OK) goto error;
 
   /* Create and setup the boundary Star-XD scene */
-  res = sXd(scene_create)(scn->dev->sXd_dev, &scene);
+  res = sXd(scene_create)(scn->dev->sXd(dev), &scene);
   if(res != RES_OK) goto error;
   res = sXd(scene_attach_shape)(scene, shape);
   if(res != RES_OK) goto error;
@@ -471,9 +524,15 @@ XD(solve_boundary_flux)
   if(res != RES_OK) goto error;
 
   /* Create the proxy RNG */
-  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
-    scn->dev->nthreads, &rng_proxy);
-  if(res != RES_OK) goto error;
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
   /* Create the per thread RNG */
   rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
@@ -499,6 +558,7 @@ XD(solve_boundary_flux)
   res = estimator_create(scn->dev, SDIS_ESTIMATOR_FLUX, &estimator);
   if(res != RES_OK) goto error;
 
+  nrealisations = args->nrealisations;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
@@ -516,12 +576,16 @@ XD(solve_boundary_flux)
     const struct sdis_medium *fmd, *bmd;
     enum sdis_side solid_side, fluid_side;
     double T_brf[3] = { 0, 0, 0 };
+    const double Tref = args->reference_temperature;
+    const double Tarad = args->ambient_radiative_temperature;
     double epsilon, hc, hr;
     size_t iprim;
     double uv[DIM - 1];
     float st[DIM - 1];
     double time;
     int flux_mask = 0;
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
 
@@ -530,7 +594,7 @@ XD(solve_boundary_flux)
     /* Begin time registration */
     time_current(&t0);
 
-    time = sample_time(rng, time_range);
+    time = sample_time(rng, args->time_range);
 
     /* Sample a position onto the boundary */
 #if SDIS_XD_DIMENSION == 2
@@ -552,8 +616,8 @@ XD(solve_boundary_flux)
     if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
 
     /* Map from boundary scene to sdis scene */
-    ASSERT(prim.prim_id < nprimitives);
-    iprim = primitives[prim.prim_id];
+    ASSERT(prim.prim_id < args->nprimitives);
+    iprim = args->primitives[prim.prim_id];
 
     interf = scene_get_interface(scn, (unsigned)iprim);
     fmd = interface_get_medium(interf, SDIS_FRONT);
@@ -585,12 +649,12 @@ XD(solve_boundary_flux)
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
 
     res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
-      solid_side, fp_to_meter, Tarad, Tref, flux_mask, T_brf);
+      solid_side, args->fp_to_meter, Tarad, Tref, flux_mask, T_brf);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);
 
-    if(res_simul != RES_OK && res_simul != RES_BAD_OP) { 
+    if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
       continue;
     } else if(res_simul == RES_OK) { /* Update accumulators */
@@ -622,8 +686,20 @@ XD(solve_boundary_flux)
       acc_frad->sum2 += w_rad*w_rad;
       ++acc_frad->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev, "Solving boundary flux: %3d%%\r", progress);
+    }
   }
   if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev, "Solving boundary flux: %3d%%\n", progress);
 
   /* Redux the per thread accumulators  */
   sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);
@@ -643,6 +719,9 @@ XD(solve_boundary_flux)
   estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc[0].sum, acc_fc[0].sum2);
   estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr[0].sum, acc_fr[0].sum2);
   estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl[0].sum, acc_fl[0].sum2);
+
+  res = estimator_save_rng_state(estimator, rng_proxy);
+  if(res != RES_OK) goto error;
 
 exit:
   if(rngs) {

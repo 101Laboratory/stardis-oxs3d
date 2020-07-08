@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
 #include "sdis_green.h"
+#include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_interface_c.h"
@@ -178,7 +179,7 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
 #define HTABLE_DATA struct sdis_interface*
 #include <rsys/hash_table.h>
 
-/* Generate the hash table that maps and id to a medium */
+/* Generate the hash table that maps an id to a medium */
 #define HTABLE_NAME medium
 #define HTABLE_KEY unsigned
 #define HTABLE_DATA struct sdis_medium*
@@ -781,7 +782,6 @@ green_function_merge_and_clear
   size_t npaths_dst;
   size_t npaths;
   size_t i;
-  unsigned id;
   res_T res = RES_OK;
   ASSERT(dst && src);
 
@@ -807,8 +807,7 @@ green_function_merge_and_clear
   while(!htable_medium_iterator_eq(&it_medium, &end_medium)) {
     struct sdis_medium* medium;
     medium = *htable_medium_iterator_data_get(&it_medium);
-    id = medium_get_id(medium);
-    res = htable_medium_set(&dst->media, &id, &medium);
+    res = ensure_medium_registration(dst, medium);
     if(res != RES_OK) goto error;
     htable_medium_iterator_next(&it_medium);
   }
@@ -818,8 +817,7 @@ green_function_merge_and_clear
   while(!htable_interf_iterator_eq(&it_interf, &end_interf)) {
     struct sdis_interface* interf;
     interf = *htable_interf_iterator_data_get(&it_interf);
-    id = interface_get_id(interf);
-    res = htable_interf_set(&dst->interfaces, &id, &interf);
+    res = ensure_interface_registration(dst, interf);
     if(res != RES_OK) goto error;
     htable_interf_iterator_next(&it_interf);
   }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,12 @@
 
 #include <rsys/dynamic_array.h>
 #include <rsys/free_list.h>
+#include <rsys/logger.h>
 #include <rsys/ref_count.h>
+
+/* Forward declarations */
+struct ssp_rng;
+struct ssp_rng_proxy;
 
 struct name { FITEM; };
 #define FITEM_TYPE name
@@ -28,6 +33,7 @@ struct name { FITEM; };
 
 struct sdis_device {
   struct logger* logger;
+  struct logger logger__; /* Default logger */
   struct mem_allocator* allocator;
   unsigned nthreads;
   int verbose;
@@ -35,35 +41,17 @@ struct sdis_device {
   struct flist_name interfaces_names;
   struct flist_name media_names;
 
-  struct s2d_device* s2d;
-  struct s3d_device* s3d;
+  struct s2d_device* s2d_dev;
+  struct s3d_device* s3d_dev;
 
   ref_T ref;
 };
 
-/* Conditionally log a message on the LOG_ERROR stream of the device logger,
- * with respect to the device verbose flag */
-extern LOCAL_SYM void
-log_err
+extern LOCAL_SYM res_T
+create_rng_from_rng_proxy
   (struct sdis_device* dev,
-   const char* msg,
-   ...)
-#ifdef COMPILER_GCC
-  __attribute((format(printf, 2, 3)))
-#endif
-;
-
-/* Conditionally log a message on the LOG_WARNING stream of the device logger,
- * with respect to the device verbose flag */
-extern LOCAL_SYM void
-log_warn
-  (struct sdis_device* dev,
-   const char* msg,
-   ...)
-#ifdef COMPILER_GCC
-    __attribute((format(printf, 2, 3)))
-#endif
-;
+   const struct ssp_rng_proxy* proxy,
+   struct ssp_rng** out_rng);
 
 #endif /* SDIS_DEVICE_C_H */
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -208,8 +208,8 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_solve_medium_args solve_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
   struct context ctx;
-  const double trange[2] = {INF, INF};
   double a, a0, a1;
   double ref;
   double* positions = NULL;
@@ -334,8 +334,13 @@ main(int argc, char** argv)
   /* Rough estimation since the disk is coarsely discretized */
   CHK(eq_eps(a1, PI, 1.e-1));
 
+  solve_args.nrealisations = N;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+
   /* Estimate the temperature of the square */
-  OK(sdis_solve_medium(scn, N, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  solve_args.medium = solid0;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -348,7 +353,8 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
 
   /* Estimate the temperature of the disk */
-  OK(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
+  solve_args.medium = solid1;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -371,8 +377,11 @@ main(int argc, char** argv)
   CHK(eq_eps(a, a0+a1, 1.e-6));
 
   /* Estimate the temperature of the square and disk shapes */
-  BA(sdis_solve_medium(scn, N, solid1, trange, 1.f, -1, 0, 0, &estimator));
-  OK(sdis_solve_medium(scn, Np, solid0, trange, 1.f, -1, 0, 0, &estimator));
+  solve_args.medium = solid1;
+  solve_args.nrealisations = Np;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator));
+  solve_args.medium = solid0;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -385,16 +394,12 @@ main(int argc, char** argv)
   CHK(nreals + nfails == Np);
 
   /* Solve green */
-  BA(sdis_solve_medium_green_function(NULL, Np, solid0, 1.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, 0, solid0, 1.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, NULL, 1.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, solid0, 0.0, 0, 0, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, -1, &green));
-  BA(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, NULL));
-  BA(sdis_solve_medium_green_function(scn, Np, solid1, 1.0, 0, 0, &green));
-  OK(sdis_solve_medium_green_function(scn, Np, solid0, 1.0, 0, 0, &green));
+  BA(sdis_solve_medium_green_function(NULL, &solve_args, &green));
+  BA(sdis_solve_medium_green_function(scn, NULL, &green));
+  BA(sdis_solve_medium_green_function(scn, &solve_args, NULL));
+  OK(sdis_solve_medium_green_function(scn, &solve_args, &green));
 
-  OK(sdis_green_function_solve(green, trange, &estimator2));
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 

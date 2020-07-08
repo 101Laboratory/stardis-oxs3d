@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 #include "sdis_device_c.h"
 #include "sdis_heat_path.h"
 #include "sdis_interface_c.h"
+#include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_scene_c.h"
@@ -80,10 +81,10 @@ XD(compute_temperature)
      * boundary. Indeed, one knows the "right" type of the first vertex only
      * after the boundary_path execution that defines the sub path to resolve
      * from the submitted boundary position. Note that if the boundary
-     * temperature is know, the type is let as it. */
-    if(heat_vtx && !T->done) {
-      if(heat_path_get_last_vertex(ctx->heat_path) != heat_vtx) {
-        /* Path was reinjected into a solid */
+     * temperature is known, the type is let as it. */
+    if(heat_vtx && !T->done && T->func != XD(boundary_path)) {
+      heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
+      if(T->func == XD(conductive_path)) {
         heat_vtx->type = SDIS_HEAT_VERTEX_CONDUCTION;
       } else if(T->func == XD(convective_path)) {
         heat_vtx->type = SDIS_HEAT_VERTEX_CONVECTION;
@@ -174,7 +175,7 @@ XD(probe_realisation)
     /* The initial condition should have been reached */
     log_err(scn->dev,
       "%s: undefined initial condition. "
-      "The time is %f but the temperature remains unknown.\n",
+      "The time is %g but the temperature remains unknown.\n",
       FUNC_NAME, t0);
     res = RES_BAD_OP;
     goto error;
@@ -227,7 +228,7 @@ XD(boundary_realisation)
   float st[2];
 #endif
   res_T res = RES_OK;
-  ASSERT(uv && fp_to_meter > 0 && weight && Tref >= 0 && time >= 0);
+  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0);
 
   T.func = XD(boundary_path);
   rwalk.hit_side = side;

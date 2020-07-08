@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -225,9 +225,9 @@ main(int argc, char** argv)
   struct sdis_interface* interf_solid_fluid2 = NULL;
   struct sdis_interface* interfaces[12/*#max primitives*/];
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   size_t nreals, nfails;
   double pos[3];
-  double time_range[2] = { INF, INF };
   double Tref;
   double x;
   (void)argc, (void)argv;
@@ -353,10 +353,17 @@ main(int argc, char** argv)
   x = pos[1];
   Tref = -Power / (2*LAMBDA) * x*x + Tf + Power/(2*H) + Power/(8*LAMBDA);
 
+  solve_args.nrealisations = N;
+  solve_args.position[0] = pos[0];
+  solve_args.position[1] = pos[1];
+  solve_args.position[2] = pos[2];
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+
   printf(">>> 2D\n");
 
   time_current(&t0);
-  OK(sdis_solve_probe(scn_2d, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn_2d, &solve_args, &estimator));
   time_sub(&t0, time_current(&t1), &t0);
   time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
   printf("Elapsed time = %s\n", dump);
@@ -375,7 +382,7 @@ main(int argc, char** argv)
   printf("\n>>> 3D\n");
 
   time_current(&t0);
-  OK(sdis_solve_probe(scn_3d, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
+  OK(sdis_solve_probe(scn_3d, &solve_args, &estimator));
   time_sub(&t0, time_current(&t1), &t0);
   time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
   printf("Elapsed time = %s\n", dump);

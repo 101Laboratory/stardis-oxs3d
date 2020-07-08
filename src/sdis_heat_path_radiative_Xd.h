@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 #include "sdis_green.h"
 #include "sdis_heat_path.h"
 #include "sdis_interface_c.h"
+#include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_scene_c.h"
@@ -167,7 +168,7 @@ XD(trace_radiative_path)
       if(outside && chk_mdm->type == SDIS_FLUID) {
         rwalk->mdm = chk_mdm;
       } else {
-        log_err(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
+        log_warn(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
           FUNC_NAME, SPLIT3(rwalk->vtx.P));
         res = RES_BAD_OP;
         goto error;

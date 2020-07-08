@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_realisation.h"
@@ -32,15 +33,7 @@
 static res_T
 XD(solve_probe_boundary)
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const enum sdis_side side, /* Side of iprim on which the probe lies */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
-   const int register_paths, /* Combination of enum sdis_heat_path_flag */
+   const struct sdis_solve_probe_boundary_args* args,
    struct sdis_green_function** out_green,
    struct sdis_estimator** out_estimator)
 {
@@ -51,12 +44,16 @@ XD(solve_probe_boundary)
   struct ssp_rng** rngs = NULL;
   struct accum* acc_temps = NULL;
   struct accum* acc_times = NULL;
+  size_t nrealisations = 0;
   int64_t irealisation = 0;
   size_t i;
+  int progress = 0;
+  int register_paths = SDIS_HEAT_PATH_NONE;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
-  || fp_to_meter <= 0 || Tref < 0 || (side != SDIS_FRONT && side != SDIS_BACK)) {
+  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
+  || args->fp_to_meter <= 0 || ((unsigned)args->side >= SDIS_SIDE_NULL__)) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -65,8 +62,10 @@ XD(solve_probe_boundary)
     goto error;
   }
   if(out_estimator) {
-    if(!time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-    || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])) {
+    if(args->time_range[0] < 0
+    || args->time_range[1] < args->time_range[0]
+    || (  args->time_range[1] > DBL_MAX
+       && args->time_range[0] != args->time_range[1])) {
       res = RES_BAD_ARG;
       goto error;
     }
@@ -79,12 +78,12 @@ XD(solve_probe_boundary)
 #endif
 
   /* Check the primitive identifier */
-  if(iprim >= scene_get_primitives_count(scn)) {
+  if(args->iprim >= scene_get_primitives_count(scn)) {
     log_err(scn->dev,
       "%s: invalid primitive identifier `%lu'. "
       "It must be in the [0 %lu] range.\n",
       FUNC_NAME,
-      (unsigned long)iprim,
+      (unsigned long)args->iprim,
       (unsigned long)scene_get_primitives_count(scn)-1);
     res = RES_BAD_ARG;
     goto error;
@@ -93,25 +92,25 @@ XD(solve_probe_boundary)
   /* Check parametric coordinates */
 #if SDIS_XD_DIMENSION  == 2
   {
-    const double v = CLAMP(1.0 - uv[0], 0, 1);
-    if(uv[0] < 0 || uv[0] > 1 || !eq_eps(uv[0] + v, 1, 1.e-6)) {
+    const double v = CLAMP(1.0 - args->uv[0], 0, 1);
+    if(args->uv[0] < 0 || args->uv[0] > 1 || !eq_eps(args->uv[0]+v, 1, 1.e-6)) {
       log_err(scn->dev,
         "%s: invalid parametric coordinates %g."
         "u + (1-u) must be equal to 1 with u [0, 1].\n",
-        FUNC_NAME, uv[0]);
+        FUNC_NAME, args->uv[0]);
       res = RES_BAD_ARG;
       goto error;
     }
   }
 #else /* SDIS_XD_DIMENSION == 3 */
   {
-    const double w = CLAMP(1 - uv[0] - uv[1], 0, 1);
-    if(uv[0] < 0 || uv[1] < 0 || uv[0] > 1 || uv[1] > 1
-    || !eq_eps(w + uv[0] + uv[1], 1, 1.e-6)) {
+    const double w = CLAMP(1 - args->uv[0] - args->uv[1], 0, 1);
+    if(args->uv[0] < 0 || args->uv[1] < 0 || args->uv[0] > 1 || args->uv[1] > 1
+    || !eq_eps(w + args->uv[0] + args->uv[1], 1, 1.e-6)) {
       log_err(scn->dev,
         "%s: invalid parametric coordinates [%g, %g]. "
         "u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
-        FUNC_NAME, uv[0], uv[1]);
+        FUNC_NAME, args->uv[0], args->uv[1]);
       res = RES_BAD_ARG;
       goto error;
     }
@@ -119,9 +118,15 @@ XD(solve_probe_boundary)
 #endif
 
   /* Create the proxy RNG */
-  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
-    scn->dev->nthreads, &rng_proxy);
-  if(res != RES_OK) goto error;
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
   /* Create the per thread RNG */
   rngs = MEM_CALLOC
@@ -157,6 +162,8 @@ XD(solve_probe_boundary)
   }
 
   /* Here we go! Launch the Monte Carlo estimation */
+  nrealisations = args->nrealisations;
+  register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
@@ -171,6 +178,8 @@ XD(solve_probe_boundary)
     struct sdis_heat_path heat_path;
     double w = NaN;
     double time;
+    size_t n;
+    int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
 
@@ -180,7 +189,7 @@ XD(solve_probe_boundary)
     time_current(&t0);
 
     if(!out_green) {
-      time = sample_time(rng, time_range);
+      time = sample_time(rng, args->time_range);
       if(register_paths) {
         heat_path_init(scn->dev->allocator, &heat_path);
         pheat_path = &heat_path;
@@ -190,30 +199,40 @@ XD(solve_probe_boundary)
        * function. Simply takes 0 as relative time */
       time = 0;
       res_local = green_function_create_path(greens[ithread], &green_path);
-      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+      if(res_local != RES_OK) {
+        ATOMIC_SET(&res, res_local);
+        goto error_it;
+      }
       pgreen_path = &green_path;
     }
 
-    res_simul = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
-      fp_to_meter, Tarad, Tref, pgreen_path, pheat_path, &w);
+    res_simul = XD(boundary_realisation)(scn, rng, args->iprim, args->uv, time,
+      args->side, args->fp_to_meter, args->ambient_radiative_temperature,
+      args->reference_temperature, pgreen_path, pheat_path, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
-      continue;
+      goto error_it;
     }
 
     if(pheat_path) {
       pheat_path->status = res_simul == RES_OK
-        ? SDIS_HEAT_PATH_SUCCEED
-        : SDIS_HEAT_PATH_FAILED;
+        ? SDIS_HEAT_PATH_SUCCESS
+        : SDIS_HEAT_PATH_FAILURE;
 
       /* Check if the path must be saved regarding the register_paths mask */
       if(!(register_paths & (int)pheat_path->status)) {
         heat_path_release(pheat_path);
-      } else { /* Register the sampled path */
+        pheat_path = NULL;
+      } else {
+        /* Register the sampled path */
         res_local = estimator_add_and_release_heat_path(estimator, pheat_path);
-        if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); continue; }
+        if(res_local != RES_OK) {
+          ATOMIC_SET(&res, res_local);
+          goto error_it;
+        }
+        pheat_path = NULL;
       }
     }
 
@@ -226,8 +245,26 @@ XD(solve_probe_boundary)
       acc_temp->sum += w;    acc_temp->sum2 += w*w;       ++acc_temp->count;
       acc_time->sum += usec; acc_time->sum2 += usec*usec; ++acc_time->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev, "Solving probe boundary temperature: %3d%%\r", progress);
+    }
+
+  exit_it:
+    if(pheat_path) heat_path_release(pheat_path);
+    continue;
+  error_it:
+    goto exit_it;
   }
   if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev, "Solving probe boundary temperature: %3d%%\n", progress);
 
   /* Setup the estimated temperature and per realisation time */
   if(out_estimator) {
@@ -241,6 +278,8 @@ XD(solve_probe_boundary)
     estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
     estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
     estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+    res = estimator_save_rng_state(estimator, rng_proxy);
+    if(res != RES_OK) goto error;
   }
 
   if(out_green) {
@@ -292,13 +331,7 @@ error:
 static res_T
 XD(solve_probe_boundary_flux)
   (struct sdis_scene* scn,
-   const size_t nrealisations, /* #realisations */
-   const size_t iprim, /* Identifier of the primitive on which the probe lies */
-   const double uv[2], /* Parametric coordinates of the probe onto the primitve */
-   const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
+   const struct sdis_solve_probe_boundary_flux_args* args,
    struct sdis_estimator** out_estimator)
 {
   struct sdis_estimator* estimator = NULL;
@@ -313,15 +346,17 @@ XD(solve_probe_boundary_flux)
   struct accum* acc_fl = NULL; /* Per thread flux accumulator */
   struct accum* acc_fc = NULL; /* Per thread convective flux accumulator */
   struct accum* acc_fr = NULL; /* Per thread radiative flux accumulator */
+  size_t nrealisations = 0;
   int64_t irealisation = 0;
   size_t i;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !nrealisations || nrealisations > INT64_MAX || !uv
-  || !time_range || time_range[0] < 0 || time_range[1] < time_range[0]
-  || (time_range[1] > DBL_MAX && time_range[0] != time_range[1])
-  || fp_to_meter <= 0 || Tref < 0
-  || !out_estimator) {
+  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
+  || args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]
+  || (args->time_range[1]>DBL_MAX && args->time_range[0] != args->time_range[1])
+  || args->fp_to_meter <= 0 || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -333,12 +368,12 @@ XD(solve_probe_boundary_flux)
 #endif
 
   /* Check the primitive identifier */
-  if(iprim >= scene_get_primitives_count(scn)) {
+  if(args->iprim >= scene_get_primitives_count(scn)) {
     log_err(scn->dev,
       "%s: invalid primitive identifier `%lu'. "
       "It must be in the [0 %lu] range.\n",
       FUNC_NAME,
-      (unsigned long)iprim,
+      (unsigned long)args->iprim,
       (unsigned long)scene_get_primitives_count(scn)-1);
     res = RES_BAD_ARG;
     goto error;
@@ -346,29 +381,33 @@ XD(solve_probe_boundary_flux)
 
   /* Check parametric coordinates */
   if(scene_is_2d(scn)) {
-    const double v = CLAMP(1.0 - uv[0], 0, 1);
-    if(uv[0] < 0 || uv[0] > 1 || !eq_eps(uv[0] + v, 1, 1.e-6)) {
+    const double v = CLAMP(1.0 - args->uv[0], 0, 1);
+    if(args->uv[0] < 0 || args->uv[0] > 1
+    || !eq_eps(args->uv[0] + v, 1, 1.e-6)) {
       log_err(scn->dev,
         "%s: invalid parametric coordinates %g. "
         "u + (1-u) must be equal to 1 with u [0, 1].\n",
-        FUNC_NAME, uv[0]);
+        FUNC_NAME, args->uv[0]);
       res = RES_BAD_ARG;
       goto error;
     }
   } else {
-    const double w = CLAMP(1 - uv[0] - uv[1], 0, 1);
-    if(uv[0] < 0 || uv[1] < 0 || uv[0] > 1 || uv[1] > 1
-      || !eq_eps(w + uv[0] + uv[1], 1, 1.e-6)) {
+    const double w = CLAMP(1 - args->uv[0] - args->uv[1], 0, 1);
+    if(args->uv[0] < 0 
+    || args->uv[1] < 0 
+    || args->uv[0] > 1 
+    || args->uv[1] > 1
+    || !eq_eps(w + args->uv[0] + args->uv[1], 1, 1.e-6)) {
       log_err(scn->dev,
         "%s: invalid parametric coordinates [%g, %g]. "
         "u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
-        FUNC_NAME, uv[0], uv[1]);
+        FUNC_NAME, args->uv[0], args->uv[1]);
       res = RES_BAD_ARG;
       goto error;
     }
   }
   /* Check medium is fluid on one side and solid on the other */
-  interf = scene_get_interface(scn, (unsigned)iprim);
+  interf = scene_get_interface(scn, (unsigned)args->iprim);
   fmd = interface_get_medium(interf, SDIS_FRONT);
   bmd = interface_get_medium(interf, SDIS_BACK);
   if(!fmd || !bmd
@@ -381,9 +420,15 @@ XD(solve_probe_boundary_flux)
   fluid_side = (fmd->type == SDIS_FLUID) ? SDIS_FRONT : SDIS_BACK;
 
   /* Create the proxy RNG */
-  res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
-    scn->dev->nthreads, &rng_proxy);
-  if(res != RES_OK) goto error;
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
   /* Create the per thread RNG */
   rngs = MEM_CALLOC
@@ -408,7 +453,7 @@ XD(solve_probe_boundary_flux)
 
   /* Prebuild the interface fragment */
   res = XD(build_interface_fragment)
-    (&frag, scn, (unsigned)iprim, uv, fluid_side);
+    (&frag, scn, (unsigned)args->iprim, args->uv, fluid_side);
   if(res != RES_OK) goto error;
 
   /* Create the estimator */
@@ -416,6 +461,7 @@ XD(solve_probe_boundary_flux)
   if(res != RES_OK) goto error;
 
   /* Here we go! Launch the Monte Carlo estimation */
+  nrealisations = args->nrealisations;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
@@ -430,6 +476,10 @@ XD(solve_probe_boundary_flux)
     double time, epsilon, hc, hr;
     int flux_mask = 0;
     double T_brf[3] = { 0, 0, 0 };
+    const double Tref = args->reference_temperature;
+    const double Tarad = args->ambient_radiative_temperature;
+    size_t n;
+    int pcent;
     res_T res_simul = RES_OK;
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
@@ -437,7 +487,7 @@ XD(solve_probe_boundary_flux)
     /* Begin time registration */
     time_current(&t0);
 
-    time = sample_time(rng, time_range);
+    time = sample_time(rng, args->time_range);
 
     /* Compute hr and hc */
     frag.time = time;
@@ -449,8 +499,8 @@ XD(solve_probe_boundary_flux)
     flux_mask = 0;
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
-    res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
-      solid_side, fp_to_meter, Tarad, Tref, flux_mask, T_brf);
+    res_simul = XD(boundary_flux_realisation)(scn, rng, args->iprim, args->uv, time,
+      solid_side, args->fp_to_meter, Tarad, Tref, flux_mask, T_brf);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);
@@ -487,8 +537,20 @@ XD(solve_probe_boundary_flux)
       acc_frad->sum2 += w_rad*w_rad;
       ++acc_frad->count;
     }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev, "Solving probe boundary flux: %3d%%\r", progress);
+    }
   }
   if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev, "Solving probe boundary flux: %3d%%\n", progress);
 
   /* Redux the per thread accumulators  */
   sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);
@@ -508,6 +570,9 @@ XD(solve_probe_boundary_flux)
   estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc[0].sum, acc_fc[0].sum2);
   estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr[0].sum, acc_fr[0].sum2);
   estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl[0].sum, acc_fl[0].sum2);
+
+  res = estimator_save_rng_state(estimator, rng_proxy);
+  if(res != RES_OK) goto error;
 
 exit:
   if(rngs) {

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +53,11 @@ estimator_buffer_setup_realisation_time
   (struct sdis_estimator_buffer* buf,
    const double sum,
    const double sum2);
+
+extern LOCAL_SYM res_T
+estimator_buffer_save_rng_state
+  (struct sdis_estimator_buffer* buf,
+   const struct ssp_rng_proxy* proxy);
 
 #endif /* SDIS_ESTIMATOR_BUFFER_C_H */
 

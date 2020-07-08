@@ -11,19 +11,30 @@ It also depends on the
 [RSys](https://gitlab.com/vaplv/rsys/),
 [Star-2D](https://gitlab.com/meso-star/star-2d/),
 [Star-3D](https://gitlab.com/meso-star/star-3d/),
-[Star-Enclosures](https://gitlab.com/meso-star/star-enclosures/),
-[Star-Enclosures2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
+[Star-Enclosures-3D](https://gitlab.com/meso-star/star-enclosures-3d/),
+[Star-Enclosures-2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
 [Star-SP](https://gitlab.com/meso-star/star-sp/) libraries as well as on the
 [OpenMP](http://www.openmp.org) 2.0 specification to parallelize its
 computations.
 
-First ensure that CMake and a compiler that implements the OpenMP 1.2
+First ensure that CMake and a C compiler that implements the OpenMP 2.0
 specification are installed on your system. Then install the RCMake package as
 well as all the aforementioned prerequisites. Finally generate the project from
 the `cmake/CMakeLists.txt` file by appending to the `CMAKE_PREFIX_PATH`
 variable the install directories of its dependencies.
 
 ## Release notes
+
+### Version 0.9.0
+
+- Update the API of the solve functions: the parameters of the simulation are
+  now grouped into a unique data structure rather than separately submitted as
+  function arguments. Thank to this structure and its default value, updating
+  input parameters should now affect marginally the calling code.
+- Improve the logger. Add a prefix to the printed text to indicate the type of
+  the message (info, error or warning). Add a progress message during
+  simulation.
+- Bump the version of the Star-Enclosures <2D|3D> dependencies to 0.5
 
 ### Version 0.8.2
 
@@ -213,7 +224,7 @@ First version and implementation of the Stardis solver API.
 
 ## License
 
-Copyright (C) 2016-2019 |Meso|Star> (<contact@meso-star.com>). Stardis is free
+Copyright (C) 2016-2020 |Meso|Star> (<contact@meso-star.com>). Stardis is free
 software released under the GPLv3+ license: GNU GPL version 3 or later. You are
 welcome to redistribute it under certain conditions; refer to the COPYING files
 for details.

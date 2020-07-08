@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -261,6 +261,7 @@ main(int argc, char** argv)
   struct sdis_interface* interf_solid1_fluid = NULL;
   struct sdis_interface* interf_solid2_fluid = NULL;
   struct sdis_interface* interfaces[10/*#segment*/];
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   double Tref;
   double time_range[2] = { INF, INF };
@@ -441,7 +442,12 @@ main(int argc, char** argv)
     FATAL("Unreachable code.\n");
   }
 
-  OK(sdis_solve_probe(scn, N, pos, time_range, 1.f, -1, 0, 0, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.position[0] = pos[0];
+  solve_args.position[1] = pos[1];
+  solve_args.time_range[0] = time_range[0];
+  solve_args.time_range[1] = time_range[1];
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,15 @@
 
 #include "sdis.h"
 #include "sdis_device_c.h"
+#include "sdis_log.h"
 
+#include <rsys/cstr.h>
 #include <rsys/logger.h>
 #include <rsys/mem_allocator.h>
 
 #include <star/s2d.h>
 #include <star/s3d.h>
+#include <star/ssp.h>
 
 #include <omp.h>
 
@@ -28,28 +31,14 @@
  * Helper functions
  ******************************************************************************/
 static void
-log_msg
-  (struct sdis_device* dev,
-   const enum log_type stream,
-   const char* msg,
-   va_list vargs)
-{
-  ASSERT(dev && msg);
-  if(dev->verbose) {
-    res_T res; (void)res;
-    res = logger_vprint(dev->logger, stream, msg, vargs);
-    ASSERT(res == RES_OK);
-  }
-}
-
-static void
 device_release(ref_T* ref)
 {
   struct sdis_device* dev;
   ASSERT(ref);
   dev = CONTAINER_OF(ref, struct sdis_device, ref);
-  if(dev->s2d) S2D(device_ref_put(dev->s2d));
-  if(dev->s3d) S3D(device_ref_put(dev->s3d));
+  if(dev->s2d_dev) S2D(device_ref_put(dev->s2d_dev));
+  if(dev->s3d_dev) S3D(device_ref_put(dev->s3d_dev));
+  if(dev->logger == &dev->logger__) logger_release(&dev->logger__);
   ASSERT(flist_name_is_empty(&dev->interfaces_names));
   ASSERT(flist_name_is_empty(&dev->media_names));
   flist_name_release(&dev->interfaces_names);
@@ -78,19 +67,21 @@ sdis_device_create
     goto error;
   }
 
-  log = logger ? logger : LOGGER_DEFAULT;
   allocator = mem_allocator ? mem_allocator : &mem_default_allocator;
   dev = MEM_CALLOC(allocator, 1, sizeof(struct sdis_device));
   if(!dev) {
     if(verbose) {
-      /* Do not use helper log functions since dev is not initialised */
-      CHK(logger_print(log, LOG_ERROR,
-        "%s: could not allocate the Stardis device.\n", FUNC_NAME) == RES_OK);
+      #define ERR_STR STR(FUNC_NAME)": could not allocate the Stardis device -- %s."
+      if(logger) {
+        logger_print(logger, LOG_ERROR, ERR_STR, res_to_cstr(res));
+      } else {
+        fprintf(stderr, MSG_ERROR_PREFIX ERR_STR, res_to_cstr(res));
+      }
+      #undef ERR_STR
     }
     res = RES_MEM_ERR;
     goto error;
   }
-  dev->logger = log;
   dev->allocator = allocator;
   dev->verbose = verbose;
   dev->nthreads = MMIN(nthreads_hint, (unsigned)omp_get_num_procs());
@@ -98,16 +89,26 @@ sdis_device_create
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
 
-  res = s2d_device_create(log, allocator, 0, &dev->s2d);
+  if(logger) {
+    dev->logger = logger;
+  } else {
+    setup_log_default(dev);
+  }
+  log_info(dev, "Use %lu %s.\n", (unsigned long)dev->nthreads,
+    dev->nthreads == 1 ? "thread" : "threads");
+
+  res = s2d_device_create(log, allocator, 0, &dev->s2d_dev);
   if(res != RES_OK) {
     log_err(dev,
-      "%s: could not create the Star-2D device on Stardis.\n", FUNC_NAME);
+      "%s: could not create the Star-2D device on Stardis -- %s.\n",
+      FUNC_NAME, res_to_cstr(res));
   }
 
-  res = s3d_device_create(log, allocator, 0, &dev->s3d);
+  res = s3d_device_create(log, allocator, 0, &dev->s3d_dev);
   if(res != RES_OK) {
     log_err(dev,
-      "%s: could not create the Star-3D device on Stardis.\n", FUNC_NAME);
+      "%s: could not create the Star-3D device on Stardis -- %s.\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
 
@@ -141,25 +142,56 @@ sdis_device_ref_put(struct sdis_device* dev)
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
-void
-log_err(struct sdis_device* dev, const char* msg, ...)
+res_T
+create_rng_from_rng_proxy
+  (struct sdis_device* dev,
+   const struct ssp_rng_proxy* proxy,
+   struct ssp_rng** out_rng)
 {
-  va_list vargs_list;
-  ASSERT(dev && msg);
+  struct ssp_rng_type rng_type;
+  struct ssp_rng* rng = NULL;
+  FILE* stream = NULL;
+  res_T res = RES_OK;
+  ASSERT(dev && proxy && out_rng);
 
-  va_start(vargs_list, msg);
-  log_msg(dev, LOG_ERROR, msg, vargs_list);
-  va_end(vargs_list);
+  stream = tmpfile();
+  if(!stream) {
+    log_err(dev,
+      "Could not open a temporary stream to store the RNG state.\n");
+    res = RES_IO_ERR;
+    goto error;
+  }
+
+  SSP(rng_proxy_get_type(proxy, &rng_type));
+  res = ssp_rng_create(dev->allocator, &rng_type, &rng);
+  if(res != RES_OK) {
+    log_err(dev, "Could not create the RNG -- %s\n", res_to_cstr(res));
+    goto error;
+  }
+
+  res = ssp_rng_proxy_write(proxy, stream);
+  if(res != RES_OK) {
+    log_err(dev, "Could not serialize the RNG state -- %s\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+  rewind(stream);
+  res = ssp_rng_read(rng, stream);
+  if(res != RES_OK) {
+    log_err(dev, "Could not read the serialized RNG state -- %s\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+exit:
+  if(out_rng) *out_rng = rng;
+  if(stream) fclose(stream);
+  return res;
+error:
+  if(rng) {
+    SSP(rng_ref_put(rng));
+    rng = NULL;
+  }
+  goto exit;
 }
-
-void
-log_warn(struct sdis_device* dev, const char* msg, ...)
-{
-  va_list vargs_list;
-  ASSERT(dev && msg);
-
-  va_start(vargs_list, msg);
-  log_msg(dev, LOG_WARNING, msg, vargs_list);
-  va_end(vargs_list);
-}
-

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -184,12 +184,11 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct s3dut_mesh* msh = NULL;
   struct s3dut_mesh_data msh_data;
   struct context ctx = CONTEXT_NULL;
   struct interf* interface_param = NULL;
-  double pos[3];
-  double time_range[2];
   double ref;
   const size_t N = 10000;
   size_t ntris;
@@ -295,20 +294,23 @@ main(int argc, char** argv)
   sa_release(ctx.indices);
 
   /* Launch the solver */
-  pos[0] = 0.5;
-  pos[1] = 0.5;
-  pos[2] = 0.5;
-  time_range[0] = time_range[1] = INF;
-  OK(sdis_solve_probe( scn, N, pos, time_range, 1.0, -1, 0, 0, &estimator));
+  solve_args.nrealisations = N;
+  solve_args.position[0] = 0.5;
+  solve_args.position[1] = 0.5;
+  solve_args.position[2] = 0.5;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
 
   /* Print the estimation results */
-  ref = 350 * pos[2] + (1-pos[2]) * 300;
+  ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
   printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(pos), ref, T.E, T.SE);
+    SPLIT3(solve_args.position), ref, T.E, T.SE);
   printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -318,8 +320,8 @@ main(int argc, char** argv)
   CHK(eq_eps(T.E, ref, 3*T.SE));
 
   /* Check green function */
-  OK(sdis_solve_probe_green_function(scn, N, pos, 1.0, -1, 0, &green));
-  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 

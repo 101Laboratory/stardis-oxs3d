@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -200,8 +200,8 @@ struct sdis_scene {
   struct darray_prim_prop prim_props; /* Per primitive properties */
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
-  struct senc_descriptor* senc_descriptor;
-  struct senc2d_descriptor* senc2d_descriptor;
+  struct senc2d_scene* senc2d_scn;
+  struct senc3d_scene* senc3d_scn;
 
   struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */

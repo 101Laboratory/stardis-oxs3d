@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #include <rsys/ref_count.h>
 
 /* Forward declarations */
+struct ssp_rng;
 struct sdis_device;
 struct sdis_estimator;
 enum sdis_estimator_type;
@@ -44,12 +45,13 @@ struct sdis_estimator {
   struct mutex* mutex;
   struct darray_heat_path paths; /* Tracked paths */
 
+  /* State of the RNG after the simulation */
+  struct ssp_rng* rng;
+
   enum sdis_estimator_type type;
   ref_T ref;
   struct sdis_device* dev;
 };
-
-struct sdis_estimator_handle;
 
 /*******************************************************************************
  * Estimator local API
@@ -65,6 +67,11 @@ extern LOCAL_SYM res_T
 estimator_add_and_release_heat_path
   (struct sdis_estimator* estimator,
    struct sdis_heat_path* path);
+
+extern LOCAL_SYM res_T
+estimator_save_rng_state
+  (struct sdis_estimator* estimator,
+   const struct ssp_rng_proxy* proxy);
 
 /* Must be invoked before any others "estimator_setup" functions */
 static INLINE void

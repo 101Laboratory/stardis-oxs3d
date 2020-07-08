@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #define SDIS_SCENE_XD_H
 
 #include "sdis_interface_c.h"
+#include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
 
@@ -118,11 +119,12 @@ clear_properties(struct sdis_scene* scn)
 #include <limits.h>
 
 /* Check the submitted dimension and include its specific headers */
+#define SENCXD_DIM SDIS_SCENE_DIMENSION
 #if (SDIS_SCENE_DIMENSION == 2)
-  #include <star/senc2d.h>
+  #include <star/sencX2d.h>
   #include <star/s2d.h>
 #elif (SDIS_SCENE_DIMENSION == 3)
-  #include <star/senc.h>
+  #include <star/sencX3d.h>
   #include <star/s3d.h>
 #else
   #error "Invalid SDIS_SCENE_DIMENSION value."
@@ -130,15 +132,6 @@ clear_properties(struct sdis_scene* scn)
 
 /* Syntactic sugar */
 #define DIM SDIS_SCENE_DIMENSION
-
-/* Star-Enc macros generic to the SDIS_SCENE_DIMENSION */
-#if DIM == 2
-  #define sencXd(Name) CONCAT(senc2d_, Name)
-  #define SENCXD SENC2D
-#else
-  #define sencXd(Name) CONCAT(senc_, Name)
-  #define SENCXD SENC
-#endif
 
 /* Star-XD macros generic to SDIS_SCENE_DIMENSION */
 #define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
@@ -150,6 +143,7 @@ clear_properties(struct sdis_scene* scn)
 #define SXD_GET_PRIMITIVE CONCAT(CONCAT(S,DIM), D_GET_PRIMITIVE)
 #define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
 #define SXD_PRIMITIVE_EQ CONCAT(CONCAT(S,DIM), D_PRIMITIVE_EQ)
+#define SXD_FLOATX CONCAT(CONCAT(CONCAT(S,DIM), D_FLOAT), DIM)
 
 /* Vector macros generic to SDIS_SCENE_DIMENSION */
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
@@ -484,24 +478,20 @@ XD(geometry_position)(const unsigned ivert, double out_pos[DIM], void* data)
 
 /* Retrieve the indices of a primitive of a Star-EncXD descriptor */
 static void
-XD(descriptor_indices)(const unsigned iprim, unsigned ids[DIM], void* data)
+XD(scene_indices)(const unsigned iprim, unsigned ids[DIM], void* data)
 {
-  struct sencXd(descriptor)* desc = data;
-#if DIM == 2
-  SENCXD(descriptor_get_global_segment(desc, iprim, ids));
-#else
-  SENCXD(descriptor_get_global_triangle(desc, iprim, ids));
-#endif
+  struct sencXd(scene)* scn = data;
+  SENCXD(scene_get_primitive(scn, iprim, ids));
 }
 
 /* Retrieve the coordinates of a vertex of a Star-EncXD descriptor */
 static void
-XD(descriptor_position)(const unsigned ivert, float out_pos[DIM], void* data)
+XD(scene_position)(const unsigned ivert, float out_pos[DIM], void* data)
 {
-  struct sencXd(descriptor)* desc = data;
+  struct sencXd(scene)* scn = data;
   double pos[3];
   int i;
-  SENCXD(descriptor_get_global_vertex(desc, ivert, pos));
+  SENCXD(scene_get_vertex(scn, ivert, pos));
   FOR_EACH(i, 0, DIM) out_pos[i] = (float)pos[i];
 }
 
@@ -510,11 +500,7 @@ static void
 XD(enclosure_indices)(const unsigned iprim, unsigned ids[DIM], void* data)
 {
   struct sencXd(enclosure)* enc = data;
-#if DIM == 2
-  SENCXD(enclosure_get_segment(enc, iprim, ids));
-#else
-  SENCXD(enclosure_get_triangle(enc, iprim, ids));
-#endif
+  SENCXD(enclosure_get_primitive(enc, iprim, ids));
 }
 
 /* Retrieve the coordinates of a vertex of a Star-EncXD encolsure */
@@ -542,26 +528,17 @@ XD(run_analyze)
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[], void*),
    void* ctx,
-   struct sencXd(descriptor)** out_desc)
+   struct sencXd(scene)** out_scn)
 {
   struct geometry geom;
   struct sencXd(device)* senc = NULL;
-  struct sencXd(scene)* senc_scn = NULL;
-  struct sencXd(descriptor)* desc = NULL;
+  struct sencXd(scene)* senc3d_scn = NULL;
+  unsigned count;
   res_T res = RES_OK;
-  ASSERT(scn && nprims && indices && interf && nverts && position && out_desc);
+  ASSERT(scn && nprims && indices && interf && nverts && position && out_scn);
 
   res = sencXd(device_create)(scn->dev->logger, scn->dev->allocator,
     scn->dev->nthreads, scn->dev->verbose, &senc);
-  if(res != RES_OK) goto error;
-
-  res = sencXd(scene_create)(senc,
-#if DIM == 2
-    SENC2D_CONVENTION_NORMAL_BACK | SENC2D_CONVENTION_NORMAL_OUTSIDE,
-#else
-    SENC_CONVENTION_NORMAL_BACK | SENC_CONVENTION_NORMAL_OUTSIDE,
-#endif
-    &senc_scn);
   if(res != RES_OK) goto error;
 
   /* Setup the geometry data */
@@ -569,27 +546,26 @@ XD(run_analyze)
   geom.interf = interf;
   geom.position = position;
   geom.data = ctx;
-  res = sencXd(scene_add_geometry)
-    (senc_scn, (unsigned)nprims, XD(geometry_indices), geometry_media,
-     (unsigned)nverts, XD(geometry_position), NULL, NULL, &geom);
+  res = sencXd(scene_create)(senc,
+    SENCXD_(CONVENTION_NORMAL_BACK) | SENCXD_(CONVENTION_NORMAL_OUTSIDE),
+    (unsigned)nprims, XD(geometry_indices), geometry_media,
+    (unsigned)nverts, XD(geometry_position), &geom, &senc3d_scn);
   if(res != RES_OK) goto error;
-
-  /* Launch the scene analyze */
-  res = sencXd(scene_analyze)(senc_scn, &desc);
+  /* With il-formed scenes, scene creation can success without being able
+   * to extract enclosures; in this case just fail */
+  res = sencXd(scene_get_enclosure_count(senc3d_scn, &count));
   if(res != RES_OK) goto error;
 
 exit:
   if(senc) SENCXD(device_ref_put(senc));
-  if(senc_scn) SENCXD(scene_ref_put(senc_scn));
-  if(out_desc) *out_desc = desc;
+  if(out_scn) *out_scn = senc3d_scn;
   return res;
 error:
-  if(desc) {
-    SENCXD(descriptor_ref_put(desc));
-    desc = NULL;
+  if(senc3d_scn) {
+    SENCXD(scene_ref_put(senc3d_scn));
+    senc3d_scn = NULL;
   }
   goto exit;
-
 }
 
 /* Register the media and the interfaces, map each primitive to its interface
@@ -598,45 +574,31 @@ error:
 static res_T
 XD(setup_properties)
   (struct sdis_scene* scn,
-   struct sencXd(descriptor)* desc,
+   struct sencXd(scene)* senc3d_scn,
    void (*interf)(const size_t itri, struct sdis_interface**, void*),
    void* ctx)
 {
   unsigned iprim, nprims;
   res_T res = RES_OK;
-  ASSERT(scn && interf);
+  ASSERT(scn && senc3d_scn && interf);
 
   clear_properties(scn);
 
-#if DIM == 2
-  SENCXD(descriptor_get_global_segments_count(desc, &nprims));
-#else
-  SENCXD(descriptor_get_global_triangles_count(desc, &nprims));
-#endif
+  SENCXD(scene_get_primitives_count(senc3d_scn, &nprims));
   FOR_EACH(iprim, 0, nprims) {
     struct prim_prop* prim_prop;
     struct sdis_interface* itface;
     unsigned enclosures[2];
-    unsigned iprim_adjusted; /* Primitive id in user space */
     unsigned id;
     int i;
     double* enc_upper_bound;
     size_t ninterfaces;
 
-#if DIM == 2
-    /* Retrieve the segment id in user space */
-    SENCXD(descriptor_get_global_segment_global_id(desc, iprim, &iprim_adjusted));
-    /* Fetch the enclosures that the segment splits */
-    SENCXD(descriptor_get_global_segment_enclosures(desc, iprim, enclosures));
-#else
-    /* Retrieve the triangle id in user space */
-    SENCXD(descriptor_get_global_triangle_global_id(desc, iprim, &iprim_adjusted));
-    /* Fetch the enclosures that the triangle splits */
-    SENCXD(descriptor_get_global_triangle_enclosures(desc, iprim, enclosures));
-#endif
+    /* Fetch the enclosures that the segment/triangle splits */
+    SENCXD(scene_get_primitive_enclosures(senc3d_scn, iprim, enclosures));
 
     /* Fetch the interface of the primitive */
-    interf(iprim_adjusted, &itface, ctx);
+    interf(iprim, &itface, ctx);
 
     /* Check that the interface is already registered against the scene */
     id = interface_get_id(itface);
@@ -689,7 +651,7 @@ error:
 
 /* Build the Star-XD scene view of the whole scene */
 static res_T
-XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
+XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
 {
   struct sXd(device)* sXd_dev = NULL;
   struct sXd(shape)* sXd_shape = NULL;
@@ -697,36 +659,30 @@ XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(descriptor)* desc
   struct sXd(vertex_data) vdata = SXD_VERTEX_DATA_NULL;
   unsigned nprims, nverts;
   res_T res = RES_OK;
-  ASSERT(scn && desc);
+  ASSERT(scn && senc3d_scn);
 
-  SENCXD(descriptor_get_global_vertices_count(desc, &nverts));
+  SENCXD(scene_get_vertices_count(senc3d_scn, &nverts));
 
   /* Setup the vertex data */
   vdata.usage = SXD_POSITION;
-#if DIM == 2
-  vdata.type = S2D_FLOAT2;
-#else
-  vdata.type = S3D_FLOAT3;
-#endif
-  vdata.get = XD(descriptor_position);
+  vdata.type = SXD_FLOATX;
+  vdata.get = XD(scene_position);
 
   /* Create the Star-XD geometry of the whole scene */
   #define CALL(Func)  { if(RES_OK != (res = Func)) goto error; } (void)0
+  sXd_dev = scn->dev->sXd(dev);
+  SENCXD(scene_get_primitives_count(senc3d_scn, &nprims));
 #if DIM == 2
-  sXd_dev = scn->dev->s2d;
-  SENCXD(descriptor_get_global_segments_count(desc, &nprims));
   CALL(sXd(shape_create_line_segments)(sXd_dev, &sXd_shape));
   CALL(sXd(line_segments_set_hit_filter_function)(sXd_shape,
     XD(hit_filter_function), NULL));
   CALL(sXd(line_segments_setup_indexed_vertices)(sXd_shape, nprims,
-    XD(descriptor_indices), nverts, &vdata, 1, desc));
+    XD(scene_indices), nverts, &vdata, 1, senc3d_scn));
 #else
-  sXd_dev = scn->dev->s3d;
-  SENCXD(descriptor_get_global_triangles_count(desc, &nprims));
   CALL(sXd(shape_create_mesh)(sXd_dev, &sXd_shape));
   CALL(sXd(mesh_set_hit_filter_function)(sXd_shape, XD(hit_filter_function), NULL));
-  CALL(sXd(mesh_setup_indexed_vertices)(sXd_shape, nprims, XD(descriptor_indices),
-    nverts, &vdata, 1, desc));
+  CALL(sXd(mesh_setup_indexed_vertices)(sXd_shape, nprims, XD(scene_indices),
+    nverts, &vdata, 1, senc3d_scn));
 #endif
   CALL(sXd(scene_create)(sXd_dev, &sXd_scn));
   CALL(sXd(scene_attach_shape)(sXd_scn, sXd_shape));
@@ -757,24 +713,15 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   float S, V;
   double* p_ub;
   unsigned iprim, nprims, nverts;
-#if DIM == 2
-  struct senc2d_enclosure_header header;
-#else
-  struct senc_enclosure_header header;
-#endif
+  struct sencXd(enclosure_header) header;
   res_T res = RES_OK;
   ASSERT(scn && enc);
 
   enclosure_init(scn->dev->allocator, &enc_dummy);
 
   SENCXD(enclosure_get_header(enc, &header));
-#if DIM == 2
-  sXd_dev = scn->dev->s2d;
-  nprims = header.segment_count;
-#else
-  sXd_dev = scn->dev->s3d;
-  nprims = header.triangle_count;
-#endif
+  sXd_dev = scn->dev->sXd(dev);
+  nprims = header.primitives_count;
   nverts = header.vertices_count;
 
   /* Register the enclosure into the scene. Use a dummy data on their
@@ -791,11 +738,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
 
     /* Setup the vertex data */
   vdata.usage = SXD_POSITION;
-#if DIM == 2
-  vdata.type = S2D_FLOAT2;
-#else
-  vdata.type = S3D_FLOAT3;
-#endif
+  vdata.type = SXD_FLOATX;
   vdata.get = XD(enclosure_position);
 
   /* Create the Star-XD geometry */
@@ -836,13 +779,8 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   if(res != RES_OK) goto error;
   FOR_EACH(iprim, 0, nprims) {
     enum sencXd(side) side;
-#if DIM == 2
-    senc2d_enclosure_get_segment_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim, &side);
-#else
-    senc_enclosure_get_triangle_global_id
-      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim, &side);
-#endif
+    SENCXD(enclosure_get_primitive_id
+      (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim, &side));
   }
 
   /* Setup the medium id of the enclosure */
@@ -861,25 +799,21 @@ error:
 /* Build the Star-XD scene view and define its associated data of the finite
  * fluid enclosures */
 static res_T
-XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
+XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
 {
   struct sencXd(enclosure)* enc = NULL;
   unsigned ienc, nencs;
   unsigned enclosed_medium;
   int outer_found = 0;
   res_T res = RES_OK;
-  ASSERT(scn && desc);
+  ASSERT(scn && senc3d_scn);
   (void)outer_found;
 
-  SENCXD(descriptor_get_enclosure_count(desc, &nencs));
+  SENCXD(scene_get_enclosure_count(senc3d_scn, &nencs));
   FOR_EACH(ienc, 0, nencs) {
-#if DIM == 2
-    struct senc2d_enclosure_header header;
-#else
-    struct senc_enclosure_header header;
-#endif
+    struct sencXd(enclosure_header) header;
 
-    SENCXD(descriptor_get_enclosure(desc, ienc, &enc));
+    SENCXD(scene_get_enclosure(senc3d_scn, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
 
     if(header.is_infinite) {
@@ -891,37 +825,37 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(descriptor)* desc)
     /* As paths don't go in infinite enclosures we can accept models are broken
      * there. But nowhere else. */
     if(header.enclosed_media_count != 1 && !header.is_infinite) {
-#ifndef NDEBUG
       /* Dump the problematic enclosure. */
       double tmp[DIM];
       unsigned indices[DIM];
       unsigned i;
       log_warn(scn->dev, "# Found internal enclosure with %u materials:\n",
         header.enclosed_media_count);
+      FOR_EACH(i, 0, header.enclosed_media_count) {
+        unsigned imed;
+        const struct sdis_medium* med;
+        SENCXD(enclosure_get_medium(enc, i, &imed));
+        med = darray_medium_cdata_get(&scn->media)[imed];
+        log_warn(scn->dev, "# %u (%s)\n",
+          imed, (med->type == SDIS_SOLID ? "solid" : "fluid"));
+      }
+      FOR_EACH(i, 0, header.vertices_count) {
+        SENCXD(enclosure_get_vertex(enc, i, tmp));
   #if DIM == 2
-      FOR_EACH(i, 0, header.vertices_count) {
-        SENCXD(enclosure_get_vertex(enc, i, tmp));
         log_warn(scn->dev, "v %g %g\n", SPLIT2(tmp));
-      }
-      FOR_EACH(i, 0, header.segment_count) {
-        ASSERT(senc2d_enclosure_get_segment(enc, i, indices) == RES_OK);
-        log_warn(scn->dev, "f %u %u\n", indices[0]+1, indices[1]+1);
-      }
   #else
-      FOR_EACH(i, 0, header.vertices_count) {
-        SENCXD(enclosure_get_vertex(enc, i, tmp));
         log_warn(scn->dev, "v %g %g %g\n", SPLIT3(tmp));
+  #endif
       }
-      FOR_EACH(i, 0, header.triangle_count) {
-        ASSERT(senc_enclosure_get_triangle(enc, i, indices) == RES_OK);
+      FOR_EACH(i, 0, header.primitives_count) {
+        SENCXD(enclosure_get_primitive(enc, i, indices));
+  #if DIM == 2
+        log_warn(scn->dev, "f %u %u\n", indices[0]+1, indices[1]+1);
+  #else
         log_warn(scn->dev, "f %u %u %u\n",
           indices[0]+1, indices[1]+1, indices[2]+1);
-      }
   #endif
-#else
-      log_warn(scn->dev, "Found internal enclosure with %u materials.\n",
-        header.enclosed_media_count);
-#endif
+      }
       SENCXD(enclosure_ref_put(enc));
       enc = NULL;
       res = RES_BAD_ARG;
@@ -961,7 +895,7 @@ XD(scene_create)
    void* ctx,
    struct sdis_scene** out_scn)
 {
-  struct sencXd(descriptor)* desc = NULL;
+  struct sencXd(scene)* senc3d_scn = NULL;
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
@@ -988,38 +922,34 @@ XD(scene_create)
   htable_enclosure_init(dev->allocator, &scn->enclosures);
   htable_d_init(dev->allocator, &scn->tmp_hc_ub);
 
-  res = XD(run_analyze)(scn, nprims, indices, interf, nverts, position, ctx, &desc);
+  res = XD(run_analyze)(scn, nprims, indices, interf, nverts, position, ctx, &senc3d_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: error during the scene analysis.\n", FUNC_NAME);
     goto error;
   }
-  res = XD(setup_properties)(scn, desc, interf, ctx);
+  res = XD(setup_properties)(scn, senc3d_scn, interf, ctx);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene interfaces and their media.\n",
       FUNC_NAME);
     goto error;
   }
-  res = XD(setup_scene_geometry)(scn, desc);
+  res = XD(setup_scene_geometry)(scn, senc3d_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene geometry.\n", FUNC_NAME);
     goto error;
   }
-  res = XD(setup_enclosures)(scn, desc);
+  res = XD(setup_enclosures)(scn, senc3d_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the enclosures.\n", FUNC_NAME);
     goto error;
   }
-#if DIM==2
-  scn->senc2d_descriptor = desc;
-#else
-  scn->senc_descriptor = desc;
-#endif
+  scn->sencXd(scn) = senc3d_scn;
 
 exit:
   if(out_scn) *out_scn = scn;
   return res;
 error:
-  if(desc) SENCXD(descriptor_ref_put(desc));
+  if(senc3d_scn) SENCXD(scene_ref_put(senc3d_scn));
   if(scn) {
     SDIS(scene_ref_put(scn));
     scn = NULL;
@@ -1237,10 +1167,14 @@ error:
   goto exit;
 }
 
+#if (SDIS_SCENE_DIMENSION == 2)
+#include <star/sencX2d_undefs.h>
+#else /* SDIS_SCENE_DIMENSION == 3 */
+#include <star/sencX3d_undefs.h>
+#endif
+
 #undef SDIS_SCENE_DIMENSION
 #undef DIM
-#undef sencXd
-#undef SENCXD
 #undef sXd
 #undef SXD
 #undef SXD_VERTEX_DATA_NULL
@@ -1251,6 +1185,7 @@ error:
 #undef SXD_GET_PRIMITIVE
 #undef SXD_HIT_NONE
 #undef SXD_PRIMITIVE_EQ
+#undef SXD_FLOATX
 #undef fX
 #undef fX_set_dX
 #undef fXX_mulfX

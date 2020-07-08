@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2019 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -158,11 +158,11 @@ XD(sample_next_step_robust)
     if(current_mdm != mdm) {
 #if 0
 #if DIM == 2
-      log_err(scn->dev,
+      log_warn(scn->dev,
         "%s: inconsistent medium during the solid random walk at {%g, %g}.\n",
         FUNC_NAME, SPLIT2(pos));
 #else
-      log_err(scn->dev,
+      log_warn(scn->dev,
         "%s: inconsistent medium during the solid random walk at {%g, %g, %g}.\n",
         FUNC_NAME, SPLIT3(pos));
 #endif
@@ -173,11 +173,11 @@ XD(sample_next_step_robust)
   /* Handle error */
   if(iattempt >= MAX_ATTEMPTS) {
 #if DIM == 2
-    log_err(scn->dev,
+    log_warn(scn->dev,
       "%s: could not find a next valid conductive step at {%g, %g}.\n",
       FUNC_NAME, SPLIT2(pos));
 #else
-    log_err(scn->dev,
+    log_warn(scn->dev,
       "%s: could not find a next valid conductive step at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(pos));
 #endif
@@ -218,7 +218,7 @@ XD(conductive_path)
   /* Check the random walk consistency */
   res = scene_get_medium_in_closed_boundaries(scn, rwalk->vtx.P, &mdm);
   if(res != RES_OK || mdm != rwalk->mdm) {
-    log_err(scn->dev, "%s: invalid solid random walk. "
+    log_warn(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -370,7 +370,7 @@ XD(conductive_path)
         /* The initial condition should have been reached */
         log_err(scn->dev,
           "%s: undefined initial condition. "
-          "The time is %f but the temperature remains unknown.\n",
+          "The time is %g but the temperature remains unknown.\n",
           FUNC_NAME, t0);
         res = RES_BAD_OP;
         goto error;
