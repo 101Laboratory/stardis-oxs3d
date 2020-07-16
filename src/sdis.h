@@ -113,8 +113,9 @@ static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
  * Estimation data types
  ******************************************************************************/
 enum sdis_estimator_type {
-  SDIS_ESTIMATOR_TEMPERATURE,
-  SDIS_ESTIMATOR_FLUX,
+  SDIS_ESTIMATOR_TEMPERATURE, /* In Kelvin */
+  SDIS_ESTIMATOR_FLUX, /* In Watt/m^2 */
+  SDIS_ESTIMATOR_MEAN_POWER, /* In Watt */
   SDIS_ESTIMATOR_TYPES_COUNT__
 };
 
@@ -500,6 +501,23 @@ struct sdis_solve_camera_args {
 }
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
   SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
+
+struct sdis_compute_mean_power_args {
+  size_t nrealisations;
+  struct sdis_medium* medium; /* Medium to solve */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_COMPUTE_MEAN_POWER_ARGS_DEFAULT__ {                               \
+  10000, /* #realisations */                                                   \
+  NULL, /* Medium */                                                           \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_compute_mean_power_args
+SDIS_COMPUTE_MEAN_POWER_ARGS_DEFAULT = SDIS_COMPUTE_MEAN_POWER_ARGS_DEFAULT__;
 
 BEGIN_DECLS
 
@@ -1081,6 +1099,15 @@ SDIS_API res_T
 sdis_solve_medium
   (struct sdis_scene* scn,
    const struct sdis_solve_medium_args* args,
+   struct sdis_estimator** estimator);
+
+/* P = SUM(volumic_power(x)) / Nrealisations * Volume
+ * mean power (in Watt) = time_range[0] == time_range[1]
+ *  ? P : P / (time_range[1] - time_range[0]) */
+SDIS_API res_T
+sdis_compute_mean_power
+  (struct sdis_scene* scn,
+   const struct sdis_compute_mean_power_args* args,
    struct sdis_estimator** estimator);
 
 /*******************************************************************************
