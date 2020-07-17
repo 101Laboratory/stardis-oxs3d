@@ -540,3 +540,16 @@ sdis_solve_medium_green_function
   }
 }
 
+res_T
+sdis_compute_mean_power
+  (struct sdis_scene* scn,
+   const struct sdis_compute_mean_power_args* args,
+   struct sdis_estimator** estimator)
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return compute_mean_power_2d(scn, args, estimator);
+  } else {
+    return compute_mean_power_3d(scn, args, estimator);
+  }
+}

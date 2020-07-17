@@ -118,7 +118,6 @@ sdis_estimator_get_convective_flux
 {
   if(!estimator || !flux ||estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
-  ASSERT(estimator->fluxes);
   SETUP_MC(flux, &estimator->fluxes[FLUX_CONVECTIVE]);
   return RES_OK;
 }
@@ -129,7 +128,6 @@ sdis_estimator_get_radiative_flux
 {
   if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
-  ASSERT(estimator->fluxes);
   SETUP_MC(flux, &estimator->fluxes[FLUX_RADIATIVE]);
   return RES_OK;
 }
@@ -140,8 +138,24 @@ sdis_estimator_get_total_flux
 {
   if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
-  ASSERT(estimator->fluxes);
   SETUP_MC(flux, &estimator->fluxes[FLUX_TOTAL]);
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_get_mean_power
+  (const struct sdis_estimator* estimator, struct sdis_mc* mean_power)
+{
+  if(!estimator || !mean_power || estimator->type != SDIS_ESTIMATOR_MEAN_POWER)
+    return RES_BAD_ARG;
+  SETUP_MC(mean_power, &estimator->mean_power.power);
+  mean_power->E *= estimator->mean_power.spread;
+
+  if(estimator->mean_power.time_range[0]
+  != estimator->mean_power.time_range[1]) {
+    mean_power->E /= /* From Joule to Watt */
+      (estimator->mean_power.time_range[1]-estimator->mean_power.time_range[0]);
+  }
   return RES_OK;
 }
 
