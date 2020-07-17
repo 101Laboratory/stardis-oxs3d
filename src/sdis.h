@@ -930,6 +930,11 @@ sdis_estimator_get_total_flux
    struct sdis_mc* flux);
 
 SDIS_API res_T
+sdis_estimator_get_mean_power
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* mean_power);
+
+SDIS_API res_T
 sdis_estimator_get_paths_count
   (const struct sdis_estimator* estimator,
    size_t* npaths);

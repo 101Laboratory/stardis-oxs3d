@@ -477,4 +477,192 @@ error:
   goto exit;
 }
 
+static res_T
+XD(compute_mean_power)
+  (struct sdis_scene* scn,
+   const struct sdis_compute_mean_power_args* args,
+   struct sdis_estimator** out_estimator)
+{
+  struct darray_enclosure_cumul cumul;
+  struct sdis_estimator* estimator = NULL;
+  struct ssp_rng_proxy* rng_proxy = NULL;
+  struct ssp_rng** rngs = NULL;
+  struct accum* acc_mpows = NULL;
+  struct accum* acc_times = NULL;
+  double spread = 0;
+  size_t i = 0;
+  size_t nrealisations = 0;
+  int64_t irealisation = 0;
+  int cumul_is_init = 0;
+  int progress = 0;
+  ATOMIC nsolved_realisations = 0;
+  ATOMIC res = RES_OK;
+
+  if(!scn
+  || !args
+  || !out_estimator
+  || !args->medium
+  || !args->nrealisations
+  || args->nrealisations > INT64_MAX
+  || args->fp_to_meter <= 0
+  || args->time_range[0] < 0
+  || args->time_range[0] > args->time_range[1]
+  || (  args->time_range[1] > DBL_MAX
+     && args->time_range[0] != args->time_range[1])) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(scene_is_2d(scn) != (SDIS_XD_DIMENSION==2)) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(sdis_medium_get_type(args->medium) != SDIS_SOLID) {
+    log_err(scn->dev, "Could not compute mean power on a non solid medium.\n");
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Create the RNG proxy */
+  if(args->rng_state) {
+    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  } else {
+    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+      scn->dev->nthreads, &rng_proxy);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Create the per thread RNG */
+  rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
+  if(!rngs) { res = RES_MEM_ERR; goto error; }
+  FOR_EACH(i, 0, scn->dev->nthreads) {
+    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Create the per thread accumulators */
+  acc_mpows = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_mpows));
+  if(!acc_mpows) { res = RES_MEM_ERR; goto error; }
+  acc_times = MEM_CALLOC
+    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_times));
+  if(!acc_times) { res = RES_MEM_ERR; goto error; }
+
+  /* Compute the cumulative of the spreads of the enclosures surrounding the
+   * submitted medium */
+  darray_enclosure_cumul_init(scn->dev->allocator, &cumul);
+  cumul_is_init = 1;
+  res = compute_medium_enclosure_cumulative(scn, args->medium, &cumul);
+  if(res != RES_OK) goto error;
+
+  /* Fetch the overall medium spread from the unormalized enclosure cumulative */
+  spread = darray_enclosure_cumul_cdata_get(&cumul)
+    [darray_enclosure_cumul_size_get(&cumul)-1].cumul;
+
+  /* Create the estimator */
+  res = estimator_create(scn->dev, SDIS_ESTIMATOR_MEAN_POWER, &estimator);
+  if(res != RES_OK) goto error;
+
+  nrealisations = args->nrealisations;
+  omp_set_num_threads((int)scn->dev->nthreads);
+  #pragma omp parallel for schedule(static)
+  for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct time t0, t1;
+    struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+    const int ithread = omp_get_thread_num();
+    struct ssp_rng* rng = rngs[ithread];
+    struct accum* acc_mpow = &acc_mpows[ithread];
+    struct accum* acc_time = &acc_times[ithread];
+    const struct enclosure* enc = NULL;
+    double power = 0;
+    double usec = 0;
+    size_t n = 0;
+    int pcent = 0;
+    res_T res_local = RES_OK;
+
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Begin time registration */
+    time_current(&t0);
+
+    /* Sample the time */
+    vtx.time = sample_time(rng, args->time_range);
+
+    /* Uniformly Sample an enclosure that surround the submitted medium and
+     * uniformly sample a position into it */
+    enc = sample_medium_enclosure(&cumul, rng);
+    res_local = XD(sample_enclosure_position)(enc, rng, vtx.P);
+    if(res_local != RES_OK) {
+      log_err(scn->dev, "%s: could not sample a medium position.\n", FUNC_NAME);
+      ATOMIC_SET(&res, res_local);
+      goto error_it;
+    }
+
+    /* Fetch the volumic power */
+    power = solid_get_volumic_power(args->medium, &vtx);
+
+    /* Stop time registration */
+    time_sub(&t0, time_current(&t1), &t0);
+    usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+
+    /* Update accumulators */
+    acc_mpow->sum += power; acc_mpow->sum2 += power*power; ++acc_mpow->count;
+    acc_time->sum += usec;  acc_time->sum2 += usec*usec;   ++acc_time->count;
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_realisations);
+    pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+    #pragma omp critical
+    if(pcent > progress) {
+      progress = pcent;
+      log_info(scn->dev, "Computing mean power: %3d%%\r", progress);
+    }
+  exit_it:
+    continue;
+  error_it:
+    goto exit_it;
+  }
+  if(res != RES_OK) goto error;
+
+  /* Add a new line after the progress status */
+  log_info(scn->dev, "Computing mean power: %3d%%\n", progress);
+
+  /* Setup the estimated mean power */
+  {
+    struct accum acc_mpow;
+    struct accum acc_time;
+    sum_accums(acc_mpows, scn->dev->nthreads, &acc_mpow);
+    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
+    ASSERT(acc_mpow.count == acc_time.count);
+
+    estimator_setup_realisations_count(estimator, nrealisations, acc_mpow.count);
+    estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+    estimator_setup_mean_power
+      (estimator, acc_mpow.sum, acc_mpow.sum2, spread, args->time_range);
+    res = estimator_save_rng_state(estimator, rng_proxy);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  if(rngs) {
+    FOR_EACH(i, 0, scn->dev->nthreads) {if(rngs[i]) SSP(rng_ref_put(rngs[i]));}
+    MEM_RM(scn->dev->allocator, rngs);
+  }
+  if(acc_mpows) MEM_RM(scn->dev->allocator, acc_mpows);
+  if(acc_times) MEM_RM(scn->dev->allocator, acc_times);
+  if(cumul_is_init) darray_enclosure_cumul_release(&cumul);
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(out_estimator) *out_estimator = estimator;
+  return (res_T)res;
+error:
+  if(estimator) {
+    SDIS(estimator_ref_put(estimator));
+    estimator = NULL;
+  }
+  goto exit;
+}
+
 #include "sdis_Xd_end.h"
