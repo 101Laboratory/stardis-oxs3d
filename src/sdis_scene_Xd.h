@@ -1000,13 +1000,10 @@ XD(scene_find_closest_point)
 
   if(SXD_HIT_NONE(&hit)) {
     *iprim = SDIS_PRIMITIVE_NONE;
-    uv[0] = -1;
-    uv[1] = -1;
   } else {
     *iprim = hit.prim.scene_prim_id;
 #if DIM == 2
     uv[0] = hit.u;
-    uv[1] = -1;
 #else
     uv[0] = hit.uv[0];
     uv[1] = hit.uv[1];
