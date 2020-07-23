@@ -24,6 +24,7 @@
 #include "sdis.h"
 #include "sdis_scene_c.h"
 
+#include <float.h>
 #include <limits.h>
 
 /*******************************************************************************
@@ -182,6 +183,22 @@ sdis_scene_get_aabb
 }
 
 res_T
+sdis_scene_find_closest_point
+  (const struct sdis_scene* scn,
+   const double pos[3],
+   const double radius,
+   size_t* iprim,
+   double uv[2])
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return scene_find_closest_point_2d(scn, pos, radius, iprim, uv);
+  } else {
+    return scene_find_closest_point_3d(scn, pos, radius, iprim, uv);
+  }
+}
+
+res_T
 sdis_scene_get_boundary_position
   (const struct sdis_scene* scn,
    const size_t iprim,
@@ -333,7 +350,7 @@ sdis_scene_get_medium_spread
     }
   }
   *out_spread = spread;
-  
+
 exit:
   return res;
 error:

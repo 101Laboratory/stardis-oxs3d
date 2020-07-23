@@ -43,6 +43,7 @@
 
 #define SDIS_VOLUMIC_POWER_NONE 0 /* <=> No volumic power */
 #define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
+#define SDIS_PRIMITIVE_NONE SIZE_MAX /* Invalid primitive */
 
 /* Forward declaration of external opaque data types */
 struct logger;
@@ -809,6 +810,20 @@ sdis_scene_get_aabb
    double lower[3],
    double upper[3]);
 
+/* Search the point onto the scene geometry that is the closest of `pos'. The
+ * `radius' parameter controls the maximum search distance around `pos'. The
+ * returned closest point is expressed locally to the geometric primitive onto
+ * which it lies. If not found, the returned primitive is SDIS_PRIMITIVE_NONE.
+ * Note that even though only one point is returned, several position can have
+ * the same minimal distance to the queried position. */
+SDIS_API res_T
+sdis_scene_find_closest_point
+  (const struct sdis_scene* scn,
+   const double pos[3], /* Query position */
+   const double radius, /* Maximum search distance around pos */
+   size_t* iprim, /* Primitive index onto which the closest point lies */
+   double uv[2]); /* Parametric cordinate onto the primitive */
+
 /* Define the world space position of a point onto the primitive `iprim' whose
  * parametric coordinate is uv. */
 SDIS_API res_T
@@ -818,7 +833,7 @@ sdis_scene_get_boundary_position
    const double uv[2], /* Parametric coordinate onto the primitive */
    double pos[3]); /* World space position */
 
-/* Project a world space position onto a primitive wrt its normal and compute
+/* roject a world space position onto a primitive wrt its normal and compute
  * the parametric coordinates of the projected point onto the primitive. This
  * function may help to define the probe position onto a boundary as expected
  * by the sdis_solve_probe_boundary function.
