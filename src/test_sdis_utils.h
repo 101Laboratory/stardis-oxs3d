@@ -18,6 +18,7 @@
 
 #include "sdis.h"
 
+#include <rsys/double33.h>
 #include <rsys/mem_allocator.h>
 #include <stdio.h>
 
