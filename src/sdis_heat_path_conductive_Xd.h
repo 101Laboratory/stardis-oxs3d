@@ -244,7 +244,8 @@ XD(conductive_path)
     float dir0[DIM], dir1[DIM];
     float org[DIM];
 
-    /* Check the limit condition */
+    /* Check the limit condition 
+     * REVIEW Rfo: This can be a bug if the random walk comes from a boundary */
     tmp = solid_get_temperature(mdm, &rwalk->vtx);
     if(tmp >= 0) {
       T->value += tmp;
