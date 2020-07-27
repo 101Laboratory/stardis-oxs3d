@@ -18,7 +18,9 @@
 
 #include "sdis.h"
 
+#include <rsys/free_list.h>
 #include <rsys/math.h>
+#include <rsys/ref_count.h>
 
 struct sdis_medium {
   enum sdis_medium_type type;

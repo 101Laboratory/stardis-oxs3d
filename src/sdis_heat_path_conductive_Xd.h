@@ -235,8 +235,6 @@ XD(conductive_path)
   do { /* Solid random walk */
     struct sXd(hit) hit0, hit1;
     double lambda; /* Thermal conductivity */
-    double rho; /* Volumic mass */
-    double cp; /* Calorific capacity */
     double tmp;
     double power_factor = 0;
     double power;
@@ -244,7 +242,7 @@ XD(conductive_path)
     float dir0[DIM], dir1[DIM];
     float org[DIM];
 
-    /* Check the limit condition 
+    /* Check the limit condition
      * REVIEW Rfo: This can be a bug if the random walk comes from a boundary */
     tmp = solid_get_temperature(mdm, &rwalk->vtx);
     if(tmp >= 0) {
@@ -267,8 +265,6 @@ XD(conductive_path)
     /* Fetch solid properties */
     delta_solid = (float)solid_get_delta(mdm, &rwalk->vtx);
     lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-    rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
-    cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
     power = solid_get_volumic_power(mdm, &rwalk->vtx);
 
     if(ctx->green_path && power_ref != power) {
@@ -346,39 +342,12 @@ XD(conductive_path)
       green_power_factor += power_factor;
     }
 
-    /* Sample the time */
-    if(!IS_INF(rwalk->vtx.time)) {
-      double tau, mu, t0;
-      mu = (2*DIM*lambda) / (rho*cp*delta*fp_to_meter*delta*fp_to_meter);
-      tau = ssp_ran_exp(rng, mu);
-      t0 = ctx->green_path ? -INF : solid_get_t0(rwalk->mdm);
-      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
-      if(rwalk->vtx.time == t0) {
-        /* Check the initial condition */
-        tmp = solid_get_temperature(mdm, &rwalk->vtx);
-        if(tmp >= 0) {
-          T->value += tmp;
-          T->done = 1;
+    /* Rewind the time */
+    res = XD(time_rewind)(rwalk->mdm, rng, delta, fp_to_meter, ctx, rwalk, T);
+    if(res != RES_OK) goto error;
+    if(T->done) break; /* Limit condition was reached */
 
-          if(ctx->heat_path) {
-            struct sdis_heat_vertex* vtx;
-            vtx = heat_path_get_last_vertex(ctx->heat_path);
-            vtx->time = rwalk->vtx.time;
-            vtx->weight = T->value;
-          }
-          break;
-        }
-        /* The initial condition should have been reached */
-        log_err(scn->dev,
-          "%s: undefined initial condition. "
-          "The time is %g but the temperature remains unknown.\n",
-          FUNC_NAME, t0);
-        res = RES_BAD_OP;
-        goto error;
-      }
-    }
-
-    /* Define if the random walk hits something along dir0 */
+   /* Define if the random walk hits something along dir0 */
     if(hit0.distance > delta) {
       rwalk->hit = SXD_HIT_NULL;
       rwalk->hit_side = SDIS_SIDE_NULL__;

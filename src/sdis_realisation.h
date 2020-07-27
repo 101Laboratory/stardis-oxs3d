@@ -144,4 +144,3 @@ ray_realisation_3d
    double* weight);
 
 #endif /* SDIS_REALISATION_H */
-
