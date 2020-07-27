@@ -600,6 +600,11 @@ XD(solid_solid_boundary_path)
     }
   }
 
+  /* Time rewind */
+  res = XD(time_rewind)(mdm, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+  if(res != RES_OK) goto error;
+  if(T->done) goto exit; /* Limit condition was reached */
+
   /* Perform reinjection. */
   XD(move_pos)(rwalk->vtx.P, dir, (float)reinject_dst);
   if(hit->distance == reinject_dst) {
@@ -764,6 +769,11 @@ XD(solid_fluid_boundary_path)
       }
     }
 
+    /* Time rewind */
+    res = XD(time_rewind)(solid, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+    if(res != RES_OK) goto error;
+    if(T->done) goto exit; /* Limit condition was reached */
+
     /* Perform solid reinjection */
     XD(move_pos)(rwalk->vtx.P, dir0, reinject_dst);
     if(hit.distance == reinject_dst) {
@@ -897,6 +907,11 @@ XD(solid_boundary_with_flux_path)
       if(res != RES_OK) goto error;
     }
   }
+
+  /* Time rewind */
+  res = XD(time_rewind)(mdm, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+  if(res != RES_OK) goto error;
+  if(T->done) goto exit; /* Limit condition was reached */
 
   /* Reinject. If the reinjection move the point too close of a boundary,
    * assume that the zone is isotherm and move to the boundary. */
