@@ -26,10 +26,11 @@
  * given temperature and time is compatible with the reference temperature
  * computed by analytically evaluating the green function.
  *
- * The test is performed on 2 scenes that actually represent the same system.
+ * The test is performed on 3 scenes that actually represent the same system.
  * The first scene is simply the cuboid, as it. The second scene is the same
  * cuboid but this time formed by 2 sub cuboid with strictly the same physical
- * properties.
+ * properties. Finally, the last scene is the same cube with successive
+ * cubes into it used only to add fictive boundaries.
  */
 
 static const double vertices[12/*#vertices*/*3/*#coords per vertex*/] = {
@@ -59,7 +60,7 @@ static const size_t nvertices = sizeof(vertices) / sizeof(double[3]);
  */
 static const size_t indices[22/*#triangles*/*3/*#indices per triangle*/] = {
   0, 4, 2, 2, 4, 6, /* X min */
-  3, 7, 5, 5, 1, 3, /* X mid */ 
+  3, 7, 5, 5, 1, 3, /* X mid */
   9,11,10,10, 8, 9, /* X max */
   0, 5, 4, 0, 1, 5, 1,10, 5, 1, 8,10, /* Y min */
   2, 6, 7, 2, 7, 3, 3, 7,11, 3,11, 9, /* Y max */
@@ -104,6 +105,73 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
   struct context* ctx = context;
   CHK(ctx);
   *bound = ctx->interfs[itri];
+}
+
+/*******************************************************************************
+ * Setup a scene composed of a box that successively contains smaller boxes
+ ******************************************************************************/
+struct matriochka_context {
+  struct sdis_interface* interfs[13];
+  const double* scale;
+  size_t nboxes;
+};
+
+static void
+matriochka_position(const size_t ivert, double pos[3], void* context)
+{
+  struct matriochka_context* ctx = context;
+  const size_t ibox = ctx->nboxes - ivert / box_nvertices - 1;
+  const double* verts = box_vertices;
+  const double box_szmin = 1.0 / (double)ctx->nboxes;
+  const size_t i = ivert % box_nvertices;
+  CHK(ibox <= ctx->nboxes);
+  pos[0] = ((verts[i*3+0]-0.5)*(double)(ibox+1)*box_szmin + 0.5)*ctx->scale[0];
+  pos[1] = ((verts[i*3+1]-0.5)*(double)(ibox+1)*box_szmin + 0.5)*ctx->scale[1];
+  pos[2] = ((verts[i*3+2]-0.5)*(double)(ibox+1)*box_szmin + 0.5)*ctx->scale[2];
+}
+
+static void
+matriochka_indices(const size_t itri, size_t ids[3], void* context)
+{
+  struct matriochka_context* ctx = context;
+  const size_t i = itri % box_ntriangles;
+  const size_t ibox = ctx->nboxes - itri / box_ntriangles - 1;
+  CHK(ibox <= ctx->nboxes);
+  (void)context;
+  ids[0] = box_indices[i*3+0] + ibox*box_nvertices;
+  ids[1] = box_indices[i*3+1] + ibox*box_nvertices;
+  ids[2] = box_indices[i*3+2] + ibox*box_nvertices;
+}
+
+static void
+matriocka_interface
+  (const size_t itri, struct sdis_interface** bound, void* context)
+{
+  struct matriochka_context* ctx = context;
+  const size_t ibox = ctx->nboxes - itri / box_ntriangles - 1;
+  const size_t i = itri % box_ntriangles;
+  CHK(ibox < ctx->nboxes);
+  *bound = ibox != 0 ? ctx->interfs[12] : ctx->interfs[i];
+}
+
+static INLINE void
+dump_matriochkas(FILE* stream, struct matriochka_context* ctx)
+{
+  size_t i;
+  ASSERT(ctx && stream);
+  FOR_EACH(i, 0, ctx->nboxes*box_nvertices) {
+    double pos[3];
+    matriochka_position(i, pos, ctx);
+    fprintf(stream, "v %g %g %g\n", SPLIT3(pos));
+  }
+  FOR_EACH(i, 0, ctx->nboxes*box_ntriangles) {
+    size_t ids[3];
+    matriochka_indices(i, ids, ctx);
+    fprintf(stream, "f %lu %lu %lu\n",
+      (unsigned long)ids[0]+1,
+      (unsigned long)ids[1]+1,
+      (unsigned long)ids[2]+1);
+  }
 }
 
 /*******************************************************************************
@@ -399,6 +467,7 @@ main(int argc, char** argv)
   struct sdis_device* dev = NULL;
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* box2_scn = NULL;
+  struct sdis_scene* box_matriochka_scn = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_data* data = NULL;
@@ -411,7 +480,9 @@ main(int argc, char** argv)
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct solid* solid_param = NULL;
   struct context ctx;
+  struct matriochka_context matriochka_ctx;
   const size_t nrealisations = 10000;
+  const size_t nmatriochkas = 5;
   size_t nfails = 0;
   double probe[3];
   double time[2];
@@ -432,7 +503,7 @@ main(int argc, char** argv)
   Tbounds[3] = 270; /* Ymax */
   Tbounds[4] = 300; /* Zmin */
   Tbounds[5] = 320; /* Zmax */
-  Tinit = 300;
+  Tinit = 100;
   boxsz[0] = 0.3;
   boxsz[1] = 0.1;
   boxsz[2] = 0.2;
@@ -461,7 +532,6 @@ main(int argc, char** argv)
   solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solid_param->init_temperature = Tinit;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
-  OK(sdis_data_ref_put(data));
 
   /* Setup the interface shader */
   interf_shader.front.temperature = interface_get_temperature;
@@ -510,41 +580,75 @@ main(int argc, char** argv)
   OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
     nvertices, get_position, &ctx, &box2_scn));
 
+  /* Setup the matriochka context */
+  matriochka_ctx.interfs[0]  = matriochka_ctx.interfs[1]  = interfs[4]; /* Zmin */
+  matriochka_ctx.interfs[2]  = matriochka_ctx.interfs[3]  = interfs[0]; /* Xmin */
+  matriochka_ctx.interfs[4]  = matriochka_ctx.interfs[5]  = interfs[5]; /* Zmax */
+  matriochka_ctx.interfs[6]  = matriochka_ctx.interfs[7]  = interfs[1]; /* Xmax */
+  matriochka_ctx.interfs[8]  = matriochka_ctx.interfs[9]  = interfs[3]; /* Ymax */
+  matriochka_ctx.interfs[10] = matriochka_ctx.interfs[11] = interfs[2]; /* Ymin */
+  matriochka_ctx.interfs[12] = interfs[6]; /* The remaining internal triangles */
+  matriochka_ctx.scale = boxsz;
+    matriochka_ctx.nboxes = nmatriochkas;
+
+  /* Create the matriochka scene */
+  OK(sdis_scene_create(dev, box_ntriangles*nmatriochkas, matriochka_indices,
+    matriocka_interface, box_nvertices*nmatriochkas, matriochka_position,
+    &matriochka_ctx, &box_matriochka_scn));
+
   /* Setup and run the simulation */
   probe[0] = 0.1;
   probe[1] = 0.06;
   probe[2] = 0.130;
-  time[0] = time[1] = 1000; /* Observation time range */
+  time[0] = time[1] = 500; /* Observation time range */
 
   /* Compute the solution */
   Tref = temperature_analytical
     (Tbounds, Tinit, boxsz, probe, time[0], rho, cp, lambda);
 
   /* Run simulation on regular scene */
+  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solve_args.nrealisations = nrealisations;
   solve_args.position[0] = probe[0];
   solve_args.position[1] = probe[1];
   solve_args.position[2] = probe[2];
-  solve_args.time_range[0] = 1000;
-  solve_args.time_range[1] = 1000;
-  solve_args.reference_temperature = 290;
+  solve_args.time_range[0] = time[0];
+  solve_args.time_range[1] = time[1];
   OK(sdis_solve_probe(box_scn, &solve_args, &estimator));
 
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &temperature));
-  printf("Temperature at (%g, %g, %g) m at %g s = %g ~ %g +/- %g\n",
-    SPLIT3(probe), time[0], Tref, temperature.E, temperature.SE);
+  printf("Temperature at (%g, %g, %g) m at %g s (delta = %g) = %g ~ %g +/- %g\n",
+    SPLIT3(probe), time[0], solid_param->delta, Tref, temperature.E,
+    temperature.SE);
   printf("#failures = %lu/%lu\n",
     (unsigned long)nfails, (unsigned long)nrealisations);
   CHK(eq_eps(Tref, temperature.E, temperature.SE*3));
   OK(sdis_estimator_ref_put(estimator));
 
   /* Run simulation on split scene */
+  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0]/2.0, boxsz[1]), boxsz[2]);
   OK(sdis_solve_probe(box2_scn, &solve_args, &estimator));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &temperature));
-  printf("Temperature at (%g, %g, %g) m at %g s = %g ~ %g +/- %g\n",
-  SPLIT3(probe), time[0], Tref, temperature.E, temperature.SE);
+  printf("Temperature at (%g, %g, %g) m at %g s (delta = %g) = %g ~ %g +/- %g\n",
+    SPLIT3(probe), time[0], solid_param->delta, Tref, temperature.E,
+    temperature.SE);
+  printf("#failures = %lu/%lu\n",
+    (unsigned long)nfails, (unsigned long)nrealisations);
+  CHK(eq_eps(Tref, temperature.E, temperature.SE*3));
+  OK(sdis_estimator_ref_put(estimator));
+
+  /* Run simulation on matriochkas */
+  solid_param->delta = MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
+  solid_param->delta /= (double)nmatriochkas;
+  solid_param->delta *= 1.0/20.0;
+  OK(sdis_solve_probe(box_matriochka_scn, &solve_args, &estimator));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &temperature));
+  printf("Temperature at (%g, %g, %g) m at %g s (delta = %g) = %g ~ %g +/- %g\n",
+    SPLIT3(probe), time[0], solid_param->delta, Tref, temperature.E,
+    temperature.SE);
   printf("#failures = %lu/%lu\n",
     (unsigned long)nfails, (unsigned long)nrealisations);
   CHK(eq_eps(Tref, temperature.E, temperature.SE*3));
@@ -557,11 +661,13 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interfs[4]));
   OK(sdis_interface_ref_put(interfs[5]));
   OK(sdis_interface_ref_put(interfs[6]));
+  OK(sdis_data_ref_put(data));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_device_ref_put(dev));
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(box2_scn));
+  OK(sdis_scene_ref_put(box_matriochka_scn));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);
