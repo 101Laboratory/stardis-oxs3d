@@ -71,6 +71,7 @@ set(SDIS_FILES_SRC
   sdis_interface.c
   sdis_log.c
   sdis_medium.c
+  sdis_misc.c
   sdis_realisation.c
   sdis_scene.c
   sdis_solve.c)
@@ -90,6 +91,8 @@ set(SDIS_FILES_INC
   sdis_heat_path_radiative_Xd.h
   sdis_interface_c.h
   sdis_log.h
+  sdis_misc.h
+  sdis_misc_Xd.h
   sdis_medium_c.h
   sdis_realisation.h
   sdis_realisation_Xd.h
