@@ -991,6 +991,11 @@ sdis_green_function_solve
    const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
 
+SDIS_API res_T
+sdis_green_function_write
+  (struct sdis_green_function* green,
+   FILE* stream);
+
 /* Retrieve the number of valid paths used to estimate the green function. It
  * is actually equal to the number of successful realisations. */
 SDIS_API res_T

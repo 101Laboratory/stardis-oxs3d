@@ -164,6 +164,46 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
   return RES_OK;
 }
 
+static INLINE res_T
+green_path_write(const struct green_path* path, FILE* stream)
+{
+  size_t sz = 0;
+  res_T res = RES_OK;
+  ASSERT(path && stream);
+
+  #define WRITE(Var, N) {                                                      \
+    if(fwrite((Var), sizeof(*(Var)), (N), stream) != (N)) {                    \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  /* Write the list of flux terms */
+  sz = darray_flux_term_size_get(&path->flux_terms);
+  WRITE(&sz, 1);
+  WRITE(darray_flux_term_cdata_get(&path->flux_terms), sz);
+
+  /* Write the list of power terms */
+  sz = darray_power_term_size_get(&path->power_terms);
+  WRITE(&sz, 1);
+  WRITE(darray_power_term_cdata_get(&path->power_terms), sz);
+
+  /* Write the limit point */
+  WRITE(&path->limit, 1);
+  WRITE(&path->limit_type, 1);
+
+  /*  Write miscellaneous data */
+  WRITE(&path->ilast_medium, 1);
+  WRITE(&path->ilast_interf, 1);
+
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 /* Generate the dynamic array of green paths */
 #define DARRAY_NAME green_path
 #define DARRAY_DATA struct green_path
@@ -370,6 +410,103 @@ error:
   goto exit;
 }
 
+static res_T
+write_media(struct sdis_green_function* green, FILE* stream)
+{
+  struct htable_medium_iterator it, it_end;
+  size_t nmedia = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  nmedia = htable_medium_size_get(&green->media);
+  WRITE(&nmedia);
+
+  htable_medium_begin(&green->media, &it);
+  htable_medium_end(&green->media, &it_end);
+  while(!htable_medium_iterator_eq(&it, &it_end)) {
+    const unsigned id = *htable_medium_iterator_key_get(&it);
+    htable_medium_iterator_next(&it);
+    WRITE(&id);
+  }
+
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+write_interfaces(struct sdis_green_function* green, FILE* stream)
+{
+  struct htable_interf_iterator it, it_end;
+  size_t ninterfaces = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+  ninterfaces = htable_interf_size_get(&green->interfaces);
+  WRITE(&ninterfaces);
+
+  htable_interf_begin(&green->interfaces, &it);
+  htable_interf_end(&green->interfaces, &it_end);
+  while(!htable_interf_iterator_eq(&it, &it_end)) {
+    const unsigned id = *htable_interf_iterator_key_get(&it);
+    htable_interf_iterator_next(&it);
+    WRITE(&id);
+  }
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+write_paths_list(struct sdis_green_function* green, FILE* stream)
+{
+  size_t npaths = 0;
+  size_t ipath = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+  npaths = darray_green_path_size_get(&green->paths);
+  WRITE(&npaths);
+  FOR_EACH(ipath, 0, npaths) {
+    const struct green_path* path = NULL;
+    path = darray_green_path_cdata_get(&green->paths) + ipath;
+
+    res = green_path_write(path, stream);
+    if(res != RES_OK) goto error;
+  }
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 static void
 green_function_clear(struct sdis_green_function* green)
 {
@@ -504,6 +641,52 @@ error:
     SDIS(estimator_ref_put(estimator));
     estimator = NULL;
   }
+  goto exit;
+}
+
+res_T
+sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
+{
+  struct ssp_rng* rng = NULL;
+  res_T res = RES_OK;
+
+  if(!green && !stream) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = write_media(green, stream);
+  if(res != RES_OK) goto error;
+  res = write_interfaces(green, stream);
+  if(res != RES_OK) goto error;
+  res = write_paths_list(green, stream);
+  if(res != RES_OK) goto error;
+
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+  WRITE(&green->npaths_valid);
+  WRITE(&green->npaths_invalid);
+  WRITE(&green->realisation_time);
+  WRITE(&green->rng_type);
+  #undef WRITE
+
+  /* Create a temporary RNG used to serialise the RNG state */
+  res = ssp_rng_create(green->dev->allocator, &green->rng_type, &rng);
+  if(res != RES_OK) goto error;
+  rewind(green->rng_state);
+  res = ssp_rng_read(rng, green->rng_state);
+  if(res != RES_OK) goto error;
+  res = ssp_rng_write(rng, stream);
+  if(res != RES_OK) goto error;
+
+exit:
+  if(rng) SSP(rng_ref_put(rng));
+  return res;
+error:
   goto exit;
 }
 
