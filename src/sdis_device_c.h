@@ -27,7 +27,7 @@
 struct ssp_rng;
 struct ssp_rng_proxy;
 
-struct name { FITEM; };
+struct name { FITEM; void* mem; };
 #define FITEM_TYPE name
 #include <rsys/free_list.h>
 

@@ -16,10 +16,11 @@
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
 #include "sdis_green.h"
+#include "sdis_interface_c.h"
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
-#include "sdis_interface_c.h"
+#include "sdis_scene_c.h"
 
 #include <star/ssp.h>
 
@@ -164,7 +165,7 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
   return RES_OK;
 }
 
-static INLINE res_T
+static res_T
 green_path_write(const struct green_path* path, FILE* stream)
 {
   size_t sz = 0;
@@ -192,11 +193,59 @@ green_path_write(const struct green_path* path, FILE* stream)
   WRITE(&path->limit, 1);
   WRITE(&path->limit_type, 1);
 
-  /*  Write miscellaneous data */
+  /* Write miscellaneous data */
   WRITE(&path->ilast_medium, 1);
   WRITE(&path->ilast_interf, 1);
 
   #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+green_path_read(struct green_path* path, FILE* stream)
+{
+  size_t sz = 0;
+  res_T res = RES_OK;
+  ASSERT(path && stream);
+
+  #define READ(Var, N) {                                                       \
+    if(fread((Var), sizeof(*(Var)), (N), stream) != (N)) {                     \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  /* Read the list of flux terms */
+  READ(&sz, 1);
+  res = darray_flux_term_resize(&path->flux_terms, sz);
+  if(res != RES_OK) goto error;
+  READ(darray_flux_term_data_get(&path->flux_terms), sz);
+
+  /* Read the list of power tems */
+  READ(&sz, 1);
+  res = darray_power_term_resize(&path->power_terms, sz);
+  if(res != RES_OK) goto error;
+  READ(darray_power_term_data_get(&path->power_terms), sz);
+
+  /* Read the limit point */
+  READ(&path->limit, 1);
+  READ(&path->limit_type, 1);
+
+  /* Read the miscellaneous data */
+  READ(&path->ilast_medium, 1);
+  READ(&path->ilast_interf, 1);
+
+  #undef READ
 
 exit:
   return res;
@@ -431,12 +480,59 @@ write_media(struct sdis_green_function* green, FILE* stream)
   htable_medium_begin(&green->media, &it);
   htable_medium_end(&green->media, &it_end);
   while(!htable_medium_iterator_eq(&it, &it_end)) {
-    const unsigned id = *htable_medium_iterator_key_get(&it);
+    const struct sdis_medium* mdm = *htable_medium_iterator_data_get(&it);
     htable_medium_iterator_next(&it);
-    WRITE(&id);
+    WRITE(&mdm->id);
   }
 
   #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+read_media(struct sdis_green_function* green, FILE* stream)
+{
+  size_t nmedia = 0;
+  size_t imedium = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define READ(Var) {                                                          \
+    if(fread((Var), sizeof(*(Var)), 1, stream) != 1) {                         \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  READ(&nmedia);
+  FOR_EACH(imedium, 0, nmedia) {
+    struct name* name = NULL;
+    struct fid id;
+    READ(&id);
+
+    name = flist_name_get(&green->dev->media_names, id);
+    if(!name) {
+      log_err(green->dev, "%s: a Stardis medium is missing.\n",
+        FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    res = ensure_medium_registration(green, name->mem);
+    if(res != RES_OK) goto error;
+  }
+
+  #undef READ
 
 exit:
   return res;
@@ -464,11 +560,58 @@ write_interfaces(struct sdis_green_function* green, FILE* stream)
   htable_interf_begin(&green->interfaces, &it);
   htable_interf_end(&green->interfaces, &it_end);
   while(!htable_interf_iterator_eq(&it, &it_end)) {
-    const unsigned id = *htable_interf_iterator_key_get(&it);
+    const struct sdis_interface* interf = *htable_interf_iterator_data_get(&it);
     htable_interf_iterator_next(&it);
-    WRITE(&id);
+    WRITE(&interf->id);
   }
   #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+read_interfaces(struct sdis_green_function* green, FILE* stream)
+{
+  size_t ninterfs = 0;
+  size_t iinterf = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define READ(Var) {                                                          \
+    if(fread((Var), sizeof(*(Var)), 1, stream) != 1) {                         \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  READ(&ninterfs);
+  FOR_EACH(iinterf, 0, ninterfs) {
+    struct name* name = NULL;
+    struct fid id;
+    READ(&id);
+
+    name = flist_name_get(&green->dev->interfaces_names, id);
+    if(!name) {
+      log_err(green->dev, "%s: a Stardis interface is missing.\n",
+        FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    res = ensure_interface_registration(green, name->mem);
+    if(res != RES_OK) goto error;
+  }
+
+  #undef READ
 
 exit:
   return res;
@@ -500,6 +643,45 @@ write_paths_list(struct sdis_green_function* green, FILE* stream)
     if(res != RES_OK) goto error;
   }
   #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+read_paths_list(struct sdis_green_function* green, FILE* stream)
+{
+  size_t npaths = 0;
+  size_t ipath = 0;
+  res_T res = RES_OK;
+
+  #define READ(Var) {                                                          \
+    if(fread((Var), sizeof(*(Var)), 1, stream) != 1) {                         \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  READ(&npaths);
+  res = darray_green_path_resize(&green->paths, npaths);
+  if(res != RES_OK) goto error;
+
+  FOR_EACH(ipath, 0, npaths) {
+    struct green_path* path = NULL;
+    path = darray_green_path_data_get(&green->paths) + ipath;
+
+    res = green_path_read(path, stream);
+    if(res != RES_OK) goto error;
+  }
+  #undef READ
 
 exit:
   return res;
@@ -650,7 +832,7 @@ sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
   struct ssp_rng* rng = NULL;
   res_T res = RES_OK;
 
-  if(!green && !stream) {
+  if(!green || !stream) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -687,6 +869,69 @@ exit:
   if(rng) SSP(rng_ref_put(rng));
   return res;
 error:
+  goto exit;
+}
+
+res_T
+sdis_green_function_create_from_stream
+  (struct sdis_scene* scn,
+   FILE* stream,
+   struct sdis_green_function** out_green)
+{
+  struct sdis_green_function* green = NULL;
+  struct ssp_rng* rng = NULL;
+  res_T res = RES_OK;
+
+  if(!scn || !stream || !out_green) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = green_function_create(scn->dev, &green);
+  if(res != RES_OK) goto error;
+
+  res = read_media(green, stream);
+  if(res != RES_OK) goto error;
+  res = read_interfaces(green, stream);
+  if(res != RES_OK) goto error;
+  res = read_paths_list(green, stream);
+  if(res != RES_OK) goto error;
+
+  #define READ(Var) {                                                          \
+    if(fread((Var), sizeof(*(Var)), 1, stream) != 1) {                         \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+  READ(&green->npaths_valid);
+  READ(&green->npaths_invalid);
+  READ(&green->realisation_time);
+  READ(&green->rng_type);
+  #undef READ
+
+  /* Create a temporary RNG used to deserialise the RNG state */
+  res = ssp_rng_create(green->dev->allocator, &green->rng_type, &rng);
+  if(res != RES_OK) goto error;
+  res = ssp_rng_read(rng, stream);
+  if(res != RES_OK) goto error;
+  res = ssp_rng_write(rng, green->rng_state);
+  if(res != RES_OK) goto error;
+
+exit:
+  if(rng) SSP(rng_ref_put(rng));
+  if(out_green) *out_green = green;
+  return res;
+error:
+  if(green) {
+    SDIS(green_function_ref_put(green));
+    green = NULL;
+  }
   goto exit;
 }
 

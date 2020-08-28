@@ -68,6 +68,7 @@ medium_create
   medium->dev = dev;
   medium->type = type;
   medium->id = flist_name_add(&dev->media_names);
+  flist_name_get(&dev->media_names, medium->id)->mem = medium;
 
 exit:
   if(out_medium) *out_medium = medium;

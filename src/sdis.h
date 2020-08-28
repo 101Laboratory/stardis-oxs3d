@@ -996,6 +996,12 @@ sdis_green_function_write
   (struct sdis_green_function* green,
    FILE* stream);
 
+SDIS_API res_T
+sdis_green_function_create_from_stream
+  (struct sdis_scene* scn, /* Scene from which the green was evaluated */
+   FILE* stream, /* Stream into which the green was serialized */
+   struct sdis_green_function** green);
+
 /* Retrieve the number of valid paths used to estimate the green function. It
  * is actually equal to the number of successful realisations. */
 SDIS_API res_T
