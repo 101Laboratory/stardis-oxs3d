@@ -215,6 +215,7 @@ solve(struct sdis_scene* scn, const double pos[])
 
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
+  check_green_serialization(green, scn, time_range);
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));

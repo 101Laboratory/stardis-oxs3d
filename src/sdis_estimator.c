@@ -98,7 +98,10 @@ res_T
 sdis_estimator_get_temperature
   (const struct sdis_estimator* estimator, struct sdis_mc* mc)
 {
-  if(!estimator || !mc) return RES_BAD_ARG;
+  if(!estimator || !mc 
+  || (  estimator->type != SDIS_ESTIMATOR_TEMPERATURE
+     && estimator->type != SDIS_ESTIMATOR_FLUX))
+    return RES_BAD_ARG;
   SETUP_MC(mc, &estimator->temperature);
   return RES_OK;
 }
@@ -116,7 +119,7 @@ res_T
 sdis_estimator_get_convective_flux
   (const struct sdis_estimator* estimator, struct sdis_mc* flux)
 {
-  if(!estimator || !flux ||estimator->type != SDIS_ESTIMATOR_FLUX)
+  if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
   SETUP_MC(flux, &estimator->fluxes[FLUX_CONVECTIVE]);
   return RES_OK;

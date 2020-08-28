@@ -348,6 +348,7 @@ main(int argc, char** argv)
   check_green_function(green);
   OK(sdis_green_function_solve(green, probe_args.time_range, &estimator2));
   check_estimator(estimator2, N, ref);
+  check_green_serialization(green, box_scn, probe_args.time_range);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -378,6 +379,7 @@ main(int argc, char** argv)
   check_green_function(green);
   OK(sdis_green_function_solve(green, probe_args.time_range, &estimator2));
   check_estimator(estimator2, N, ref);
+  check_green_serialization(green, square_scn, probe_args.time_range);
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
@@ -465,11 +467,11 @@ main(int argc, char** argv)
   BA(GREEN(box_scn, &bound_args, &green));
   sides[0] = SDIS_FRONT;
 
-
   OK(GREEN(box_scn, &bound_args, &green));
   check_green_function(green);
   OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
   check_estimator(estimator2, N, ref);
+  check_green_serialization(green, box_scn, bound_args.time_range);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -506,6 +508,7 @@ main(int argc, char** argv)
   check_green_function(green);
   OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
   check_estimator(estimator2, N, ref);
+  check_green_serialization(green, square_scn, bound_args.time_range);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -538,6 +541,7 @@ main(int argc, char** argv)
   check_green_function(green);
   OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
   check_estimator(estimator2, N, ref);
+  check_green_serialization(green, box_scn, bound_args.time_range);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -555,6 +559,7 @@ main(int argc, char** argv)
   check_green_function(green);
   OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
   check_estimator(estimator2, N, ref);
+  check_green_serialization(green, square_scn, bound_args.time_range);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));

@@ -252,26 +252,82 @@ check_estimator_eq
   OK(sdis_estimator_get_type(e2, &type2));
   CHK(type1 == type2);
 
-  OK(sdis_estimator_get_temperature(e1, &mc1));
-  OK(sdis_estimator_get_temperature(e2, &mc2));
-  CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-  CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+  switch(type1) {
+    case SDIS_ESTIMATOR_TEMPERATURE:
+      OK(sdis_estimator_get_temperature(e1, &mc1));
+      OK(sdis_estimator_get_temperature(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      break;
 
-  if(type1 == SDIS_ESTIMATOR_FLUX) {
-    OK(sdis_estimator_get_convective_flux(e1, &mc1));
-    OK(sdis_estimator_get_convective_flux(e2, &mc2));
-    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+    case SDIS_ESTIMATOR_FLUX:
+      OK(sdis_estimator_get_convective_flux(e1, &mc1));
+      OK(sdis_estimator_get_convective_flux(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
 
-    OK(sdis_estimator_get_radiative_flux(e1, &mc1));
-    OK(sdis_estimator_get_radiative_flux(e2, &mc2));
-    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      OK(sdis_estimator_get_radiative_flux(e1, &mc1));
+      OK(sdis_estimator_get_radiative_flux(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
 
-    OK(sdis_estimator_get_total_flux(e1, &mc1));
-    OK(sdis_estimator_get_total_flux(e2, &mc2));
-    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      OK(sdis_estimator_get_total_flux(e1, &mc1));
+      OK(sdis_estimator_get_total_flux(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      break;
+
+    case SDIS_ESTIMATOR_MEAN_POWER:
+      OK(sdis_estimator_get_mean_power(e1, &mc1));
+      OK(sdis_estimator_get_mean_power(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      break;
+
+    default: FATAL("Unreachable code.\n"); break;
+  }
+}
+
+static INLINE void
+check_estimator_eq_strict
+  (const struct sdis_estimator* e1, const struct sdis_estimator* e2)
+{
+  struct sdis_mc mc1, mc2;
+  enum sdis_estimator_type type1, type2;
+  ASSERT(e1 && e2);
+
+  OK(sdis_estimator_get_type(e1, &type1));
+  OK(sdis_estimator_get_type(e2, &type2));
+  CHK(type1 == type2);
+
+  switch(type1) {
+    case SDIS_ESTIMATOR_TEMPERATURE:
+      OK(sdis_estimator_get_temperature(e1, &mc1));
+      OK(sdis_estimator_get_temperature(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+      break;
+
+    case SDIS_ESTIMATOR_FLUX:
+      OK(sdis_estimator_get_convective_flux(e1, &mc1));
+      OK(sdis_estimator_get_convective_flux(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+
+      OK(sdis_estimator_get_radiative_flux(e1, &mc1));
+      OK(sdis_estimator_get_radiative_flux(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+
+      OK(sdis_estimator_get_total_flux(e1, &mc1));
+      OK(sdis_estimator_get_total_flux(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+      break;
+
+    case SDIS_ESTIMATOR_MEAN_POWER:
+      OK(sdis_estimator_get_mean_power(e1, &mc1));
+      OK(sdis_estimator_get_mean_power(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+      break;
+
+    default: FATAL("Unreachable code.\n"); break;
   }
 }
 
@@ -294,6 +350,12 @@ extern LOCAL_SYM void
 dump_heat_paths
   (FILE* stream,
    const struct sdis_estimator* estimator);
+
+extern LOCAL_SYM void
+check_green_serialization
+  (struct sdis_green_function* green,
+   struct sdis_scene* scn,
+   const double time_range[2]);
 
 #endif /* TEST_SDIS_UTILS_H */
 

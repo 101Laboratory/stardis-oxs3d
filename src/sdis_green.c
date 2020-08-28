@@ -99,6 +99,7 @@ green_path_init(struct mem_allocator* allocator, struct green_path* path)
   darray_flux_term_init(allocator, &path->flux_terms);
   darray_power_term_init(allocator, &path->power_terms);
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
+  path->limit.fragment = SDIS_INTERFACE_FRAGMENT_NULL;
   path->limit_id = UINT_MAX;
   path->limit_type = SDIS_POINT_NONE;
   path->ilast_medium = UINT16_MAX;
@@ -191,6 +192,7 @@ green_path_write(const struct green_path* path, FILE* stream)
 
   /* Write the limit point */
   WRITE(&path->limit, 1);
+  WRITE(&path->limit_id, 1);
   WRITE(&path->limit_type, 1);
 
   /* Write miscellaneous data */
@@ -239,6 +241,7 @@ green_path_read(struct green_path* path, FILE* stream)
 
   /* Read the limit point */
   READ(&path->limit, 1);
+  READ(&path->limit_id, 1);
   READ(&path->limit_type, 1);
 
   /* Read the miscellaneous data */
@@ -881,6 +884,15 @@ sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
     goto error;
   }
 
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  WRITE(&SDIS_GREEN_FUNCTION_VERSION);
+
   res = write_media(green, stream);
   if(res != RES_OK) goto error;
   res = write_interfaces(green, stream);
@@ -888,12 +900,6 @@ sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
   res = write_paths_list(green, stream);
   if(res != RES_OK) goto error;
 
-  #define WRITE(Var) {                                                         \
-    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
-      res = RES_IO_ERR;                                                        \
-      goto error;                                                              \
-    }                                                                          \
-  } (void)0
   WRITE(&green->npaths_valid);
   WRITE(&green->npaths_invalid);
   WRITE(&green->realisation_time);
@@ -924,6 +930,7 @@ sdis_green_function_create_from_stream
 {
   struct sdis_green_function* green = NULL;
   struct ssp_rng* rng = NULL;
+  int version = 0;
   res_T res = RES_OK;
 
   if(!scn || !stream || !out_green) {
@@ -932,13 +939,6 @@ sdis_green_function_create_from_stream
   }
 
   res = green_function_create(scn->dev, &green);
-  if(res != RES_OK) goto error;
-
-  res = read_media(green, stream);
-  if(res != RES_OK) goto error;
-  res = read_interfaces(green, stream);
-  if(res != RES_OK) goto error;
-  res = read_paths_list(green, stream);
   if(res != RES_OK) goto error;
 
   #define READ(Var) {                                                          \
@@ -953,6 +953,23 @@ sdis_green_function_create_from_stream
       goto error;                                                              \
     }                                                                          \
   } (void)0
+
+  READ(&version);
+  if(version != SDIS_GREEN_FUNCTION_VERSION) {
+    log_err(green->dev, "%s: unexpected green function version %d. Expecting a "
+      "green function in version %d.\n", 
+      FUNC_NAME, version, SDIS_GREEN_FUNCTION_VERSION);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = read_media(green, stream);
+  if(res != RES_OK) goto error;
+  res = read_interfaces(green, stream);
+  if(res != RES_OK) goto error;
+  res = read_paths_list(green, stream);
+  if(res != RES_OK) goto error;
+
   READ(&green->npaths_valid);
   READ(&green->npaths_invalid);
   READ(&green->realisation_time);
