@@ -483,6 +483,7 @@ write_media(struct sdis_green_function* green, FILE* stream)
     const struct sdis_medium* mdm = *htable_medium_iterator_data_get(&it);
     htable_medium_iterator_next(&it);
     WRITE(&mdm->id);
+    WRITE(&mdm->type);
   }
 
   #undef WRITE
@@ -517,8 +518,12 @@ read_media(struct sdis_green_function* green, FILE* stream)
   READ(&nmedia);
   FOR_EACH(imedium, 0, nmedia) {
     struct name* name = NULL;
+    struct sdis_medium* mdm = NULL;
     struct fid id;
+    enum sdis_medium_type mdm_type;
+
     READ(&id);
+    READ(&mdm_type);
 
     name = flist_name_get(&green->dev->media_names, id);
     if(!name) {
@@ -528,7 +533,16 @@ read_media(struct sdis_green_function* green, FILE* stream)
       goto error;
     }
 
-    res = ensure_medium_registration(green, name->mem);
+    mdm = name->mem;
+
+    if(mdm_type != mdm->type) {
+      log_err(green->dev, "%s: inconsistency between the a Stardis medium "
+        "and its serialised data.\n", FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    res = ensure_medium_registration(green, mdm);
     if(res != RES_OK) goto error;
   }
 
@@ -563,6 +577,10 @@ write_interfaces(struct sdis_green_function* green, FILE* stream)
     const struct sdis_interface* interf = *htable_interf_iterator_data_get(&it);
     htable_interf_iterator_next(&it);
     WRITE(&interf->id);
+    WRITE(&interf->medium_front->id);
+    WRITE(&interf->medium_front->type);
+    WRITE(&interf->medium_back->id);
+    WRITE(&interf->medium_back->type);
   }
   #undef WRITE
 
@@ -596,8 +614,20 @@ read_interfaces(struct sdis_green_function* green, FILE* stream)
   READ(&ninterfs);
   FOR_EACH(iinterf, 0, ninterfs) {
     struct name* name = NULL;
+    struct sdis_interface* interf = NULL;
+    struct sdis_medium* mdm_front = NULL;
+    struct sdis_medium* mdm_back = NULL;
     struct fid id;
+    struct fid mdm_front_id;
+    struct fid mdm_back_id;
+    enum sdis_medium_type mdm_front_type;
+    enum sdis_medium_type mdm_back_type;
+
     READ(&id);
+    READ(&mdm_front_id);
+    READ(&mdm_front_type);
+    READ(&mdm_back_id);
+    READ(&mdm_back_type);
 
     name = flist_name_get(&green->dev->interfaces_names, id);
     if(!name) {
@@ -607,7 +637,21 @@ read_interfaces(struct sdis_green_function* green, FILE* stream)
       goto error;
     }
 
-    res = ensure_interface_registration(green, name->mem);
+    interf = name->mem;
+    mdm_front = flist_name_get(&green->dev->media_names, mdm_front_id)->mem;
+    mdm_back = flist_name_get(&green->dev->media_names, mdm_back_id)->mem;
+
+    if(mdm_front != interf->medium_front
+    || mdm_back != interf->medium_back
+    || mdm_front_type != interf->medium_front->type
+    || mdm_back_type != interf->medium_back->type) {
+      log_err(green->dev, "%s: inconsistency between the a Stardis interface "
+        "and its serialised data.\n", FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    res = ensure_interface_registration(green, interf);
     if(res != RES_OK) goto error;
   }
 
