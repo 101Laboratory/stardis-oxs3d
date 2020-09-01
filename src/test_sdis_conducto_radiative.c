@@ -437,7 +437,7 @@ main(int argc, char** argv)
     printf("\n");
 
     /* Check green used at a different temperature */
-    p_intface->temperature = T1b = T1 + (isimul + 1) * 10;
+    p_intface->temperature = T1b = T1 + ((double)isimul + 1) * 10;
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
