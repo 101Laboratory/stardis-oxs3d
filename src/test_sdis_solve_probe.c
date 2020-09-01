@@ -403,8 +403,8 @@ main(int argc, char** argv)
   OK(sdis_estimator_get_rng_state(estimator, &rng_state));
 
   ref = 300;
-  printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(solve_args.position), ref, T.E, T.SE);
+  printf("Temperature at (%g, %g, %g) with Tfluid=%g = %g ~ %g +/- %g\n",
+    SPLIT3(solve_args.position), fluid_param->temperature, ref, T.E, T.SE);
   printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -441,6 +441,32 @@ main(int argc, char** argv)
   BA(sdis_green_function_solve(green, solve_args.time_range, NULL));
   OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
 
+  check_green_function(green);
+  check_estimator_eq(estimator, estimator2);
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  printf("\n");
+
+  /* Check green used at a different temperature */
+  fluid_param->temperature = 500;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+  ref = 500;
+  printf("Temperature at (%g, %g, %g) with Tfluid=%g = %g ~ %g +/- %g\n",
+    SPLIT3(solve_args.position), fluid_param->temperature, ref, T.E, T.SE);
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N / 1000);
+  CHK(eq_eps(T.E, ref, T.SE));
+
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 

@@ -415,7 +415,7 @@ main(int argc, char** argv)
 
     u = (solve_args.position[0] + 1) / thickness;
     ref = u * Ts1 + (1-u) * Ts0;
-    printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
+    printf("Temperature at (%g, %g) = %g ~ %g +/- %g\n",
       SPLIT2(solve_args.position), ref, T.E, T.SE);
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
