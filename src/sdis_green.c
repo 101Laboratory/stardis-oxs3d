@@ -297,6 +297,38 @@ struct sdis_green_function {
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+enum rng_type {
+  RNG_KISS,
+  RNG_MT_19937_64,
+  RNG_RANLUX48,
+  RNG_THREEFRY,
+  RNG_UNKNOWN
+};
+
+static INLINE enum rng_type
+get_rng_type_enum(const struct ssp_rng_type* type)
+{
+  ASSERT(type);
+  if(ssp_rng_type_eq(type, &ssp_rng_kiss)) return RNG_KISS;
+  if(ssp_rng_type_eq(type, &ssp_rng_mt19937_64)) return RNG_MT_19937_64;
+  if(ssp_rng_type_eq(type, &ssp_rng_ranlux48)) return RNG_RANLUX48;
+  if(ssp_rng_type_eq(type, &ssp_rng_threefry)) return RNG_THREEFRY;
+  return RNG_UNKNOWN;
+}
+
+static INLINE void
+get_rng_type_ssp(const enum rng_type type, struct ssp_rng_type* ssp_type)
+{
+  switch(type) {
+    case RNG_KISS: *ssp_type = ssp_rng_kiss; break;
+    case RNG_MT_19937_64: *ssp_type = ssp_rng_mt19937_64; break;
+    case RNG_RANLUX48: *ssp_type = ssp_rng_ranlux48; break;
+    case RNG_THREEFRY: *ssp_type = ssp_rng_threefry; break;
+    case RNG_UNKNOWN: memset(ssp_type, 0, sizeof(*ssp_type)); break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+}
+
 static res_T
 ensure_medium_registration
   (struct sdis_green_function* green,
@@ -877,6 +909,7 @@ res_T
 sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
 {
   struct ssp_rng* rng = NULL;
+  enum rng_type rng_type = RNG_UNKNOWN;
   res_T res = RES_OK;
 
   if(!green || !stream) {
@@ -891,6 +924,15 @@ sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
     }                                                                          \
   } (void)0
 
+  rng_type = get_rng_type_enum(&green->rng_type);
+  if(rng_type == RNG_UNKNOWN) {
+    log_err(green->dev,
+      "%s: could not function a green function with an unknown RNG type.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
   WRITE(&SDIS_GREEN_FUNCTION_VERSION);
 
   res = write_media(green, stream);
@@ -903,7 +945,7 @@ sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
   WRITE(&green->npaths_valid);
   WRITE(&green->npaths_invalid);
   WRITE(&green->realisation_time);
-  WRITE(&green->rng_type);
+  WRITE(&rng_type);
   #undef WRITE
 
   /* Create a temporary RNG used to serialise the RNG state */
@@ -930,6 +972,7 @@ sdis_green_function_create_from_stream
 {
   struct sdis_green_function* green = NULL;
   struct ssp_rng* rng = NULL;
+  enum rng_type rng_type = RNG_UNKNOWN;
   int version = 0;
   res_T res = RES_OK;
 
@@ -957,7 +1000,7 @@ sdis_green_function_create_from_stream
   READ(&version);
   if(version != SDIS_GREEN_FUNCTION_VERSION) {
     log_err(green->dev, "%s: unexpected green function version %d. Expecting a "
-      "green function in version %d.\n", 
+      "green function in version %d.\n",
       FUNC_NAME, version, SDIS_GREEN_FUNCTION_VERSION);
     res = RES_BAD_ARG;
     goto error;
@@ -973,8 +1016,10 @@ sdis_green_function_create_from_stream
   READ(&green->npaths_valid);
   READ(&green->npaths_invalid);
   READ(&green->realisation_time);
-  READ(&green->rng_type);
+  READ(&rng_type);
   #undef READ
+
+  get_rng_type_ssp(rng_type, &green->rng_type);
 
   /* Create a temporary RNG used to deserialise the RNG state */
   res = ssp_rng_create(green->dev->allocator, &green->rng_type, &rng);

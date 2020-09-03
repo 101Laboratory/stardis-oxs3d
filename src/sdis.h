@@ -510,7 +510,7 @@ struct sdis_compute_power_args {
   double fp_to_meter; /* Scale from floating point units to meters */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
-#define SDIS_COMPUTE_POWER_ARGS_DEFAULT__ {                               \
+#define SDIS_COMPUTE_POWER_ARGS_DEFAULT__ {                                    \
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
