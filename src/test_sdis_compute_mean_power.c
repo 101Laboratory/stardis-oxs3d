@@ -182,7 +182,7 @@ main(int argc, char** argv)
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
-  struct sdis_compute_mean_power_args args = SDIS_COMPUTE_MEAN_POWER_ARGS_DEFAULT;
+  struct sdis_compute_power_args args = SDIS_COMPUTE_POWER_ARGS_DEFAULT;
   size_t nverts = 0;
   size_t ntris = 0;
   double ref = 0;
@@ -229,35 +229,35 @@ main(int argc, char** argv)
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
     get_position, &ctx, &scn));
 
-  /* Test sdis_compute_mean_power function */
+  /* Test sdis_compute_power function */
   args.nrealisations = N;
   args.medium = solid0;
   args.time_range[0] = INF;
   args.time_range[1] = INF;
-  BA(sdis_compute_mean_power(NULL, &args, &estimator));
-  BA(sdis_compute_mean_power(scn, NULL, &estimator));
-  BA(sdis_compute_mean_power(scn, &args, NULL));
+  BA(sdis_compute_power(NULL, &args, &estimator));
+  BA(sdis_compute_power(scn, NULL, &estimator));
+  BA(sdis_compute_power(scn, &args, NULL));
   args.nrealisations = 0;
-  BA(sdis_compute_mean_power(scn, &args, &estimator));
+  BA(sdis_compute_power(scn, &args, &estimator));
   args.nrealisations = N;
   args.medium = NULL;
-  BA(sdis_compute_mean_power(scn, &args, &estimator));
+  BA(sdis_compute_power(scn, &args, &estimator));
   args.medium = solid0;
   args.fp_to_meter = 0;
-  BA(sdis_compute_mean_power(scn, &args, &estimator));
+  BA(sdis_compute_power(scn, &args, &estimator));
   args.fp_to_meter = 1;
   args.time_range[0] = args.time_range[1] = -1;
-  BA(sdis_compute_mean_power(scn, &args, &estimator));
+  BA(sdis_compute_power(scn, &args, &estimator));
   args.time_range[0] = 1;
-  BA(sdis_compute_mean_power(scn, &args, &estimator));
+  BA(sdis_compute_power(scn, &args, &estimator));
   args.time_range[1] = 0;
-  BA(sdis_compute_mean_power(scn, &args, &estimator));
+  BA(sdis_compute_power(scn, &args, &estimator));
   args.time_range[0] = args.time_range[1] = INF;
-  OK(sdis_compute_mean_power(scn, &args, &estimator));
+  OK(sdis_compute_power(scn, &args, &estimator));
 
-  BA(sdis_estimator_get_mean_power(NULL, &mpow));
-  BA(sdis_estimator_get_mean_power(estimator, NULL));
-  OK(sdis_estimator_get_mean_power(estimator, &mpow));
+  BA(sdis_estimator_get_power(NULL, &mpow));
+  BA(sdis_estimator_get_power(estimator, NULL));
+  OK(sdis_estimator_get_power(estimator, &mpow));
   OK(sdis_estimator_get_realisation_time(estimator, &time));
 
   /* Check results for solid 0 */
@@ -269,8 +269,8 @@ main(int argc, char** argv)
 
   /* Check results for solid 1 */
   args.medium = solid1;
-  OK(sdis_compute_mean_power(scn, &args, &estimator));
-  OK(sdis_estimator_get_mean_power(estimator, &mpow));
+  OK(sdis_compute_power(scn, &args, &estimator));
+  OK(sdis_estimator_get_power(estimator, &mpow));
   ref = PI * 10 * POWER1;
   printf("Mean power of the solid1 = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);
@@ -280,8 +280,8 @@ main(int argc, char** argv)
   /* Check for a not null time range */
   args.time_range[0] = 0;
   args.time_range[1] = 10;
-  OK(sdis_compute_mean_power(scn, &args, &estimator));
-  OK(sdis_estimator_get_mean_power(estimator, &mpow));
+  OK(sdis_compute_power(scn, &args, &estimator));
+  OK(sdis_estimator_get_power(estimator, &mpow));
   ref = PI * 10 * POWER1 / 10;
   printf("Mean power of the solid1 in [0, 10] s = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);
@@ -298,12 +298,12 @@ main(int argc, char** argv)
   /* Check invalid medium */
   args.time_range[0] = args.time_range[1] = 1;
   args.medium = solid1;
-  BA(sdis_compute_mean_power(scn, &args, &estimator));
+  BA(sdis_compute_power(scn, &args, &estimator));
 
   /* Check non constant volumic power */
   args.medium = solid0;
-  OK(sdis_compute_mean_power(scn, &args, &estimator));
-  OK(sdis_estimator_get_mean_power(estimator, &mpow));
+  OK(sdis_compute_power(scn, &args, &estimator));
+  OK(sdis_estimator_get_power(estimator, &mpow));
   ref = 4.0/3.0*PI*POWER0 + PI*10*POWER1;
   printf("Mean power of the sphere+cylinder = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);

@@ -277,9 +277,9 @@ check_estimator_eq
       CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
       break;
 
-    case SDIS_ESTIMATOR_MEAN_POWER:
-      OK(sdis_estimator_get_mean_power(e1, &mc1));
-      OK(sdis_estimator_get_mean_power(e2, &mc2));
+    case SDIS_ESTIMATOR_POWER:
+      OK(sdis_estimator_get_power(e1, &mc1));
+      OK(sdis_estimator_get_power(e2, &mc2));
       CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
       CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
       break;
@@ -321,9 +321,9 @@ check_estimator_eq_strict
       CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
       break;
 
-    case SDIS_ESTIMATOR_MEAN_POWER:
-      OK(sdis_estimator_get_mean_power(e1, &mc1));
-      OK(sdis_estimator_get_mean_power(e2, &mc2));
+    case SDIS_ESTIMATOR_POWER:
+      OK(sdis_estimator_get_power(e1, &mc1));
+      OK(sdis_estimator_get_power(e2, &mc2));
       CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
       break;
 

@@ -478,9 +478,9 @@ error:
 }
 
 static res_T
-XD(compute_mean_power)
+XD(compute_power)
   (struct sdis_scene* scn,
-   const struct sdis_compute_mean_power_args* args,
+   const struct sdis_compute_power_args* args,
    struct sdis_estimator** out_estimator)
 {
   struct darray_enclosure_cumul cumul;
@@ -563,7 +563,7 @@ XD(compute_mean_power)
     [darray_enclosure_cumul_size_get(&cumul)-1].cumul;
 
   /* Create the estimator */
-  res = estimator_create(scn->dev, SDIS_ESTIMATOR_MEAN_POWER, &estimator);
+  res = estimator_create(scn->dev, SDIS_ESTIMATOR_POWER, &estimator);
   if(res != RES_OK) goto error;
 
   nrealisations = args->nrealisations;
@@ -640,7 +640,7 @@ XD(compute_mean_power)
 
     estimator_setup_realisations_count(estimator, nrealisations, acc_mpow.count);
     estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
-    estimator_setup_mean_power
+    estimator_setup_power
       (estimator, acc_mpow.sum, acc_mpow.sum2, spread, args->time_range);
     res = estimator_save_rng_state(estimator, rng_proxy);
     if(res != RES_OK) goto error;
