@@ -211,7 +211,7 @@ XD(convective_path)
       double mu, tau, t0;
       mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
       tau = ssp_ran_exp(rng, mu);
-      t0 = ctx->green_path ? -INF : fluid_get_t0(rwalk->mdm);
+      t0 = fluid_get_t0(rwalk->mdm);
       rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
 
       /* Register the new vertex against the heat path */

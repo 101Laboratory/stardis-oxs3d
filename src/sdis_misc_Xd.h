@@ -17,6 +17,7 @@
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
+#include "sdis_green.h"
 
 #include <star/ssp.h>
 
@@ -24,7 +25,7 @@
 
 res_T
 XD(time_rewind)
-  (const struct sdis_medium* mdm,
+  (struct sdis_medium* mdm,
    struct ssp_rng* rng,
    const double delta,
    const double fp_to_meter,
@@ -49,7 +50,7 @@ XD(time_rewind)
   cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
 
   /* Fetch the limit time */
-  t0 = ctx->green_path ? -INF : solid_get_t0(mdm);
+  t0 = solid_get_t0(mdm);
 
   /* Sample the time to reroll */
   mu = (2*DIM*lambda)/(rho*cp*delta_in_meter*delta_in_meter);
@@ -80,6 +81,11 @@ XD(time_rewind)
     vtx = heat_path_get_last_vertex(ctx->heat_path);
     vtx->time = rwalk->vtx.time;
     vtx->weight = T->value;
+  }
+
+  if(ctx->green_path) {
+    res = green_path_set_limit_vertex(ctx->green_path, mdm, &rwalk->vtx);
+    if(res != RES_OK) goto error;
   }
 
 exit:

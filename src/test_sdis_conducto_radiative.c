@@ -126,6 +126,8 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* ctx)
  ******************************************************************************/
 struct solid {
   double lambda;
+  double initial_temperature;
+  double t0;
 };
 
 static double
@@ -166,6 +168,20 @@ solid_get_delta
 {
   CHK(vtx != NULL); (void)data;
   return 1.0/10.0;
+}
+
+static double
+solid_get_temperature
+(const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
+{
+  double t0;
+  CHK(vtx != NULL);
+  CHK(data != NULL);
+  t0 = ((const struct solid*)sdis_data_cget(data))->t0;
+  if(vtx->time > t0)
+    return UNKNOWN_TEMPERATURE;
+  else
+    return ((const struct solid*)sdis_data_cget(data))->initial_temperature;
 }
 
 /*******************************************************************************
@@ -269,8 +285,8 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_scene* scn = NULL;
   struct ssp_rng* rng = NULL;
-  const size_t nsimuls = 4;
-  size_t isimul;
+  const int nsimuls = 4;
+  int isimul;
   const double emissivity = 1;/* Emissivity of the side +/-X of the solid */
   const double lambda = 0.1; /* Conductivity of the solid */
   const double Tref = 300; /* Reference temperature */
@@ -292,11 +308,13 @@ main(int argc, char** argv)
   OK(sdis_data_create(dev, sizeof(struct solid), ALIGNOF(struct solid),
     NULL, &data));
   ((struct solid*)sdis_data_get(data))->lambda = lambda;
+  ((struct solid*)sdis_data_get(data))->t0 = 0;
+  ((struct solid*)sdis_data_get(data))->initial_temperature = (T0 + T1) / 2;
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
   solid_shader.delta_solid = solid_get_delta;
-  solid_shader.temperature = temperature_unknown;
+  solid_shader.temperature = solid_get_temperature;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
 
@@ -389,22 +407,26 @@ main(int argc, char** argv)
     struct sdis_estimator* estimator2;
     struct sdis_green_function* green;
     struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
-    double ref, u;
+    double ref = -1;
     size_t nreals = 0;
     size_t nfails = 0;
     const size_t N = 10000;
     double T1b;
+    int steady = (isimul % 2) == 0;
 
     /* Reset temperature */
     p_intface->temperature = T1;
 
     solve_args.nrealisations = N;
-    solve_args.time_range[0] = INF;
-    solve_args.time_range[1] = INF;
+    if(steady)
+      solve_args.time_range[0] = solve_args.time_range[1] = INF;
+    else {
+      solve_args.time_range[0] = 100 * (double)isimul;
+      solve_args.time_range[1] = 4 * solve_args.time_range[0];
+    }
     solve_args.position[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     solve_args.position[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     solve_args.position[2] = ssp_rng_uniform_double(rng, -0.9, 0.9);
-    u = (solve_args.position[0] + 1) / thickness;
     solve_args.reference_temperature = Tref;
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
@@ -416,19 +438,27 @@ main(int argc, char** argv)
     tmp = lambda / (2 * lambda + thickness * hr) * (T1 - T0);
     Ts0 = T0 + tmp;
     Ts1 = T1 - tmp;
-    ref = u * Ts1 + (1-u) * Ts0;
-    printf("Temperature at (%g, %g, %g) with T1=%g = %g ~ %g +/- %g\n",
-      SPLIT3(solve_args.position), p_intface->temperature, ref, T.E, T.SE);
+    if(steady) {
+      double u = (solve_args.position[0] + 1) / thickness;
+      ref = u * Ts1 + (1 - u) * Ts0;
+      printf("Steady temperature at (%g, %g, %g) with T1=%g = %g ~ %g +/- %g\n",
+        SPLIT3(solve_args.position), p_intface->temperature, ref, T.E, T.SE);
+    } else {
+      printf("Mean temperature at (%g, %g, %g) with t in [%g %g]"
+        " and T1=%g ~ %g +/- %g\n",
+        SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+        p_intface->temperature, T.E, T.SE);
+    }
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
     CHK(nfails + nreals == N);
-    CHK(nfails < N/1000);
-    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
+    CHK(nfails <= N/1000);
+    if(steady) CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
     /* Check green function */
     OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
-    OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+    OK(sdis_green_function_solve(green, &estimator2));
     check_green_function(green);
     check_estimator_eq(estimator, estimator2);
 
@@ -436,7 +466,7 @@ main(int argc, char** argv)
     OK(sdis_estimator_ref_put(estimator2));
     printf("\n");
 
-    /* Check green used at a different temperature */
+    /* Check same green used at a different temperature */
     p_intface->temperature = T1b = T1 + ((double)isimul + 1) * 10;
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
@@ -448,17 +478,26 @@ main(int argc, char** argv)
     tmp = lambda / (2 * lambda + thickness * hr) * (T1b - T0);
     Ts0 = T0 + tmp;
     Ts1 = T1b - tmp;
-    ref = u * Ts1 + (1 - u) * Ts0;
-    printf("Temperature at (%g, %g, %g) with T1=%g = %g ~ %g +/- %g\n",
-      SPLIT3(solve_args.position), p_intface->temperature, ref, T.E, T.SE);
+
+    if(steady) {
+      double u = (solve_args.position[0] + 1) / thickness;
+      ref = u * Ts1 + (1 - u) * Ts0;
+      printf("Steady temperature at (%g, %g, %g) with T1=%g = %g ~ %g +/- %g\n",
+        SPLIT3(solve_args.position), p_intface->temperature, ref, T.E, T.SE);
+    } else {
+      printf("Mean temperature at (%g, %g, %g) with t in [%g %g]"
+        " and T1=%g ~ %g +/- %g\n",
+        SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+        p_intface->temperature, T.E, T.SE);
+    }
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
     CHK(nfails + nreals == N);
-    CHK(nfails < N / 1000);
-    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
+    CHK(nfails <= N/1000);
+    if(steady) CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
 
-    OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+    OK(sdis_green_function_solve(green, &estimator2));
     check_green_function(green);
     check_estimator_eq(estimator, estimator2);
 
@@ -472,7 +511,7 @@ main(int argc, char** argv)
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_ref_put(estimator));
 
-    printf("\n");
+    printf("\n\n");
   }
 
   /* Release memory */

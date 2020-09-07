@@ -117,7 +117,6 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   switch(pt.type) {
     case SDIS_FRAGMENT:
       frag = pt.data.itfrag.fragment;
-      frag.time = INF;
       OK(sdis_interface_get_shader(pt.data.itfrag.intface, &interf));
       data = sdis_interface_get_data(pt.data.itfrag.intface);
       temp = frag.side == SDIS_FRONT
@@ -126,7 +125,6 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
       break;
     case SDIS_VERTEX:
       vtx = pt.data.mdmvert.vertex;
-      vtx.time = INF;
       type = sdis_medium_get_type(pt.data.mdmvert.medium);
       data = sdis_medium_get_data(pt.data.mdmvert.medium);
       if(type == SDIS_FLUID) {
@@ -229,7 +227,7 @@ check_green_function(struct sdis_green_function* green)
 
   time_range[0] = time_range[1] = INF;
 
-  OK(sdis_green_function_solve(green, time_range, &estimator));
+  OK(sdis_green_function_solve(green, &estimator));
 
   BA(sdis_green_function_get_paths_count(NULL, &n));
   BA(sdis_green_function_get_paths_count(green, NULL));

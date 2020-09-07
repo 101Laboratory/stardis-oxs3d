@@ -426,7 +426,7 @@ main(int argc, char** argv)
 
     /* Check green function */
     OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
-    OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+    OK(sdis_green_function_solve(green, &estimator2));
     check_green_function(green);
     check_estimator_eq(estimator, estimator2);
 
@@ -440,7 +440,7 @@ main(int argc, char** argv)
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_ref_put(estimator));
 
-    printf("\n");
+    printf("\n\n");
   }
 
   /* Release memory */

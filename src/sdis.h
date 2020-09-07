@@ -988,7 +988,6 @@ sdis_green_function_ref_put
 SDIS_API res_T
 sdis_green_function_solve
   (struct sdis_green_function* green,
-   const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
 
 /* Retrieve the number of valid paths used to estimate the green function. It
@@ -1133,23 +1132,11 @@ sdis_compute_mean_power
 /*******************************************************************************
  * Green solvers.
  *
- * The caller should ensure that green solvers are invoked on scenes whose data
- * do not depend on time. Indeed, on green estimation, the time parameter along
- * the random walks registers the relative time spent in the system rather than
- * an absolute time. As a consequence, the media/interfaces parameters cannot
- * vary in time with respect to an absolute time value.
- *
- * In addition, the green solvers assumes that the interface fluxes are
- * constants in time and space. In the same way the volumic power of the solid
- * media must be constant in time and space too. Furthermore, note that only
- * the interfaces/media that had a flux/volumic power during green estimation
- * can update their flux/volumic power value for subsequent
+ * Note that only the interfaces/media with flux/volumic power defined during
+ * green estimation can update their flux/volumic power values for subsequent
  * sdis_green_function_solve invocations: others interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
- *
- * If the aforementioned assumptions are not ensured by the caller, the
- * behavior of the estimated green function is undefined.
  ******************************************************************************/
 SDIS_API res_T
 sdis_solve_probe_green_function
@@ -1178,4 +1165,3 @@ sdis_solve_medium_green_function
 END_DECLS
 
 #endif /* SDIS_H */
-

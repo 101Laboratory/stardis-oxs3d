@@ -346,7 +346,7 @@ main(int argc, char** argv)
   OK(GREEN(box_scn, &probe_args, &green));
 
   check_green_function(green);
-  OK(sdis_green_function_solve(green, probe_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
 
   OK(sdis_green_function_ref_put(green));
@@ -376,7 +376,7 @@ main(int argc, char** argv)
 
   OK(GREEN(square_scn, &probe_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, probe_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
 
   OK(sdis_estimator_ref_put(estimator));
@@ -468,7 +468,7 @@ main(int argc, char** argv)
 
   OK(GREEN(box_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
 
   OK(sdis_green_function_ref_put(green));
@@ -504,7 +504,7 @@ main(int argc, char** argv)
 
   OK(GREEN(square_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
 
   OK(sdis_green_function_ref_put(green));
@@ -536,7 +536,7 @@ main(int argc, char** argv)
 
   OK(GREEN(box_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
 
   OK(sdis_green_function_ref_put(green));
@@ -553,7 +553,7 @@ main(int argc, char** argv)
 
   OK(GREEN(square_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
 
   OK(sdis_green_function_ref_put(green));
