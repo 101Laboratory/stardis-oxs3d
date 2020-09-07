@@ -307,7 +307,7 @@ main(int argc, char** argv)
   ref = 4.0/3.0*PI*POWER0 + PI*10*POWER1;
   printf("Mean power of the sphere+cylinder = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.e-1, mpow.E, 3*mpow.SE);
+  check_intersection(ref, 1.5e-1, mpow.E, 3*mpow.SE);
   OK(sdis_estimator_ref_put(estimator));
 
 #if 0
