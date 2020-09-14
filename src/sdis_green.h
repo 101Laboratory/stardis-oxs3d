@@ -39,7 +39,7 @@ static const struct green_path_handle GREEN_PATH_HANDLE_NULL =
 
 extern LOCAL_SYM res_T
 green_function_create
-  (struct sdis_device* dev,
+  (struct sdis_scene* scn,
    struct sdis_green_function** green);
 
 /* Merge `src' into `dst' an clear `src' */

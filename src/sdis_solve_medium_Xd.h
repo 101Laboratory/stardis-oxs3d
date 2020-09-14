@@ -284,7 +284,7 @@ XD(solve_medium)
     greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
     if(!greens) { res = RES_MEM_ERR; goto error; }
     FOR_EACH(i, 0, scn->dev->nthreads) {
-      res = green_function_create(scn->dev, &greens[i]);
+      res = green_function_create(scn, &greens[i]);
       if(res != RES_OK) goto error;
     }
   }
