@@ -25,7 +25,22 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
-### Version 0.9.0
+### Version 0.10
+
+- Add support of green function [de]serialization. The
+  `sdis_green_function_write` function serializes the green function into a
+  stream while the `sdis_green_function_create_from_stream` function
+  deserialize it. Note that the scene used to deserialize the green function
+  must be the same of the one used to estimate it: the media and the interfaces
+  have to be created in the same order, the scene geometry must be the same,
+  etc.
+- Add the `sdis_scene_find_closest_point` function: search the point onto the
+  scene geometry that is the closest of the submitted position.
+- Add the `sdis_compute_power` function that evaluates the power of a medium.
+- Update the solver: the time of the sampled path is now rewind on solid
+  reinjection.
+
+### Version 0.9
 
 - Update the API of the solve functions: the parameters of the simulation are
   now grouped into a unique data structure rather than separately submitted as
