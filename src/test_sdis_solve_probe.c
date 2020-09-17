@@ -259,6 +259,7 @@ main(int argc, char** argv)
   struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_estimator* estimator2 = NULL;
+  struct sdis_estimator* estimator3 = NULL;
   struct sdis_green_function* green = NULL;
   const struct sdis_heat_path* path = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
@@ -272,6 +273,7 @@ main(int argc, char** argv)
   struct interf* interface_param;
   struct ssp_rng* rng_state = NULL;
   enum sdis_estimator_type type;
+  FILE* stream = NULL;
   double ref;
   const size_t N = 1000;
   const size_t N_dump = 10;
@@ -470,14 +472,34 @@ main(int argc, char** argv)
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 
+  CHK(stream = tmpfile());
+  BA(sdis_green_function_write(NULL, stream));
+  BA(sdis_green_function_write(green, NULL));
+  OK(sdis_green_function_write(green, stream));
+
   BA(sdis_green_function_ref_get(NULL));
   OK(sdis_green_function_ref_get(green));
   BA(sdis_green_function_ref_put(NULL));
   OK(sdis_green_function_ref_put(green));
   OK(sdis_green_function_ref_put(green));
 
+  rewind(stream);
+  BA(sdis_green_function_create_from_stream(NULL, stream, &green));
+  BA(sdis_green_function_create_from_stream(scn, NULL, &green));
+  BA(sdis_green_function_create_from_stream(scn, stream, NULL));
+  OK(sdis_green_function_create_from_stream(scn, stream, &green));
+  CHK(!fclose(stream));
+
+  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator3));
+
+  check_green_function(green);
+  check_estimator_eq_strict(estimator2, estimator3);
+
+  OK(sdis_green_function_ref_put(green));
+
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
+  OK(sdis_estimator_ref_put(estimator3));
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   BA(sdis_estimator_get_paths_count(NULL, &n));

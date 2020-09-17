@@ -926,7 +926,6 @@ XD(solid_boundary_with_flux_path)
     rwalk->mdm = mdm;
     rwalk->hit = SXD_HIT_NULL;
     rwalk->hit_side = SDIS_SIDE_NULL__;
-
   }
 
   /* Register the new vertex against the heat path */
@@ -990,7 +989,7 @@ XD(boundary_path)
   /* Check if the boundary flux is known. Note that currently, only solid media
    * can have a flux as limit condition */
   mdm = interface_get_medium(interf, frag.side);
-  if(sdis_medium_get_type(mdm) == SDIS_SOLID ) {
+  if(sdis_medium_get_type(mdm) == SDIS_SOLID) {
     const double phi = interface_side_get_flux(interf, &frag);
     if(phi != SDIS_FLUX_NONE) {
       res = XD(solid_boundary_with_flux_path)

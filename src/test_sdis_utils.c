@@ -363,3 +363,35 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
   fprintf(stream, "0.0 0.0 1.0 1.0\n"); /* 0.0 = Blue: success */
   fprintf(stream, "1.0 0.0 0.0 1.0\n"); /* 1.0 = Red: failure */
 }
+
+void
+check_green_serialization
+  (struct sdis_green_function* green,
+   struct sdis_scene* scn,
+   const double time_range[2])
+{
+  FILE* stream = NULL;
+  struct sdis_estimator *e1 = NULL;
+  struct sdis_estimator *e2 = NULL;
+  struct sdis_green_function* green2 = NULL;
+
+  CHK(green && time_range);
+  CHK(stream = tmpfile());
+
+  OK(sdis_green_function_write(green, stream));
+
+  rewind(stream);
+  OK(sdis_green_function_create_from_stream(scn, stream, &green2));
+  CHK(!fclose(stream));
+  check_green_function(green2);
+
+  OK(sdis_green_function_solve(green, time_range, &e1));
+  OK(sdis_green_function_solve(green2, time_range, &e2));
+  check_estimator_eq_strict(e1, e2);
+
+  OK(sdis_estimator_ref_put(e1));
+  OK(sdis_estimator_ref_put(e2));
+  OK(sdis_green_function_ref_put(green2));
+}
+
+

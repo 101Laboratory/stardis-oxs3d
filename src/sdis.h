@@ -116,7 +116,7 @@ static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
 enum sdis_estimator_type {
   SDIS_ESTIMATOR_TEMPERATURE, /* In Kelvin */
   SDIS_ESTIMATOR_FLUX, /* In Watt/m^2 */
-  SDIS_ESTIMATOR_MEAN_POWER, /* In Watt */
+  SDIS_ESTIMATOR_POWER, /* In Watt */
   SDIS_ESTIMATOR_TYPES_COUNT__
 };
 
@@ -503,22 +503,22 @@ struct sdis_solve_camera_args {
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
   SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
 
-struct sdis_compute_mean_power_args {
+struct sdis_compute_power_args {
   size_t nrealisations;
   struct sdis_medium* medium; /* Medium to solve */
   double time_range[2]; /* Observation time */
   double fp_to_meter; /* Scale from floating point units to meters */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
-#define SDIS_COMPUTE_MEAN_POWER_ARGS_DEFAULT__ {                               \
+#define SDIS_COMPUTE_POWER_ARGS_DEFAULT__ {                                    \
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* FP to meter */                                                         \
   NULL /* RNG state */                                                         \
 }
-static const struct sdis_compute_mean_power_args
-SDIS_COMPUTE_MEAN_POWER_ARGS_DEFAULT = SDIS_COMPUTE_MEAN_POWER_ARGS_DEFAULT__;
+static const struct sdis_compute_power_args
+SDIS_COMPUTE_POWER_ARGS_DEFAULT = SDIS_COMPUTE_POWER_ARGS_DEFAULT__;
 
 BEGIN_DECLS
 
@@ -945,9 +945,9 @@ sdis_estimator_get_total_flux
    struct sdis_mc* flux);
 
 SDIS_API res_T
-sdis_estimator_get_mean_power
+sdis_estimator_get_power
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* mean_power);
+   struct sdis_mc* power);
 
 SDIS_API res_T
 sdis_estimator_get_paths_count
@@ -990,6 +990,17 @@ sdis_green_function_solve
   (struct sdis_green_function* green,
    const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_green_function_write
+  (struct sdis_green_function* green,
+   FILE* stream);
+
+SDIS_API res_T
+sdis_green_function_create_from_stream
+  (struct sdis_scene* scn, /* Scene from which the green was evaluated */
+   FILE* stream, /* Stream into which the green was serialized */
+   struct sdis_green_function** green);
 
 /* Retrieve the number of valid paths used to estimate the green function. It
  * is actually equal to the number of successful realisations. */
@@ -1122,12 +1133,12 @@ sdis_solve_medium
    struct sdis_estimator** estimator);
 
 /* P = SUM(volumic_power(x)) / Nrealisations * Volume
- * mean power (in Watt) = time_range[0] == time_range[1]
+ * power (in Watt) = time_range[0] == time_range[1]
  *  ? P : P / (time_range[1] - time_range[0]) */
 SDIS_API res_T
-sdis_compute_mean_power
+sdis_compute_power
   (struct sdis_scene* scn,
-   const struct sdis_compute_mean_power_args* args,
+   const struct sdis_compute_power_args* args,
    struct sdis_estimator** estimator);
 
 /*******************************************************************************
