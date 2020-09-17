@@ -18,6 +18,7 @@
 
 #include "sdis.h"
 
+#include <rsys/double33.h>
 #include <rsys/mem_allocator.h>
 #include <stdio.h>
 
@@ -52,12 +53,12 @@ static const size_t box_nvertices = sizeof(box_vertices) / sizeof(double[3]);
  *  Front, right      Back, left and     Z
  * and Top faces       bottom faces */
 static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
-  0, 2, 1, 1, 2, 3, /* Front face */
-  0, 4, 2, 2, 4, 6, /* Left face*/
-  4, 5, 6, 6, 5, 7, /* Back face */
-  3, 7, 1, 1, 7, 5, /* Right face */
-  2, 6, 3, 3, 6, 7, /* Top face */
-  0, 1, 4, 4, 1, 5  /* Bottom face */
+  0, 2, 1, 1, 2, 3, /* -Z */
+  0, 4, 2, 2, 4, 6, /* -X */
+  4, 5, 6, 6, 5, 7, /* +Z */
+  3, 7, 5, 5, 1, 3, /* +X */
+  2, 6, 7, 7, 3, 2, /* +Y */
+  0, 1, 5, 5, 4, 0  /* -Y */
 };
 static const size_t box_ntriangles = sizeof(box_indices) / sizeof(size_t[3]);
 
@@ -251,26 +252,82 @@ check_estimator_eq
   OK(sdis_estimator_get_type(e2, &type2));
   CHK(type1 == type2);
 
-  OK(sdis_estimator_get_temperature(e1, &mc1));
-  OK(sdis_estimator_get_temperature(e2, &mc2));
-  CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-  CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+  switch(type1) {
+    case SDIS_ESTIMATOR_TEMPERATURE:
+      OK(sdis_estimator_get_temperature(e1, &mc1));
+      OK(sdis_estimator_get_temperature(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      break;
 
-  if(type1 == SDIS_ESTIMATOR_FLUX) {
-    OK(sdis_estimator_get_convective_flux(e1, &mc1));
-    OK(sdis_estimator_get_convective_flux(e2, &mc2));
-    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+    case SDIS_ESTIMATOR_FLUX:
+      OK(sdis_estimator_get_convective_flux(e1, &mc1));
+      OK(sdis_estimator_get_convective_flux(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
 
-    OK(sdis_estimator_get_radiative_flux(e1, &mc1));
-    OK(sdis_estimator_get_radiative_flux(e2, &mc2));
-    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      OK(sdis_estimator_get_radiative_flux(e1, &mc1));
+      OK(sdis_estimator_get_radiative_flux(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
 
-    OK(sdis_estimator_get_total_flux(e1, &mc1));
-    OK(sdis_estimator_get_total_flux(e2, &mc2));
-    CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
-    CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      OK(sdis_estimator_get_total_flux(e1, &mc1));
+      OK(sdis_estimator_get_total_flux(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      break;
+
+    case SDIS_ESTIMATOR_POWER:
+      OK(sdis_estimator_get_power(e1, &mc1));
+      OK(sdis_estimator_get_power(e2, &mc2));
+      CHK(mc1.E + 3*mc1.SE >= mc2.E - 3*mc2.SE);
+      CHK(mc1.E - 3*mc1.SE <= mc2.E + 3*mc2.SE);
+      break;
+
+    default: FATAL("Unreachable code.\n"); break;
+  }
+}
+
+static INLINE void
+check_estimator_eq_strict
+  (const struct sdis_estimator* e1, const struct sdis_estimator* e2)
+{
+  struct sdis_mc mc1, mc2;
+  enum sdis_estimator_type type1, type2;
+  ASSERT(e1 && e2);
+
+  OK(sdis_estimator_get_type(e1, &type1));
+  OK(sdis_estimator_get_type(e2, &type2));
+  CHK(type1 == type2);
+
+  switch(type1) {
+    case SDIS_ESTIMATOR_TEMPERATURE:
+      OK(sdis_estimator_get_temperature(e1, &mc1));
+      OK(sdis_estimator_get_temperature(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+      break;
+
+    case SDIS_ESTIMATOR_FLUX:
+      OK(sdis_estimator_get_convective_flux(e1, &mc1));
+      OK(sdis_estimator_get_convective_flux(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+
+      OK(sdis_estimator_get_radiative_flux(e1, &mc1));
+      OK(sdis_estimator_get_radiative_flux(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+
+      OK(sdis_estimator_get_total_flux(e1, &mc1));
+      OK(sdis_estimator_get_total_flux(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+      break;
+
+    case SDIS_ESTIMATOR_POWER:
+      OK(sdis_estimator_get_power(e1, &mc1));
+      OK(sdis_estimator_get_power(e2, &mc2));
+      CHK(mc1.E == mc2.E && mc1.V == mc2.V && mc1.SE == mc2.SE);
+      break;
+
+    default: FATAL("Unreachable code.\n"); break;
   }
 }
 
@@ -293,6 +350,12 @@ extern LOCAL_SYM void
 dump_heat_paths
   (FILE* stream,
    const struct sdis_estimator* estimator);
+
+extern LOCAL_SYM void
+check_green_serialization
+  (struct sdis_green_function* green,
+   struct sdis_scene* scn,
+   const double time_range[2]);
 
 #endif /* TEST_SDIS_UTILS_H */
 

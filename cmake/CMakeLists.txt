@@ -29,12 +29,12 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ###############################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.3.1 REQUIRED)
-find_package(Star3D 0.6.2 REQUIRED)
+find_package(Star2D 0.4 REQUIRED)
+find_package(Star3D 0.7 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc2D 0.5 REQUIRED)
 find_package(StarEnc3D 0.5 REQUIRED)
-find_package(RSys 0.8.1 REQUIRED)
+find_package(RSys 0.10 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
@@ -56,7 +56,7 @@ rcmake_append_runtime_dirs(_runtime_dirs
 # Configure and define targets
 ###############################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 9)
+set(VERSION_MINOR 10)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
@@ -71,6 +71,7 @@ set(SDIS_FILES_SRC
   sdis_interface.c
   sdis_log.c
   sdis_medium.c
+  sdis_misc.c
   sdis_realisation.c
   sdis_scene.c
   sdis_solve.c)
@@ -90,6 +91,8 @@ set(SDIS_FILES_INC
   sdis_heat_path_radiative_Xd.h
   sdis_interface_c.h
   sdis_log.h
+  sdis_misc.h
+  sdis_misc_Xd.h
   sdis_medium_c.h
   sdis_realisation.h
   sdis_realisation_Xd.h
@@ -172,6 +175,7 @@ if(NOT NO_TEST)
   endfunction()
 
   new_test(test_sdis_camera)
+  new_test(test_sdis_compute_mean_power)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
   new_test(test_sdis_convection)
@@ -194,6 +198,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_boundary_flux)
   new_test(test_sdis_solve_medium)
   new_test(test_sdis_solve_medium_2d)
+  new_test(test_sdis_transcient)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4)
 
@@ -208,6 +213,7 @@ if(NOT NO_TEST)
     add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
   endif()
 
+  target_link_libraries(test_sdis_compute_mean_power Star3DUT)
   target_link_libraries(test_sdis_solid_random_walk_robustness Star3DUT)
   target_link_libraries(test_sdis_solve_medium Star3DUT)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)

@@ -600,6 +600,11 @@ XD(solid_solid_boundary_path)
     }
   }
 
+  /* Time rewind */
+  res = XD(time_rewind)(mdm, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+  if(res != RES_OK) goto error;
+  if(T->done) goto exit; /* Limit condition was reached */
+
   /* Perform reinjection. */
   XD(move_pos)(rwalk->vtx.P, dir, (float)reinject_dst);
   if(hit->distance == reinject_dst) {
@@ -764,6 +769,11 @@ XD(solid_fluid_boundary_path)
       }
     }
 
+    /* Time rewind */
+    res = XD(time_rewind)(solid, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+    if(res != RES_OK) goto error;
+    if(T->done) goto exit; /* Limit condition was reached */
+
     /* Perform solid reinjection */
     XD(move_pos)(rwalk->vtx.P, dir0, reinject_dst);
     if(hit.distance == reinject_dst) {
@@ -898,6 +908,11 @@ XD(solid_boundary_with_flux_path)
     }
   }
 
+  /* Time rewind */
+  res = XD(time_rewind)(mdm, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+  if(res != RES_OK) goto error;
+  if(T->done) goto exit; /* Limit condition was reached */
+
   /* Reinject. If the reinjection move the point too close of a boundary,
    * assume that the zone is isotherm and move to the boundary. */
   XD(move_pos)(rwalk->vtx.P, dir0, reinject_dst);
@@ -911,7 +926,6 @@ XD(solid_boundary_with_flux_path)
     rwalk->mdm = mdm;
     rwalk->hit = SXD_HIT_NULL;
     rwalk->hit_side = SDIS_SIDE_NULL__;
-
   }
 
   /* Register the new vertex against the heat path */
@@ -975,7 +989,7 @@ XD(boundary_path)
   /* Check if the boundary flux is known. Note that currently, only solid media
    * can have a flux as limit condition */
   mdm = interface_get_medium(interf, frag.side);
-  if(sdis_medium_get_type(mdm) == SDIS_SOLID ) {
+  if(sdis_medium_get_type(mdm) == SDIS_SOLID) {
     const double phi = interface_side_get_flux(interf, &frag);
     if(phi != SDIS_FLUX_NONE) {
       res = XD(solid_boundary_with_flux_path)

@@ -415,7 +415,7 @@ main(int argc, char** argv)
 
     u = (solve_args.position[0] + 1) / thickness;
     ref = u * Ts1 + (1-u) * Ts0;
-    printf("Temperature at (%g, %g)  = %g ~ %g +/- %g\n",
+    printf("Temperature at (%g, %g) = %g ~ %g +/- %g\n",
       SPLIT2(solve_args.position), ref, T.E, T.SE);
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
@@ -429,6 +429,7 @@ main(int argc, char** argv)
     OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
     check_green_function(green);
     check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn, solve_args.time_range);
 
     OK(sdis_estimator_ref_put(estimator));
     OK(sdis_estimator_ref_put(estimator2));

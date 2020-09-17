@@ -127,7 +127,10 @@ interface_get_flux
  * Helper functions
  ******************************************************************************/
 static void
-solve(struct sdis_scene* scn, const double pos[])
+solve
+  (struct sdis_scene* scn,
+   const double pos[],
+   struct interf* interf)
 {
   char dump[128];
   struct time t0, t1, t2;
@@ -142,9 +145,12 @@ solve(struct sdis_scene* scn, const double pos[])
   double ref;
   const double time_range[2] = {INF, INF};
   enum sdis_scene_dimension dim;
-  ASSERT(scn && pos);
+  ASSERT(scn && pos && interf);
 
-  ref = T0 + (1 - pos[0]) * PHI/LAMBDA;
+  /* Restore phi value */
+  interf->phi = PHI;
+
+  ref = T0 + (1 - pos[0]) * interf->phi/LAMBDA;
 
   OK(sdis_scene_get_dimension(scn, &dim));
 
@@ -167,18 +173,18 @@ solve(struct sdis_scene* scn, const double pos[])
 
   switch(dim) {
     case SDIS_SCENE_2D:
-      printf("Temperature at (%g %g) = %g ~ %g +/- %g\n",
-        SPLIT2(pos), ref, T.E, T.SE);
+      printf("Temperature at (%g %g) with phi=%g = %g ~ %g +/- %g\n",
+        SPLIT2(pos), interf->phi, ref, T.E, T.SE);
       break;
     case SDIS_SCENE_3D:
-      printf("Temperature at (%g %g %g) = %g ~ %g +/- %g\n",
-        SPLIT3(pos), ref, T.E, T.SE);
+      printf("Temperature at (%g %g %g) with phi=%g = %g ~ %g +/- %g\n",
+        SPLIT3(pos), interf->phi, ref, T.E, T.SE);
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  printf("Elapsed time = %s\n\n", dump);
+  printf("Elapsed time = %s\n", dump);
+  printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
 
   CHK(nfails + nreals == N);
   CHK(nfails < N/1000);
@@ -196,12 +202,12 @@ solve(struct sdis_scene* scn, const double pos[])
 
   switch(dim) {
     case SDIS_SCENE_2D:
-      printf("Green temperature at (%g %g) = %g ~ %g +/- %g\n",
-        SPLIT2(pos), ref, T.E, T.SE);
+      printf("Green temperature at (%g %g) with phi=%g = %g ~ %g +/- %g\n",
+        SPLIT2(pos), interf->phi, ref, T.E, T.SE);
       break;
     case SDIS_SCENE_3D:
-      printf("Green temperature at (%g %g %g) = %g ~ %g +/- %g\n",
-        SPLIT3(pos), ref, T.E, T.SE);
+      printf("Green temperature at (%g %g %g) with phi=%g = %g ~ %g +/- %g\n",
+        SPLIT3(pos), interf->phi, ref, T.E, T.SE);
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
@@ -211,6 +217,54 @@ solve(struct sdis_scene* scn, const double pos[])
   printf("Green estimation time = %s\n", dump);
   time_sub(&t1, &t2, &t1);
   time_dump(&t1, TIME_ALL, NULL, dump, sizeof(dump));
+  printf("Green solve time = %s\n", dump);
+
+  check_green_function(green);
+  check_estimator_eq(estimator, estimator2);
+  check_green_serialization(green, scn, time_range);
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  printf("\n");
+
+  /* Check green used at a different phi */
+  interf->phi = 3 * PHI;
+
+  time_current(&t0);
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
+  time_sub(&t0, time_current(&t1), &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+  ref = T0 + (1 - pos[0]) * interf->phi/LAMBDA;
+
+  switch (dim) {
+  case SDIS_SCENE_2D:
+    printf("Temperature at (%g %g) with phi=%g = %g ~ %g +/- %g\n",
+      SPLIT2(pos), interf->phi, ref, T.E, T.SE);
+    break;
+  case SDIS_SCENE_3D:
+    printf("Temperature at (%g %g %g) with phi=%g = %g ~ %g +/- %g\n",
+      SPLIT3(pos), interf->phi, ref, T.E, T.SE);
+    break;
+  default: FATAL("Unreachable code.\n"); break;
+  }
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  printf("Elapsed time = %s\n", dump);
+  printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N / 1000);
+  CHK(eq_eps(T.E, ref, T.SE * 3));
+
+  time_current(&t0);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  time_sub(&t0, time_current(&t1), &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
   printf("Green solve time = %s\n", dump);
 
   check_green_function(green);
@@ -328,9 +382,9 @@ main(int argc, char** argv)
   /* Solve */
   d3_splat(pos, 0.25);
   printf(">> Box scene\n");
-  solve(box_scn, pos);
+  solve(box_scn, pos, interf_props);
   printf(">> Square Scene\n");
-  solve(square_scn, pos);
+  solve(square_scn, pos, interf_props);
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));

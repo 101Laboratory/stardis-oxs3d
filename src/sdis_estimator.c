@@ -98,7 +98,10 @@ res_T
 sdis_estimator_get_temperature
   (const struct sdis_estimator* estimator, struct sdis_mc* mc)
 {
-  if(!estimator || !mc) return RES_BAD_ARG;
+  if(!estimator || !mc 
+  || (  estimator->type != SDIS_ESTIMATOR_TEMPERATURE
+     && estimator->type != SDIS_ESTIMATOR_FLUX))
+    return RES_BAD_ARG;
   SETUP_MC(mc, &estimator->temperature);
   return RES_OK;
 }
@@ -116,9 +119,8 @@ res_T
 sdis_estimator_get_convective_flux
   (const struct sdis_estimator* estimator, struct sdis_mc* flux)
 {
-  if(!estimator || !flux ||estimator->type != SDIS_ESTIMATOR_FLUX)
+  if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
-  ASSERT(estimator->fluxes);
   SETUP_MC(flux, &estimator->fluxes[FLUX_CONVECTIVE]);
   return RES_OK;
 }
@@ -129,7 +131,6 @@ sdis_estimator_get_radiative_flux
 {
   if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
-  ASSERT(estimator->fluxes);
   SETUP_MC(flux, &estimator->fluxes[FLUX_RADIATIVE]);
   return RES_OK;
 }
@@ -140,8 +141,24 @@ sdis_estimator_get_total_flux
 {
   if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
     return RES_BAD_ARG;
-  ASSERT(estimator->fluxes);
   SETUP_MC(flux, &estimator->fluxes[FLUX_TOTAL]);
+  return RES_OK;
+}
+
+res_T
+sdis_estimator_get_power
+  (const struct sdis_estimator* estimator, struct sdis_mc* power)
+{
+  if(!estimator || !power || estimator->type != SDIS_ESTIMATOR_POWER)
+    return RES_BAD_ARG;
+  SETUP_MC(power, &estimator->power.power);
+  power->E *= estimator->power.spread;
+
+  if(estimator->power.time_range[0]
+  != estimator->power.time_range[1]) {
+    power->E /= /* From Joule to Watt */
+      (estimator->power.time_range[1]-estimator->power.time_range[0]);
+  }
   return RES_OK;
 }
 

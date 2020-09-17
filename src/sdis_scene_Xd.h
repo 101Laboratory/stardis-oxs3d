@@ -24,6 +24,7 @@
 #include "sdis_scene_c.h"
 
 #include <star/ssp.h>
+#include <rsys/cstr.h>
 #include <rsys/float22.h>
 #include <rsys/float33.h>
 #include <rsys/rsys.h>
@@ -954,6 +955,64 @@ error:
     SDIS(scene_ref_put(scn));
     scn = NULL;
   }
+  goto exit;
+}
+
+static res_T
+XD(scene_find_closest_point)
+  (const struct sdis_scene* scn,
+   const double pos[3],
+   const double radius,
+   size_t* iprim,
+   double uv[2])
+{
+  struct sXd(hit) hit;
+  float query_pos[DIM];
+  float query_radius;
+  res_T res = RES_OK;
+
+  if(!scn || !pos || radius <= 0 || !iprim || !uv
+  || scene_is_2d(scn) != (DIM == 2)) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Avoid a null query radius due to casting in single-precision */
+  query_radius = MMAX((float)radius, FLT_MIN);
+
+  fX_set_dX(query_pos, pos);
+  res = sXd(scene_view_closest_point)
+    (scn->sXd(view), query_pos, query_radius, NULL, &hit);
+  if(res != RES_OK) {
+#if DIM == 2
+    log_err(scn->dev,
+      "%s: error querying the closest position at {%g, %g} "
+      "for a radius of %g -- %s.\n",
+      FUNC_NAME, SPLIT2(query_pos), query_radius, res_to_cstr(res));
+#else
+   log_err(scn->dev,
+      "%s: error querying the closest position at {%g, %g, %g} "
+      "for a radius of %g -- %s.\n",
+      FUNC_NAME, SPLIT3(query_pos), query_radius, res_to_cstr(res));
+#endif
+   goto error;
+  }
+
+  if(SXD_HIT_NONE(&hit)) {
+    *iprim = SDIS_PRIMITIVE_NONE;
+  } else {
+    *iprim = hit.prim.scene_prim_id;
+#if DIM == 2
+    uv[0] = hit.u;
+#else
+    uv[0] = hit.uv[0];
+    uv[1] = hit.uv[1];
+#endif
+  }
+
+exit:
+  return res;
+error:
   goto exit;
 }
 

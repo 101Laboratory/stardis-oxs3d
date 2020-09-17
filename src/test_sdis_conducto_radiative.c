@@ -278,6 +278,7 @@ main(int argc, char** argv)
   const double T1 = 310; /* Fixed temperature on the right side of the system */
   const double thickness = 2.0; /* Thickness of the solid along X */
   double Ts0, Ts1, hr, tmp;
+  struct interfac* p_intface;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -376,11 +377,10 @@ main(int argc, char** argv)
     get_position, &geom, &scn));
 
   hr = 4.0 * BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;
-  tmp = lambda/(2*lambda + thickness*hr) * (T1 - T0);
-  Ts0 = T0 + tmp;
-  Ts1 = T1 - tmp;
 
   /* Run the simulations */
+  p_intface
+    = (struct interfac*)sdis_data_get(sdis_interface_get_data(interfaces[4]));
   OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
@@ -393,6 +393,10 @@ main(int argc, char** argv)
     size_t nreals = 0;
     size_t nfails = 0;
     const size_t N = 10000;
+    double T1b;
+
+    /* Reset temperature */
+    p_intface->temperature = T1;
 
     solve_args.nrealisations = N;
     solve_args.time_range[0] = INF;
@@ -400,6 +404,7 @@ main(int argc, char** argv)
     solve_args.position[0] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     solve_args.position[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     solve_args.position[2] = ssp_rng_uniform_double(rng, -0.9, 0.9);
+    u = (solve_args.position[0] + 1) / thickness;
     solve_args.reference_temperature = Tref;
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
@@ -408,10 +413,12 @@ main(int argc, char** argv)
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-    u = (solve_args.position[0] + 1) / thickness;
+    tmp = lambda / (2 * lambda + thickness * hr) * (T1 - T0);
+    Ts0 = T0 + tmp;
+    Ts1 = T1 - tmp;
     ref = u * Ts1 + (1-u) * Ts0;
-    printf("Temperature at (%g, %g, %g)  = %g ~ %g +/- %g\n",
-      SPLIT3(solve_args.position), ref, T.E, T.SE);
+    printf("Temperature at (%g, %g, %g) with T1=%g = %g ~ %g +/- %g\n",
+      SPLIT3(solve_args.position), p_intface->temperature, ref, T.E, T.SE);
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -421,6 +428,37 @@ main(int argc, char** argv)
 
     /* Check green function */
     OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+    OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn, solve_args.time_range);
+
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+    printf("\n");
+
+    /* Check green used at a different temperature */
+    p_intface->temperature = T1b = T1 + ((double)isimul + 1) * 10;
+
+    OK(sdis_solve_probe(scn, &solve_args, &estimator));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+    tmp = lambda / (2 * lambda + thickness * hr) * (T1b - T0);
+    Ts0 = T0 + tmp;
+    Ts1 = T1b - tmp;
+    ref = u * Ts1 + (1 - u) * Ts0;
+    printf("Temperature at (%g, %g, %g) with T1=%g = %g ~ %g +/- %g\n",
+      SPLIT3(solve_args.position), p_intface->temperature, ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+
+    CHK(nfails + nreals == N);
+    CHK(nfails < N / 1000);
+    CHK(eq_eps(T.E, ref, 3*T.SE) == 1);
+
     OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
     check_green_function(green);
     check_estimator_eq(estimator, estimator2);

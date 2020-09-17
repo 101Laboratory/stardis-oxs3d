@@ -18,6 +18,11 @@
 
 #include <rsys/rsys.h>
 
+/* Current version the green function data structure. One should increment it
+ * and perform a version management onto serialized data when the gren function
+ * data structure is updated. */
+static const int SDIS_GREEN_FUNCTION_VERSION = 0;
+
 /* Forward declaration */
 struct accum;
 struct sdis_green_function;
@@ -34,7 +39,7 @@ static const struct green_path_handle GREEN_PATH_HANDLE_NULL =
 
 extern LOCAL_SYM res_T
 green_function_create
-  (struct sdis_device* dev,
+  (struct sdis_scene* scn,
    struct sdis_green_function** green);
 
 /* Merge `src' into `dst' an clear `src' */

@@ -43,6 +43,7 @@
 
 #define SDIS_VOLUMIC_POWER_NONE 0 /* <=> No volumic power */
 #define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
+#define SDIS_PRIMITIVE_NONE SIZE_MAX /* Invalid primitive */
 
 /* Forward declaration of external opaque data types */
 struct logger;
@@ -113,8 +114,9 @@ static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
  * Estimation data types
  ******************************************************************************/
 enum sdis_estimator_type {
-  SDIS_ESTIMATOR_TEMPERATURE,
-  SDIS_ESTIMATOR_FLUX,
+  SDIS_ESTIMATOR_TEMPERATURE, /* In Kelvin */
+  SDIS_ESTIMATOR_FLUX, /* In Watt/m^2 */
+  SDIS_ESTIMATOR_POWER, /* In Watt */
   SDIS_ESTIMATOR_TYPES_COUNT__
 };
 
@@ -501,6 +503,23 @@ struct sdis_solve_camera_args {
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
   SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
 
+struct sdis_compute_power_args {
+  size_t nrealisations;
+  struct sdis_medium* medium; /* Medium to solve */
+  double time_range[2]; /* Observation time */
+  double fp_to_meter; /* Scale from floating point units to meters */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+};
+#define SDIS_COMPUTE_POWER_ARGS_DEFAULT__ {                                    \
+  10000, /* #realisations */                                                   \
+  NULL, /* Medium */                                                           \
+  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* FP to meter */                                                         \
+  NULL /* RNG state */                                                         \
+}
+static const struct sdis_compute_power_args
+SDIS_COMPUTE_POWER_ARGS_DEFAULT = SDIS_COMPUTE_POWER_ARGS_DEFAULT__;
+
 BEGIN_DECLS
 
 /*******************************************************************************
@@ -791,6 +810,20 @@ sdis_scene_get_aabb
    double lower[3],
    double upper[3]);
 
+/* Search the point onto the scene geometry that is the closest of `pos'. The
+ * `radius' parameter controls the maximum search distance around `pos'. The
+ * returned closest point is expressed locally to the geometric primitive onto
+ * which it lies. If not found, the returned primitive is SDIS_PRIMITIVE_NONE.
+ * Note that even though only one point is returned, several position can have
+ * the same minimal distance to the queried position. */
+SDIS_API res_T
+sdis_scene_find_closest_point
+  (const struct sdis_scene* scn,
+   const double pos[3], /* Query position */
+   const double radius, /* Maximum search distance around pos */
+   size_t* iprim, /* Primitive index onto which the closest point lies */
+   double uv[2]); /* Parametric cordinate onto the primitive */
+
 /* Define the world space position of a point onto the primitive `iprim' whose
  * parametric coordinate is uv. */
 SDIS_API res_T
@@ -800,7 +833,7 @@ sdis_scene_get_boundary_position
    const double uv[2], /* Parametric coordinate onto the primitive */
    double pos[3]); /* World space position */
 
-/* Project a world space position onto a primitive wrt its normal and compute
+/* roject a world space position onto a primitive wrt its normal and compute
  * the parametric coordinates of the projected point onto the primitive. This
  * function may help to define the probe position onto a boundary as expected
  * by the sdis_solve_probe_boundary function.
@@ -912,6 +945,11 @@ sdis_estimator_get_total_flux
    struct sdis_mc* flux);
 
 SDIS_API res_T
+sdis_estimator_get_power
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* power);
+
+SDIS_API res_T
 sdis_estimator_get_paths_count
   (const struct sdis_estimator* estimator,
    size_t* npaths);
@@ -952,6 +990,17 @@ sdis_green_function_solve
   (struct sdis_green_function* green,
    const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
+
+SDIS_API res_T
+sdis_green_function_write
+  (struct sdis_green_function* green,
+   FILE* stream);
+
+SDIS_API res_T
+sdis_green_function_create_from_stream
+  (struct sdis_scene* scn, /* Scene from which the green was evaluated */
+   FILE* stream, /* Stream into which the green was serialized */
+   struct sdis_green_function** green);
 
 /* Retrieve the number of valid paths used to estimate the green function. It
  * is actually equal to the number of successful realisations. */
@@ -1081,6 +1130,15 @@ SDIS_API res_T
 sdis_solve_medium
   (struct sdis_scene* scn,
    const struct sdis_solve_medium_args* args,
+   struct sdis_estimator** estimator);
+
+/* P = SUM(volumic_power(x)) / Nrealisations * Volume
+ * power (in Watt) = time_range[0] == time_range[1]
+ *  ? P : P / (time_range[1] - time_range[0]) */
+SDIS_API res_T
+sdis_compute_power
+  (struct sdis_scene* scn,
+   const struct sdis_compute_power_args* args,
    struct sdis_estimator** estimator);
 
 /*******************************************************************************

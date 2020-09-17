@@ -89,17 +89,19 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 static void
 test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
 {
-  struct sdis_scene* scn = NULL;
-  double lower[3], upper[3];
-  double uv0[2], uv1[2], pos[3], pos1[3];
-  struct context ctx;
-  struct senc2d_scene* scn2d;
-  struct senc3d_scene* scn3d;
-  size_t ntris, npos;
-  size_t i;
   size_t duplicated_indices[] = { 0, 1, 2, 0, 2, 1 };
   size_t degenerated_indices[] = { 0, 1, 1 };
   double duplicated_vertices[] = { 0, 0, 0, 1, 1, 1, 0, 0, 0 };
+  double lower[3], upper[3];
+  double uv0[2], uv1[2], uv2[2], pos[3], pos1[3];
+  struct context ctx;
+  struct senc2d_scene* scn2d;
+  struct senc3d_scene* scn3d;
+  struct sdis_scene* scn = NULL;
+  size_t ntris, npos;
+  size_t iprim;
+  size_t i;
+  double dst = 0;
   size_t dup_vrtx_indices[] = { 0, 1, 2 };
   enum sdis_scene_dimension dim;
 
@@ -172,7 +174,32 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_boundary_project_position(scn, 6, pos, NULL));
   OK(sdis_scene_boundary_project_position(scn, 6, pos, uv1));
 
+  BA(sdis_scene_find_closest_point(NULL, pos, INF, &iprim, uv2));
+  BA(sdis_scene_find_closest_point(scn, NULL, INF, &iprim, uv2));
+  BA(sdis_scene_find_closest_point(scn, pos, 0, &iprim, uv2));
+  BA(sdis_scene_find_closest_point(scn, pos, INF, NULL, uv2));
+  BA(sdis_scene_find_closest_point(scn, pos, INF, &iprim, NULL));
+  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+
+  CHK(iprim == 6);
   CHK(d2_eq_eps(uv0, uv1, 1.e-6));
+  CHK(d2_eq_eps(uv1, uv2, 1.e-6));
+
+  pos[0] = 0.5;
+  pos[1] = 0.1;
+  pos[2] = 0.25;
+  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+  CHK(iprim == 10);
+
+  OK(sdis_scene_boundary_project_position(scn, 10, pos, uv0));
+  CHK(d2_eq_eps(uv0, uv2, 1.e-6));
+
+  OK(sdis_scene_get_boundary_position(scn, iprim, uv2, pos1));
+  dst = d3_len(d3_sub(pos1, pos, pos1));
+  CHK(eq_eps(dst, 0.1, 1.e-6));
+
+  OK(sdis_scene_find_closest_point(scn, pos, 0.09, &iprim, uv2));
+  CHK(iprim == SDIS_PRIMITIVE_NONE);
 
   FOR_EACH(i, 0, 64) {
     uv0[0] = rand_canonic();
@@ -180,7 +207,10 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
 
     OK(sdis_scene_get_boundary_position(scn, 4, uv0, pos));
     OK(sdis_scene_boundary_project_position(scn, 4, pos, uv1));
+    OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
     CHK(d2_eq_eps(uv0, uv1, 1.e-6));
+    CHK(d2_eq_eps(uv1, uv2, 1.e-6));
+    CHK(iprim == 4);
   }
 
   pos[0] = 10;
@@ -208,17 +238,19 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
 static void
 test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 {
+  size_t duplicated_indices[] = { 0, 1, 1, 0 };
+  size_t degenerated_indices[] = { 0, 0 };
+  double duplicated_vertices[] = { 0, 0, 0, 0 };
   struct sdis_scene* scn = NULL;
   double lower[2], upper[2];
-  double u0, u1, pos[2];
+  double u0, u1, u2, pos[2], pos1[2];
+  double dst;
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
   size_t nsegs, npos;
   size_t i;
-  size_t duplicated_indices[] = { 0, 1, 1, 0 };
-  size_t degenerated_indices[] = { 0, 0 };
-  double duplicated_vertices[] = { 0, 0, 0, 0 };
+  size_t iprim;
   size_t dup_vrtx_indices[] = { 0, 1 };
   enum sdis_scene_dimension dim;
 
@@ -288,14 +320,41 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_boundary_project_position(scn, 1, pos, NULL));
   OK(sdis_scene_boundary_project_position(scn, 1, pos, &u1));
 
+  BA(sdis_scene_find_closest_point(NULL, pos, INF, &iprim, &u2));
+  BA(sdis_scene_find_closest_point(scn, NULL, INF, &iprim, &u2));
+  BA(sdis_scene_find_closest_point(scn, pos, 0, &iprim, &u2));
+  BA(sdis_scene_find_closest_point(scn, pos, INF, NULL, &u2));
+  BA(sdis_scene_find_closest_point(scn, pos, INF, &iprim, NULL));
+  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+
   CHK(eq_eps(u0, u1, 1.e-6));
+  CHK(eq_eps(u1, u2, 1.e-6));
+  CHK(iprim == 1);
+
+  pos[0] = 0.5;
+  pos[1] = 0.1;
+  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+  CHK(iprim == 0);
+
+  OK(sdis_scene_boundary_project_position(scn, 0, pos, &u0));
+  CHK(eq_eps(u0, u2, 1.e-6));
+
+  OK(sdis_scene_get_boundary_position(scn, iprim, &u2, pos1));
+  dst = d2_len(d2_sub(pos1, pos, pos1));
+  CHK(eq_eps(dst, 0.1, 1.e-6));
+
+  OK(sdis_scene_find_closest_point(scn, pos, 0.09, &iprim, &u2));
+  CHK(iprim == SDIS_PRIMITIVE_NONE);
 
   FOR_EACH(i, 0, 64) {
     u0 = rand_canonic();
 
     OK(sdis_scene_get_boundary_position(scn, 2, &u0, pos));
     OK(sdis_scene_boundary_project_position(scn, 2, pos, &u1));
+    OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
     CHK(eq_eps(u0, u1, 1.e-6));
+    CHK(eq_eps(u1, u2, 1.e-6));
+    CHK(iprim == 2);
   }
 
   d2(pos, 5, 0.5);

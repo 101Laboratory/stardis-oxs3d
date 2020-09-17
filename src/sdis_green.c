@@ -16,10 +16,11 @@
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
 #include "sdis_green.h"
+#include "sdis_interface_c.h"
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
-#include "sdis_interface_c.h"
+#include "sdis_scene_c.h"
 
 #include <star/ssp.h>
 
@@ -98,6 +99,7 @@ green_path_init(struct mem_allocator* allocator, struct green_path* path)
   darray_flux_term_init(allocator, &path->flux_terms);
   darray_power_term_init(allocator, &path->power_terms);
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
+  path->limit.fragment = SDIS_INTERFACE_FRAGMENT_NULL;
   path->limit_id = UINT_MAX;
   path->limit_type = SDIS_POINT_NONE;
   path->ilast_medium = UINT16_MAX;
@@ -164,6 +166,96 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
   return RES_OK;
 }
 
+static res_T
+green_path_write(const struct green_path* path, FILE* stream)
+{
+  size_t sz = 0;
+  res_T res = RES_OK;
+  ASSERT(path && stream);
+
+  #define WRITE(Var, N) {                                                      \
+    if(fwrite((Var), sizeof(*(Var)), (N), stream) != (N)) {                    \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  /* Write the list of flux terms */
+  sz = darray_flux_term_size_get(&path->flux_terms);
+  WRITE(&sz, 1);
+  WRITE(darray_flux_term_cdata_get(&path->flux_terms), sz);
+
+  /* Write the list of power terms */
+  sz = darray_power_term_size_get(&path->power_terms);
+  WRITE(&sz, 1);
+  WRITE(darray_power_term_cdata_get(&path->power_terms), sz);
+
+  /* Write the limit point */
+  WRITE(&path->limit, 1);
+  WRITE(&path->limit_id, 1);
+  WRITE(&path->limit_type, 1);
+
+  /* Write miscellaneous data */
+  WRITE(&path->ilast_medium, 1);
+  WRITE(&path->ilast_interf, 1);
+
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+green_path_read(struct green_path* path, FILE* stream)
+{
+  size_t sz = 0;
+  res_T res = RES_OK;
+  ASSERT(path && stream);
+
+  #define READ(Var, N) {                                                       \
+    if(fread((Var), sizeof(*(Var)), (N), stream) != (N)) {                     \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  /* Read the list of flux terms */
+  READ(&sz, 1);
+  res = darray_flux_term_resize(&path->flux_terms, sz);
+  if(res != RES_OK) goto error;
+  READ(darray_flux_term_data_get(&path->flux_terms), sz);
+
+  /* Read the list of power tems */
+  READ(&sz, 1);
+  res = darray_power_term_resize(&path->power_terms, sz);
+  if(res != RES_OK) goto error;
+  READ(darray_power_term_data_get(&path->power_terms), sz);
+
+  /* Read the limit point */
+  READ(&path->limit, 1);
+  READ(&path->limit_id, 1);
+  READ(&path->limit_type, 1);
+
+  /* Read the miscellaneous data */
+  READ(&path->ilast_medium, 1);
+  READ(&path->ilast_interf, 1);
+
+  #undef READ
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 /* Generate the dynamic array of green paths */
 #define DARRAY_NAME green_path
 #define DARRAY_DATA struct green_path
@@ -199,12 +291,44 @@ struct sdis_green_function {
   FILE* rng_state;
 
   ref_T ref;
-  struct sdis_device* dev;
+  struct sdis_scene* scn;
 };
 
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+enum rng_type {
+  RNG_KISS,
+  RNG_MT_19937_64,
+  RNG_RANLUX48,
+  RNG_THREEFRY,
+  RNG_UNKNOWN
+};
+
+static INLINE enum rng_type
+get_rng_type_enum(const struct ssp_rng_type* type)
+{
+  ASSERT(type);
+  if(ssp_rng_type_eq(type, &ssp_rng_kiss)) return RNG_KISS;
+  if(ssp_rng_type_eq(type, &ssp_rng_mt19937_64)) return RNG_MT_19937_64;
+  if(ssp_rng_type_eq(type, &ssp_rng_ranlux48)) return RNG_RANLUX48;
+  if(ssp_rng_type_eq(type, &ssp_rng_threefry)) return RNG_THREEFRY;
+  return RNG_UNKNOWN;
+}
+
+static INLINE void
+get_rng_type_ssp(const enum rng_type type, struct ssp_rng_type* ssp_type)
+{
+  switch(type) {
+    case RNG_KISS: *ssp_type = ssp_rng_kiss; break;
+    case RNG_MT_19937_64: *ssp_type = ssp_rng_mt19937_64; break;
+    case RNG_RANLUX48: *ssp_type = ssp_rng_ranlux48; break;
+    case RNG_THREEFRY: *ssp_type = ssp_rng_threefry; break;
+    case RNG_UNKNOWN: memset(ssp_type, 0, sizeof(*ssp_type)); break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+}
+
 static res_T
 ensure_medium_registration
   (struct sdis_green_function* green,
@@ -338,7 +462,7 @@ green_function_solve_path
 
   if(time_curr <= 0
   || (path->limit_type == SDIS_VERTEX && time_curr <= medium_get_t0(medium))) {
-    log_err(green->dev,
+    log_err(green->scn->dev,
       "%s: invalid observation time \"%g\": the initial condition is reached "
       "while instationary system are not supported by the green function.\n",
       FUNC_NAME, time);
@@ -363,6 +487,280 @@ green_function_solve_path
 
   /* Compute the path weight */
   *weight = power + flux + temperature;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+write_media(struct sdis_green_function* green, FILE* stream)
+{
+  struct htable_medium_iterator it, it_end;
+  size_t nmedia = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  nmedia = htable_medium_size_get(&green->media);
+  WRITE(&nmedia);
+
+  htable_medium_begin(&green->media, &it);
+  htable_medium_end(&green->media, &it_end);
+  while(!htable_medium_iterator_eq(&it, &it_end)) {
+    const struct sdis_medium* mdm = *htable_medium_iterator_data_get(&it);
+    htable_medium_iterator_next(&it);
+    WRITE(&mdm->id);
+    WRITE(&mdm->type);
+  }
+
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+read_media(struct sdis_green_function* green, FILE* stream)
+{
+  size_t nmedia = 0;
+  size_t imedium = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define READ(Var) {                                                          \
+    if(fread((Var), sizeof(*(Var)), 1, stream) != 1) {                         \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  READ(&nmedia);
+  FOR_EACH(imedium, 0, nmedia) {
+    struct name* name = NULL;
+    struct sdis_medium* mdm = NULL;
+    struct fid id;
+    enum sdis_medium_type mdm_type;
+
+    READ(&id);
+    READ(&mdm_type);
+
+    name = flist_name_get(&green->scn->dev->media_names, id);
+    if(!name) {
+      log_err(green->scn->dev, "%s: a Stardis medium is missing.\n",
+        FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    mdm = name->mem;
+
+    if(mdm_type != mdm->type) {
+      log_err(green->scn->dev, "%s: inconsistency between the a Stardis medium "
+        "and its serialised data.\n", FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    res = ensure_medium_registration(green, mdm);
+    if(res != RES_OK) goto error;
+  }
+
+  #undef READ
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+write_interfaces(struct sdis_green_function* green, FILE* stream)
+{
+  struct htable_interf_iterator it, it_end;
+  size_t ninterfaces = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+  ninterfaces = htable_interf_size_get(&green->interfaces);
+  WRITE(&ninterfaces);
+
+  htable_interf_begin(&green->interfaces, &it);
+  htable_interf_end(&green->interfaces, &it_end);
+  while(!htable_interf_iterator_eq(&it, &it_end)) {
+    const struct sdis_interface* interf = *htable_interf_iterator_data_get(&it);
+    htable_interf_iterator_next(&it);
+    WRITE(&interf->id);
+    WRITE(&interf->medium_front->id);
+    WRITE(&interf->medium_front->type);
+    WRITE(&interf->medium_back->id);
+    WRITE(&interf->medium_back->type);
+  }
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+read_interfaces(struct sdis_green_function* green, FILE* stream)
+{
+  size_t ninterfs = 0;
+  size_t iinterf = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define READ(Var) {                                                          \
+    if(fread((Var), sizeof(*(Var)), 1, stream) != 1) {                         \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  READ(&ninterfs);
+  FOR_EACH(iinterf, 0, ninterfs) {
+    struct name* name = NULL;
+    struct sdis_interface* interf = NULL;
+    struct sdis_medium* mdm_front = NULL;
+    struct sdis_medium* mdm_back = NULL;
+    struct fid id;
+    struct fid mdm_front_id;
+    struct fid mdm_back_id;
+    enum sdis_medium_type mdm_front_type;
+    enum sdis_medium_type mdm_back_type;
+
+    READ(&id);
+    READ(&mdm_front_id);
+    READ(&mdm_front_type);
+    READ(&mdm_back_id);
+    READ(&mdm_back_type);
+
+    name = flist_name_get(&green->scn->dev->interfaces_names, id);
+    if(!name) {
+      log_err(green->scn->dev, "%s: a Stardis interface is missing.\n",
+        FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    interf = name->mem;
+    mdm_front = flist_name_get(&green->scn->dev->media_names, mdm_front_id)->mem;
+    mdm_back = flist_name_get(&green->scn->dev->media_names, mdm_back_id)->mem;
+
+    if(mdm_front != interf->medium_front
+    || mdm_back != interf->medium_back
+    || mdm_front_type != interf->medium_front->type
+    || mdm_back_type != interf->medium_back->type) {
+      log_err(green->scn->dev, "%s: inconsistency between the a Stardis interface "
+        "and its serialised data.\n", FUNC_NAME);
+      res = RES_BAD_ARG;
+      goto error;
+    }
+
+    res = ensure_interface_registration(green, interf);
+    if(res != RES_OK) goto error;
+  }
+
+  #undef READ
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+write_paths_list(struct sdis_green_function* green, FILE* stream)
+{
+  size_t npaths = 0;
+  size_t ipath = 0;
+  res_T res = RES_OK;
+  ASSERT(green && stream);
+
+  #define WRITE(Var) {                                                         \
+    if(fwrite((Var), sizeof(*(Var)), 1, stream) != 1) {                        \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+  npaths = darray_green_path_size_get(&green->paths);
+  WRITE(&npaths);
+  FOR_EACH(ipath, 0, npaths) {
+    const struct green_path* path = NULL;
+    path = darray_green_path_cdata_get(&green->paths) + ipath;
+
+    res = green_path_write(path, stream);
+    if(res != RES_OK) goto error;
+  }
+  #undef WRITE
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+read_paths_list(struct sdis_green_function* green, FILE* stream)
+{
+  size_t npaths = 0;
+  size_t ipath = 0;
+  res_T res = RES_OK;
+
+  #define READ(Var) {                                                          \
+    if(fread((Var), sizeof(*(Var)), 1, stream) != 1) {                         \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  READ(&npaths);
+  res = darray_green_path_resize(&green->paths, npaths);
+  if(res != RES_OK) goto error;
+
+  FOR_EACH(ipath, 0, npaths) {
+    struct green_path* path = NULL;
+    path = darray_green_path_data_get(&green->paths) + ipath;
+
+    res = green_path_read(path, stream);
+    if(res != RES_OK) goto error;
+  }
+  #undef READ
 
 exit:
   return res;
@@ -406,18 +804,18 @@ green_function_clear(struct sdis_green_function* green)
 static void
 green_function_release(ref_T* ref)
 {
-  struct sdis_device* dev;
+  struct sdis_scene* scn;
   struct sdis_green_function* green;
   ASSERT(ref);
   green = CONTAINER_OF(ref, struct sdis_green_function, ref);
-  dev = green->dev;
+  scn = green->scn;
   green_function_clear(green);
   htable_medium_release(&green->media);
   htable_interf_release(&green->interfaces);
   darray_green_path_release(&green->paths);
   if(green->rng_state) fclose(green->rng_state);
-  MEM_RM(dev->allocator, green);
-  SDIS(device_ref_put(dev));
+  MEM_RM(scn->dev->allocator, green);
+  SDIS(scene_ref_put(scn));
 }
 
 /*******************************************************************************
@@ -460,7 +858,7 @@ sdis_green_function_solve
     goto error;
   }
 
-  res = ssp_rng_create(green->dev->allocator, &green->rng_type, &rng);
+  res = ssp_rng_create(green->scn->dev->allocator, &green->rng_type, &rng);
   if(res != RES_OK) goto error;
 
   /* Avoid correlation by defining the RNG state from the final state of the
@@ -472,7 +870,7 @@ sdis_green_function_solve
   npaths = darray_green_path_size_get(&green->paths);
 
   /* Create the estimator */
-  res = estimator_create(green->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
+  res = estimator_create(green->scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
   if(res != RES_OK) goto error;
 
   /* Solve the green function */
@@ -503,6 +901,161 @@ error:
   if(estimator) {
     SDIS(estimator_ref_put(estimator));
     estimator = NULL;
+  }
+  goto exit;
+}
+
+res_T
+sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
+{
+  struct ssp_rng* rng = NULL;
+  enum rng_type rng_type = RNG_UNKNOWN;
+  hash256_T hash;
+  res_T res = RES_OK;
+
+  if(!green || !stream) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  #define WRITE(Var, Nb) {                                                     \
+    if(fwrite((Var), sizeof(*(Var)), (Nb), stream) != (Nb)) {                  \
+      res = RES_IO_ERR;                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  rng_type = get_rng_type_enum(&green->rng_type);
+  if(rng_type == RNG_UNKNOWN) {
+    log_err(green->scn->dev,
+      "%s: could not function a green function with an unknown RNG type.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  WRITE(&SDIS_GREEN_FUNCTION_VERSION, 1);
+
+  res = scene_compute_hash(green->scn, hash);
+  if(res != RES_OK) goto error;
+  WRITE(hash, sizeof(hash256_T));
+
+  res = write_media(green, stream);
+  if(res != RES_OK) goto error;
+  res = write_interfaces(green, stream);
+  if(res != RES_OK) goto error;
+  res = write_paths_list(green, stream);
+  if(res != RES_OK) goto error;
+
+  WRITE(&green->npaths_valid, 1);
+  WRITE(&green->npaths_invalid, 1);
+  WRITE(&green->realisation_time, 1);
+  WRITE(&rng_type, 1);
+  #undef WRITE
+
+  /* Create a temporary RNG used to serialise the RNG state */
+  res = ssp_rng_create(green->scn->dev->allocator, &green->rng_type, &rng);
+  if(res != RES_OK) goto error;
+  rewind(green->rng_state);
+  res = ssp_rng_read(rng, green->rng_state);
+  if(res != RES_OK) goto error;
+  res = ssp_rng_write(rng, stream);
+  if(res != RES_OK) goto error;
+
+exit:
+  if(rng) SSP(rng_ref_put(rng));
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+sdis_green_function_create_from_stream
+  (struct sdis_scene* scn,
+   FILE* stream,
+   struct sdis_green_function** out_green)
+{
+  hash256_T hash0, hash1;
+  struct sdis_green_function* green = NULL;
+  struct ssp_rng* rng = NULL;
+  enum rng_type rng_type = RNG_UNKNOWN;
+  int version = 0;
+  res_T res = RES_OK;
+
+  if(!scn || !stream || !out_green) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = green_function_create(scn, &green);
+  if(res != RES_OK) goto error;
+
+  #define READ(Var, Nb) {                                                      \
+    if(fread((Var), sizeof(*(Var)), (Nb), stream) != (Nb)) {                   \
+      if(feof(stream)) {                                                       \
+        res = RES_BAD_ARG;                                                     \
+      } else if(ferror(stream)) {                                              \
+        res = RES_IO_ERR;                                                      \
+      } else {                                                                 \
+        res = RES_UNKNOWN_ERR;                                                 \
+      }                                                                        \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  READ(&version, 1);
+  if(version != SDIS_GREEN_FUNCTION_VERSION) {
+    log_err(green->scn->dev,
+      "%s: unexpected green function version %d. Expecting a green function "
+      "in version %d.\n",
+      FUNC_NAME, version, SDIS_GREEN_FUNCTION_VERSION);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = scene_compute_hash(green->scn, hash0);
+  if(res != RES_OK) goto error;
+
+  READ(hash1, sizeof(hash256_T));
+  if(!hash256_eq(hash0, hash1)) {
+    log_err(green->scn->dev,
+      "%s: the submitted scene does not match scene used to estimate the green "
+      "function.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = read_media(green, stream);
+  if(res != RES_OK) goto error;
+  res = read_interfaces(green, stream);
+  if(res != RES_OK) goto error;
+  res = read_paths_list(green, stream);
+  if(res != RES_OK) goto error;
+
+  READ(&green->npaths_valid, 1);
+  READ(&green->npaths_invalid, 1);
+  READ(&green->realisation_time, 1);
+  READ(&rng_type, 1);
+  #undef READ
+
+  get_rng_type_ssp(rng_type, &green->rng_type);
+
+  /* Create a temporary RNG used to deserialise the RNG state */
+  res = ssp_rng_create(green->scn->dev->allocator, &green->rng_type, &rng);
+  if(res != RES_OK) goto error;
+  res = ssp_rng_read(rng, stream);
+  if(res != RES_OK) goto error;
+  res = ssp_rng_write(rng, green->rng_state);
+  if(res != RES_OK) goto error;
+
+exit:
+  if(rng) SSP(rng_ref_put(rng));
+  if(out_green) *out_green = green;
+  return res;
+error:
+  if(green) {
+    SDIS(green_function_ref_put(green));
+    green = NULL;
   }
   goto exit;
 }
@@ -733,23 +1286,23 @@ error:
  ******************************************************************************/
 res_T
 green_function_create
-  (struct sdis_device* dev, struct sdis_green_function** out_green)
+  (struct sdis_scene* scn, struct sdis_green_function** out_green)
 {
   struct sdis_green_function* green = NULL;
   res_T res = RES_OK;
-  ASSERT(dev && out_green);
+  ASSERT(scn && out_green);
 
-  green = MEM_CALLOC(dev->allocator, 1, sizeof(*green));
+  green = MEM_CALLOC(scn->dev->allocator, 1, sizeof(*green));
   if(!green) {
     res = RES_MEM_ERR;
     goto error;
   }
   ref_init(&green->ref);
-  SDIS(device_ref_get(dev));
-  green->dev = dev;
-  htable_medium_init(dev->allocator, &green->media);
-  htable_interf_init(dev->allocator, &green->interfaces);
-  darray_green_path_init(dev->allocator, &green->paths);
+  SDIS(scene_ref_get(scn));
+  green->scn = scn;
+  htable_medium_init(scn->dev->allocator, &green->media);
+  htable_interf_init(scn->dev->allocator, &green->interfaces);
+  darray_green_path_init(scn->dev->allocator, &green->paths);
   green->npaths_valid = SIZE_MAX;
   green->npaths_invalid = SIZE_MAX;
 

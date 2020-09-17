@@ -39,6 +39,13 @@ struct sdis_estimator {
   struct accum temperature;
   struct accum realisation_time;
   struct accum fluxes[FLUX_NAMES_COUNT__]; 
+
+  struct {
+    struct accum power;
+    double spread;
+    double time_range[2];
+  } power;
+
   size_t nrealisations; /* #successes */
   size_t nfailures;
 
@@ -95,6 +102,23 @@ estimator_setup_temperature
   estim->temperature.sum = sum;
   estim->temperature.sum2 = sum2;
   estim->temperature.count = estim->nrealisations;
+}
+
+static INLINE void
+estimator_setup_power
+  (struct sdis_estimator* estim,
+   const double sum,
+   const double sum2,
+   const double spread,
+   const double time_range[2])
+{
+  ASSERT(estim && estim->nrealisations && time_range);
+  estim->power.power.sum = sum;
+  estim->power.power.sum2 = sum2;
+  estim->power.power.count = estim->nrealisations;
+  estim->power.spread = spread;
+  estim->power.time_range[0] = time_range[0];
+  estim->power.time_range[1] = time_range[1];
 }
 
 static INLINE void

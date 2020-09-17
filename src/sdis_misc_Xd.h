@@ -1,0 +1,91 @@
+/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>. */
+
+#include "sdis_heat_path.h"
+#include "sdis_log.h"
+#include "sdis_medium_c.h"
+#include "sdis_misc.h"
+
+#include <star/ssp.h>
+
+#include "sdis_Xd_begin.h"
+
+res_T
+XD(time_rewind)
+  (const struct sdis_medium* mdm,
+   struct ssp_rng* rng,
+   const double delta,
+   const double fp_to_meter,
+   const struct rwalk_context* ctx,
+   struct XD(rwalk)* rwalk,
+   struct XD(temperature)* T)
+{
+  const double delta_in_meter = delta * fp_to_meter;
+  double temperature;
+  double lambda, rho, cp;
+  double tau, mu, t0;
+  res_T res = RES_OK;
+  ASSERT(mdm && rng && delta && fp_to_meter && ctx && rwalk);
+  ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
+  ASSERT(T->done == 0);
+
+  if(IS_INF(rwalk->vtx.time)) goto exit;
+
+  /* Fetch phyisical properties */
+  lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
+  rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
+  cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
+
+  /* Fetch the limit time */
+  t0 = ctx->green_path ? -INF : solid_get_t0(mdm);
+
+  /* Sample the time to reroll */
+  mu = (2*DIM*lambda)/(rho*cp*delta_in_meter*delta_in_meter);
+  tau = ssp_ran_exp(rng, mu);
+
+  /* Time rewind */
+  rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
+
+  /* The path does not reach the limit condition */
+  if(rwalk->vtx.time > t0) goto exit;
+
+  /* Fetch initial temperature */
+  temperature = solid_get_temperature(mdm, &rwalk->vtx);
+  if(temperature < 0) {
+    log_err(mdm->dev, "%s: the path reaches the limit condition by the "
+      "temperature remains unknown.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Update temperature */
+  T->value += temperature;
+  T->done = 1;
+
+  if(ctx->heat_path) {
+    /* Update the registered vertex data */
+    struct sdis_heat_vertex* vtx;
+    vtx = heat_path_get_last_vertex(ctx->heat_path);
+    vtx->time = rwalk->vtx.time;
+    vtx->weight = T->value;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+#include "sdis_Xd_end.h"

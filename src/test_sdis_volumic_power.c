@@ -60,6 +60,7 @@ struct solid {
   double rho;
   double cp;
   double delta;
+  double vpower;
 };
 
 static double
@@ -118,7 +119,7 @@ solid_get_volumic_power
 {
   (void)data;
   CHK(vtx != NULL);
-  return P0;
+  return ((struct solid*)sdis_data_cget(data))->vpower;
 }
 
 /*******************************************************************************
@@ -149,7 +150,10 @@ interface_get_convection_coef
  * Helper functions
  ******************************************************************************/
 static void
-solve(struct sdis_scene* scn, const double pos[])
+solve
+  (struct sdis_scene* scn,
+   const double pos[],
+   struct solid* solid)
 {
   char dump[128];
   struct time t0, t1, t2;
@@ -157,17 +161,21 @@ solve(struct sdis_scene* scn, const double pos[])
   struct sdis_estimator* estimator2;
   struct sdis_green_function* green;
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
-  struct sdis_mc T;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
   size_t nreals;
   size_t nfails;
   double x;
   double ref;
   const double time_range[2] = {INF, INF};
   enum sdis_scene_dimension dim;
-  ASSERT(scn && pos);
+  ASSERT(scn && pos && solid);
+
+  /* Restore power value */
+  solid->vpower = P0;
 
   x = pos[0] - 0.5;
-  ref = P0 / (2*LAMBDA) * (1.0/4.0 - x*x) + T0;
+  ref = solid->vpower / (2*LAMBDA) * (1.0/4.0 - x*x) + T0;
 
   OK(sdis_scene_get_dimension(scn, &dim));
 
@@ -186,25 +194,28 @@ solve(struct sdis_scene* scn, const double pos[])
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
 
   switch(dim) {
     case SDIS_SCENE_2D:
-      printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g, %g]\n",
-        SPLIT2(pos), ref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
+      printf("Temperature at (%g %g) with Power=%g = %g ~ %g +/- %g [%g, %g]\n",
+        SPLIT2(pos), solid->vpower, ref, T.E, T.SE, T.E-3*T.SE, T.E+3*T.SE);
       break;
     case SDIS_SCENE_3D:
-      printf("Temperature at (%g %g %g) = %g ~ %g +/- %g [%g, %g]\n",
-        SPLIT3(pos), ref, T.E, T.SE, T.E -3*T.SE, T.E + 3*T.SE);
+      printf("Temperature at (%g %g %g)th Power=%g = %g ~ %g +/- %g [%g, %g]\n",
+        SPLIT3(pos), solid->vpower, ref, T.E, T.SE, T.E -3*T.SE, T.E + 3*T.SE);
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  printf("Elapsed time = %s\n\n", dump);
+  printf("Elapsed time = %s\n", dump);
+  printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
 
   CHK(nfails + nreals == N);
   CHK(nfails < N/1000);
   CHK(eq_eps(T.E, ref, T.SE*3));
 
+  /* Check green function */
   time_current(&t0);
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
   time_current(&t1);
@@ -217,12 +228,12 @@ solve(struct sdis_scene* scn, const double pos[])
 
   switch(dim) {
     case SDIS_SCENE_2D:
-      printf("Green temperature at (%g %g) = %g ~ %g +/- %g\n",
-        SPLIT2(pos), ref, T.E, T.SE);
+      printf("Green temperature at (%g %g) with Power=%g = %g ~ %g +/- %g\n",
+        SPLIT2(pos), solid->vpower, ref, T.E, T.SE);
       break;
     case SDIS_SCENE_3D:
-      printf("Green temperature at (%g %g %g) = %g ~ %g +/- %g\n",
-        SPLIT3(pos), ref, T.E, T.SE);
+      printf("Green temperature at (%g %g %g) with Power=%g = %g ~ %g +/- %g\n",
+        SPLIT3(pos), solid->vpower, ref, T.E, T.SE);
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
@@ -232,6 +243,54 @@ solve(struct sdis_scene* scn, const double pos[])
   printf("Green estimation time = %s\n", dump);
   time_sub(&t1, &t2, &t1);
   time_dump(&t1, TIME_ALL, NULL, dump, sizeof(dump));
+  printf("Green solve time = %s\n", dump);
+
+  check_green_function(green);
+  check_estimator_eq(estimator, estimator2);
+  check_green_serialization(green, scn, time_range);
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  printf("\n");
+
+  /* Check green used at a different power */
+  solid->vpower = 3 * P0;
+
+  time_current(&t0);
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
+  time_sub(&t0, time_current(&t1), &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+  ref = solid->vpower / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
+
+  switch (dim) {
+  case SDIS_SCENE_2D:
+    printf("Temperature at (%g %g) with Power=%g = %g ~ %g +/- %g [%g, %g]\n",
+      SPLIT2(pos), solid->vpower, ref, T.E, T.SE, T.E - 3 * T.SE, T.E + 3 * T.SE);
+    break;
+  case SDIS_SCENE_3D:
+    printf("Temperature at (%g %g %g) with Power=%g = %g ~ %g +/- %g [%g, %g]\n",
+      SPLIT3(pos), solid->vpower, ref, T.E, T.SE, T.E - 3 * T.SE, T.E + 3 * T.SE);
+    break;
+  default: FATAL("Unreachable code.\n"); break;
+  }
+  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  printf("Elapsed time = %s\n", dump);
+  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+
+  CHK(nfails + nreals == N);
+  CHK(nfails < N / 1000);
+  CHK(eq_eps(T.E, ref, T.SE * 3));
+
+  time_current(&t0);
+  OK(sdis_green_function_solve(green, time_range, &estimator2));
+  time_sub(&t0, time_current(&t1), &t0);
+  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
   printf("Green solve time = %s\n", dump);
 
   check_green_function(green);
@@ -255,7 +314,6 @@ main(int argc, char** argv)
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
-  struct sdis_medium* solid2 = NULL; /* For debug */
   struct sdis_interface* interf_adiabatic = NULL;
   struct sdis_interface* interf_T0 = NULL;
   struct sdis_scene* box_scn = NULL;
@@ -291,16 +349,8 @@ main(int argc, char** argv)
   solid_props->cp = 2;
   solid_props->rho = 25;
   solid_props->delta = DELTA;
+  solid_props->vpower = P0;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
-  OK(sdis_data_ref_put(data));
-
-  OK(sdis_data_create(dev, sizeof(struct solid), 16, NULL, &data));
-  solid_props = sdis_data_get(data);
-  solid_props->lambda = 0;
-  solid_props->cp = 0;
-  solid_props->rho = 0;
-  solid_props->delta = DELTA/4;
-  OK(sdis_solid_create(dev, &solid_shader, data, &solid2));
   OK(sdis_data_ref_put(data));
 
   /* Setup the interface shader */
@@ -325,7 +375,6 @@ main(int argc, char** argv)
 
   /* Release the media */
   OK(sdis_medium_ref_put(solid));
-  OK(sdis_medium_ref_put(solid2));
   OK(sdis_medium_ref_put(fluid));
 
   /* Map the interfaces to their box triangles */
@@ -359,9 +408,9 @@ main(int argc, char** argv)
   /* Solve */
   d3_splat(pos, 0.25);
   printf(">> Box scene\n");
-  solve(box_scn, pos);
+  solve(box_scn, pos, solid_props);
   printf(">> Square scene\n");
-  solve(square_scn, pos);
+  solve(square_scn, pos, solid_props);
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));

@@ -13,6 +13,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#define _POSIX_C_SOURCE 200809L /* mmap support */
+#define _DEFAULT_SOURCE 1 /* MAP_POPULATE support */
+#define _BSD_SOURCE 1 /* MAP_POPULATE for glibc < 2.19 */
+
 #include "sdis_scene_Xd.h"
 
 /* Generate the Generic functions of the scene */
@@ -22,9 +26,12 @@
 #include "sdis_scene_Xd.h"
 
 #include "sdis.h"
+#include "sdis_interface_c.h"
 #include "sdis_scene_c.h"
 
+#include <float.h>
 #include <limits.h>
+#include <sys/mman.h>
 
 /*******************************************************************************
  * Helper function
@@ -182,6 +189,22 @@ sdis_scene_get_aabb
 }
 
 res_T
+sdis_scene_find_closest_point
+  (const struct sdis_scene* scn,
+   const double pos[3],
+   const double radius,
+   size_t* iprim,
+   double uv[2])
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return scene_find_closest_point_2d(scn, pos, radius, iprim, uv);
+  } else {
+    return scene_find_closest_point_3d(scn, pos, radius, iprim, uv);
+  }
+}
+
+res_T
 sdis_scene_get_boundary_position
   (const struct sdis_scene* scn,
    const size_t iprim,
@@ -333,7 +356,7 @@ sdis_scene_get_medium_spread
     }
   }
   *out_spread = spread;
-  
+
 exit:
   return res;
 error:
@@ -373,3 +396,93 @@ scene_get_medium_in_closed_boundaries
     : scene_get_medium_in_closed_boundaries_3d(scn, pos, out_medium);
 }
 
+res_T
+scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
+{
+  void* data = NULL;
+  FILE* stream = NULL;
+  size_t iprim, nprims;
+  size_t len;
+  res_T res = RES_OK;
+  ASSERT(scn && hash);
+
+  stream = tmpfile();
+  if(!stream) {
+    res = RES_IO_ERR;
+    goto error;
+  }
+
+  #define WRITE(Var, Nb)                                                       \
+  if(fwrite((Var), sizeof(*(Var)), Nb, stream) != (Nb)) {                      \
+    res = RES_IO_ERR;                                                          \
+    goto error;                                                                \
+  } (void)0
+  if(scene_is_2d(scn)) {
+    S2D(scene_view_primitives_count(scn->s2d_view, &nprims));
+  } else {
+    S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
+  }
+  FOR_EACH(iprim, 0, nprims) {
+    struct sdis_interface* interf = NULL;
+    size_t ivert;
+
+    if(scene_is_2d(scn)) {
+      struct s2d_primitive prim;
+      S2D(scene_view_get_primitive(scn->s2d_view, (unsigned)iprim, &prim));
+      FOR_EACH(ivert, 0, 2) {
+        struct s2d_attrib attr;
+        S2D(segment_get_vertex_attrib(&prim, ivert, S2D_POSITION, &attr));
+        WRITE(attr.value, 2);
+      }
+    } else {
+      struct s3d_primitive prim;
+      S3D(scene_view_get_primitive(scn->s3d_view, (unsigned)iprim, &prim));
+      FOR_EACH(ivert, 0, 3) {
+        struct s3d_attrib attr;
+        S3D(triangle_get_vertex_attrib(&prim, ivert, S3D_POSITION, &attr));
+        WRITE(attr.value, 3);
+      }
+    }
+
+    interf = scene_get_interface(scn, (unsigned)iprim);
+    WRITE(&interf->medium_front->type, 1);
+    WRITE(&interf->medium_front->id, 1);
+    WRITE(&interf->medium_back->type, 1);
+    WRITE(&interf->medium_back->id, 1);
+  }
+  #undef WRITE
+
+  len = (size_t)ftell(stream);
+  rewind(stream);
+#ifdef COMPILER_GCC
+  data = mmap(NULL, len, PROT_READ, MAP_PRIVATE|MAP_POPULATE, fileno(stream), 0);
+  if(data == MAP_FAILED) {
+    res = RES_IO_ERR;
+    goto error;
+  }
+#else
+  data = MEM_ALLOC_ALIGNED(scn->dev->allocator, len, 16);
+  if(!data) {
+    res = RES_MEM_ERR;
+    goto error;
+  }
+  if(fread(data, len, 1, stream) != 1) {
+    res = RES_IO_ERR;
+    goto error;
+  }
+#endif
+
+  res = hash_sha256(scn->dev->allocator, data, len, hash);
+  if(res != RES_OK) goto error;
+
+exit:
+#ifdef COMPILER_GCC
+  if(data) munmap(data, len);
+#else
+  if(data) MEM_RM(scn->dev->allocator, data);
+#endif
+  if(stream) fclose(stream);
+  return res;
+error:
+  goto exit;
+}
