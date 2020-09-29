@@ -31,7 +31,9 @@
 
 #include <float.h>
 #include <limits.h>
+#ifdef COMPILER_GCC
 #include <sys/mman.h>
+#endif
 
 /*******************************************************************************
  * Helper function
