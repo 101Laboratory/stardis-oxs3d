@@ -136,6 +136,16 @@ sdis_estimator_get_radiative_flux
 }
 
 res_T
+sdis_estimator_get_imposed_flux
+  (const struct sdis_estimator* estimator, struct sdis_mc* flux)
+{
+  if(!estimator || !flux || estimator->type != SDIS_ESTIMATOR_FLUX)
+    return RES_BAD_ARG;
+  SETUP_MC(flux, &estimator->fluxes[FLUX_IMPOSED]);
+  return RES_OK;
+}
+
+res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator, struct sdis_mc* flux)
 {

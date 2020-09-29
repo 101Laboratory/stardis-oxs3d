@@ -940,6 +940,11 @@ sdis_estimator_get_radiative_flux
    struct sdis_mc* flux);
 
 SDIS_API res_T
+sdis_estimator_get_imposed_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
+
+SDIS_API res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);
