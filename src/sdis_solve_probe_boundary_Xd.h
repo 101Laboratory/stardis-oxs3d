@@ -496,6 +496,7 @@ XD(solve_probe_boundary_flux)
 
     /* Compute hr and hc */
     frag.time = time;
+    frag.side = fluid_side;
     epsilon = interface_side_get_emissivity(interf, &frag);
     hc = interface_get_convection_coef(interf, &frag);
     hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
