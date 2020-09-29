@@ -31,6 +31,7 @@ enum sdis_estimator_type;
 enum flux_name {
   FLUX_CONVECTIVE,
   FLUX_RADIATIVE,
+  FLUX_IMPOSED,
   FLUX_TOTAL,
   FLUX_NAMES_COUNT__
 };
@@ -44,7 +45,7 @@ struct sdis_estimator {
     struct accum power;
     double spread;
     double time_range[2];
-  } mean_power;
+  } power;
 
   size_t nrealisations; /* #successes */
   size_t nfailures;
@@ -105,7 +106,7 @@ estimator_setup_temperature
 }
 
 static INLINE void
-estimator_setup_mean_power
+estimator_setup_power
   (struct sdis_estimator* estim,
    const double sum,
    const double sum2,
@@ -113,12 +114,12 @@ estimator_setup_mean_power
    const double time_range[2])
 {
   ASSERT(estim && estim->nrealisations && time_range);
-  estim->mean_power.power.sum = sum;
-  estim->mean_power.power.sum2 = sum2;
-  estim->mean_power.power.count = estim->nrealisations;
-  estim->mean_power.spread = spread;
-  estim->mean_power.time_range[0] = time_range[0];
-  estim->mean_power.time_range[1] = time_range[1];
+  estim->power.power.sum = sum;
+  estim->power.power.sum2 = sum2;
+  estim->power.power.count = estim->nrealisations;
+  estim->power.spread = spread;
+  estim->power.time_range[0] = time_range[0];
+  estim->power.time_range[1] = time_range[1];
 }
 
 static INLINE void

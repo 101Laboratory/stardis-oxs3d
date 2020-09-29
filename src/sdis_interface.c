@@ -153,6 +153,7 @@ sdis_interface_create
   interf->dev = dev;
   interf->shader = *shader;
   interf->id = flist_name_add(&dev->interfaces_names);
+  flist_name_get(&dev->interfaces_names, interf->id)->mem = interf;
 
   if(data) {
     SDIS(data_ref_get(data));

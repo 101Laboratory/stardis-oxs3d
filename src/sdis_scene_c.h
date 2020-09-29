@@ -20,6 +20,7 @@
 #include <star/s3d.h>
 
 #include <rsys/dynamic_array_uint.h>
+#include <rsys/hash.h>
 #include <rsys/hash_table.h>
 #include <rsys/ref_count.h>
 
@@ -247,6 +248,11 @@ scene_get_medium_in_closed_boundaries
   (const struct sdis_scene* scn,
    const double position[],
    struct sdis_medium** medium);
+
+extern LOCAL_SYM res_T
+scene_compute_hash
+  (const struct sdis_scene* scn,
+   hash256_T hash);
 
 static INLINE void
 scene_get_enclosure_ids

@@ -149,7 +149,7 @@ XD(solve_probe_boundary)
     greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
     if(!greens) { res = RES_MEM_ERR; goto error; }
     FOR_EACH(i, 0, scn->dev->nthreads) {
-      res = green_function_create(scn->dev, &greens[i]);
+      res = green_function_create(scn, &greens[i]);
       if(res != RES_OK) goto error;
     }
   }
@@ -342,10 +342,12 @@ XD(solve_probe_boundary_flux)
   struct accum* acc_fl = NULL; /* Per thread flux accumulator */
   struct accum* acc_fc = NULL; /* Per thread convective flux accumulator */
   struct accum* acc_fr = NULL; /* Per thread radiative flux accumulator */
+  struct accum* acc_fi = NULL; /* Per thread imposed flux accumulator */
   size_t nrealisations = 0;
   int64_t irealisation = 0;
   size_t i;
   int progress = 0;
+  int msg1 = 0;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
@@ -409,6 +411,11 @@ XD(solve_probe_boundary_flux)
   if(!fmd || !bmd
   || (  !(fmd->type == SDIS_FLUID && bmd->type == SDIS_SOLID)
      && !(fmd->type == SDIS_SOLID && bmd->type == SDIS_FLUID))) {
+    log_err(scn->dev,
+      "%s: Attempt to compute a flux at a %s-%s interface.\n",
+      FUNC_NAME,
+      (fmd->type == SDIS_FLUID ? "fluid" : "solid"),
+      (bmd->type == SDIS_FLUID ? "fluid" : "solid"));
     res = RES_BAD_ARG;
     goto error;
   }
@@ -445,6 +452,7 @@ XD(solve_probe_boundary_flux)
   ALLOC_ACCUMS(acc_fc);
   ALLOC_ACCUMS(acc_fl);
   ALLOC_ACCUMS(acc_fr);
+  ALLOC_ACCUMS(acc_fi);
   #undef ALLOC_ACCUMS
 
   /* Prebuild the interface fragment */
@@ -459,7 +467,7 @@ XD(solve_probe_boundary_flux)
   /* Here we go! Launch the Monte Carlo estimation */
   nrealisations = args->nrealisations;
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(static) shared(msg1)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
@@ -469,7 +477,8 @@ XD(solve_probe_boundary_flux)
     struct accum* acc_flux = &acc_fl[ithread];
     struct accum* acc_fcon = &acc_fc[ithread];
     struct accum* acc_frad = &acc_fr[ithread];
-    double time, epsilon, hc, hr;
+    struct accum* acc_fimp = &acc_fi[ithread];
+    double time, epsilon, hc, hr, imposed_flux, imposed_temp;
     int flux_mask = 0;
     double T_brf[3] = { 0, 0, 0 };
     const double Tref = args->reference_temperature;
@@ -490,13 +499,30 @@ XD(solve_probe_boundary_flux)
     epsilon = interface_side_get_emissivity(interf, &frag);
     hc = interface_get_convection_coef(interf, &frag);
     hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
+    frag.side = solid_side;
+    imposed_flux = interface_side_get_flux(interf, &frag);
+    imposed_temp = interface_side_get_temperature(interf, &frag);
+    if(imposed_temp >= 0) {
+      /* Flux computation on T boundaries is not supported yet */
+      #pragma omp critical
+      {
+        if(msg1 == 0) {
+          msg1 = 1,
+            log_err(scn->dev,
+              "%s: Attempt to compute a flux at a Dirichlet boundary.\n",
+              FUNC_NAME);
+        }
+      }
+      ATOMIC_SET(&res, RES_BAD_ARG);
+      continue;
+    }
 
     /* Fluid, Radiative and Solid temperatures */
     flux_mask = 0;
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
-    res_simul = XD(boundary_flux_realisation)(scn, rng, args->iprim, args->uv, time,
-      solid_side, args->fp_to_meter, Tarad, Tref, flux_mask, T_brf);
+    res_simul = XD(boundary_flux_realisation)(scn, rng, args->iprim, args->uv,
+      time, solid_side, args->fp_to_meter, Tarad, Tref, flux_mask, T_brf);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);
@@ -511,7 +537,8 @@ XD(solve_probe_boundary_flux)
       const double Tfluid = T_brf[2];
       const double w_conv = hc * (Tboundary - Tfluid);
       const double w_rad = hr * (Tboundary - Tradiative);
-      const double w_total = w_conv + w_rad;
+      const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
+      const double w_total = w_conv + w_rad + w_imp;
       /* Temperature */
       acc_temp->sum += Tboundary;
       acc_temp->sum2 += Tboundary*Tboundary;
@@ -532,6 +559,10 @@ XD(solve_probe_boundary_flux)
       acc_frad->sum += w_rad;
       acc_frad->sum2 += w_rad*w_rad;
       ++acc_frad->count;
+      /* Imposed flux */
+      acc_fimp->sum += w_imp;
+      acc_fimp->sum2 += w_imp*w_imp;
+      ++acc_fimp->count;
     }
 
     /* Update progress */
@@ -554,10 +585,12 @@ XD(solve_probe_boundary_flux)
   sum_accums(acc_fc, scn->dev->nthreads, &acc_fc[0]);
   sum_accums(acc_fr, scn->dev->nthreads, &acc_fr[0]);
   sum_accums(acc_fl, scn->dev->nthreads, &acc_fl[0]);
+  sum_accums(acc_fi, scn->dev->nthreads, &acc_fi[0]);
   ASSERT(acc_tp[0].count == acc_fl[0].count);
   ASSERT(acc_tp[0].count == acc_ti[0].count);
   ASSERT(acc_tp[0].count == acc_fr[0].count);
   ASSERT(acc_tp[0].count == acc_fc[0].count);
+  ASSERT(acc_tp[0].count == acc_fi[0].count);
 
   /* Setup the estimated values */
   estimator_setup_realisations_count(estimator, nrealisations, acc_tp[0].count);
@@ -565,6 +598,7 @@ XD(solve_probe_boundary_flux)
   estimator_setup_realisation_time(estimator, acc_ti[0].sum, acc_ti[0].sum2);
   estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc[0].sum, acc_fc[0].sum2);
   estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr[0].sum, acc_fr[0].sum2);
+  estimator_setup_flux(estimator, FLUX_IMPOSED, acc_fi[0].sum, acc_fi[0].sum2);
   estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl[0].sum, acc_fl[0].sum2);
 
   res = estimator_save_rng_state(estimator, rng_proxy);
@@ -580,6 +614,7 @@ exit:
   if(acc_fc) MEM_RM(scn->dev->allocator, acc_fc);
   if(acc_fr) MEM_RM(scn->dev->allocator, acc_fr);
   if(acc_fl) MEM_RM(scn->dev->allocator, acc_fl);
+  if(acc_fi) MEM_RM(scn->dev->allocator, acc_fi);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;

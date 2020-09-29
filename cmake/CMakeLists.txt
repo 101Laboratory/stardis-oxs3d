@@ -34,7 +34,7 @@ find_package(Star3D 0.7 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc2D 0.5 REQUIRED)
 find_package(StarEnc3D 0.5 REQUIRED)
-find_package(RSys 0.8.1 REQUIRED)
+find_package(RSys 0.10 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
@@ -56,7 +56,7 @@ rcmake_append_runtime_dirs(_runtime_dirs
 # Configure and define targets
 ###############################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 9)
+set(VERSION_MINOR 10)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
