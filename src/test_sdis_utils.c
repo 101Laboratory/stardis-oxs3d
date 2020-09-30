@@ -376,7 +376,8 @@ check_green_serialization
   struct sdis_green_function* green2 = NULL;
 
   CHK(green && time_range);
-  CHK(stream = tmpfile());
+  stream = tmpfile();
+  CHK(stream);
 
   OK(sdis_green_function_write(green, stream));
 
