@@ -662,7 +662,7 @@ XD(solve_boundary_flux)
         if(msg2 == 0) {
           msg2 = 1,
             log_err(scn->dev,
-              "%s: Attempt to compute a flux at a Dirichlet boundary.\n",
+              "%s: Attempt to compute a flux at a Dirichlet boundary (not available yet).\n",
               FUNC_NAME);
         }
       }
