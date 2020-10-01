@@ -351,7 +351,6 @@ XD(solve_probe_boundary_flux)
   int64_t irealisation = 0;
   size_t i;
   int progress = 0;
-  int msg1 = 0;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
@@ -395,9 +394,9 @@ XD(solve_probe_boundary_flux)
     }
   } else {
     const double w = CLAMP(1 - args->uv[0] - args->uv[1], 0, 1);
-    if(args->uv[0] < 0 
-    || args->uv[1] < 0 
-    || args->uv[0] > 1 
+    if(args->uv[0] < 0
+    || args->uv[1] < 0
+    || args->uv[0] > 1
     || args->uv[1] > 1
     || !eq_eps(w + args->uv[0] + args->uv[1], 1, 1.e-6)) {
       log_err(scn->dev,
@@ -471,7 +470,7 @@ XD(solve_probe_boundary_flux)
   /* Here we go! Launch the Monte Carlo estimation */
   nrealisations = args->nrealisations;
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static) shared(msg1)
+  #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
@@ -509,15 +508,8 @@ XD(solve_probe_boundary_flux)
     imposed_temp = interface_side_get_temperature(interf, &frag);
     if(imposed_temp >= 0) {
       /* Flux computation on T boundaries is not supported yet */
-      #pragma omp critical
-      {
-        if(msg1 == 0) {
-          msg1 = 1,
-            log_err(scn->dev,
-              "%s: Attempt to compute a flux at a Dirichlet boundary (not available yet).\n",
-              FUNC_NAME);
-        }
-      }
+      log_err(scn->dev,"%s: Attempt to compute a flux at a Dirichlet boundary "
+        "(not available yet).\n",  FUNC_NAME);
       ATOMIC_SET(&res, RES_BAD_ARG);
       continue;
     }
