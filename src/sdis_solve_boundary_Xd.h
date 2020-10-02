@@ -264,8 +264,8 @@ XD(solve_boundary)
       }
     } else {
       /* Do not take care of the submitted time when registering the green
-       * function. Simply takes 0 as relative time */
-      time = 0;
+       * function. Only steady systems are supported yet */
+      time = INF;
       res_local = green_function_create_path(greens[ithread], &green_path);
       if(res_local != RES_OK) {
         ATOMIC_SET(&res, res_local);

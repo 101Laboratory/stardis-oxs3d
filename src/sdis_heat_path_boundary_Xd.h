@@ -977,7 +977,7 @@ XD(boundary_path)
 
     if(ctx->green_path) {
       res = green_path_set_limit_interface_fragment
-        (ctx->green_path, interf, &frag);
+        (ctx->green_path, interf, &frag, rwalk->elapsed_time);
       if(res != RES_OK) goto error;
     }
     if(ctx->heat_path) {

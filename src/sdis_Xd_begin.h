@@ -95,10 +95,11 @@ struct XD(rwalk) {
   struct sdis_rwalk_vertex vtx; /* Position and time of the Random walk */
   struct sdis_medium* mdm; /* Medium in which the random walk lies */
   struct sXd(hit) hit; /* Hit of the random walk */
+  double elapsed_time;
   enum sdis_side hit_side;
 };
 static const struct XD(rwalk) XD(RWALK_NULL) = {
-  SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__, SDIS_SIDE_NULL__
+  SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__, 0, SDIS_SIDE_NULL__
 };
 
 struct XD(temperature) {

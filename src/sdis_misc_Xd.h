@@ -41,19 +41,21 @@ XD(time_rewind)
   ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
   ASSERT(T->done == 0);
 
-  if(IS_INF(rwalk->vtx.time)) goto exit;
-
-  /* Fetch phyisical properties */
+  /* Fetch physical properties */
   lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
   rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
   cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
-
-  /* Fetch the limit time */
-  t0 = ctx->green_path ? -INF : solid_get_t0(mdm);
+  t0 = solid_get_t0(mdm); /* Limit time */
 
   /* Sample the time to reroll */
   mu = (2*DIM*lambda)/(rho*cp*delta_in_meter*delta_in_meter);
   tau = ssp_ran_exp(rng, mu);
+
+  /* Increment the elapsed time */
+  ASSERT(rwalk->vtx.time > t0);
+  rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
+
+  if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
 
   /* Time rewind */
   rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
