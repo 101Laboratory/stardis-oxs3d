@@ -940,6 +940,11 @@ sdis_estimator_get_radiative_flux
    struct sdis_mc* flux);
 
 SDIS_API res_T
+sdis_estimator_get_imposed_flux
+  (const struct sdis_estimator* estimator,
+   struct sdis_mc* flux);
+
+SDIS_API res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator,
    struct sdis_mc* flux);
@@ -1144,11 +1149,8 @@ sdis_compute_power
 /*******************************************************************************
  * Green solvers.
  *
- * The caller should ensure that green solvers are invoked on scenes whose data
- * do not depend on time. Indeed, on green estimation, the time parameter along
- * the random walks registers the relative time spent in the system rather than
- * an absolute time. As a consequence, the media/interfaces parameters cannot
- * vary in time with respect to an absolute time value.
+ * Currently only steady computations are supported. As a consequence, the
+ * observation time is always fixed to infinity.
  *
  * In addition, the green solvers assumes that the interface fluxes are
  * constants in time and space. In the same way the volumic power of the solid
@@ -1159,8 +1161,8 @@ sdis_compute_power
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
  *
- * If the aforementioned assumptions are not ensured by the caller, the
- * behavior of the estimated green function is undefined.
+ * If these assumptions are not ensured by the caller, the behavior of the
+ * estimated green function is undefined.
  ******************************************************************************/
 SDIS_API res_T
 sdis_solve_probe_green_function

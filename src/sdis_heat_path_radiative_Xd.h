@@ -84,7 +84,8 @@ XD(trace_radiative_path)
           struct sdis_rwalk_vertex vtx;
           d3_splat(vtx.P, INF);
           vtx.time = rwalk->vtx.time;
-          res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &vtx);
+          res = green_path_set_limit_vertex
+            (ctx->green_path, rwalk->mdm, &vtx, rwalk->elapsed_time);
           if(res != RES_OK) goto error;
         }
         if(ctx->heat_path) {

@@ -472,7 +472,8 @@ main(int argc, char** argv)
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
 
-  CHK(stream = tmpfile());
+  stream = tmpfile();
+  CHK(stream);
   BA(sdis_green_function_write(NULL, stream));
   BA(sdis_green_function_write(green, NULL));
   OK(sdis_green_function_write(green, stream));

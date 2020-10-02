@@ -71,13 +71,15 @@ extern LOCAL_SYM res_T
 green_path_set_limit_interface_fragment
   (struct green_path_handle* path,
    struct sdis_interface* interf,
-   const struct sdis_interface_fragment* fragment);
+   const struct sdis_interface_fragment* fragment,
+   const double elapsed_time);
 
 extern LOCAL_SYM res_T
 green_path_set_limit_vertex
   (struct green_path_handle* path,
    struct sdis_medium* mdm,
-   const struct sdis_rwalk_vertex* vertex);
+   const struct sdis_rwalk_vertex* vertex,
+   const double elapsed_time);
 
 extern LOCAL_SYM res_T
 green_path_add_power_term

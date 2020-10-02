@@ -62,7 +62,7 @@
   */
 
 #define UNKNOWN_TEMPERATURE -1
-#define N 10000 /* #realisations */
+#define N 100000 /* #realisations */
 
 #define Tf 300.0
 #define Tb 0.0
@@ -447,29 +447,17 @@ main(int argc, char** argv)
   printf("Average values of the right side of the square = ");
   check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
   OK(sdis_estimator_ref_put(estimator));
-  
-  /* Average temperature on the left side of the box */
+
+  /* Flux computation on Dirichlet boundaries is not available yet.
+   * Once available, the expected total flux is the same we expect on the right
+   * side (as the other sides are adiabatic). */
   prims[0] = 2;
   prims[1] = 3;
-
-  analyticT = Tb;
-  analyticCF = H * (analyticT - Tf);
-  analyticRF = Hrad * (analyticT - Trad);
-  analyticTF = analyticCF + analyticRF;
-
   bound_args.nprimitives = 2;
-  OK(SOLVE(box_scn, &bound_args, &estimator));
-  printf("Average values of the left side of the box = ");
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
-
-  /* Average temperature on the left/right side of the square */
+  BA(SOLVE(box_scn, &bound_args, &estimator));
   prims[0] = 1;
   bound_args.nprimitives = 1;
-  OK(SOLVE(square_scn, &bound_args, &estimator));
-  printf("Average values of the left side of the square = ");
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+  BA(SOLVE(square_scn, &bound_args, &estimator));
   #undef SOLVE
 
   OK(sdis_scene_ref_put(box_scn));

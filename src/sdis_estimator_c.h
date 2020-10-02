@@ -31,6 +31,7 @@ enum sdis_estimator_type;
 enum flux_name {
   FLUX_CONVECTIVE,
   FLUX_RADIATIVE,
+  FLUX_IMPOSED,
   FLUX_TOTAL,
   FLUX_NAMES_COUNT__
 };

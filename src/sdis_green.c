@@ -1462,7 +1462,8 @@ res_T
 green_path_set_limit_interface_fragment
   (struct green_path_handle* handle,
    struct sdis_interface* interf,
-   const struct sdis_interface_fragment* frag)
+   const struct sdis_interface_fragment* frag,
+   const double elapsed_time)
 {
   res_T res = RES_OK;
   ASSERT(handle && interf && frag);
@@ -1470,6 +1471,7 @@ green_path_set_limit_interface_fragment
   res = ensure_interface_registration(handle->green, interf);
   if(res != RES_OK) return res;
   handle->path->limit.fragment = *frag;
+  handle->path->limit.fragment.time = -elapsed_time;
   handle->path->limit_id = interface_get_id(interf);
   handle->path->limit_type = SDIS_FRAGMENT;
   return RES_OK;
@@ -1479,7 +1481,8 @@ res_T
 green_path_set_limit_vertex
   (struct green_path_handle* handle,
    struct sdis_medium* mdm,
-   const struct sdis_rwalk_vertex* vert)
+   const struct sdis_rwalk_vertex* vert,
+   const double elapsed_time)
 {
   res_T res = RES_OK;
   ASSERT(handle && mdm && vert);
@@ -1487,6 +1490,7 @@ green_path_set_limit_vertex
   res = ensure_medium_registration(handle->green, mdm);
   if(res != RES_OK) return res;
   handle->path->limit.vertex = *vert;
+  handle->path->limit.vertex.time = -elapsed_time;
   handle->path->limit_id = medium_get_id(mdm);
   handle->path->limit_type = SDIS_VERTEX;
   return RES_OK;
