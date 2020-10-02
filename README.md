@@ -25,6 +25,18 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.10.1
+
+- In green function estimation, the time sent to the user callbacks is no more
+  the elapsed time from the beginning of the realisation: as in a regular
+  computation, it is now the observation time.
+- Fix the flux computation for boundaries with an imposed flux: it was
+  previously ignored. The new `sdis_estimator_get_imposed_flux` function
+  returns this estimated flux component.
+- Return an error if the flux is computed at a boundary whose temperature is
+  known: this configuration is not currently supported.
+- Fix build with the CL compiler.
+
 ### Version 0.10
 
 - Add support of green function [de]serialization. The
