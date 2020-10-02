@@ -1149,10 +1149,17 @@ sdis_compute_power
  * Green solvers.
  *
  * Note that only the interfaces/media with flux/volumic power defined during
- * green estimation can update their flux/volumic power values for subsequent
+ * green estimation can update their flux/volumic power value for subsequent
  * sdis_green_function_solve invocations: others interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
+ *
+ * Also note that the green solvers assume that the interface fluxes are
+ * constant in time and space. The same applies to the volumic power of the
+ * solid media.
+ *
+ * If these assumptions are not ensured by the caller, the behavior of the
+ * estimated green function is undefined.
  ******************************************************************************/
 SDIS_API res_T
 sdis_solve_probe_green_function

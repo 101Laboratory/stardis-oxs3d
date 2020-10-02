@@ -103,7 +103,8 @@ XD(convective_path)
     T->done = 1;
 
     if(ctx->green_path) {
-      res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm, &rwalk->vtx);
+      res = green_path_set_limit_vertex
+        (ctx->green_path, rwalk->mdm, &rwalk->vtx, rwalk->elapsed_time);
       if(res != RES_OK) goto error;
     }
 
@@ -201,18 +202,23 @@ XD(convective_path)
   for(;;) {
     struct sdis_interface_fragment frag;
     struct sXd(primitive) prim;
+    double mu, tau, t0;
 
     /* Fetch other physical properties. */
     cp = fluid_get_calorific_capacity(rwalk->mdm, &rwalk->vtx);
     rho = fluid_get_volumic_mass(rwalk->mdm, &rwalk->vtx);
+    t0 = fluid_get_t0(rwalk->mdm); /* Limit time */
 
     /* Sample the time using the upper bound. */
+    mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
+    tau = ssp_ran_exp(rng, mu);
+
+    /* Increment the elapsed time */
+    ASSERT(rwalk->vtx.time > t0);
+    rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
+
     if(rwalk->vtx.time != INF) {
-      double mu, tau, t0;
-      mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
-      tau = ssp_ran_exp(rng, mu);
-      t0 = fluid_get_t0(rwalk->mdm);
-      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
+      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0); /* Time rewind */
 
       /* Register the new vertex against the heat path */
       res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);

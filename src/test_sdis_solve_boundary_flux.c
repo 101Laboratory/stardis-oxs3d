@@ -62,7 +62,7 @@
   */
 
 #define UNKNOWN_TEMPERATURE -1
-#define N 10000 /* #realisations */
+#define N 100000 /* #realisations */
 
 #define Tf 300.0
 #define Tb 0.0

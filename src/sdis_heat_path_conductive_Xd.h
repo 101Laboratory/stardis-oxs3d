@@ -251,7 +251,7 @@ XD(conductive_path)
 
       if(ctx->green_path) {
         res = green_path_set_limit_vertex
-          (ctx->green_path, rwalk->mdm, &rwalk->vtx);
+          (ctx->green_path, rwalk->mdm, &rwalk->vtx, rwalk->elapsed_time);
         if(res != RES_OK) goto error;
       }
 

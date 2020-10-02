@@ -448,7 +448,6 @@ XD(solve_boundary_flux)
   size_t i;
   size_t view_nprims;
   int progress = 0;
-  int msg1 = 0, msg2 = 0;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
@@ -559,7 +558,7 @@ XD(solve_boundary_flux)
 
   nrealisations = args->nrealisations;
   omp_set_num_threads((int)scn->dev->nthreads);
-  #pragma omp parallel for schedule(static) shared(msg1, msg2)
+  #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
@@ -624,19 +623,11 @@ XD(solve_boundary_flux)
     bmd = interface_get_medium(interf, SDIS_BACK);
     if(!fmd || !bmd
       || (  !(fmd->type == SDIS_FLUID && bmd->type == SDIS_SOLID)
-         && !(fmd->type == SDIS_SOLID && bmd->type == SDIS_FLUID)))
-    {
-      #pragma omp critical
-      {
-        if(msg1 == 0) {
-          msg1 = 1,
-          log_err(scn->dev,
-            "%s: Attempt to compute a flux at a %s-%s interface.\n",
-            FUNC_NAME,
-            (fmd->type == SDIS_FLUID ? "fluid" : "solid"),
-            (bmd->type == SDIS_FLUID ? "fluid" : "solid"));
-        }
-      }
+         && !(fmd->type == SDIS_SOLID && bmd->type == SDIS_FLUID))) {
+      log_err(scn->dev, "%s: Attempt to compute a flux at a %s-%s interface.\n",
+        FUNC_NAME,
+        (fmd->type == SDIS_FLUID ? "fluid" : "solid"),
+        (bmd->type == SDIS_FLUID ? "fluid" : "solid"));
       ATOMIC_SET(&res, RES_BAD_ARG);
       continue;
     }
@@ -657,15 +648,8 @@ XD(solve_boundary_flux)
     imposed_temp = interface_side_get_temperature(interf, &frag);
     if(imposed_temp >= 0) {
       /* Flux computation on T boundaries is not supported yet */
-      #pragma omp critical
-      {
-        if(msg2 == 0) {
-          msg2 = 1,
-            log_err(scn->dev,
-              "%s: Attempt to compute a flux at a Dirichlet boundary (not available yet).\n",
-              FUNC_NAME);
-        }
-      }
+      log_err(scn->dev, "%s: Attempt to compute a flux at a Dirichlet boundary "
+        "(not available yet).\n", FUNC_NAME);
       ATOMIC_SET(&res, RES_BAD_ARG);
       continue;
     }

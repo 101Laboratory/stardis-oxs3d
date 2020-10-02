@@ -74,7 +74,7 @@ static double
 temperature_unknown(const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)data;
-  CHK(vtx != NULL);
+  CHK(vtx != NULL && IS_INF(vtx->time));
   return -1;
 }
 
@@ -83,7 +83,8 @@ solid_get_calorific_capacity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)data;
-  CHK(vtx != NULL && data == NULL);
+  CHK(vtx != NULL && IS_INF(vtx->time) && data == NULL);
+  CHK(IS_INF(vtx->time));
   return 2.0;
 }
 
@@ -92,7 +93,7 @@ solid_get_thermal_conductivity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)data;
-  CHK(vtx != NULL);
+  CHK(vtx != NULL && IS_INF(vtx->time));
   return 50.0;
 }
 
@@ -101,7 +102,7 @@ solid_get_volumic_mass
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)data;
-  CHK(vtx != NULL);
+  CHK(vtx != NULL && IS_INF(vtx->time));
   return 25.0;
 }
 
@@ -110,7 +111,7 @@ solid_get_delta
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)data;
-  CHK(vtx != NULL);
+  CHK(vtx != NULL && IS_INF(vtx->time));
   return 1.0/20.0;
 }
 
@@ -125,7 +126,7 @@ static double
 null_interface_value
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
-  CHK(frag != NULL);
+  CHK(frag != NULL && IS_INF(frag->time));
   (void)data;
   return 0;
 }
@@ -134,7 +135,7 @@ static double
 interface_get_temperature
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
-  CHK(data != NULL && frag != NULL);
+  CHK(data != NULL && frag != NULL && IS_INF(frag->time));
   return ((const struct interf*)sdis_data_cget(data))->temperature;
 }
 
