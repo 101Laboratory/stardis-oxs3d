@@ -1508,7 +1508,6 @@ green_path_set_limit_interface_fragment
   if(res != RES_OK) return res;
   handle->path->elapsed_time = elapsed_time;
   handle->path->limit.fragment = *frag;
-  handle->path->limit.fragment.time = INF;
   handle->path->limit_id = interface_get_id(interf);
   handle->path->limit_type = SDIS_FRAGMENT;
   return RES_OK;
@@ -1528,7 +1527,6 @@ green_path_set_limit_vertex
   if(res != RES_OK) return res;
   handle->path->elapsed_time = elapsed_time;
   handle->path->limit.vertex = *vert;
-  handle->path->limit.vertex.time = INF;
   handle->path->limit_id = medium_get_id(mdm);
   handle->path->limit_type = SDIS_VERTEX;
   return RES_OK;
