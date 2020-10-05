@@ -1027,6 +1027,11 @@ sdis_green_function_for_each_path
    sdis_process_green_path_T func,
    void* context);
 
+/* Retrieve the path's elapsed time */
+SDIS_API res_T
+sdis_green_path_get_elapsed_time
+  (struct sdis_green_path* path_handle, double* elapsed);
+
 /* Retrieve the spatio-temporal end point of a path used to estimate the green
  * function. Note that this point went back in time from the relative
  * observation time 0. Its time is thus negative; its absolute value

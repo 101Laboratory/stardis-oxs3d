@@ -77,6 +77,7 @@ flux_term_init(struct mem_allocator* allocator, struct flux_term* term)
 #include <rsys/dynamic_array.h>
 
 struct green_path {
+  double elapsed_time;
   struct darray_flux_term flux_terms; /* List of flux terms */
   struct darray_power_term power_terms; /* List of volumic power terms */
   union {
@@ -98,6 +99,7 @@ green_path_init(struct mem_allocator* allocator, struct green_path* path)
   ASSERT(path);
   darray_flux_term_init(allocator, &path->flux_terms);
   darray_power_term_init(allocator, &path->power_terms);
+  path->elapsed_time = -INF;
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
   path->limit.fragment = SDIS_INTERFACE_FRAGMENT_NULL;
   path->limit_id = UINT_MAX;
@@ -119,6 +121,7 @@ green_path_copy(struct green_path* dst, const struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
+  dst->elapsed_time = src->elapsed_time;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->limit_type = src->limit_type;
@@ -136,6 +139,7 @@ green_path_copy_and_clear(struct green_path* dst, struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
+  dst->elapsed_time = src->elapsed_time;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->limit_type = src->limit_type;
@@ -154,6 +158,7 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
+  dst->elapsed_time = src->elapsed_time;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->limit_type = src->limit_type;
@@ -179,6 +184,9 @@ green_path_write(const struct green_path* path, FILE* stream)
       goto error;                                                              \
     }                                                                          \
   } (void)0
+
+  /* Write elapsed time */
+  WRITE(&path->elapsed_time, 1);
 
   /* Write the list of flux terms */
   sz = darray_flux_term_size_get(&path->flux_terms);
@@ -226,6 +234,9 @@ green_path_read(struct green_path* path, FILE* stream)
       goto error;                                                              \
     }                                                                          \
   } (void)0
+
+  /* Read elapsed time */
+  READ(&path->elapsed_time, 1);
 
   /* Read the list of flux terms */
   READ(&sz, 1);
@@ -1101,6 +1112,31 @@ error:
 }
 
 res_T
+sdis_green_path_get_elapsed_time
+  (struct sdis_green_path* path_handle, double* elapsed)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !elapsed) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+  *elapsed = path->elapsed_time;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
 sdis_green_path_get_limit_point
   (struct sdis_green_path* path_handle, struct sdis_point* pt)
 {
@@ -1455,8 +1491,9 @@ green_path_set_limit_interface_fragment
   ASSERT(handle->path->limit_type == SDIS_POINT_NONE);
   res = ensure_interface_registration(handle->green, interf);
   if(res != RES_OK) return res;
+  handle->path->elapsed_time = elapsed_time;
   handle->path->limit.fragment = *frag;
-  handle->path->limit.fragment.time = -elapsed_time;
+  handle->path->limit.fragment.time = INF;
   handle->path->limit_id = interface_get_id(interf);
   handle->path->limit_type = SDIS_FRAGMENT;
   return RES_OK;
@@ -1474,8 +1511,9 @@ green_path_set_limit_vertex
   ASSERT(handle->path->limit_type == SDIS_POINT_NONE);
   res = ensure_medium_registration(handle->green, mdm);
   if(res != RES_OK) return res;
+  handle->path->elapsed_time = elapsed_time;
   handle->path->limit.vertex = *vert;
-  handle->path->limit.vertex.time = -elapsed_time;
+  handle->path->limit.vertex.time = INF;
   handle->path->limit_id = medium_get_id(mdm);
   handle->path->limit_type = SDIS_VERTEX;
   return RES_OK;

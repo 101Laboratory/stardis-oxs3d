@@ -21,7 +21,7 @@
 /* Current version the green function data structure. One should increment it
  * and perform a version management onto serialized data when the gren function
  * data structure is updated. */
-static const int SDIS_GREEN_FUNCTION_VERSION = 0;
+static const int SDIS_GREEN_FUNCTION_VERSION = 1;
 
 /* Forward declaration */
 struct accum;
