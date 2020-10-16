@@ -313,10 +313,10 @@ main(int argc, char** argv)
 
     if(IS_INF(time)) { /* Check green function */
       OK(sdis_solve_probe_green_function(box_scn, &solve_args, &green));
-      OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+      OK(sdis_green_function_solve(green, &estimator2));
       check_green_function(green);
       check_estimator_eq(estimator, estimator2);
-      check_green_serialization(green, box_scn, solve_args.time_range);
+      check_green_serialization(green, box_scn);
       OK(sdis_estimator_ref_put(estimator2));
       OK(sdis_green_function_ref_put(green));
     }
@@ -354,10 +354,10 @@ main(int argc, char** argv)
 
     if(IS_INF(time)) { /* Check green function */
       OK(sdis_solve_probe_green_function(square_scn, &solve_args, &green));
-      OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+      OK(sdis_green_function_solve(green, &estimator2));
       check_green_function(green);
       check_estimator_eq(estimator, estimator2);
-      check_green_serialization(green, square_scn, solve_args.time_range);
+      check_green_serialization(green, square_scn);
       OK(sdis_estimator_ref_put(estimator2));
       OK(sdis_green_function_ref_put(green));
     }

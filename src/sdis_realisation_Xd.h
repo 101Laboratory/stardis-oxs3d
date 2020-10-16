@@ -195,6 +195,7 @@ XD(probe_realisation)
   res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
 
+  ASSERT(T.value >= 0);
   *weight = T.value;
 
 exit:

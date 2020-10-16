@@ -354,8 +354,7 @@ dump_heat_paths
 extern LOCAL_SYM void
 check_green_serialization
   (struct sdis_green_function* green,
-   struct sdis_scene* scn,
-   const double time_range[2]);
+   struct sdis_scene* scn);
 
 #endif /* TEST_SDIS_UTILS_H */
 

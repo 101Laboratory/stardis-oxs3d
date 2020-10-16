@@ -17,6 +17,7 @@
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
+#include "sdis_green.h"
 
 #include <star/ssp.h>
 
@@ -24,7 +25,7 @@
 
 res_T
 XD(time_rewind)
-  (const struct sdis_medium* mdm,
+  (struct sdis_medium* mdm,
    struct ssp_rng* rng,
    const double delta,
    const double fp_to_meter,
@@ -82,6 +83,12 @@ XD(time_rewind)
     vtx = heat_path_get_last_vertex(ctx->heat_path);
     vtx->time = rwalk->vtx.time;
     vtx->weight = T->value;
+  }
+
+  if(ctx->green_path) {
+    res = green_path_set_limit_vertex(ctx->green_path, mdm, &rwalk->vtx,
+      rwalk->elapsed_time);
+    if(res != RES_OK) goto error;
   }
 
 exit:

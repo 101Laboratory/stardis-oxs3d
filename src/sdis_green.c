@@ -411,7 +411,6 @@ green_function_fetch_interf
 static res_T
 green_function_solve_path
   (struct sdis_green_function* green,
-   const double time, /* Sampled time */
    const size_t ipath,
    double* weight)
 {
@@ -429,7 +428,6 @@ green_function_solve_path
   size_t i, n;
   res_T res = RES_OK;
   ASSERT(green && ipath < darray_green_path_size_get(&green->paths) && weight);
-  ASSERT(time > 0);
 
   path = darray_green_path_cdata_get(&green->paths) + ipath;
   if(path->limit_type == SDIS_POINT_NONE) { /* Rejected path */
@@ -461,24 +459,14 @@ green_function_solve_path
   /* Setup time. */
   switch(path->limit_type) {
     case SDIS_FRAGMENT:
-      time_curr = time + path->limit.fragment.time;
+      time_curr = path->limit.fragment.time;
       interf = green_function_fetch_interf(green, path->limit_id);
       break;
     case SDIS_VERTEX:
-      time_curr = time + path->limit.vertex.time;
+      time_curr = path->limit.vertex.time;
       medium = green_function_fetch_medium(green, path->limit_id);
       break;
     default: FATAL("Unreachable code.\n"); break;
-  }
-
-  if(time_curr <= 0
-  || (path->limit_type == SDIS_VERTEX && time_curr <= medium_get_t0(medium))) {
-    log_err(green->scn->dev,
-      "%s: invalid observation time \"%g\": the initial condition is reached "
-      "while instationary system are not supported by the green function.\n",
-      FUNC_NAME, time);
-    res = RES_BAD_ARG;
-    goto error;
   }
 
   /* Compute limit condition */
@@ -851,7 +839,6 @@ sdis_green_function_ref_put(struct sdis_green_function* green)
 res_T
 sdis_green_function_solve
   (struct sdis_green_function* green,
-   const double time_range[2],
    struct sdis_estimator** out_estimator)
 {
   struct sdis_estimator* estimator = NULL;
@@ -863,8 +850,7 @@ sdis_green_function_solve
   double accum2 = 0;
   res_T res = RES_OK;
 
-  if(!green || !time_range || time_range[0] < 0
-  || time_range[1] < time_range[0] || !out_estimator) {
+  if(!green || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -886,10 +872,9 @@ sdis_green_function_solve
 
   /* Solve the green function */
   FOR_EACH(ipath, 0, npaths) {
-    const double time = sample_time(rng, time_range);
     double w;
 
-    res = green_function_solve_path(green, time, ipath, &w);
+    res = green_function_solve_path(green, ipath, &w);
     if(res == RES_BAD_OP) continue;
     if(res != RES_OK) goto error;
 

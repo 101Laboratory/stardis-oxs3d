@@ -993,7 +993,6 @@ sdis_green_function_ref_put
 SDIS_API res_T
 sdis_green_function_solve
   (struct sdis_green_function* green,
-   const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -1154,17 +1153,15 @@ sdis_compute_power
 /*******************************************************************************
  * Green solvers.
  *
- * Currently only steady computations are supported. As a consequence, the
- * observation time is always fixed to infinity.
- *
- * In addition, the green solvers assumes that the interface fluxes are
- * constants in time and space. In the same way the volumic power of the solid
- * media must be constant in time and space too. Furthermore, note that only
- * the interfaces/media that had a flux/volumic power during green estimation
- * can update their flux/volumic power value for subsequent
+ * Note that only the interfaces/media with flux/volumic power defined during
+ * green estimation can update their flux/volumic power value for subsequent
  * sdis_green_function_solve invocations: others interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
+ *
+ * Also note that the green solvers assume that the interface fluxes are
+ * constant in time and space. The same applies to the volumic power of the
+ * solid media.
  *
  * If these assumptions are not ensured by the caller, the behavior of the
  * estimated green function is undefined.
@@ -1196,4 +1193,3 @@ sdis_solve_medium_green_function
 END_DECLS
 
 #endif /* SDIS_H */
-

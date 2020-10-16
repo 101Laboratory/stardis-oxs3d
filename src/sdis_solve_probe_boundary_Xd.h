@@ -61,14 +61,13 @@ XD(solve_probe_boundary)
     res = RES_BAD_ARG;
     goto error;
   }
-  if(out_estimator) {
-    if(args->time_range[0] < 0
+  if(args->time_range[0] < 0
     || args->time_range[1] < args->time_range[0]
-    || (  args->time_range[1] > DBL_MAX
-       && args->time_range[0] != args->time_range[1])) {
-      res = RES_BAD_ARG;
-      goto error;
-    }
+    || (args->time_range[1] > DBL_MAX
+       && args->time_range[0] != args->time_range[1]))
+  {
+    res = RES_BAD_ARG;
+    goto error;
   }
 
 #if SDIS_XD_DIMENSION == 2
@@ -188,22 +187,19 @@ XD(solve_probe_boundary)
     /* Begin time registration */
     time_current(&t0);
 
-    if(!out_green) {
-      time = sample_time(rng, args->time_range);
-      if(register_paths) {
-        heat_path_init(scn->dev->allocator, &heat_path);
-        pheat_path = &heat_path;
-      }
-    } else {
-      /* Do not take care of the submitted time when registering the green
-       * function. Only steady systems are supported */
-      time = INF;
+    time = sample_time(rng, args->time_range);
+    if(out_green) {
       res_local = green_function_create_path(greens[ithread], &green_path);
       if(res_local != RES_OK) {
         ATOMIC_SET(&res, res_local);
         goto error_it;
       }
       pgreen_path = &green_path;
+    }
+
+    if(register_paths) {
+      heat_path_init(scn->dev->allocator, &heat_path);
+      pheat_path = &heat_path;
     }
 
     res_simul = XD(boundary_realisation)(scn, rng, args->iprim, args->uv, time,

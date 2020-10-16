@@ -438,10 +438,10 @@ main(int argc, char** argv)
   solve_args.fp_to_meter = 1;
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
 
-  BA(sdis_green_function_solve(NULL, solve_args.time_range, &estimator2));
-  BA(sdis_green_function_solve(green, NULL, &estimator2));
-  BA(sdis_green_function_solve(green, solve_args.time_range, NULL));
-  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+  BA(sdis_green_function_solve(NULL, &estimator2));
+  BA(sdis_green_function_solve(green, NULL));
+  BA(sdis_green_function_solve(NULL, NULL));
+  OK(sdis_green_function_solve(green, &estimator2));
 
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
@@ -450,7 +450,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator2));
   printf("\n");
 
-  /* Check green used at a different temperature */
+  /* Check same green used at a different temperature */
   fluid_param->temperature = 500;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -468,10 +468,10 @@ main(int argc, char** argv)
   CHK(nfails < N / 1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
-  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
-
+  
   stream = tmpfile();
   CHK(stream);
   BA(sdis_green_function_write(NULL, stream));
@@ -491,7 +491,7 @@ main(int argc, char** argv)
   OK(sdis_green_function_create_from_stream(scn, stream, &green));
   CHK(!fclose(stream));
 
-  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator3));
+  OK(sdis_green_function_solve(green, &estimator3));
 
   check_green_function(green);
   check_estimator_eq_strict(estimator2, estimator3);

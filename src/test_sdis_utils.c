@@ -117,7 +117,6 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   switch(pt.type) {
     case SDIS_FRAGMENT:
       frag = pt.data.itfrag.fragment;
-      frag.time = INF;
       OK(sdis_interface_get_shader(pt.data.itfrag.intface, &interf));
       data = sdis_interface_get_data(pt.data.itfrag.intface);
       temp = frag.side == SDIS_FRONT
@@ -126,7 +125,6 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
       break;
     case SDIS_VERTEX:
       vtx = pt.data.mdmvert.vertex;
-      vtx.time = INF;
       type = sdis_medium_get_type(pt.data.mdmvert.medium);
       data = sdis_medium_get_data(pt.data.mdmvert.medium);
       if(type == SDIS_FLUID) {
@@ -229,7 +227,7 @@ check_green_function(struct sdis_green_function* green)
 
   time_range[0] = time_range[1] = INF;
 
-  OK(sdis_green_function_solve(green, time_range, &estimator));
+  OK(sdis_green_function_solve(green, &estimator));
 
   BA(sdis_green_function_get_paths_count(NULL, &n));
   BA(sdis_green_function_get_paths_count(green, NULL));
@@ -367,15 +365,14 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
 void
 check_green_serialization
   (struct sdis_green_function* green,
-   struct sdis_scene* scn,
-   const double time_range[2])
+   struct sdis_scene* scn)
 {
   FILE* stream = NULL;
   struct sdis_estimator *e1 = NULL;
   struct sdis_estimator *e2 = NULL;
   struct sdis_green_function* green2 = NULL;
 
-  CHK(green && time_range);
+  CHK(green && scn);
   stream = tmpfile();
   CHK(stream);
 
@@ -386,8 +383,8 @@ check_green_serialization
   CHK(!fclose(stream));
   check_green_function(green2);
 
-  OK(sdis_green_function_solve(green, time_range, &e1));
-  OK(sdis_green_function_solve(green2, time_range, &e2));
+  OK(sdis_green_function_solve(green, &e1));
+  OK(sdis_green_function_solve(green2, &e2));
   check_estimator_eq_strict(e1, e2);
 
   OK(sdis_estimator_ref_put(e1));
