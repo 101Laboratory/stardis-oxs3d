@@ -280,7 +280,7 @@ main(int argc, char** argv)
   struct context ctx;
   double lower[3];
   double upper[3];
-  double size[3];
+  double spread;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -337,10 +337,8 @@ main(int argc, char** argv)
      ctx.msh.nvertices, ctx.msh.indices, ctx.msh.nprimitives);*/
 
   /* Compute the delta of the solid random walk */
-  size[0] = upper[0] - lower[0];
-  size[1] = upper[1] - lower[1];
-  size[2] = upper[2] - lower[2];
-  solid_param->delta = MMIN(MMIN(size[0], size[1]), size[2]) / 20.0;
+  OK(sdis_scene_get_medium_spread(scn, solid, &spread));
+  solid_param->delta = 0.4 / spread; /* (4V/S) / 10 */
 
   interf_param->upper[0] = upper[0];
   interf_param->upper[1] = upper[1];
