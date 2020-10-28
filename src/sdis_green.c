@@ -842,7 +842,6 @@ sdis_green_function_solve
    struct sdis_estimator** out_estimator)
 {
   struct sdis_estimator* estimator = NULL;
-  struct ssp_rng* rng = NULL;
   size_t npaths;
   size_t ipath;
   size_t N = 0; /* #realisations */
@@ -854,15 +853,6 @@ sdis_green_function_solve
     res = RES_BAD_ARG;
     goto error;
   }
-
-  res = ssp_rng_create(green->scn->dev->allocator, &green->rng_type, &rng);
-  if(res != RES_OK) goto error;
-
-  /* Avoid correlation by defining the RNG state from the final state of the
-   * RNG used to estimate the green function */
-  rewind(green->rng_state);
-  res = ssp_rng_read(rng, green->rng_state);
-  if(res != RES_OK) goto error;
 
   npaths = darray_green_path_size_get(&green->paths);
 
@@ -890,7 +880,6 @@ sdis_green_function_solve
     (estimator, green->realisation_time.sum, green->realisation_time.sum2);
 
 exit:
-  if(rng) SSP(rng_ref_put(rng));
   if(out_estimator) *out_estimator = estimator;
   return res;
 error:
