@@ -66,7 +66,6 @@ fluid_get_temperature
   return ((const struct fluid*)sdis_data_cget(data))->temperature;
 }
 
-
 static double
 solid_get_calorific_capacity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
@@ -109,7 +108,8 @@ solid_get_temperature
 {
   (void)data;
   CHK(vtx != NULL);
-  return UNKNOWN_TEMPERATURE;
+  if(vtx->time > 0) return UNKNOWN_TEMPERATURE;
+  return Tf;
 }
 
 /*******************************************************************************
@@ -217,7 +217,7 @@ main(int argc, char** argv)
   OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
   OK(sdis_data_ref_put(data));
 
-  /* Create the solid_medium */
+  /* Create the solid medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
@@ -389,6 +389,22 @@ main(int argc, char** argv)
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
   BA(SOLVE(square_scn, &probe_args, &estimator));
   fluid_param->temperature = Tf;
+  
+  /* Right-side temperature at initial time */
+  probe_args.time_range[0] = 0;
+  probe_args.time_range[1] = 0;
+
+  probe_args.iprim = 6;
+  OK(SOLVE(box_scn, &probe_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
+
+  probe_args.iprim = 3;
+  OK(SOLVE(square_scn, &probe_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
 
   #undef F
   #undef SOLVE
@@ -564,6 +580,26 @@ main(int argc, char** argv)
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
+
+  /* Right-side temperature at initial time */
+  bound_args.time_range[0] = 0;
+  bound_args.time_range[1] = 0;
+
+  prims[0] = 6;
+  prims[1] = 7;
+  bound_args.nprimitives = 2;
+  OK(SOLVE(box_scn, &bound_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
+
+  prims[0] = 3;
+  bound_args.nprimitives = 1;
+  OK(SOLVE(square_scn, &bound_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
+
   #undef SOLVE
   #undef GREEN
 

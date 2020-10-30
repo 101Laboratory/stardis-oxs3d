@@ -53,7 +53,7 @@ XD(time_rewind)
   tau = ssp_ran_exp(rng, mu);
 
   /* Increment the elapsed time */
-  ASSERT(rwalk->vtx.time > t0);
+  ASSERT(rwalk->vtx.time >= t0);
   rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
 
   if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
