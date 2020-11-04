@@ -1004,8 +1004,8 @@ sdis_green_function_create_from_stream
   READ(hash1, sizeof(hash256_T));
   if(!hash256_eq(hash0, hash1)) {
     log_err(green->scn->dev,
-      "%s: the submitted scene does not match scene used to estimate the green "
-      "function.\n", FUNC_NAME);
+      "%s: the submitted scene does not match the scene used to estimate the "
+      "green function.\n", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;
   }

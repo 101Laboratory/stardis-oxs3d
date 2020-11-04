@@ -490,6 +490,8 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   } else {
     S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
   }
+  WRITE(&scn->reference_temperature, 1);
+  WRITE(&scn->fp_to_meter, 1);
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;
     size_t ivert;
