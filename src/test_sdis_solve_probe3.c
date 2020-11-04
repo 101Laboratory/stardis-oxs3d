@@ -283,7 +283,7 @@ main(int argc, char** argv)
   nverts = sa_size(ctx.positions) / 3;
   ntris = sa_size(ctx.indices) / 3;
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+    get_position, 1, -1, 0, &ctx, &scn));
 
   /* Release the scene data */
   OK(sdis_interface_ref_put(Tnone));

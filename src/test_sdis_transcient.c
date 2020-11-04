@@ -558,7 +558,7 @@ main(int argc, char** argv)
 
   /* Create the box scene */
   OK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, &ctx, &box_scn));
+    box_nvertices, get_position, 1, -1, 0, &ctx, &box_scn));
 
   /* Setup the box2 scene context */
   ctx.indices = indices;
@@ -578,7 +578,7 @@ main(int argc, char** argv)
 
   /* Create the box scene */
   OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
-    nvertices, get_position, &ctx, &box2_scn));
+    nvertices, get_position, 1, -1, 0, &ctx, &box2_scn));
 
   /* Setup the matriochka context */
   matriochka_ctx.interfs[0]  = matriochka_ctx.interfs[1]  = interfs[4]; /* Zmin */
@@ -594,7 +594,7 @@ main(int argc, char** argv)
   /* Create the matriochka scene */
   OK(sdis_scene_create(dev, box_ntriangles*nmatriochkas, matriochka_indices,
     matriocka_interface, box_nvertices*nmatriochkas, matriochka_position,
-    &matriochka_ctx, &box_matriochka_scn));
+    1, -1, 0, &matriochka_ctx, &box_matriochka_scn));
 
   /* Setup and run the simulation */
   probe[0] = 0.1;

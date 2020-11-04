@@ -33,7 +33,6 @@ res_T
 XD(trace_radiative_path)
   (struct sdis_scene* scn,
    const float ray_dir[3],
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
@@ -45,8 +44,7 @@ XD(trace_radiative_path)
   float dir[3] = {0, 0, 0};
   res_T res = RES_OK;
 
-  ASSERT(scn && ray_dir && fp_to_meter > 0 && ctx && rwalk && rng && T);
-  (void)fp_to_meter;
+  ASSERT(scn && ray_dir && ctx && rwalk && rng && T);
 
   f3_set(dir, ray_dir);
 
@@ -81,11 +79,8 @@ XD(trace_radiative_path)
         T->done = 1;
 
         if(ctx->green_path) {
-          struct sdis_rwalk_vertex vtx;
-          d3_splat(vtx.P, INF);
-          vtx.time = rwalk->vtx.time;
-          res = green_path_set_limit_vertex
-            (ctx->green_path, rwalk->mdm, &vtx, rwalk->elapsed_time);
+          res = green_path_set_limit_radiative
+            (ctx->green_path, rwalk->elapsed_time);
           if(res != RES_OK) goto error;
         }
         if(ctx->heat_path) {
@@ -193,7 +188,6 @@ error:
 res_T
 XD(radiative_path)
   (struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
@@ -205,9 +199,8 @@ XD(radiative_path)
   float dir[3] = {0, 0, 0};
   res_T res = RES_OK;
 
-  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+  ASSERT(scn && ctx && rwalk && rng && T);
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
-  (void)fp_to_meter;
 
   /* Normalize the normal of the interface and ensure that it points toward the
    * current medium */
@@ -220,7 +213,7 @@ XD(radiative_path)
   ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
 
   /* Launch the radiative random walk */
-  res = XD(trace_radiative_path)(scn, dir, fp_to_meter, ctx, rwalk, rng, T);
+  res = XD(trace_radiative_path)(scn, dir, ctx, rwalk, rng, T);
   if(res != RES_OK) goto error;
 
 exit:

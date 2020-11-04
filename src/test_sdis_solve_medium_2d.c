@@ -326,7 +326,7 @@ main(int argc, char** argv)
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid1_fluid1;
   OK(sdis_scene_2d_create(dev, sa_size(indices)/2, get_indices, get_interface,
-    sa_size(positions)/2, get_position, &ctx, &scn));
+    sa_size(positions)/2, get_position, 1, -1, 0, &ctx, &scn));
 
   OK(sdis_scene_get_medium_spread(scn, solid0, &a0));
   CHK(eq_eps(a0, 1.0, 1.e-6));
@@ -371,7 +371,7 @@ main(int argc, char** argv)
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid0_fluid1;
   OK(sdis_scene_2d_create(dev, sa_size(indices)/2, get_indices, get_interface,
-    sa_size(positions)/2, get_position, &ctx, &scn));
+    sa_size(positions)/2, get_position, 1, -1, 0, &ctx, &scn));
 
   OK(sdis_scene_get_medium_spread(scn, solid0, &a));
   CHK(eq_eps(a, a0+a1, 1.e-6));

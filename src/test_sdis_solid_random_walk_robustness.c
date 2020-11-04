@@ -332,7 +332,7 @@ main(int argc, char** argv)
   /* Create the scene */
   ctx.interf = interf;
   OK(sdis_scene_create(dev, ctx.msh.nprimitives, get_indices, get_interface,
-    ctx.msh.nvertices, get_position, &ctx, &scn));
+    ctx.msh.nvertices, get_position, 1, -1, 0, &ctx, &scn));
   /*dump_mesh(stdout, ctx.msh.positions,
      ctx.msh.nvertices, ctx.msh.indices, ctx.msh.nprimitives);*/
 

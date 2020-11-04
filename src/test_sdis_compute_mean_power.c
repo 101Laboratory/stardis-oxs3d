@@ -227,7 +227,7 @@ main(int argc, char** argv)
   ntris = ctx.msh0.nprimitives + ctx.msh1.nprimitives;
   nverts = ctx.msh0.nvertices + ctx.msh1.nvertices;
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+    get_position, 1, -1, 0, &ctx, &scn));
 
   /* Test sdis_compute_power function */
   args.nrealisations = N;
@@ -243,9 +243,6 @@ main(int argc, char** argv)
   args.medium = NULL;
   BA(sdis_compute_power(scn, &args, &estimator));
   args.medium = solid0;
-  args.fp_to_meter = 0;
-  BA(sdis_compute_power(scn, &args, &estimator));
-  args.fp_to_meter = 1;
   args.time_range[0] = args.time_range[1] = -1;
   BA(sdis_compute_power(scn, &args, &estimator));
   args.time_range[0] = 1;
@@ -293,7 +290,7 @@ main(int argc, char** argv)
   ctx.interf0 = interf0;
   ctx.interf1 = interf0;
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+    get_position, 1, -1, 0, &ctx, &scn));
 
   /* Check invalid medium */
   args.time_range[0] = args.time_range[1] = 1;

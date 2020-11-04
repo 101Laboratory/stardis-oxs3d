@@ -338,7 +338,7 @@ main(int argc, char** argv)
 #endif
 
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+    get_position, 1, -1, 0, &ctx, &scn));
 
   BA(sdis_scene_get_medium_spread(NULL, solid0, &v0));
   BA(sdis_scene_get_medium_spread(scn, NULL, &v0));
@@ -366,9 +366,6 @@ main(int argc, char** argv)
   solve_args.medium = NULL;
   BA(sdis_solve_medium(scn, &solve_args, &estimator));
   solve_args.medium = solid0;
-  solve_args.fp_to_meter = 0;
-  BA(sdis_solve_medium(scn, &solve_args, &estimator));
-  solve_args.fp_to_meter = 1;
   solve_args.time_range[0] = solve_args.time_range[1] = -1;
   BA(sdis_solve_medium(scn, &solve_args, &estimator));
   solve_args.time_range[0] = 1;
@@ -419,7 +416,7 @@ main(int argc, char** argv)
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid0_fluid1;
   OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+    get_position, 1, -1, 0, &ctx, &scn));
 
   OK(sdis_scene_get_medium_spread(scn, solid0, &v));
   CHK(eq_eps(v, v0+v1, 1.e-6));
@@ -451,9 +448,6 @@ main(int argc, char** argv)
   solve_args.medium = solid1;
   BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
   solve_args.medium = solid0;
-  solve_args.fp_to_meter = 0;
-  BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
-  solve_args.fp_to_meter = 1;
   OK(sdis_solve_medium_green_function(scn, &solve_args, &green));
 
   OK(sdis_green_function_solve(green, &estimator2));

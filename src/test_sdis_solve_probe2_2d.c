@@ -229,7 +229,7 @@ main(int argc, char** argv)
   ctx.indices = square_indices;
   ctx.interfaces = interfaces;
   OK(sdis_scene_2d_create(dev, square_nsegments, get_indices, get_interface,
-    square_nvertices, get_position, &ctx, &scn));
+    square_nvertices, get_position, 1, -1, 0, &ctx, &scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(Tnone));

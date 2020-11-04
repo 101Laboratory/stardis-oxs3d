@@ -856,6 +856,9 @@ XD(scene_create)
    void (*interf)(const size_t iprim, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[], void* ctx),
+   const double fp_to_meter,
+   const double trad,
+   const double tref,
    void* ctx,
    struct sdis_scene** out_scn)
 {
@@ -864,7 +867,8 @@ XD(scene_create)
   res_T res = RES_OK;
 
   if(!dev || !out_scn || !nprims || !indices || !interf || !nverts
-  || !position || nprims > UINT_MAX || nverts > UINT_MAX) {
+  || !position || nprims > UINT_MAX || nverts > UINT_MAX
+    || fp_to_meter <= 0 || tref < 0) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -878,7 +882,9 @@ XD(scene_create)
   ref_init(&scn->ref);
   SDIS(device_ref_get(dev));
   scn->dev = dev;
-  scn->ambient_radiative_temperature = -1;
+  scn->fp_to_meter = fp_to_meter;
+  scn->ambient_radiative_temperature = trad;
+  scn->reference_temperature = tref;
   scn->outer_enclosure_id = UINT_MAX;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_medium_init(dev->allocator, &scn->media);

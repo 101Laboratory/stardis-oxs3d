@@ -82,6 +82,11 @@ green_path_set_limit_vertex
    const double elapsed_time);
 
 extern LOCAL_SYM res_T
+green_path_set_limit_radiative
+  (struct green_path_handle* handle,
+   const double elapsed_time);
+
+extern LOCAL_SYM res_T
 green_path_add_power_term
   (struct green_path_handle* path,
    struct sdis_medium* mdm,

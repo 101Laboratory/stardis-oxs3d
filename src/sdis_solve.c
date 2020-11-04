@@ -68,9 +68,6 @@ solve_pixel
    struct sdis_medium* mdm,
    const struct sdis_camera* cam,
    const double time_range[2], /* Observation time */
-   const double fp_to_meter, /* Scale from floating point units to meters */
-   const double Tarad, /* In Kelvin */
-   const double Tref, /* In Kelvin */
    const size_t ipix[2], /* Pixel coordinate in the image plane */
    const size_t nrealisations,
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
@@ -82,7 +79,7 @@ solve_pixel
   struct sdis_heat_path* pheat_path = NULL;
   size_t irealisation;
   res_T res = RES_OK;
-  ASSERT(scn && mdm && rng && cam && ipix && nrealisations && Tref >= 0);
+  ASSERT(scn && mdm && rng && cam && ipix && nrealisations);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
   ASSERT(estimator && time_range);
 
@@ -115,7 +112,7 @@ solve_pixel
 
     /* Launch the realisation */
     res_simul = ray_realisation_3d(scn, rng, mdm, ray_pos, ray_dir,
-      time, fp_to_meter, Tarad, Tref, pheat_path, &w);
+      time, pheat_path, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
@@ -170,9 +167,6 @@ solve_tile
    struct sdis_medium* mdm,
    const struct sdis_camera* cam,
    const double time_range[2],
-   const double fp_to_meter,
-   const double Tarad,
-   const double Tref,
    const size_t origin[2], /* Tile origin in image plane */
    const size_t size[2], /* #pixels in X and Y */
    const size_t spp, /* #samples per pixel */
@@ -183,7 +177,7 @@ solve_tile
   size_t mcode; /* Morton code of the tile pixel */
   size_t npixels;
   res_T res = RES_OK;
-  ASSERT(scn && rng && mdm && cam && spp && origin && Tref >= 0);
+  ASSERT(scn && rng && mdm && cam && spp && origin);
   ASSERT(size &&size[0] && size[1] && buf);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0 && time_range);
 
@@ -206,7 +200,7 @@ solve_tile
     /* Fetch the pixel estimator */
     estimator = estimator_buffer_grab(buf, ipix[0], ipix[1]);
 
-    res = solve_pixel(scn, rng, mdm, cam, time_range, fp_to_meter, Tarad, Tref,
+    res = solve_pixel(scn, rng, mdm, cam, time_range,
       ipix, spp, register_paths, pix_sz, estimator);
     if(res != RES_OK) goto error;
   }
@@ -362,12 +356,9 @@ sdis_solve_camera
   || !args
   || !out_buf
   || !args->cam
-  || args->fp_to_meter <= 0
   || !args->image_resolution[0]
   || !args->image_resolution[1]
   || !args->spp
-  || args->ambient_radiative_temperature < 0
-  || args->reference_temperature < 0
   || args->time_range[0] < 0
   || args->time_range[1] < args->time_range[0]
   || (  args->time_range[1] > DBL_MAX
@@ -448,9 +439,7 @@ sdis_solve_camera
 
     /* Draw the tile */
     res_local = solve_tile(scn, rng, medium, args->cam, args->time_range,
-      args->fp_to_meter, args->ambient_radiative_temperature,
-      args->reference_temperature, tile_org, tile_sz, args->spp,
-      args->register_paths, pix_sz, buf);
+      tile_org, tile_sz, args->spp, args->register_paths, pix_sz, buf);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;

@@ -199,7 +199,6 @@ error:
 res_T
 XD(conductive_path)
   (struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
@@ -211,7 +210,7 @@ XD(conductive_path)
   struct sdis_medium* mdm;
   size_t istep = 0; /* Help for debug */
   res_T res = RES_OK;
-  ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T);
+  ASSERT(scn && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_SOLID);
   (void)ctx, (void)istep;
 
@@ -286,12 +285,12 @@ XD(conductive_path)
     /* Add the volumic power density to the measured temperature */
     if(power != SDIS_VOLUMIC_POWER_NONE) {
       if((S3D_HIT_NONE(&hit0) && S3D_HIT_NONE(&hit1))) { /* Hit nothing */
-        const double delta_in_meter = delta * fp_to_meter;
+        const double delta_in_meter = delta * scn->fp_to_meter;
         power_factor = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
         T->value += power * power_factor;
       } else {
         const double delta_s_adjusted = delta_solid * RAY_RANGE_MAX_SCALE;
-        const double delta_s_in_meter = delta_solid * fp_to_meter;
+        const double delta_s_in_meter = delta_solid * scn->fp_to_meter;
         double h;
         double h_in_meter;
         double cos_U_N;
@@ -307,7 +306,7 @@ XD(conductive_path)
         }
 
         h = delta * fabs(cos_U_N);
-        h_in_meter = h * fp_to_meter;
+        h_in_meter = h * scn->fp_to_meter;
 
         /* The regular power term at wall */
         tmp = h_in_meter * h_in_meter / (2.0 * lambda);
@@ -343,7 +342,7 @@ XD(conductive_path)
     }
 
     /* Rewind the time */
-    res = XD(time_rewind)(rwalk->mdm, rng, delta, fp_to_meter, ctx, rwalk, T);
+    res = XD(time_rewind)(rwalk->mdm, rng, delta * scn->fp_to_meter, ctx, rwalk, T);
     if(res != RES_OK) goto error;
     if(T->done) break; /* Limit condition was reached */
 

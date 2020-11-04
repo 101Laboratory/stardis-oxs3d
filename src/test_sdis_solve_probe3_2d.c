@@ -277,7 +277,7 @@ main(int argc, char** argv)
   nverts = sa_size(ctx.positions) / 2;
   nsegs = sa_size(ctx.indices) / 2;
   OK(sdis_scene_2d_create(dev, nsegs, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+    get_position, 1, -1, 0, &ctx, &scn));
 
   /* Release the scene data */
   OK(sdis_interface_ref_put(Tnone));

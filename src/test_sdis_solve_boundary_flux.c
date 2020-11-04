@@ -22,7 +22,7 @@
   * The scene is composed of a solid cube/square whose temperature is unknown.
   * The convection coefficient with the surrounding fluid is null excepted for
   * the X faces whose value is 'H'. The Temperature T of the -X face is fixed
-  * to Tb. The ambiant radiative temperature is 0 excepted for the X faces
+  * to Tb. The ambient radiative temperature is 0 excepted for the X faces
   * whose value is 'Trad'.
   * This test computes temperature and fluxes on the X faces and check that
   * they are equal to:
@@ -326,12 +326,12 @@ main(int argc, char** argv)
 
   /* Create the box scene */
   OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
-    box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn));
+    box_get_interface, box_nvertices, box_get_position, 1, Trad, Tref,
+    box_interfaces, &box_scn));
 
   /* Create the square scene */
   OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
-    square_get_interface, square_nvertices, square_get_position,
+    square_get_interface, square_nvertices, square_get_position, 1, Trad, Tref,
     square_interfaces, &square_scn));
 
   /* Release the interfaces */
@@ -351,8 +351,6 @@ main(int argc, char** argv)
   probe_args.uv[1] = 0.3;
   probe_args.time_range[0] = INF;
   probe_args.time_range[1] = INF;
-  probe_args.ambient_radiative_temperature = Trad;
-  probe_args.reference_temperature = Tref;
   BA(SOLVE(NULL, &probe_args, &estimator));
   BA(SOLVE(box_scn, NULL, &estimator));
   BA(SOLVE(box_scn, &probe_args, NULL));
@@ -407,8 +405,6 @@ main(int argc, char** argv)
   bound_args.nprimitives = 2;
   bound_args.time_range[0] = INF;
   bound_args.time_range[1] = INF;
-  bound_args.ambient_radiative_temperature = Trad;
-  bound_args.reference_temperature = Tref;
 
   BA(SOLVE(NULL, &bound_args, &estimator));
   BA(SOLVE(box_scn, NULL, &estimator));

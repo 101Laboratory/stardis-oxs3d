@@ -426,7 +426,7 @@ main(int argc, char** argv)
 
   /* Create the scene */
   OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+    nvertices, get_position, 1, -1, 0, interfaces, &scn));
 
 #if 0
   dump_mesh(stdout, vertices, nvertices, indices, ntriangles);
@@ -442,7 +442,7 @@ main(int argc, char** argv)
   solid_param = sdis_data_get(data);
   solid_param->lambda = 0.1;
   OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+    nvertices, get_position, 1, -1, 0, interfaces, &scn));
 
   printf("\n>>> Check 2\n");
   check(scn, refs2, sizeof(refs2)/sizeof(struct reference));

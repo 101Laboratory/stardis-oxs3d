@@ -94,9 +94,10 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   struct green_accum* acc = NULL;
   struct sdis_data* data = NULL;
   enum sdis_medium_type type;
+  enum sdis_green_path_end_type end_type;
   double power = 0;
   double flux = 0;
-  double temp = 0;
+  double time, temp = 0;
   double weight = 0;
   CHK(path && ctx);
 
@@ -110,11 +111,40 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   BA(sdis_green_path_for_each_flux_term(path, NULL, &acc));
   OK(sdis_green_path_for_each_flux_term(path, accum_flux_terms, &flux));
 
+  BA(sdis_green_path_get_elapsed_time(NULL, NULL));
+  BA(sdis_green_path_get_elapsed_time(path, NULL));
+  BA(sdis_green_path_get_elapsed_time(NULL, &time));
+  OK(sdis_green_path_get_elapsed_time(path, &time));
+
+  BA(sdis_green_path_get_end_type(NULL, NULL));
+  BA(sdis_green_path_get_end_type(path, NULL));
+  BA(sdis_green_path_get_end_type(NULL, &end_type));
+  OK(sdis_green_path_get_end_type(path, &end_type));
+
+  BA(sdis_green_path_get_limit_point(NULL, NULL));
   BA(sdis_green_path_get_limit_point(NULL, &pt));
   BA(sdis_green_path_get_limit_point(path, NULL));
-  OK(sdis_green_path_get_limit_point(path, &pt));
+  if(end_type == SDIS_GREEN_PATH_END_RADIATIVE) {
+    struct sdis_green_function* green;
+    struct sdis_scene* scn;
+    BO(sdis_green_path_get_limit_point(path, &pt));
+    BA(sdis_green_path_get_green_function(NULL, NULL));
+    BA(sdis_green_path_get_green_function(path, NULL));
+    BA(sdis_green_path_get_green_function(NULL, &green));
+    OK(sdis_green_path_get_green_function(path, &green));
 
-  switch(pt.type) {
+    BA(sdis_green_function_get_scene(NULL, NULL));
+    BA(sdis_green_function_get_scene(NULL, &scn));
+    BA(sdis_green_function_get_scene(green, NULL));
+    OK(sdis_green_function_get_scene(green, &scn));
+
+    BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
+    BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
+    BA(sdis_scene_get_ambient_radiative_temperature(NULL, &temp));
+    OK(sdis_scene_get_ambient_radiative_temperature(scn, &temp));
+  } else {
+    OK(sdis_green_path_get_limit_point(path, &pt));
+    switch(pt.type) {
     case SDIS_FRAGMENT:
       frag = pt.data.itfrag.fragment;
       OK(sdis_interface_get_shader(pt.data.itfrag.intface, &interf));
@@ -136,6 +166,7 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
       }
       break;
     default: FATAL("Unreachable code.\n"); break;
+    }
   }
 
   weight = temp + power + flux;

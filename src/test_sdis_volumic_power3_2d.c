@@ -415,7 +415,7 @@ main(int argc, char** argv)
 
   /* Create the scene */
   OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+    nvertices, get_position, 1, -1, 0, interfaces, &scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_solid_adiabatic));

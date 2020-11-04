@@ -379,7 +379,7 @@ main(int argc, char** argv)
   geom.indices = indices;
   geom.interfaces = prim_interfaces;
   OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface, nvertices,
-    get_position, &geom, &scn));
+    get_position, 1, 0, Tref, &geom, &scn));
 
   hr = 4*BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;
   tmp = lambda/(2*lambda + thickness*hr) * (T1 - T0);
@@ -405,7 +405,6 @@ main(int argc, char** argv)
     solve_args.position[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     solve_args.time_range[0] = INF;
     solve_args.time_range[1] = INF;
-    solve_args.reference_temperature = Tref;
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));

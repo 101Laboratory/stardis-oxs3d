@@ -458,7 +458,6 @@ XD(check_rwalk_fragment_consistency)
 static res_T
 XD(solid_solid_boundary_path)
   (const struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct XD(rwalk)* rwalk,
@@ -491,7 +490,7 @@ XD(solid_solid_boundary_path)
   int move;
   int reinjection_is_valid;
   res_T res = RES_OK;
-  ASSERT(scn && fp_to_meter > 0 && ctx && frag && rwalk && rng && T);
+  ASSERT(scn && ctx && frag && rwalk && rng && T);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)frag, (void)ctx;
 
@@ -589,7 +588,7 @@ XD(solid_solid_boundary_path)
   /* Handle the volumic power */
   power = solid_get_volumic_power(mdm, &rwalk->vtx);
   if(power != SDIS_VOLUMIC_POWER_NONE) {
-    const double delta_in_meter = reinject_dst * fp_to_meter;
+    const double delta_in_meter = reinject_dst * scn->fp_to_meter;
     const double lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
     tmp = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
     T->value += power * tmp;
@@ -601,7 +600,7 @@ XD(solid_solid_boundary_path)
   }
 
   /* Time rewind */
-  res = XD(time_rewind)(mdm, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+  res = XD(time_rewind)(mdm, rng, reinject_dst * scn->fp_to_meter, ctx, rwalk, T);
   if(res != RES_OK) goto error;
   if(T->done) goto exit; /* Limit condition was reached */
 
@@ -633,7 +632,6 @@ error:
 static res_T
 XD(solid_fluid_boundary_path)
   (const struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct XD(rwalk)* rwalk,
@@ -666,7 +664,7 @@ XD(solid_fluid_boundary_path)
   int iattempt;
   int reinjection_is_valid = 0;
   res_T res = RES_OK;
-  ASSERT(scn && fp_to_meter > 0 && rwalk && rng && T && ctx);
+  ASSERT(scn && rwalk && rng && T && ctx);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
 
     /* Retrieve the solid and the fluid split by the boundary */
@@ -741,7 +739,7 @@ XD(solid_fluid_boundary_path)
   hr = 4.0 * BOLTZMANN_CONSTANT * ctx->Tref3 * epsilon;
 
   /* Compute the probas to switch in solid, fluid or radiative random walk */
-  tmp = lambda / (delta*fp_to_meter);
+  tmp = lambda / (delta * scn->fp_to_meter);
   fluid_proba = hc  / (tmp + hr + hc);
   radia_proba = hr  / (tmp + hr + hc);
   /*solid_proba = tmp / (tmp + hr + hc);*/
@@ -759,7 +757,7 @@ XD(solid_fluid_boundary_path)
     /* Handle the volumic power */
     const double power = solid_get_volumic_power(solid, &rwalk->vtx);
     if(power != SDIS_VOLUMIC_POWER_NONE) {
-      const double delta_in_meter = reinject_dst * fp_to_meter;
+      const double delta_in_meter = reinject_dst * scn->fp_to_meter;
       tmp = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
       T->value += power * tmp;
 
@@ -770,7 +768,7 @@ XD(solid_fluid_boundary_path)
     }
 
     /* Time rewind */
-    res = XD(time_rewind)(solid, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+    res = XD(time_rewind)(solid, rng, reinject_dst * scn->fp_to_meter, ctx, rwalk, T);
     if(res != RES_OK) goto error;
     if(T->done) goto exit; /* Limit condition was reached */
 
@@ -803,7 +801,6 @@ error:
 static res_T
 XD(solid_boundary_with_flux_path)
   (const struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    const double phi,
@@ -888,7 +885,7 @@ XD(solid_boundary_with_flux_path)
   delta = reinject_dst / sqrt(DIM);
 
   /* Handle the flux */
-  delta_in_meter = delta*fp_to_meter;
+  delta_in_meter = delta * scn->fp_to_meter;
   tmp = delta_in_meter / lambda;
   T->value += phi * tmp;
   if(ctx->green_path) {
@@ -899,7 +896,7 @@ XD(solid_boundary_with_flux_path)
   /* Handle the volumic power */
   power = solid_get_volumic_power(mdm, &rwalk->vtx);
   if(power != SDIS_VOLUMIC_POWER_NONE) {
-    delta_in_meter = reinject_dst * fp_to_meter;
+    delta_in_meter = reinject_dst * scn->fp_to_meter;
     tmp = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
     T->value += power * tmp;
     if(ctx->green_path) {
@@ -909,7 +906,7 @@ XD(solid_boundary_with_flux_path)
   }
 
   /* Time rewind */
-  res = XD(time_rewind)(mdm, rng, reinject_dst, fp_to_meter, ctx, rwalk, T);
+  res = XD(time_rewind)(mdm, rng, reinject_dst * scn->fp_to_meter, ctx, rwalk, T);
   if(res != RES_OK) goto error;
   if(T->done) goto exit; /* Limit condition was reached */
 
@@ -945,7 +942,6 @@ error:
 res_T
 XD(boundary_path)
   (struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
@@ -958,7 +954,7 @@ XD(boundary_path)
   struct sdis_medium* mdm = NULL;
   double tmp;
   res_T res = RES_OK;
-  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+  ASSERT(scn && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm == NULL);
   ASSERT(!SXD_HIT_NONE(&rwalk->hit));
 
@@ -993,7 +989,7 @@ XD(boundary_path)
     const double phi = interface_side_get_flux(interf, &frag);
     if(phi != SDIS_FLUX_NONE) {
       res = XD(solid_boundary_with_flux_path)
-        (scn, fp_to_meter, ctx, &frag, phi, rwalk, rng, T);
+        (scn, ctx, &frag, phi, rwalk, rng, T);
       if(res != RES_OK) goto error;
 
       goto exit;
@@ -1004,11 +1000,9 @@ XD(boundary_path)
   mdm_back = interface_get_medium(interf, SDIS_BACK);
 
   if(mdm_front->type == mdm_back->type) {
-    res = XD(solid_solid_boundary_path)
-      (scn, fp_to_meter, ctx, &frag, rwalk, rng, T);
+    res = XD(solid_solid_boundary_path)(scn, ctx, &frag, rwalk, rng, T);
   } else {
-    res = XD(solid_fluid_boundary_path)
-      (scn, fp_to_meter, ctx, &frag, rwalk, rng, T);
+    res = XD(solid_fluid_boundary_path)(scn, ctx, &frag, rwalk, rng, T);
   }
   if(res != RES_OK) goto error;
 

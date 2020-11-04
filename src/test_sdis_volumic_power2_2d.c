@@ -447,7 +447,7 @@ main(int argc, char** argv)
 
   /* Create the scene */
   OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+    nvertices, get_position, 1, -1, 0, interfaces, &scn));
 
   printf(">>> Check 1\n");
   check(scn, refs1, sizeof(refs1)/sizeof(struct reference));
@@ -458,7 +458,7 @@ main(int argc, char** argv)
   solid_param = sdis_data_get(data);
   solid_param->lambda = 0.1;
   OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn) );
+    nvertices, get_position, 1, -1, 0, interfaces, &scn));
 
   printf("\n>>> Check 2\n");
   check(scn, refs2, sizeof(refs2)/sizeof(struct reference));
@@ -473,7 +473,7 @@ main(int argc, char** argv)
   solid_param->lambda = 10;
   solid_param->P = SDIS_VOLUMIC_POWER_NONE;
   OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+    nvertices, get_position, 1, -1, 0, interfaces, &scn));
 
   printf("\n>>> Check 3\n");
   check(scn, refs3, sizeof(refs3)/sizeof(struct reference));

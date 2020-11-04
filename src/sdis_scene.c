@@ -130,11 +130,14 @@ sdis_scene_create
    void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[3], void* ctx),
+   const double fp_to_meter,
+   const double trad,
+   const double tref,
    void* ctx,
    struct sdis_scene** out_scn)
 {
   return scene_create_3d
-    (dev, ntris, indices, interf, nverts, position, ctx, out_scn);
+    (dev, ntris, indices, interf, nverts, position, fp_to_meter, trad, tref, ctx, out_scn);
 }
 
 res_T
@@ -145,11 +148,14 @@ sdis_scene_2d_create
    void (*interf)(const size_t iseg, struct sdis_interface** bound, void*),
    const size_t nverts, /* #vertices */
    void (*position)(const size_t ivert, double pos[2], void* ctx),
+   const double fp_to_meter,
+   const double trad,
+   const double tref,
    void* ctx,
    struct sdis_scene** out_scn)
 {
   return scene_create_2d
-    (dev, nsegs, indices, interf, nverts, position, ctx, out_scn);
+    (dev, nsegs, indices, interf, nverts, position, fp_to_meter, trad, tref, ctx, out_scn);
 }
 
 res_T
@@ -187,6 +193,66 @@ sdis_scene_get_aabb
     d3_set_f3(lower, low);
     d3_set_f3(upper, upp);
   }
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_fp_to_meter
+  (const struct sdis_scene* scn,
+   double* fp_to_meter)
+{
+  if(!scn || !fp_to_meter) return RES_BAD_ARG;
+  *fp_to_meter = scn->fp_to_meter;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_fp_to_meter
+  (struct sdis_scene* scn,
+   const double fp_to_meter)
+{
+  if(!scn || fp_to_meter <= 0) return RES_BAD_ARG;
+  scn->fp_to_meter = fp_to_meter;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_ambient_radiative_temperature
+  (const struct sdis_scene* scn,
+   double* trad)
+{
+  if(!scn || !trad) return RES_BAD_ARG;
+  *trad = scn->ambient_radiative_temperature;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_reference_temperature
+  (struct sdis_scene* scn,
+   const double tref)
+{
+  if(!scn || tref < 0) return RES_BAD_ARG;
+  scn->reference_temperature = tref;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_reference_temperature
+  (const struct sdis_scene* scn,
+   double* tref)
+{
+  if(!scn || !tref) return RES_BAD_ARG;
+  *tref = scn->reference_temperature;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_ambient_radiative_temperature
+  (struct sdis_scene* scn,
+   const double trad)
+{
+  if(!scn) return RES_BAD_ARG;
+  scn->ambient_radiative_temperature = trad;
   return RES_OK;
 }
 

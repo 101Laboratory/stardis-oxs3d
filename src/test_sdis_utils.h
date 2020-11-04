@@ -26,6 +26,7 @@
 
 #define OK(Cond) CHK((Cond) == RES_OK)
 #define BA(Cond) CHK((Cond) == RES_BAD_ARG)
+#define BO(Cond) CHK((Cond) == RES_BAD_OP)
 
 /*******************************************************************************
  * Box geometry

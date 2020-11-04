@@ -246,12 +246,12 @@ main(int argc, char** argv)
 
   /* Create the box scene */
   OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
-    box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn));
+    box_get_interface, box_nvertices, box_get_position, 1, -1, 0,
+    box_interfaces, &box_scn));
 
   /* Create the square scene */
   OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
-    square_get_interface, square_nvertices, square_get_position,
+    square_get_interface, square_nvertices, square_get_position, 1, -1, 0,
     square_interfaces, &square_scn));
 
   /* Release the interfaces */

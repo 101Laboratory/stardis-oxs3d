@@ -327,7 +327,7 @@ main(int argc, char** argv)
 
   /* Create the 2D scene */
   OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices, get_interface,
-    square_nvertices, get_position_2d, interfaces, &scn_2d));
+    square_nvertices, get_position_2d, 1, -1, 0, interfaces, &scn_2d));
 
   /* Map the interfaces to their box triangles */
   interfaces[0] = interfaces[1] = interf_adiabatic; /* Front */
@@ -339,7 +339,7 @@ main(int argc, char** argv)
 
   /* Create the 3D scene */
   OK(sdis_scene_create(dev, box_ntriangles, box_get_indices, get_interface,
-    box_nvertices, get_position_3d, interfaces, &scn_3d));
+    box_nvertices, get_position_3d, 1, -1, 0, interfaces, &scn_3d));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_adiabatic));

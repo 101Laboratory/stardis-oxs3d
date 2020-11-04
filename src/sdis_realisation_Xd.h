@@ -32,7 +32,6 @@
 static res_T
 XD(compute_temperature)
   (struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
@@ -50,7 +49,7 @@ XD(compute_temperature)
   /* Maximum accepted #failures before stopping the realisation */
   const size_t MAX_FAILS = 1;
   res_T res = RES_OK;
-  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+  ASSERT(scn && ctx && rwalk && rng && T);
 
   if(ctx->heat_path && T->func == XD(boundary_path)) {
     heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
@@ -72,7 +71,7 @@ XD(compute_temperature)
 
     /* Reject the step if a BAD_OP occurs and retry up to MAX_FAILS times */
     do {
-      res = T->func(scn, fp_to_meter, ctx, rwalk, rng, T);
+      res = T->func(scn, ctx, rwalk, rng, T);
       if(res == RES_BAD_OP) { *rwalk = rwalk_bkp; *T = T_bkp; }
     } while(res == RES_BAD_OP && ++nfails < MAX_FAILS);
     if(res != RES_OK) goto error;
@@ -119,9 +118,6 @@ XD(probe_realisation)
    struct sdis_medium* medium,
    const double position[],
    const double time,
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    struct green_path_handle* green_path, /* May be NULL */
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight)
@@ -135,7 +131,7 @@ XD(probe_realisation)
     (const struct sdis_medium* mdm,
      const struct sdis_rwalk_vertex* vtx);
   res_T res = RES_OK;
-  ASSERT(medium && position && fp_to_meter > 0 && weight && time >= 0);
+  ASSERT(medium && position && weight && time >= 0);
   (void)irealisation;
 
   switch(medium->type) {
@@ -186,13 +182,13 @@ XD(probe_realisation)
 
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
-  ctx.Tarad = ambient_radiative_temperature;
+  ctx.Tarad = scn->ambient_radiative_temperature;
   ctx.Tref3 =
-    reference_temperature
-  * reference_temperature
-  * reference_temperature;
+    scn->reference_temperature
+  * scn->reference_temperature
+  * scn->reference_temperature;
 
-  res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+  res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
 
   ASSERT(T.value >= 0);
@@ -212,9 +208,6 @@ XD(boundary_realisation)
    const double uv[2],
    const double time,
    const enum sdis_side side,
-   const double fp_to_meter,
-   const double Tarad,
-   const double Tref,
    struct green_path_handle* green_path, /* May be NULL */
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight)
@@ -229,7 +222,7 @@ XD(boundary_realisation)
   float st[2];
 #endif
   res_T res = RES_OK;
-  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0);
+  ASSERT(uv && weight && time >= 0);
 
   T.func = XD(boundary_path);
   rwalk.hit_side = side;
@@ -267,10 +260,11 @@ XD(boundary_realisation)
 
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
-  ctx.Tarad = Tarad;
-  ctx.Tref3 = Tref*Tref*Tref;
+  ctx.Tarad = scn->ambient_radiative_temperature;
+  ctx.Tref3 = scn->reference_temperature * scn->reference_temperature
+    * scn->reference_temperature;
 
-  res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+  res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
 
   *weight = T.value;
@@ -289,9 +283,6 @@ XD(boundary_flux_realisation)
    const double uv[DIM],
    const double time,
    const enum sdis_side solid_side,
-   const double fp_to_meter,
-   const double Tarad,
-   const double Tref,
    const int flux_mask,
    double weight[3])
 {
@@ -310,13 +301,14 @@ XD(boundary_flux_realisation)
 #endif
   double P[SDIS_XD_DIMENSION];
   float N[SDIS_XD_DIMENSION];
-  const double Tr3 = Tref * Tref * Tref;
+  const double Tr3 = scn->reference_temperature * scn->reference_temperature
+    * scn->reference_temperature;
   const enum sdis_side fluid_side =
     (solid_side == SDIS_FRONT) ? SDIS_BACK : SDIS_FRONT;
   res_T res = RES_OK;
   const char compute_radiative = (flux_mask & FLUX_FLAG_RADIATIVE) != 0;
   const char compute_convective = (flux_mask & FLUX_FLAG_CONVECTIVE) != 0;
-  ASSERT(uv && fp_to_meter > 0 && weight && time >= 0 && Tref >= 0);
+  ASSERT(uv && weight && time >= 0 );
 
 #if SDIS_XD_DIMENSION == 2
   #define SET_PARAM(Dest, Src) (Dest).u = (Src);
@@ -345,7 +337,7 @@ XD(boundary_flux_realisation)
     rwalk.mdm = (Mdm);                                                         \
     rwalk.hit.prim = prim;                                                     \
     SET_PARAM(rwalk.hit, st);                                                  \
-    ctx.Tarad = Tarad;                                                         \
+    ctx.Tarad = scn->ambient_radiative_temperature;                            \
     ctx.Tref3 = Tr3;                                                           \
     dX(set)(rwalk.vtx.P, P);                                                   \
     fX(set)(rwalk.hit.normal, N);                                              \
@@ -355,7 +347,7 @@ XD(boundary_flux_realisation)
   /* Compute boundary temperature */
   RESET_WALK(solid_side, NULL);
   T.func = XD(boundary_path);
-  res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+  res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) return res;
   weight[0] = T.value;
 
@@ -367,7 +359,7 @@ XD(boundary_flux_realisation)
   if(compute_radiative) {
     RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(radiative_path);
-    res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+    res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) return res;
     weight[1] = T.value;
   }
@@ -376,7 +368,7 @@ XD(boundary_flux_realisation)
   if(compute_convective) {
     RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(convective_path);
-    res = XD(compute_temperature)(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+    res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) return res;
     weight[2] = T.value;
   }

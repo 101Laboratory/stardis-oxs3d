@@ -222,7 +222,7 @@ XD(solve_medium)
   ATOMIC res = RES_OK;
 
   if(!scn || !args || !args->medium || !args->nrealisations
-  || args->nrealisations > INT64_MAX || args->fp_to_meter <= 0) {
+  || args->nrealisations > INT64_MAX) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -349,9 +349,7 @@ XD(solve_medium)
 
     /* Run a probe realisation */
     res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng,
-      args->medium, pos, time, args->fp_to_meter,
-      args->ambient_radiative_temperature, args->reference_temperature,
-      pgreen_path, pheat_path, &weight);
+      args->medium, pos, time, pgreen_path, pheat_path, &weight);
 
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
@@ -497,7 +495,6 @@ XD(compute_power)
   || !args->medium
   || !args->nrealisations
   || args->nrealisations > INT64_MAX
-  || args->fp_to_meter <= 0
   || args->time_range[0] < 0
   || args->time_range[0] > args->time_range[1]
   || (  args->time_range[1] > DBL_MAX

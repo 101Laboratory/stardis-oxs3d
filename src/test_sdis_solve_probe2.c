@@ -231,7 +231,7 @@ main(int argc, char** argv)
   ctx.indices = box_indices;
   ctx.interfaces = interfaces;
   OK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, &ctx, &scn));
+    box_nvertices, get_position, 1, -1, 0, &ctx, &scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(Tnone));
