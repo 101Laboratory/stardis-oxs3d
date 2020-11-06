@@ -110,11 +110,12 @@ XD(solve_boundary)
     res = RES_BAD_ARG;
     goto error;
   }
-  if(args->time_range[0] < 0
-    || args->time_range[1] < args->time_range[0]
-    || (args->time_range[1] > DBL_MAX
-       && args->time_range[0] != args->time_range[1]))
-  {
+  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+  if(args->time_range[1] > DBL_MAX 
+  && args->time_range[0] != args->time_range[1]) {
     res = RES_BAD_ARG;
     goto error;
   }

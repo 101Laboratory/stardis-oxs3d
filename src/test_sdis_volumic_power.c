@@ -115,10 +115,11 @@ solid_get_temperature
   CHK(vtx != NULL);
   CHK(data != NULL);
   t0 = ((const struct solid*)sdis_data_cget(data))->t0;
-  if(vtx->time > t0)
+  if(vtx->time > t0) {
     return UNKNOWN_TEMPERATURE;
-  else
+  } else {
     return ((const struct solid*)sdis_data_cget(data))->initial_temperature;
+  }
 }
 
 static double
@@ -192,9 +193,9 @@ solve
       dim == SDIS_SCENE_2D ? 0 : ssp_rng_uniform_double(rng, 0.1, 0.9);
 
     solve_args.nrealisations = N;
-    if(steady)
+    if(steady) {
       solve_args.time_range[0] = solve_args.time_range[1] = INF;
-    else {
+    } else {
       solve_args.time_range[0] = 100 * (double)isimul;
       solve_args.time_range[1] = 4 * solve_args.time_range[0];
     }
