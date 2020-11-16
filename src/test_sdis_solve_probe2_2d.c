@@ -155,6 +155,7 @@ main(int argc, char** argv)
   struct sdis_interface* T350 = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_green_function* green = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
@@ -228,8 +229,13 @@ main(int argc, char** argv)
   ctx.positions = square_vertices;
   ctx.indices = square_indices;
   ctx.interfaces = interfaces;
-  OK(sdis_scene_2d_create(dev, square_nsegments, get_indices, get_interface,
-    square_nvertices, get_position, 1, -1, 0, &ctx, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = square_nsegments;
+  scn_args.nvertices = square_nvertices;
+  scn_args.context = &ctx;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(Tnone));

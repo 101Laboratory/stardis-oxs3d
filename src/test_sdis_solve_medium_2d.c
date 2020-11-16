@@ -205,6 +205,7 @@ main(int argc, char** argv)
   struct fluid* fluid_param = NULL;
   struct solid* solid_param = NULL;
   struct interf* interface_param = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -325,8 +326,13 @@ main(int argc, char** argv)
   ctx.nsegments_interf0 = square_nsegments;
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid1_fluid1;
-  OK(sdis_scene_2d_create(dev, sa_size(indices)/2, get_indices, get_interface,
-    sa_size(positions)/2, get_position, 1, -1, 0, &ctx, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = sa_size(indices)/2;
+  scn_args.nvertices = sa_size(positions)/2;
+  scn_args.context = &ctx;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   OK(sdis_scene_get_medium_spread(scn, solid0, &a0));
   CHK(eq_eps(a0, 1.0, 1.e-6));
@@ -370,8 +376,7 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid0_fluid1;
-  OK(sdis_scene_2d_create(dev, sa_size(indices)/2, get_indices, get_interface,
-    sa_size(positions)/2, get_position, 1, -1, 0, &ctx, &scn));
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   OK(sdis_scene_get_medium_spread(scn, solid0, &a));
   CHK(eq_eps(a, a0+a1, 1.e-6));

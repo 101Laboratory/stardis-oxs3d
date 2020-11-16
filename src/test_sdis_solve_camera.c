@@ -540,6 +540,7 @@ main(int argc, char** argv)
   struct sdis_interface* interf0 = NULL;
   struct sdis_interface* interf1 = NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
   struct ssp_rng* rng_state = NULL;
   struct fluid fluid_param = FLUID_NULL;
@@ -608,9 +609,15 @@ main(int argc, char** argv)
   /* Setup the scene */
   ntris = sa_size(geom.indices) / 3; /* #primitives */
   npos = sa_size(geom.positions) / 3; /* #positions */
-  OK(sdis_scene_create(dev, ntris, geometry_get_indices,
-    geometry_get_interface, npos, geometry_get_position,
-    1, 300, 300, &geom, &scn));
+  scn_args.get_indices = geometry_get_indices;
+  scn_args.get_interface = geometry_get_interface;
+  scn_args.get_position = geometry_get_position;
+  scn_args.nprimitives = ntris;
+  scn_args.nvertices = npos;
+  scn_args.trad = 300;
+  scn_args.tref = 300;
+  scn_args.context = &geom;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
 #if 0
   dump_mesh(stdout, geom.positions, sa_size(geom.positions)/3, geom.indices,

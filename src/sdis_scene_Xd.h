@@ -106,6 +106,20 @@ clear_properties(struct sdis_scene* scn)
   darray_prim_prop_clear(&scn->prim_props);
 }
 
+static INLINE int
+check_sdis_scene_create_args(const struct sdis_scene_create_args* args)
+{
+  return args
+      && args->get_indices
+      && args->get_interface
+      && args->get_position
+      && args->nprimitives
+      && args->nprimitives < UINT_MAX
+      && args->nvertices
+      && args->nvertices < UINT_MAX
+      && args->fp_to_meter > 0;
+}
+
 #endif /* SDIS_SCENE_XD_H */
 #else /* !SDIS_SCENE_DIMENSION */
 
@@ -524,10 +538,10 @@ static res_T
 XD(run_analyze)
   (struct sdis_scene* scn,
    const size_t nprims, /* #primitives */
-   void (*indices)(const size_t iprim, size_t ids[], void*),
-   void (interf)(const size_t iprim, struct sdis_interface**, void*),
+   sdis_get_primitive_indices_T indices,
+   sdis_get_primitive_interface_T interf,
    const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[], void*),
+   sdis_get_vertex_position_T position,
    void* ctx,
    struct sencXd(scene)** out_scn)
 {
@@ -851,24 +865,14 @@ error:
 static res_T
 XD(scene_create)
   (struct sdis_device* dev,
-   const size_t nprims, /* #primitives */
-   void (*indices)(const size_t iprim, size_t ids[], void*),
-   void (*interf)(const size_t iprim, struct sdis_interface** bound, void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[], void* ctx),
-   const double fp_to_meter,
-   const double trad,
-   const double tref,
-   void* ctx,
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** out_scn)
 {
   struct sencXd(scene)* senc3d_scn = NULL;
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_scn || !nprims || !indices || !interf || !nverts
-  || !position || nprims > UINT_MAX || nverts > UINT_MAX
-    || fp_to_meter <= 0 || tref < 0) {
+  if(!dev || !check_sdis_scene_create_args(args) || !out_scn) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -879,12 +883,13 @@ XD(scene_create)
     res = RES_MEM_ERR;
     goto error;
   }
+
   ref_init(&scn->ref);
   SDIS(device_ref_get(dev));
   scn->dev = dev;
-  scn->fp_to_meter = fp_to_meter;
-  scn->ambient_radiative_temperature = trad;
-  scn->reference_temperature = tref;
+  scn->fp_to_meter = args->fp_to_meter;
+  scn->ambient_radiative_temperature = args->trad;
+  scn->reference_temperature = args->tref;
   scn->outer_enclosure_id = UINT_MAX;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_medium_init(dev->allocator, &scn->media);
@@ -892,12 +897,20 @@ XD(scene_create)
   htable_enclosure_init(dev->allocator, &scn->enclosures);
   htable_d_init(dev->allocator, &scn->tmp_hc_ub);
 
-  res = XD(run_analyze)(scn, nprims, indices, interf, nverts, position, ctx, &senc3d_scn);
+  res = XD(run_analyze)
+    (scn,
+     args->nprimitives,
+     args->get_indices,
+     args->get_interface,
+     args->nvertices,
+     args->get_position,
+     args->context,
+     &senc3d_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: error during the scene analysis.\n", FUNC_NAME);
     goto error;
   }
-  res = XD(setup_properties)(scn, senc3d_scn, interf, ctx);
+  res = XD(setup_properties)(scn, senc3d_scn, args->get_interface, args->context);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene interfaces and their media.\n",
       FUNC_NAME);

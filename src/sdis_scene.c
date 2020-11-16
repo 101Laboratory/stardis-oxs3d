@@ -125,37 +125,19 @@ scene_release(ref_T * ref)
 res_T
 sdis_scene_create
   (struct sdis_device* dev,
-   const size_t ntris, /* #triangles */
-   void (*indices)(const size_t itri, size_t ids[3], void*),
-   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[3], void* ctx),
-   const double fp_to_meter,
-   const double trad,
-   const double tref,
-   void* ctx,
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** out_scn)
 {
-  return scene_create_3d
-    (dev, ntris, indices, interf, nverts, position, fp_to_meter, trad, tref, ctx, out_scn);
+  return scene_create_3d(dev, args, out_scn);
 }
 
 res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
-   const size_t nsegs, /* #segments */
-   void (*indices)(const size_t iseg, size_t ids[2], void*),
-   void (*interf)(const size_t iseg, struct sdis_interface** bound, void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[2], void* ctx),
-   const double fp_to_meter,
-   const double trad,
-   const double tref,
-   void* ctx,
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** out_scn)
 {
-  return scene_create_2d
-    (dev, nsegs, indices, interf, nverts, position, fp_to_meter, trad, tref, ctx, out_scn);
+  return scene_create_2d(dev, args, out_scn);
 }
 
 res_T

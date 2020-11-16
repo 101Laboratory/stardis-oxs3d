@@ -270,6 +270,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_interface* interf = NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -331,8 +332,13 @@ main(int argc, char** argv)
 
   /* Create the scene */
   ctx.interf = interf;
-  OK(sdis_scene_create(dev, ctx.msh.nprimitives, get_indices, get_interface,
-    ctx.msh.nvertices, get_position, 1, -1, 0, &ctx, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = ctx.msh.nprimitives;
+  scn_args.nvertices = ctx.msh.nvertices;
+  scn_args.context = &ctx;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
   /*dump_mesh(stdout, ctx.msh.positions,
      ctx.msh.nvertices, ctx.msh.indices, ctx.msh.nprimitives);*/
 

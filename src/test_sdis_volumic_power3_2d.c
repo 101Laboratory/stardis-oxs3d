@@ -261,6 +261,7 @@ main(int argc, char** argv)
   struct sdis_interface* interf_solid1_fluid = NULL;
   struct sdis_interface* interf_solid2_fluid = NULL;
   struct sdis_interface* interfaces[10/*#segment*/];
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   double Tref;
@@ -414,8 +415,13 @@ main(int argc, char** argv)
 #endif
 
   /* Create the scene */
-  OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface,
-    nvertices, get_position, 1, -1, 0, interfaces, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = nsegments;
+  scn_args.nvertices = nvertices;
+  scn_args.context = interfaces;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_solid_adiabatic));

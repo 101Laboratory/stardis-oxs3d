@@ -179,6 +179,7 @@ main(int argc, char** argv)
   struct sdis_scene* scn = NULL;
   struct sdis_mc mpow = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -226,8 +227,13 @@ main(int argc, char** argv)
   /* Create the scene */
   ntris = ctx.msh0.nprimitives + ctx.msh1.nprimitives;
   nverts = ctx.msh0.nvertices + ctx.msh1.nvertices;
-  OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, 1, -1, 0, &ctx, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = ntris;
+  scn_args.nvertices = nverts;
+  scn_args.context = &ctx;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   /* Test sdis_compute_power function */
   args.nrealisations = N;
@@ -289,8 +295,7 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   ctx.interf0 = interf0;
   ctx.interf1 = interf0;
-  OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, 1, -1, 0, &ctx, &scn));
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   /* Check invalid medium */
   args.time_range[0] = args.time_range[1] = 1;

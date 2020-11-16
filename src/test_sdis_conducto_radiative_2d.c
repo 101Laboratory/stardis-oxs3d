@@ -283,6 +283,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid2 = NULL;
   struct sdis_interface* interfaces[5]  = {NULL};
   struct sdis_interface* prim_interfaces[10/*#segment*/];
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   const size_t nsimuls = 4;
@@ -378,8 +379,14 @@ main(int argc, char** argv)
   geom.positions = vertices;
   geom.indices = indices;
   geom.interfaces = prim_interfaces;
-  OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface, nvertices,
-    get_position, 1, 0, Tref, &geom, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = nsegments;
+  scn_args.nvertices = nvertices;
+  scn_args.tref = Tref;
+  scn_args.context = &geom;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   hr = 4*BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;
   tmp = lambda/(2*lambda + thickness*hr) * (T1 - T0);

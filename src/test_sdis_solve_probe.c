@@ -262,6 +262,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator3 = NULL;
   struct sdis_green_function* green = NULL;
   const struct sdis_heat_path* path = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -335,8 +336,13 @@ main(int argc, char** argv)
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
   ctx.interf = interf;
-  OK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, 1, -1, 0, &ctx, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = box_ntriangles;
+  scn_args.nvertices = box_nvertices;
+  scn_args.context = &ctx;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   OK(sdis_interface_ref_put(interf));
 

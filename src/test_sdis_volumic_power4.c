@@ -217,6 +217,7 @@ main(int argc, char** argv)
   struct sdis_scene* scn_2d = NULL;
   struct sdis_scene* scn_3d = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = SDIS_FLUID_SHADER_NULL;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -326,8 +327,13 @@ main(int argc, char** argv)
   interfaces[3] = interf_adiabatic; /* Right */
 
   /* Create the 2D scene */
-  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices, get_interface,
-    square_nvertices, get_position_2d, 1, -1, 0, interfaces, &scn_2d));
+  scn_args.get_indices = square_get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position_2d;
+  scn_args.nprimitives = square_nsegments;
+  scn_args.nvertices = square_nvertices;
+  scn_args.context = interfaces;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn_2d));
 
   /* Map the interfaces to their box triangles */
   interfaces[0] = interfaces[1] = interf_adiabatic; /* Front */
@@ -338,8 +344,13 @@ main(int argc, char** argv)
   interfaces[10]= interfaces[11]= interf_solid_fluid2; /* Bottom */
 
   /* Create the 3D scene */
-  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices, get_interface,
-    box_nvertices, get_position_3d, 1, -1, 0, interfaces, &scn_3d));
+  scn_args.get_indices = box_get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position_3d;
+  scn_args.nprimitives = box_ntriangles;
+  scn_args.nvertices = box_nvertices;
+  scn_args.context = interfaces;
+  OK(sdis_scene_create(dev, &scn_args, &scn_3d));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_adiabatic));

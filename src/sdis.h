@@ -327,6 +327,62 @@ typedef res_T
    void* context);
 
 /*******************************************************************************
+ * Data types of scene creation
+ ******************************************************************************/
+/* Functor used to retrieve the indices toward the vertices of a geometric
+ * primitive. Geometric primitive means for segment in 2D and triangle in 3D */
+typedef void
+(*sdis_get_primitive_indices_T)
+  (const size_t iprim, /* Index of the primitive */
+   size_t ids[], /* Output list of primitive indices */
+   void* ctx); /* User defined data */
+
+/* Retrieve the interface, i.e. the physical properties,  associated to a given
+ * geometric primitive */
+typedef void
+(*sdis_get_primitive_interface_T)
+  (const size_t iprim, /* Index of the primitive */
+   struct sdis_interface** interf,
+   void* ctx);
+
+/* Retrieve the coordinates of a vertex */
+typedef void
+(*sdis_get_vertex_position_T)
+  (const size_t ivert, /* Index of the vertex */
+   double pos[], /* Output list of vertex coordinates */
+   void* ctx);
+
+struct sdis_scene_create_args {
+  /* Functors to retrieve the geometric description */
+  sdis_get_primitive_indices_T get_indices;
+  sdis_get_primitive_interface_T get_interface;
+  sdis_get_vertex_position_T get_position;
+
+ /* Pointer toward client side sent as the last argument of the callbacks */
+  void* context;
+
+  size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
+  size_t nvertices; /* #vertices */
+  double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
+  double trad; /* Ambiant radiative temperature */
+  double tref; /* Temperature used to linearize the radiative temperature */
+};
+
+#define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
+  NULL, /* Get indices */                                                      \
+  NULL, /* Get interfaces */                                                   \
+  NULL, /* Get position */                                                     \
+  NULL, /* Context */                                                          \
+  0, /* #primitives */                                                         \
+  0, /* #vertices */                                                           \
+  1.0, /* #Floating point to meter scale factor */                             \
+  -1.0, /* Ambient radiative temperature */                                    \
+  -1.0 /* Reference temperature */                                             \
+}
+static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
+  SDIS_SCENE_CREATE_ARGS_DEFAULT__;
+
+/*******************************************************************************
  * Data types of the input simulation parameters
  ******************************************************************************/
 struct sdis_solve_probe_args {
@@ -702,7 +758,7 @@ sdis_interface_get_id
  *
  * Note that each triangle has 2 sides: a front and a back side. By convention,
  * the front side of a triangle is the side where its vertices are clock wise
- * ordered.  The back side of a triangle is the exact opposite: it is the side
+ * ordered. The back side of a triangle is the exact opposite: it is the side
  * where the triangle vertices are counter-clock wise ordered. The front and
  * back media of a triangle interface directly refer to this convention and
  * thus one has to take care of how the triangle vertices are defined to ensure
@@ -710,18 +766,7 @@ sdis_interface_get_id
 SDIS_API res_T
 sdis_scene_create
   (struct sdis_device* dev,
-   const size_t ntris, /* #triangles */
-   void (*indices) /* Retrieve the indices toward the vertices of `itri' */
-    (const size_t itri, size_t ids[3], void* ctx),
-   void (*interf) /* Get the interface of the triangle `itri' */
-    (const size_t itri, struct sdis_interface** bound, void* ctx),
-   const size_t nverts, /* #vertices */
-   void (*position) /* Retrieve the position of the vertex `ivert' */
-    (const size_t ivert, double pos[3], void* ctx),
-   const double fp_to_meter,
-   const double trad,
-   const double tref,
-   void* ctx, /* Client side data sent as input of the previous callbacks */
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** scn);
 
 /* Create a 2D scene. The geometry of the 2D scene is defined by an indexed
@@ -742,18 +787,7 @@ sdis_scene_create
 SDIS_API res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
-   const size_t nsegs, /* #segments */
-   void (*indices) /* Retrieve the indices toward the vertices of `iseg' */
-    (const size_t iseg, size_t ids[2], void* ctx),
-   void (*interf) /* Get the interface of the segment `iseg' */
-    (const size_t iseg, struct sdis_interface** bound, void* ctx),
-   const size_t nverts, /* #vertices */
-   void (*position) /* Retrieve the position of the vertex `ivert' */
-    (const size_t ivert, double pos[2], void* ctx),
-   const double fp_to_meter,
-   const double trad,
-   const double tref,
-   void* ctx, /* Client side data sent as input of the previous callbacks */
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** scn);
 
 SDIS_API res_T

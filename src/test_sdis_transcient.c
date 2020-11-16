@@ -144,7 +144,7 @@ matriochka_indices(const size_t itri, size_t ids[3], void* context)
 }
 
 static void
-matriocka_interface
+matriochka_interface
   (const size_t itri, struct sdis_interface** bound, void* context)
 {
   struct matriochka_context* ctx = context;
@@ -471,6 +471,7 @@ main(int argc, char** argv)
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_data* data = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = SDIS_FLUID_SHADER_NULL;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -557,8 +558,13 @@ main(int argc, char** argv)
   ctx.scale = boxsz;
 
   /* Create the box scene */
-  OK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, 1, -1, 0, &ctx, &box_scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = box_ntriangles;
+  scn_args.nvertices = box_nvertices;
+  scn_args.context = &ctx;
+  OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
   /* Setup the box2 scene context */
   ctx.indices = indices;
@@ -576,9 +582,10 @@ main(int argc, char** argv)
   ctx.interfs[20] = ctx.interfs[21] = interfs[5]; /* Zmax */
   ctx.scale = boxsz;
 
-  /* Create the box scene */
-  OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
-    nvertices, get_position, 1, -1, 0, &ctx, &box2_scn));
+  /* Create the box2 scene */
+  scn_args.nprimitives = ntriangles;
+  scn_args.nvertices = nvertices;
+  OK(sdis_scene_create(dev, &scn_args, &box2_scn));
 
   /* Setup the matriochka context */
   matriochka_ctx.interfs[0]  = matriochka_ctx.interfs[1]  = interfs[4]; /* Zmin */
@@ -589,12 +596,16 @@ main(int argc, char** argv)
   matriochka_ctx.interfs[10] = matriochka_ctx.interfs[11] = interfs[2]; /* Ymin */
   matriochka_ctx.interfs[12] = interfs[6]; /* The remaining internal triangles */
   matriochka_ctx.scale = boxsz;
-    matriochka_ctx.nboxes = nmatriochkas;
+  matriochka_ctx.nboxes = nmatriochkas;
 
   /* Create the matriochka scene */
-  OK(sdis_scene_create(dev, box_ntriangles*nmatriochkas, matriochka_indices,
-    matriocka_interface, box_nvertices*nmatriochkas, matriochka_position,
-    1, -1, 0, &matriochka_ctx, &box_matriochka_scn));
+  scn_args.get_indices = matriochka_indices;
+  scn_args.get_interface = matriochka_interface;
+  scn_args.get_position = matriochka_position;
+  scn_args.nprimitives = box_ntriangles*nmatriochkas;
+  scn_args.nvertices = box_nvertices*nmatriochkas;
+  scn_args.context = &matriochka_ctx;
+  OK(sdis_scene_create(dev, &scn_args, &box_matriochka_scn));
 
   /* Setup and run the simulation */
   probe[0] = 0.1;
