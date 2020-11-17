@@ -1,11 +1,96 @@
-# Stardis
+# Stardis-Solver
 
-The purpose of this library is to solve coupled convecto - conducto - radiative
-thermal problems in 2D and 3D environments.
+Stardis-Solver is *free software* that solves *coupled* convecto - conducto -
+radiative *thermal problems* in *complex* 2D and 3D *environments*. This C89
+library internally relies on *Monte-Carlo* algorithms based on reformulations
+of the main heat transfer phenomena as cross-recursive "thermal paths" that
+explore space and time until a boundary condition or an initial condition is
+found. The key concept here is that heat transfer phenomena are not considered
+separately but naturally coupled via cross-recursive Monte-Carlo algorithms.
+
+The hypothesis these algorithms are based upon are the following:
+
+- *conduction*: the discretization of thermal heat transfer in solids introduces
+  the notion of a conductive path length within the Monte-Carlo algorithm.
+  Solutions obtained using this algorithm are formally exact at the limit of a
+  null path length. In practice, this path length has to be adapted for a given
+  geometric configuration so that its value is small compared to the smallest
+  typical length of a solid.
+- *convection*: fluid media are supposed to be isothermal, even if their
+  temperature may vary with time. This hypothesis relies on the assumption of
+  perfectly agitated fluids.
+- *radiation*: local radiative transfer is linearised, i.e. instead of writing
+  the spectrally integrated net flux as a difference of temperatures to the
+  power 4, it is assumed of the same form as the convective flux (as a
+  difference of temperatures, multiplied by a radiative exchange coefficient).
+  In order to be valid, this representation of radiative transfer exchanges
+  requires that the temperature at any position and time is close to a known
+  reference temperature.
+
+In Stardis-Solver the system to simulate is represented by a *scene* whose
+geometry defines the contour of the object only: in contrast to legacy thermal
+solvers *no volumetric mesh* has to be provided. Each geometric primitive as an
+associated *interface* that defines its physical properties (e.g. surface
+emissivity) and reference the *media* defining the thermal properties on both
+side of the primitive. The boundary and initial conditions are defined defined
+on the interfaces (convection coefficient, fixed temperature/flux, etc.) and
+the media (known temperature). Once fully and consistently described,
+computations can be invoked on the resulting scene.
+
+The main features of the solver are currently:
+
+- *probe computation*: Stardis-Solver will compute the temperature at any given
+  position (spatial and temporal). The main idea is that thermal paths start
+  from this probe position, and scatter in space while going back in time,
+  until a (spatial) boundary condition or a (temporal) initial condition is
+  met. In addition to the value of temperature, using a Monte-Carlo method
+  makes possible to compute a numerical uncertainty (standard deviation of the
+  weight distribution) over each result.
+- *flux computation*: Stardis-Solver can compute the flux over any surface (or
+  group of surfaces) at any time. Alternatively, it can also compute the total
+  energy output from a solid element where a internal source of power must be
+  taken into account.
+- *green function*: the value of temperature computed at a probe position is
+  the average of the Monte-Carlo weight for every thermal path. In practice:
+  when no internal power sources have to be considered, the weight of any given
+  thermal path is the temperature of the boundary or initial condition that has
+  been reached; when internal power sources or imposed fluxes are taken into
+  account, additional contributions to the weight must be continuously
+  evaluated by the thermal conduction algorithm, but these contributions are
+  proportional to the local dissipated power/imposed flux.  In any case, the
+  position and date at the end of each thermal path (and also accumulation
+  coefficients) can be stored during a first complete Monte-Carlo simulation.
+  This information, known as the Green function, can then be used in (very
+  fast) post-processing to compute all required results for different boundary
+  and initial conditions (and also different internal power sources/imposed
+  flux). Note that when using the Green function, only boundary and initial
+  conditions (as well as internal power sources) can be modified: in
+  particular, the geometry, thermal properties and exchange coefficients have
+  to remain identical.
+- *path visualization*: Stardis-Solver can store the complete spatial and
+  temporal position along a set of thermal paths, for latter visualization. In
+  addition of their position and, each thermal path vertex register additional
+  data as the type of thermal phenomena it simulates, the accumulated
+  power/flux along the path, etc.
+
+Stardis-Solver is currently used in two frameworks. The
+[Stardis](https://gitlab.com/meso-star/stardis.git) CLI and its associated
+tools is the reference workflow of Stardis-Solver. It proposes a complete
+toolchain from fileformats describing the scene (geometry, thermal properties,
+limit and boundary conditions) to computations and post-treatments of the
+results ([Stardis-Green](https://gitlab.com/meso-star/stardis-green.git).
+Stardis-Solver is also integrated into
+[SYRTHES](https://www.edf.fr/en/the-edf-group/world-s-largest-power-company/activities/research-and-development/scientific-communities/simulation-softwares?logiciel=10818),
+the general thermal free software developed by Electricité De France (EDF).
 
 ## How to build
 
-Stardis relies on the [CMake](http://www.cmake.org) and the
+Stardis-Solver is compatible GNU/Linux as well as Microsoft Windows 7 and
+later, both in 64-bits. It was successfully built with the [GNU Compiler
+Collection](https://gcc.gnu.org) (versions 4.9.2 and later) as well as with
+Microsoft Visual Studio 2015.
+
+It relies on the [CMake](http://www.cmake.org) and the
 [RCMake](https://gitlab.com/vaplv/rcmake/) package to build.
 It also depends on the
 [RSys](https://gitlab.com/vaplv/rsys/),
@@ -70,7 +155,7 @@ variable the install directories of its dependencies.
   data inconsistencies.
 - Fix a memory leak when the scene creation failed.
 - Enable parallelism on Star-Enclosure[2D] to improve the performances of the
-  enclosure extraction on the setup of the Stardis scene.
+  enclosure extraction on the setup of the Stardis-Solver scene.
 
 ### Version 0.8.1
 
@@ -107,12 +192,12 @@ evaluation. This means that one can estimate the Green function of a system
 only one time and then evaluate it with different limit conditions, boundary
 fluxes or power terms with negligible computation costs.
 
-Currently, Stardis assumes that during the Green function estimation, the
-properties of the system do not depend on time. In addition, it assumes that
-the boundary fluxes and the volumic powers are constants in time and space.
-Anyway, on Green function evaluation, the limit conditions of the system can
-still vary in time and space; systems in steady state can be simulated with
-Green functions.
+Currently, Stardis-Solver assumes that during the Green function estimation,
+the properties of the system do not depend on time. In addition, it assumes
+that the boundary fluxes and the volumetric powers are constants in time and
+space.  Anyway, on Green function evaluation, the limit conditions of the
+system can still vary in time and space; systems in steady state can be
+simulated with Green functions.
 
 #### Add heat path registration
 
@@ -158,7 +243,7 @@ the few paths that failed in order to diagnose what went wrong.
   not support time integration, yet.
 - Add support of an explicit initial time `t0` for the fluid.
 - Fix a bug in the estimation of unknown fluid temperatures: the associativity
-  between the internal Stardis data and the user defined data was wrong.
+  between the internal Stardis-Solver data and the user defined data was wrong.
 
 ### Version 0.5
 
@@ -242,17 +327,17 @@ Full rewrite of how the volumetric power is taken into account.
 
 ### Version 0.0
 
-First version and implementation of the Stardis solver API.
+First version and implementation of the Stardis-Solver API.
 
 - Support fluid/solid and solid/solid interfaces.
 - Only conduction is currently fully supported: convection and radiative
   temperature are not computed yet. Fluid media can be added to the system but
-  currently, Stardis assumes that their temperature are known.
+  currently, Stardis-Solver assumes that their temperature are known.
 
 ## License
 
-Copyright (C) 2016-2020 |Meso|Star> (<contact@meso-star.com>). Stardis is free
-software released under the GPLv3+ license: GNU GPL version 3 or later. You are
-welcome to redistribute it under certain conditions; refer to the COPYING files
-for details.
+Copyright (C) 2016-2020 |Meso|Star> (<contact@meso-star.com>). Stardis-Solver
+is free software released under the GPLv3+ license: GNU GPL version 3 or later.
+You are welcome to redistribute it under certain conditions; refer to the
+COPYING files for details.
 
