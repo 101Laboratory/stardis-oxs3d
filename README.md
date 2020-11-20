@@ -111,6 +111,19 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.11
+
+- Add support of unsteady green evaluation. The resulting green function can
+  then be used to quickly evaluate the system at the same time bit with
+  different limit and initial conditions, volumetric powers and imposed fluxes.
+- Add checks on green re-evaluation to ensure that the system remains unchanged
+  regarding its scale factor and its reference temperature.
+- Remove the ambient radiative temperature, the reference temperature and the
+  geometry scale factor from the list of arguments submitted to the solve
+  functions. They become scene arguments defined on scene creation.
+- Update the `sdis_scene_[2d_]create` function profile: its data are now
+  grouped into a variable of type `struct sdis_scene_create_args`.
+
 ### Version 0.10.1
 
 - In green function estimation, the time sent to the user callbacks is no more
