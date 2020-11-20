@@ -6,7 +6,8 @@ library internally relies on *Monte-Carlo* algorithms based on reformulations
 of the main heat transfer phenomena as cross-recursive "thermal paths" that
 explore space and time until a boundary condition or an initial condition is
 found. The key concept here is that heat transfer phenomena are not considered
-separately but naturally coupled via cross-recursive Monte-Carlo algorithms.
+separately but naturally coupled via cross-recursive [Monte-Carlo
+algorithms](https://hal.archives-ouvertes.fr/hal-02419604/).
 
 The hypothesis these algorithms are based upon are the following:
 
