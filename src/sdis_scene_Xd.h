@@ -106,6 +106,20 @@ clear_properties(struct sdis_scene* scn)
   darray_prim_prop_clear(&scn->prim_props);
 }
 
+static INLINE int
+check_sdis_scene_create_args(const struct sdis_scene_create_args* args)
+{
+  return args
+      && args->get_indices
+      && args->get_interface
+      && args->get_position
+      && args->nprimitives
+      && args->nprimitives < UINT_MAX
+      && args->nvertices
+      && args->nvertices < UINT_MAX
+      && args->fp_to_meter > 0;
+}
+
 #endif /* SDIS_SCENE_XD_H */
 #else /* !SDIS_SCENE_DIMENSION */
 
@@ -524,10 +538,10 @@ static res_T
 XD(run_analyze)
   (struct sdis_scene* scn,
    const size_t nprims, /* #primitives */
-   void (*indices)(const size_t iprim, size_t ids[], void*),
-   void (interf)(const size_t iprim, struct sdis_interface**, void*),
+   sdis_get_primitive_indices_T indices,
+   sdis_get_primitive_interface_T interf,
    const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[], void*),
+   sdis_get_vertex_position_T position,
    void* ctx,
    struct sencXd(scene)** out_scn)
 {
@@ -804,11 +818,9 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
 {
   struct sencXd(enclosure)* enc = NULL;
   unsigned ienc, nencs;
-  unsigned enclosed_medium;
-  int outer_found = 0;
+  int inner_multi = 0;
   res_T res = RES_OK;
   ASSERT(scn && senc3d_scn);
-  (void)outer_found;
 
   SENCXD(scene_get_enclosure_count(senc3d_scn, &nencs));
   FOR_EACH(ienc, 0, nencs) {
@@ -818,53 +830,12 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
     SENCXD(enclosure_get_header(enc, &header));
 
     if(header.is_infinite) {
-      ASSERT(!outer_found);
-      outer_found = 1;
+      ASSERT(scn->outer_enclosure_id == UINT_MAX); /* Not set yet */
       scn->outer_enclosure_id = ienc;
     }
 
-    /* As paths don't go in infinite enclosures we can accept models are broken
-     * there. But nowhere else. */
-    if(header.enclosed_media_count != 1 && !header.is_infinite) {
-      /* Dump the problematic enclosure. */
-      double tmp[DIM];
-      unsigned indices[DIM];
-      unsigned i;
-      log_warn(scn->dev, "# Found internal enclosure with %u materials:\n",
-        header.enclosed_media_count);
-      FOR_EACH(i, 0, header.enclosed_media_count) {
-        unsigned imed;
-        const struct sdis_medium* med;
-        SENCXD(enclosure_get_medium(enc, i, &imed));
-        med = darray_medium_cdata_get(&scn->media)[imed];
-        log_warn(scn->dev, "# %u (%s)\n",
-          imed, (med->type == SDIS_SOLID ? "solid" : "fluid"));
-      }
-      FOR_EACH(i, 0, header.vertices_count) {
-        SENCXD(enclosure_get_vertex(enc, i, tmp));
-  #if DIM == 2
-        log_warn(scn->dev, "v %g %g\n", SPLIT2(tmp));
-  #else
-        log_warn(scn->dev, "v %g %g %g\n", SPLIT3(tmp));
-  #endif
-      }
-      FOR_EACH(i, 0, header.primitives_count) {
-        SENCXD(enclosure_get_primitive(enc, i, indices));
-  #if DIM == 2
-        log_warn(scn->dev, "f %u %u\n", indices[0]+1, indices[1]+1);
-  #else
-        log_warn(scn->dev, "f %u %u %u\n",
-          indices[0]+1, indices[1]+1, indices[2]+1);
-  #endif
-      }
-      SENCXD(enclosure_ref_put(enc));
-      enc = NULL;
-      res = RES_BAD_ARG;
-      goto error;
-    }
-
-    SENCXD(enclosure_get_medium(enc, 0, &enclosed_medium));
-    ASSERT(enclosed_medium < darray_medium_size_get(&scn->media));
+    if(header.enclosed_media_count != 1 && !header.is_infinite)
+      inner_multi++;
 
     /* Silently discard infinite enclosures */
     if(!header.is_infinite) {
@@ -873,6 +844,12 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
     }
     SENCXD(enclosure_ref_put(enc));
     enc = NULL;
+  }
+
+  if(inner_multi) {
+    log_info(scn->dev,
+      "# Found %d internal enclosure(s) with more than 1 medium.\n",
+      inner_multi);
   }
 
   /* tmp table no more useful */
@@ -888,20 +865,14 @@ error:
 static res_T
 XD(scene_create)
   (struct sdis_device* dev,
-   const size_t nprims, /* #primitives */
-   void (*indices)(const size_t iprim, size_t ids[], void*),
-   void (*interf)(const size_t iprim, struct sdis_interface** bound, void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[], void* ctx),
-   void* ctx,
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** out_scn)
 {
   struct sencXd(scene)* senc3d_scn = NULL;
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !out_scn || !nprims || !indices || !interf || !nverts
-  || !position || nprims > UINT_MAX || nverts > UINT_MAX) {
+  if(!dev || !check_sdis_scene_create_args(args) || !out_scn) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -912,10 +883,13 @@ XD(scene_create)
     res = RES_MEM_ERR;
     goto error;
   }
+
   ref_init(&scn->ref);
   SDIS(device_ref_get(dev));
   scn->dev = dev;
-  scn->ambient_radiative_temperature = -1;
+  scn->fp_to_meter = args->fp_to_meter;
+  scn->ambient_radiative_temperature = args->trad;
+  scn->reference_temperature = args->tref;
   scn->outer_enclosure_id = UINT_MAX;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_medium_init(dev->allocator, &scn->media);
@@ -923,12 +897,20 @@ XD(scene_create)
   htable_enclosure_init(dev->allocator, &scn->enclosures);
   htable_d_init(dev->allocator, &scn->tmp_hc_ub);
 
-  res = XD(run_analyze)(scn, nprims, indices, interf, nverts, position, ctx, &senc3d_scn);
+  res = XD(run_analyze)
+    (scn,
+     args->nprimitives,
+     args->get_indices,
+     args->get_interface,
+     args->nvertices,
+     args->get_position,
+     args->context,
+     &senc3d_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: error during the scene analysis.\n", FUNC_NAME);
     goto error;
   }
-  res = XD(setup_properties)(scn, senc3d_scn, interf, ctx);
+  res = XD(setup_properties)(scn, senc3d_scn, args->get_interface, args->context);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene interfaces and their media.\n",
       FUNC_NAME);

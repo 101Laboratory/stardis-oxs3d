@@ -21,7 +21,7 @@
 /* Current version the green function data structure. One should increment it
  * and perform a version management onto serialized data when the gren function
  * data structure is updated. */
-static const int SDIS_GREEN_FUNCTION_VERSION = 0;
+static const int SDIS_GREEN_FUNCTION_VERSION = 1;
 
 /* Forward declaration */
 struct accum;
@@ -79,6 +79,11 @@ green_path_set_limit_vertex
   (struct green_path_handle* path,
    struct sdis_medium* mdm,
    const struct sdis_rwalk_vertex* vertex,
+   const double elapsed_time);
+
+extern LOCAL_SYM res_T
+green_path_set_limit_radiative
+  (struct green_path_handle* handle,
    const double elapsed_time);
 
 extern LOCAL_SYM res_T

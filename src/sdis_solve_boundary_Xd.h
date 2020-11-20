@@ -102,8 +102,7 @@ XD(solve_boundary)
   ATOMIC res = RES_OK;
 
   if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
-  || !args->primitives || !args->sides || !args->nprimitives
-  || args->fp_to_meter <= 0) {
+  || !args->primitives || !args->sides || !args->nprimitives) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -111,14 +110,14 @@ XD(solve_boundary)
     res = RES_BAD_ARG;
     goto error;
   }
-  if(out_estimator) {
-    if(args->time_range[0] < 0
-    || args->time_range[1] < args->time_range[0]
-    || (  args->time_range[1] > DBL_MAX
-       && args->time_range[0] != args->time_range[1])) {
-      res = RES_BAD_ARG;
-      goto error;
-    }
+  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+  if(args->time_range[1] > DBL_MAX 
+  && args->time_range[0] != args->time_range[1]) {
+    res = RES_BAD_ARG;
+    goto error;
   }
 
 #if SDIS_XD_DIMENSION == 2
@@ -256,22 +255,19 @@ XD(solve_boundary)
     /* Begin time registration */
     time_current(&t0);
 
-    if(!out_green) {
-      time = sample_time(rng, args->time_range);
-      if(register_paths) {
-        heat_path_init(scn->dev->allocator, &heat_path);
-        pheat_path = &heat_path;
-      }
-    } else {
-      /* Do not take care of the submitted time when registering the green
-       * function. Only steady systems are supported yet */
-      time = INF;
+    time = sample_time(rng, args->time_range);
+    if(out_green) {
       res_local = green_function_create_path(greens[ithread], &green_path);
       if(res_local != RES_OK) {
         ATOMIC_SET(&res, res_local);
         goto error_it;
       }
       pgreen_path = &green_path;
+    }
+
+    if(register_paths) {
+      heat_path_init(scn->dev->allocator, &heat_path);
+      pheat_path = &heat_path;
     }
 
     /* Sample a position onto the boundary */
@@ -303,8 +299,7 @@ XD(solve_boundary)
 
     /* Invoke the boundary realisation */
     res_simul = XD(boundary_realisation)(scn, rng, iprim, uv, time, side,
-      args->fp_to_meter, args->ambient_radiative_temperature,
-      args->reference_temperature, pgreen_path, pheat_path, &w);
+      pgreen_path, pheat_path, &w);
 
     /* Fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
@@ -464,7 +459,6 @@ XD(solve_boundary_flux)
   || args->time_range[1] < args->time_range[0]
   || (args->time_range[1] > DBL_MAX && args->time_range[0] != args->time_range[1])
   || !args->nprimitives
-  || args->fp_to_meter < 0
   || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
@@ -579,8 +573,7 @@ XD(solve_boundary_flux)
     const struct sdis_medium *fmd, *bmd;
     enum sdis_side solid_side, fluid_side;
     double T_brf[3] = { 0, 0, 0 };
-    const double Tref = args->reference_temperature;
-    const double Tarad = args->ambient_radiative_temperature;
+    const double Tref = scn->reference_temperature;
     double epsilon, hc, hr, imposed_flux, imposed_temp;
     size_t iprim;
     double uv[DIM - 1];
@@ -663,7 +656,7 @@ XD(solve_boundary_flux)
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
     res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
-      solid_side, args->fp_to_meter, Tarad, Tref, flux_mask, T_brf);
+      solid_side, flux_mask, T_brf);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);

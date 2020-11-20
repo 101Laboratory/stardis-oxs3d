@@ -29,9 +29,6 @@ ray_realisation_3d
    const double position[],
    const double direction[],
    const double time,
-   const double fp_to_meter,
-   const double Tarad,
-   const double Tref,
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight)
 {
@@ -40,8 +37,8 @@ ray_realisation_3d
   struct temperature_3d T = TEMPERATURE_NULL_3d;
   float dir[3];
   res_T res = RES_OK;
-  ASSERT(scn && position && direction && time>=0 && fp_to_meter>0 && weight);
-  ASSERT(Tref >= 0 && medium && medium->type == SDIS_FLUID);
+  ASSERT(scn && position && direction && time>=0 && weight);
+  ASSERT(medium && medium->type == SDIS_FLUID);
 
   d3_set(rwalk.vtx.P, position);
   rwalk.vtx.time = time;
@@ -49,8 +46,9 @@ ray_realisation_3d
   rwalk.hit_side = SDIS_SIDE_NULL__;
   rwalk.mdm = medium;
 
-  ctx.Tarad = Tarad;
-  ctx.Tref3 = Tref*Tref*Tref;
+  ctx.Tarad = scn->ambient_radiative_temperature;
+  ctx.Tref3 = scn->reference_temperature * scn->reference_temperature
+    * scn->reference_temperature;
   ctx.heat_path = heat_path;
 
   f3_set_d3(dir, direction);
@@ -59,11 +57,11 @@ ray_realisation_3d
   res = register_heat_vertex(heat_path, &rwalk.vtx, 0, SDIS_HEAT_VERTEX_RADIATIVE);
   if(res != RES_OK) goto error;
 
-  res = trace_radiative_path_3d(scn, dir, fp_to_meter, &ctx, &rwalk, rng, &T);
+  res = trace_radiative_path_3d(scn, dir, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
 
   if(!T.done) {
-    res = compute_temperature_3d(scn, fp_to_meter, &ctx, &rwalk, rng, &T);
+    res = compute_temperature_3d(scn, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) goto error;
   }
 

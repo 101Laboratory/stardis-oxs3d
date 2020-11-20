@@ -97,6 +97,7 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_scene* scn = NULL;
   size_t ntris, npos;
   size_t iprim;
@@ -111,37 +112,51 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   ntris = box_ntriangles;
   npos = box_nvertices;
 
-  #define CREATE sdis_scene_create
-  #define IDS get_indices_3d
-  #define POS get_position_3d
-  #define IFA get_interface
+  scn_args.get_indices = get_indices_3d;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position_3d;
+  scn_args.nprimitives = ntris;
+  scn_args.nvertices = npos;
+  scn_args.context = &ctx;
+  BA(sdis_scene_create(NULL, &SDIS_SCENE_CREATE_ARGS_DEFAULT, NULL));
+  BA(sdis_scene_create(NULL, &SDIS_SCENE_CREATE_ARGS_DEFAULT, NULL));
 
-  BA(CREATE(NULL, 0, NULL, NULL, 0, NULL, &ctx, NULL));
-  BA(CREATE(dev, 0, IDS, IFA, npos, POS, &ctx, &scn));
-  BA(CREATE(dev, ntris, NULL, IFA, npos, POS, &ctx, &scn));
-  BA(CREATE(dev, ntris, IDS, NULL, npos, POS, &ctx, &scn));
-  BA(CREATE(dev, ntris, IDS, IFA, 0, POS, &ctx, &scn));
-  BA(CREATE(dev, ntris, IDS, IFA, npos, NULL, &ctx, &scn));
+  scn_args.nprimitives = 0;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.nprimitives = ntris;
+  scn_args.get_indices = NULL;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.get_indices = get_indices_3d;
+  scn_args.get_interface = NULL;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = NULL;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.get_position = get_position_3d;
+  scn_args.nvertices = 0;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.nvertices = npos;
+  scn_args.fp_to_meter = 0;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.fp_to_meter = 1;
   /* Duplicated vertex */
   ctx.positions = duplicated_vertices;
   ctx.indices = dup_vrtx_indices;
-  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
+  BA(sdis_scene_create(dev, &scn_args, &scn));
   /* Duplicated triangle */
   ctx.positions = box_vertices;
   ctx.indices = duplicated_indices;
-  BA(CREATE(dev, 2, IDS, IFA, npos, POS, &ctx, &scn));
+  BA(sdis_scene_create(dev, &scn_args, &scn));
   /* Degenerated triangle */
   ctx.indices = degenerated_indices;
-  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
-
+  BA(sdis_scene_create(dev, &scn_args, &scn));
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
-  OK(CREATE(dev, ntris, IDS, IFA, npos, POS, &ctx, &scn));
-
-  #undef CREATE
-  #undef IDS
-  #undef POS
-  #undef IFA
+  BA(sdis_scene_create(dev, &SDIS_SCENE_CREATE_ARGS_DEFAULT, &scn));
+  BA(sdis_scene_create(NULL, &scn_args, &scn));
+  BA(sdis_scene_create(dev, NULL, &scn));
+  BA(sdis_scene_create(dev, &scn_args, NULL));
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   BA(sdis_scene_get_dimension(NULL, &dim));
   BA(sdis_scene_get_dimension(scn, NULL));
@@ -242,9 +257,10 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   size_t degenerated_indices[] = { 0, 0 };
   double duplicated_vertices[] = { 0, 0, 0, 0 };
   struct sdis_scene* scn = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   double lower[2], upper[2];
   double u0, u1, u2, pos[2], pos1[2];
-  double dst;
+  double dst, fp, t;
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
@@ -260,37 +276,50 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   nsegs = square_nsegments;
   npos = square_nvertices;
 
-  #define CREATE sdis_scene_2d_create
-  #define IDS get_indices_2d
-  #define POS get_position_2d
-  #define IFA get_interface
+  scn_args.get_indices = get_indices_2d;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position_2d;
+  scn_args.nprimitives = nsegs;
+  scn_args.nvertices = npos;
+  scn_args.context = &ctx;
 
-  BA(CREATE(NULL, 0, NULL, NULL, 0, NULL, &ctx, NULL));
-  BA(CREATE(dev, 0, IDS, IFA, npos, POS, &ctx, &scn));
-  BA(CREATE(dev, nsegs, NULL, IFA, npos, POS, &ctx, &scn));
-  BA(CREATE(dev, nsegs, IDS, NULL, npos, POS, &ctx, &scn));
-  BA(CREATE(dev, nsegs, IDS, IFA, 0, POS, &ctx, &scn));
-  BA(CREATE(dev, nsegs, IDS, IFA, npos, NULL, &ctx, &scn));
+  BA(sdis_scene_2d_create(NULL, &SDIS_SCENE_CREATE_ARGS_DEFAULT, NULL));
+  scn_args.nprimitives = 0;
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
+  scn_args.nprimitives = nsegs;
+  scn_args.get_indices = NULL;
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
+  scn_args.get_indices = get_indices_2d;
+  scn_args.get_interface = NULL;
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = NULL;
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
+  scn_args.get_position = get_position_2d;
+  scn_args.nvertices = 0;
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
+  scn_args.nvertices = npos;
+  scn_args.fp_to_meter = 0;
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
+  scn_args.fp_to_meter = 1;
   /* Duplicated vertex */
   ctx.positions = duplicated_vertices;
   ctx.indices = dup_vrtx_indices;
-  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
   /* Duplicated segment */
   ctx.positions = square_vertices;
   ctx.indices = duplicated_indices;
-  BA(CREATE(dev, 2, IDS, IFA, npos, POS, &ctx, &scn));
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
   /* Degenerated segment */
   ctx.indices = degenerated_indices;
-  BA(CREATE(dev, 1, IDS, IFA, npos, POS, &ctx, &scn));
-
+  BA(sdis_scene_2d_create(dev, &scn_args, &scn));
   ctx.positions = square_vertices;
   ctx.indices = square_indices;
-  OK(CREATE(dev, nsegs, IDS, IFA, npos, POS, &ctx, &scn));
-
-  #undef CREATE
-  #undef IDS
-  #undef POS
-  #undef IFA
+  BA(sdis_scene_2d_create(dev, &SDIS_SCENE_CREATE_ARGS_DEFAULT, &scn));
+  BA(sdis_scene_2d_create(NULL, &scn_args, &scn));
+  BA(sdis_scene_2d_create(dev, NULL, &scn));
+  BA(sdis_scene_2d_create(dev, &scn_args, NULL));
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   BA(sdis_scene_get_dimension(NULL, &dim));
   BA(sdis_scene_get_dimension(scn, NULL));
@@ -307,6 +336,46 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   CHK(eq_eps(upper[1], 1, 1.e-6));
 
   u0 = 0.5;
+
+  BA(sdis_scene_get_fp_to_meter(NULL, NULL));
+  BA(sdis_scene_get_fp_to_meter(scn, NULL));
+  BA(sdis_scene_get_fp_to_meter(NULL, &fp));
+  OK(sdis_scene_get_fp_to_meter(scn, &fp));
+  CHK(fp == 1);
+
+  fp = 0;
+  BA(sdis_scene_set_fp_to_meter(NULL, fp));
+  BA(sdis_scene_set_fp_to_meter(scn, fp));
+  fp = 2;
+  OK(sdis_scene_set_fp_to_meter(scn, fp));
+  OK(sdis_scene_get_fp_to_meter(scn, &fp));
+  CHK(fp == 2);
+
+  BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
+  BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
+  BA(sdis_scene_get_ambient_radiative_temperature(NULL, &t));
+  OK(sdis_scene_get_ambient_radiative_temperature(scn, &t));
+  CHK(t == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad);
+
+  t = 100;
+  BA(sdis_scene_set_ambient_radiative_temperature(NULL, t));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, t));
+  OK(sdis_scene_get_ambient_radiative_temperature(scn, &t));
+  CHK(t == 100);
+
+  BA(sdis_scene_get_reference_temperature(NULL, NULL));
+  BA(sdis_scene_get_reference_temperature(scn, NULL));
+  BA(sdis_scene_get_reference_temperature(NULL, &t));
+  OK(sdis_scene_get_reference_temperature(scn, &t));
+  CHK(t == SDIS_SCENE_CREATE_ARGS_DEFAULT.tref);
+
+  t = -1;
+  BA(sdis_scene_set_reference_temperature(NULL, t));
+  BA(sdis_scene_set_reference_temperature(scn, t));
+  t = 100;
+  OK(sdis_scene_set_reference_temperature(scn, t));
+  OK(sdis_scene_get_reference_temperature(scn, &t));
+  CHK(t == 100);
 
   BA(sdis_scene_get_boundary_position(NULL, 1, &u0, pos));
   BA(sdis_scene_get_boundary_position(scn, 4, &u0, pos));

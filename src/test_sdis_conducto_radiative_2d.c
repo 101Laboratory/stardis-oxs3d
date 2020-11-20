@@ -283,6 +283,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid2 = NULL;
   struct sdis_interface* interfaces[5]  = {NULL};
   struct sdis_interface* prim_interfaces[10/*#segment*/];
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   const size_t nsimuls = 4;
@@ -378,8 +379,14 @@ main(int argc, char** argv)
   geom.positions = vertices;
   geom.indices = indices;
   geom.interfaces = prim_interfaces;
-  OK(sdis_scene_2d_create(dev, nsegments, get_indices, get_interface, nvertices,
-    get_position, &geom, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = nsegments;
+  scn_args.nvertices = nvertices;
+  scn_args.tref = Tref;
+  scn_args.context = &geom;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   hr = 4*BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;
   tmp = lambda/(2*lambda + thickness*hr) * (T1 - T0);
@@ -405,7 +412,6 @@ main(int argc, char** argv)
     solve_args.position[1] = ssp_rng_uniform_double(rng, -0.9, 0.9);
     solve_args.time_range[0] = INF;
     solve_args.time_range[1] = INF;
-    solve_args.reference_temperature = Tref;
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -426,10 +432,10 @@ main(int argc, char** argv)
 
     /* Check green function */
     OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
-    OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+    OK(sdis_green_function_solve(green, &estimator2));
     check_green_function(green);
     check_estimator_eq(estimator, estimator2);
-    check_green_serialization(green, scn, solve_args.time_range);
+    check_green_serialization(green, scn);
 
     OK(sdis_estimator_ref_put(estimator));
     OK(sdis_estimator_ref_put(estimator2));
@@ -441,7 +447,7 @@ main(int argc, char** argv)
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_ref_put(estimator));
 
-    printf("\n");
+    printf("\n\n");
   }
 
   /* Release memory */

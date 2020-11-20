@@ -69,6 +69,7 @@ struct sdis_medium;
 struct sdis_scene;
 
 /* Forward declaration of non ref counted types */
+struct sdis_green_path;
 struct sdis_heat_path;
 
 /*******************************************************************************
@@ -270,22 +271,20 @@ typedef res_T
 /*******************************************************************************
  * Green function data types
  ******************************************************************************/
+enum sdis_green_path_end_type {
+  SDIS_GREEN_PATH_END_AT_INTERFACE,
+  SDIS_GREEN_PATH_END_IN_VOLUME,
+  SDIS_GREEN_PATH_END_RADIATIVE,
+  SDIS_GREEN_PATH_END_TYPES_COUNT__,
+  SDIS_GREEN_PATH_END_ERROR = SDIS_GREEN_PATH_END_TYPES_COUNT__
+};
+
 enum sdis_point_type {
   SDIS_FRAGMENT,
   SDIS_VERTEX,
   SDIS_POINT_TYPES_COUNT__,
   SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
 };
-
-/* Path used to estimate the green function */
-struct sdis_green_path {
-  /* Internal data. Should not be accessed */
-  void* green__;
-  size_t id__;
-};
-#define SDIS_GREEN_PATH_NULL__ {NULL, 0}
-static const struct sdis_green_path SDIS_GREEN_PATH_NULL =
-  SDIS_GREEN_PATH_NULL__;
 
 /* Spatio temporal point */
 struct sdis_point {
@@ -328,15 +327,68 @@ typedef res_T
    void* context);
 
 /*******************************************************************************
+ * Data types of scene creation
+ ******************************************************************************/
+/* Functor used to retrieve the indices toward the vertices of a geometric
+ * primitive. Geometric primitive means for segment in 2D and triangle in 3D */
+typedef void
+(*sdis_get_primitive_indices_T)
+  (const size_t iprim, /* Index of the primitive */
+   size_t ids[], /* Output list of primitive indices */
+   void* ctx); /* User defined data */
+
+/* Retrieve the interface, i.e. the physical properties,  associated to a given
+ * geometric primitive */
+typedef void
+(*sdis_get_primitive_interface_T)
+  (const size_t iprim, /* Index of the primitive */
+   struct sdis_interface** interf,
+   void* ctx);
+
+/* Retrieve the coordinates of a vertex */
+typedef void
+(*sdis_get_vertex_position_T)
+  (const size_t ivert, /* Index of the vertex */
+   double pos[], /* Output list of vertex coordinates */
+   void* ctx);
+
+struct sdis_scene_create_args {
+  /* Functors to retrieve the geometric description */
+  sdis_get_primitive_indices_T get_indices;
+  sdis_get_primitive_interface_T get_interface;
+  sdis_get_vertex_position_T get_position;
+
+ /* Pointer toward client side sent as the last argument of the callbacks */
+  void* context;
+
+  size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
+  size_t nvertices; /* #vertices */
+  double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
+  double trad; /* Ambiant radiative temperature */
+  double tref; /* Temperature used to linearize the radiative temperature */
+};
+
+#define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
+  NULL, /* Get indices */                                                      \
+  NULL, /* Get interfaces */                                                   \
+  NULL, /* Get position */                                                     \
+  NULL, /* Context */                                                          \
+  0, /* #primitives */                                                         \
+  0, /* #vertices */                                                           \
+  1.0, /* #Floating point to meter scale factor */                             \
+  -1.0, /* Ambient radiative temperature */                                    \
+  -1.0 /* Reference temperature */                                             \
+}
+static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
+  SDIS_SCENE_CREATE_ARGS_DEFAULT__;
+
+/*******************************************************************************
  * Data types of the input simulation parameters
  ******************************************************************************/
 struct sdis_solve_probe_args {
   size_t nrealisations; /* #realisations */
   double position[3]; /* Probe position */
   double time_range[2]; /* Observation time */
-  double fp_to_meter; /* Scale from floating point units to meters */
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
@@ -344,9 +396,6 @@ struct sdis_solve_probe_args {
   10000, /* #realisations */                                                   \
   {0,0,0}, /* Position  */                                                     \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  1.0, /* FP to meter */                                                       \
-  -1, /* Ambient radiative temperature */                                      \
-  -1, /* Reference temperature */                                              \
   SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
   NULL /* RNG state */                                                         \
 }
@@ -360,9 +409,6 @@ struct sdis_solve_probe_boundary_args {
   double uv[2]; /* Parametric coordinates of the probe onto the primitve */
   double time_range[2]; /* Observation time */
   enum sdis_side side; /* Side of iprim on which the probe lies */
-  double fp_to_meter; /* Scale from floating point units to meters */
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
@@ -372,9 +418,6 @@ struct sdis_solve_probe_boundary_args {
   {0,0}, /* UV */                                                              \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   SDIS_SIDE_NULL__,                                                            \
-  1, /* FP to meter */                                                         \
-  -1, /* Ambient radiative temperature */                                      \
-  -1, /* Reference temperature */                                              \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL /* RNG state */                                                         \
 }
@@ -388,9 +431,6 @@ struct sdis_solve_boundary_args {
   const enum sdis_side* sides; /* Per primitive side to consider */
   size_t nprimitives; /* #primitives */
   double time_range[2]; /* Observation time */
-  double fp_to_meter; /* Scale from floating point units to meters */
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
@@ -400,9 +440,6 @@ struct sdis_solve_boundary_args {
   NULL, /* Per primitive side */                                               \
   0, /* #primitives */                                                         \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  1, /* FP to meter */                                                         \
-  -1, /* Ambient radiative temperature */                                      \
-  -1, /* Reference temperature */                                              \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL /* RNG state */                                                         \
 }
@@ -413,9 +450,6 @@ struct sdis_solve_medium_args {
   size_t nrealisations; /* #realisations */
   struct sdis_medium* medium; /* Medium to solve */
   double time_range[2]; /* Observation time */
-  double fp_to_meter; /* Scale from floating point units to meters */
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
@@ -423,9 +457,6 @@ struct sdis_solve_medium_args {
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  1, /* FP to meter */                                                         \
-  -1, /* Ambient radiative temperature */                                      \
-  -1, /* Reference temperature */                                              \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL /* RNG state */                                                         \
 }
@@ -437,9 +468,6 @@ struct sdis_solve_probe_boundary_flux_args {
   size_t iprim; /* Identifier of the primitive on which the probe lies */
   double uv[2]; /* Parametric coordinates of the probe onto the primitve */
   double time_range[2]; /* Observation time */
-  double fp_to_meter; /* Scale from floating point units to meters */
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
@@ -447,9 +475,6 @@ struct sdis_solve_probe_boundary_flux_args {
   0, /* Primitive identifier */                                                \
   {0,0}, /* UV */                                                              \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  1, /* FP to meter */                                                         \
-  -1, /* Ambient radiative temperature */                                      \
-  -1, /* Reference temperature */                                              \
   NULL /* RNG state */                                                         \
 }
 static const struct sdis_solve_probe_boundary_flux_args
@@ -461,9 +486,6 @@ struct sdis_solve_boundary_flux_args {
   const size_t* primitives; /* List of boundary primitives to handle */
   size_t nprimitives; /* #primitives */
   double time_range[2]; /* Observation time */
-  double fp_to_meter; /* Scale from floating point units to meters */
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
 #define SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                              \
@@ -471,9 +493,6 @@ struct sdis_solve_boundary_flux_args {
   NULL, /* List or primitive ids */                                            \
   0, /* #primitives */                                                         \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  1, /* FP to meter */                                                         \
-  -1, /* Ambient radiative temperature */                                      \
-  -1, /* Reference temperature */                                              \
   NULL /* RNG state */                                                         \
 }
 static const struct sdis_solve_boundary_flux_args
@@ -483,9 +502,6 @@ SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
 struct sdis_solve_camera_args {
   struct sdis_camera* cam; /* Point of view */
   double time_range[2]; /* Observation time */
-  double fp_to_meter; /* Scale from floating point units to meters */
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   size_t image_resolution[2]; /* Image resolution */
   size_t spp; /* #samples per pixel */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
@@ -493,9 +509,6 @@ struct sdis_solve_camera_args {
 #define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
   NULL, /* Camera */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  1, /* FP to meter */                                                         \
-  -1, /* Ambient radiative temperature */                                      \
-  -1, /* Reference temperature */                                              \
   {512,512}, /* Image resolution */                                            \
   256, /* #realisations per pixel */                                           \
   SDIS_HEAT_PATH_NONE                                                          \
@@ -507,14 +520,12 @@ struct sdis_compute_power_args {
   size_t nrealisations;
   struct sdis_medium* medium; /* Medium to solve */
   double time_range[2]; /* Observation time */
-  double fp_to_meter; /* Scale from floating point units to meters */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
 #define SDIS_COMPUTE_POWER_ARGS_DEFAULT__ {                                    \
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  1, /* FP to meter */                                                         \
   NULL /* RNG state */                                                         \
 }
 static const struct sdis_compute_power_args
@@ -747,7 +758,7 @@ sdis_interface_get_id
  *
  * Note that each triangle has 2 sides: a front and a back side. By convention,
  * the front side of a triangle is the side where its vertices are clock wise
- * ordered.  The back side of a triangle is the exact opposite: it is the side
+ * ordered. The back side of a triangle is the exact opposite: it is the side
  * where the triangle vertices are counter-clock wise ordered. The front and
  * back media of a triangle interface directly refer to this convention and
  * thus one has to take care of how the triangle vertices are defined to ensure
@@ -755,15 +766,7 @@ sdis_interface_get_id
 SDIS_API res_T
 sdis_scene_create
   (struct sdis_device* dev,
-   const size_t ntris, /* #triangles */
-   void (*indices) /* Retrieve the indices toward the vertices of `itri' */
-    (const size_t itri, size_t ids[3], void* ctx),
-   void (*interf) /* Get the interface of the triangle `itri' */
-    (const size_t itri, struct sdis_interface** bound, void* ctx),
-   const size_t nverts, /* #vertices */
-   void (*position) /* Retrieve the position of the vertex `ivert' */
-    (const size_t ivert, double pos[3], void* ctx),
-   void* ctx, /* Client side data sent as input of the previous callbacks */
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** scn);
 
 /* Create a 2D scene. The geometry of the 2D scene is defined by an indexed
@@ -784,15 +787,7 @@ sdis_scene_create
 SDIS_API res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
-   const size_t nsegs, /* #segments */
-   void (*indices) /* Retrieve the indices toward the vertices of `iseg' */
-    (const size_t iseg, size_t ids[2], void* ctx),
-   void (*interf) /* Get the interface of the segment `iseg' */
-    (const size_t iseg, struct sdis_interface** bound, void* ctx),
-   const size_t nverts, /* #vertices */
-   void (*position) /* Retrieve the position of the vertex `ivert' */
-    (const size_t ivert, double pos[2], void* ctx),
-   void* ctx, /* Client side data sent as input of the previous callbacks */
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** scn);
 
 SDIS_API res_T
@@ -809,6 +804,44 @@ sdis_scene_get_aabb
   (const struct sdis_scene* scn,
    double lower[3],
    double upper[3]);
+
+/* Get scene's fp_to_meter */
+SDIS_API res_T
+sdis_scene_get_fp_to_meter
+  (const struct sdis_scene* scn,
+   double* fp_to_meter);
+
+/* Set scene's fp_to_meter */
+SDIS_API res_T
+sdis_scene_set_fp_to_meter
+  (struct sdis_scene* scn,
+   const double fp_to_meter);
+
+/* Get scene's ambient radiative temperature */
+SDIS_API res_T
+sdis_scene_get_ambient_radiative_temperature
+  (const struct sdis_scene* scn,
+   double* trad);
+
+/* Set scene's ambient radiative temperature. If set negative, any sample
+ * ending in ambient radiative temperature will fail */
+SDIS_API res_T
+sdis_scene_set_ambient_radiative_temperature
+  (struct sdis_scene* scn,
+   const double trad);
+
+/* Get scene's reference temperature */
+SDIS_API res_T
+sdis_scene_get_reference_temperature
+  (const struct sdis_scene* scn,
+   double* tref);
+
+/* Set scene's reference temperature. If set to 0, there is no radiative
+ * transfert in the whole system */
+SDIS_API res_T
+sdis_scene_set_reference_temperature
+  (struct sdis_scene* scn,
+   const double tref);
 
 /* Search the point onto the scene geometry that is the closest of `pos'. The
  * `radius' parameter controls the maximum search distance around `pos'. The
@@ -993,7 +1026,6 @@ sdis_green_function_ref_put
 SDIS_API res_T
 sdis_green_function_solve
   (struct sdis_green_function* green,
-   const double time_range[2], /* Observation time */
    struct sdis_estimator** estimator);
 
 SDIS_API res_T
@@ -1006,6 +1038,12 @@ sdis_green_function_create_from_stream
   (struct sdis_scene* scn, /* Scene from which the green was evaluated */
    FILE* stream, /* Stream into which the green was serialized */
    struct sdis_green_function** green);
+
+/* Retrieve the scene used to compute the green function */
+SDIS_API res_T
+sdis_green_function_get_scene
+  (const struct sdis_green_function* green,
+   struct sdis_scene** scn);
 
 /* Retrieve the number of valid paths used to estimate the green function. It
  * is actually equal to the number of successful realisations. */
@@ -1028,14 +1066,30 @@ sdis_green_function_for_each_path
    sdis_process_green_path_T func,
    void* context);
 
+/* Retrieve the path's elapsed time */
+SDIS_API res_T
+sdis_green_path_get_elapsed_time
+  (struct sdis_green_path* path_handle,
+   double* elapsed);
+
+/* Retrieve the path's end type. */
+SDIS_API res_T
+sdis_green_path_get_end_type
+  (struct sdis_green_path* path,
+   enum sdis_green_path_end_type* type);
+
 /* Retrieve the spatio-temporal end point of a path used to estimate the green
- * function. Note that this point went back in time from the relative
- * observation time 0. Its time is thus negative; its absolute value
- * represents the time spent by the path into the system. */
+ * function. Return RES_BAD_OP for paths ending radiative. */
 SDIS_API res_T
 sdis_green_path_get_limit_point
   (struct sdis_green_path* path,
    struct sdis_point* pt);
+
+/* Retrieve the green function the path belongs to */
+SDIS_API res_T
+sdis_green_path_get_green_function
+  (struct sdis_green_path* path_handle,
+   struct sdis_green_function** green);
 
 /* Retrieve the number of "power terms" associated to a path. */
 SDIS_API res_T
@@ -1149,17 +1203,15 @@ sdis_compute_power
 /*******************************************************************************
  * Green solvers.
  *
- * Currently only steady computations are supported. As a consequence, the
- * observation time is always fixed to infinity.
- *
- * In addition, the green solvers assumes that the interface fluxes are
- * constants in time and space. In the same way the volumic power of the solid
- * media must be constant in time and space too. Furthermore, note that only
- * the interfaces/media that had a flux/volumic power during green estimation
- * can update their flux/volumic power value for subsequent
+ * Note that only the interfaces/media with flux/volumic power defined during
+ * green estimation can update their flux/volumic power value for subsequent
  * sdis_green_function_solve invocations: others interfaces/media are
  * definitely registered against the green function as interfaces/media with no
  * flux/volumic power.
+ *
+ * Also note that the green solvers assume that the interface fluxes are
+ * constant in time and space. The same applies to the volumic power of the
+ * solid media.
  *
  * If these assumptions are not ensured by the caller, the behavior of the
  * estimated green function is undefined.
@@ -1191,4 +1243,3 @@ sdis_solve_medium_green_function
 END_DECLS
 
 #endif /* SDIS_H */
-

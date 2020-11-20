@@ -208,7 +208,9 @@ struct sdis_scene {
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */
   unsigned outer_enclosure_id;
 
+  double fp_to_meter;
   double ambient_radiative_temperature; /* In Kelvin */
+  double reference_temperature;
 
   ref_T ref;
   struct sdis_device* dev;

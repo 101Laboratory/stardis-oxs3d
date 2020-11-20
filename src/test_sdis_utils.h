@@ -26,6 +26,7 @@
 
 #define OK(Cond) CHK((Cond) == RES_OK)
 #define BA(Cond) CHK((Cond) == RES_BAD_ARG)
+#define BO(Cond) CHK((Cond) == RES_BAD_OP)
 
 /*******************************************************************************
  * Box geometry
@@ -354,8 +355,7 @@ dump_heat_paths
 extern LOCAL_SYM void
 check_green_serialization
   (struct sdis_green_function* green,
-   struct sdis_scene* scn,
-   const double time_range[2]);
+   struct sdis_scene* scn);
 
 #endif /* TEST_SDIS_UTILS_H */
 

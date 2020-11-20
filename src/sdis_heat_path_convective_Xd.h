@@ -70,7 +70,6 @@ XD(register_heat_vertex_in_fluid)
 res_T
 XD(convective_path)
   (struct sdis_scene* scn,
-   const double fp_to_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
@@ -93,8 +92,8 @@ XD(convective_path)
   float st[2];
 #endif
   res_T res = RES_OK;
-  (void)rng, (void)fp_to_meter, (void)ctx;
-  ASSERT(scn && fp_to_meter > 0 && ctx && rwalk && rng && T);
+  (void)rng, (void)ctx;
+  ASSERT(scn && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_FLUID);
 
   tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);

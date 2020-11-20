@@ -274,6 +274,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid1 = NULL;
   struct sdis_medium* solid2 = NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = SDIS_FLUID_SHADER_NULL;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -425,8 +426,13 @@ main(int argc, char** argv)
   interfaces[17] = interf_solid2_adiabatic;
 
   /* Create the scene */
-  OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = ntriangles;
+  scn_args.nvertices = nvertices;
+  scn_args.context = interfaces;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
 #if 0
   dump_mesh(stdout, vertices, nvertices, indices, ntriangles);
@@ -441,8 +447,7 @@ main(int argc, char** argv)
   data = sdis_medium_get_data(solid1);
   solid_param = sdis_data_get(data);
   solid_param->lambda = 0.1;
-  OK(sdis_scene_create(dev, ntriangles, get_indices, get_interface,
-    nvertices, get_position, interfaces, &scn));
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   printf("\n>>> Check 2\n");
   check(scn, refs2, sizeof(refs2)/sizeof(struct reference));

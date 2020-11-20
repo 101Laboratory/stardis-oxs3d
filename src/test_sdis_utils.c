@@ -94,9 +94,10 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   struct green_accum* acc = NULL;
   struct sdis_data* data = NULL;
   enum sdis_medium_type type;
+  enum sdis_green_path_end_type end_type;
   double power = 0;
   double flux = 0;
-  double temp = 0;
+  double time, temp = 0;
   double weight = 0;
   CHK(path && ctx);
 
@@ -110,14 +111,42 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   BA(sdis_green_path_for_each_flux_term(path, NULL, &acc));
   OK(sdis_green_path_for_each_flux_term(path, accum_flux_terms, &flux));
 
+  BA(sdis_green_path_get_elapsed_time(NULL, NULL));
+  BA(sdis_green_path_get_elapsed_time(path, NULL));
+  BA(sdis_green_path_get_elapsed_time(NULL, &time));
+  OK(sdis_green_path_get_elapsed_time(path, &time));
+
+  BA(sdis_green_path_get_end_type(NULL, NULL));
+  BA(sdis_green_path_get_end_type(path, NULL));
+  BA(sdis_green_path_get_end_type(NULL, &end_type));
+  OK(sdis_green_path_get_end_type(path, &end_type));
+
+  BA(sdis_green_path_get_limit_point(NULL, NULL));
   BA(sdis_green_path_get_limit_point(NULL, &pt));
   BA(sdis_green_path_get_limit_point(path, NULL));
-  OK(sdis_green_path_get_limit_point(path, &pt));
+  if(end_type == SDIS_GREEN_PATH_END_RADIATIVE) {
+    struct sdis_green_function* green;
+    struct sdis_scene* scn;
+    BO(sdis_green_path_get_limit_point(path, &pt));
+    BA(sdis_green_path_get_green_function(NULL, NULL));
+    BA(sdis_green_path_get_green_function(path, NULL));
+    BA(sdis_green_path_get_green_function(NULL, &green));
+    OK(sdis_green_path_get_green_function(path, &green));
 
-  switch(pt.type) {
+    BA(sdis_green_function_get_scene(NULL, NULL));
+    BA(sdis_green_function_get_scene(NULL, &scn));
+    BA(sdis_green_function_get_scene(green, NULL));
+    OK(sdis_green_function_get_scene(green, &scn));
+
+    BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
+    BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
+    BA(sdis_scene_get_ambient_radiative_temperature(NULL, &temp));
+    OK(sdis_scene_get_ambient_radiative_temperature(scn, &temp));
+  } else {
+    OK(sdis_green_path_get_limit_point(path, &pt));
+    switch(pt.type) {
     case SDIS_FRAGMENT:
       frag = pt.data.itfrag.fragment;
-      frag.time = INF;
       OK(sdis_interface_get_shader(pt.data.itfrag.intface, &interf));
       data = sdis_interface_get_data(pt.data.itfrag.intface);
       temp = frag.side == SDIS_FRONT
@@ -126,7 +155,6 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
       break;
     case SDIS_VERTEX:
       vtx = pt.data.mdmvert.vertex;
-      vtx.time = INF;
       type = sdis_medium_get_type(pt.data.mdmvert.medium);
       data = sdis_medium_get_data(pt.data.mdmvert.medium);
       if(type == SDIS_FLUID) {
@@ -138,6 +166,7 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
       }
       break;
     default: FATAL("Unreachable code.\n"); break;
+    }
   }
 
   weight = temp + power + flux;
@@ -229,7 +258,7 @@ check_green_function(struct sdis_green_function* green)
 
   time_range[0] = time_range[1] = INF;
 
-  OK(sdis_green_function_solve(green, time_range, &estimator));
+  OK(sdis_green_function_solve(green, &estimator));
 
   BA(sdis_green_function_get_paths_count(NULL, &n));
   BA(sdis_green_function_get_paths_count(green, NULL));
@@ -367,15 +396,14 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
 void
 check_green_serialization
   (struct sdis_green_function* green,
-   struct sdis_scene* scn,
-   const double time_range[2])
+   struct sdis_scene* scn)
 {
   FILE* stream = NULL;
   struct sdis_estimator *e1 = NULL;
   struct sdis_estimator *e2 = NULL;
   struct sdis_green_function* green2 = NULL;
 
-  CHK(green && time_range);
+  CHK(green && scn);
   stream = tmpfile();
   CHK(stream);
 
@@ -386,8 +414,8 @@ check_green_serialization
   CHK(!fclose(stream));
   check_green_function(green2);
 
-  OK(sdis_green_function_solve(green, time_range, &e1));
-  OK(sdis_green_function_solve(green2, time_range, &e2));
+  OK(sdis_green_function_solve(green, &e1));
+  OK(sdis_green_function_solve(green2, &e2));
   check_estimator_eq_strict(e1, e2);
 
   OK(sdis_estimator_ref_put(e1));

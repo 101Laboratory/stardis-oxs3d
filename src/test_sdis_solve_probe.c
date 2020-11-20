@@ -262,6 +262,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator3 = NULL;
   struct sdis_green_function* green = NULL;
   const struct sdis_heat_path* path = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -335,8 +336,13 @@ main(int argc, char** argv)
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
   ctx.interf = interf;
-  OK(sdis_scene_create(dev, box_ntriangles, get_indices, get_interface,
-    box_nvertices, get_position, &ctx, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = box_ntriangles;
+  scn_args.nvertices = box_nvertices;
+  scn_args.context = &ctx;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   OK(sdis_interface_ref_put(interf));
 
@@ -354,9 +360,6 @@ main(int argc, char** argv)
   solve_args.nrealisations = 0;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
   solve_args.nrealisations = N;
-  solve_args.fp_to_meter = 0;
-  BA(sdis_solve_probe(scn, &solve_args, &estimator));
-  solve_args.fp_to_meter = 1;
   solve_args.time_range[0] = solve_args.time_range[1] = -1;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
   solve_args.time_range[0] = 1;
@@ -433,15 +436,12 @@ main(int argc, char** argv)
   solve_args.nrealisations = 0;
   BA(sdis_solve_probe_green_function(scn, &solve_args, &green));
   solve_args.nrealisations = N;
-  solve_args.fp_to_meter = 0;
-  BA(sdis_solve_probe_green_function(scn, &solve_args, &green));
-  solve_args.fp_to_meter = 1;
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
 
-  BA(sdis_green_function_solve(NULL, solve_args.time_range, &estimator2));
-  BA(sdis_green_function_solve(green, NULL, &estimator2));
-  BA(sdis_green_function_solve(green, solve_args.time_range, NULL));
-  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+  BA(sdis_green_function_solve(NULL, &estimator2));
+  BA(sdis_green_function_solve(green, NULL));
+  BA(sdis_green_function_solve(NULL, NULL));
+  OK(sdis_green_function_solve(green, &estimator2));
 
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
@@ -450,8 +450,9 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator2));
   printf("\n");
 
-  /* Check green used at a different temperature */
+  /* Check same green used at a different temperature */
   fluid_param->temperature = 500;
+
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
@@ -468,10 +469,10 @@ main(int argc, char** argv)
   CHK(nfails < N / 1000);
   CHK(eq_eps(T.E, ref, T.SE));
 
-  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
-
+  
   stream = tmpfile();
   CHK(stream);
   BA(sdis_green_function_write(NULL, stream));
@@ -491,7 +492,7 @@ main(int argc, char** argv)
   OK(sdis_green_function_create_from_stream(scn, stream, &green));
   CHK(!fclose(stream));
 
-  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator3));
+  OK(sdis_green_function_solve(green, &estimator3));
 
   check_green_function(green);
   check_estimator_eq_strict(estimator2, estimator3);
@@ -532,6 +533,39 @@ main(int argc, char** argv)
   OK(sdis_estimator_for_each_path(estimator, process_heat_path, &dump_ctx));
 
   OK(sdis_estimator_ref_put(estimator));
+
+  printf("\n");
+
+  /* Green and ambient radiative temperature */
+  solve_args.nrealisations = N;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, 300));
+  OK(sdis_scene_set_reference_temperature(scn, 300));
+
+  interface_param->epsilon = 1;
+
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
+  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+  OK(sdis_green_function_solve(green, &estimator2));
+
+  check_green_function(green);
+  check_estimator_eq(estimator, estimator2);
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+
+  /* Check same green used at different ambient radiative temperature */
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, 600));
+
+  OK(sdis_solve_probe(scn, &solve_args, &estimator));
+  OK(sdis_green_function_solve(green, &estimator2));
+
+  check_green_function(green);
+  check_estimator_eq(estimator, estimator2);
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_estimator_ref_put(estimator2));
+  OK(sdis_green_function_ref_put(green));
+
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));
 

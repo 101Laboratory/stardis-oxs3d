@@ -18,13 +18,14 @@
 
 #include <rsys/clock_time.h>
 #include <rsys/double3.h>
+#include <star/ssp.h>
 
 /*
  * The scene is composed of a solid cube/square whose temperature is unknown.
  * The temperature is fixed at T0 on the +X face. The Flux of the -X face is
  * fixed to PHI. The flux on the other faces is null (i.e. adiabatic). This
  * test computes the temperature of a probe position pos into the solid and
- * check that it is equal to:
+ * check that at t=inf it is equal to:
  *
  *    T(pos) = T0 + (A-pos) * PHI/LAMBDA
  *
@@ -94,7 +95,10 @@ solid_get_temperature
 {
   (void)data;
   CHK(vtx != NULL);
-  return UNKNOWN_TEMPERATURE;
+  if(vtx->time > 0)
+    return UNKNOWN_TEMPERATURE;
+  else
+    return T0;
 }
 
 /*******************************************************************************
@@ -129,7 +133,7 @@ interface_get_flux
 static void
 solve
   (struct sdis_scene* scn,
-   const double pos[],
+   struct ssp_rng* rng,
    struct interf* interf)
 {
   char dump[128];
@@ -142,139 +146,195 @@ solve
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   size_t nreals;
   size_t nfails;
-  double ref;
-  const double time_range[2] = {INF, INF};
+  double ref = -1;
+  const int nsimuls = 4;
+  int isimul;
   enum sdis_scene_dimension dim;
-  ASSERT(scn && pos && interf);
-
-  /* Restore phi value */
-  interf->phi = PHI;
-
-  ref = T0 + (1 - pos[0]) * interf->phi/LAMBDA;
+  ASSERT(scn && rng && interf);
 
   OK(sdis_scene_get_dimension(scn, &dim));
+  FOR_EACH(isimul, 0, nsimuls) {
+    int steady = (isimul % 2) == 0;
 
-  solve_args.nrealisations = N;
-  solve_args.position[0] = pos[0];
-  solve_args.position[1] = pos[1];
-  solve_args.position[2] = dim == SDIS_SCENE_2D ? 0 : pos[2];
-  solve_args.time_range[0] = INF;
-  solve_args.time_range[1] = INF;
+    /* Restore phi value */
+    interf->phi = PHI;
 
-  time_current(&t0);
-  OK(sdis_solve_probe(scn, &solve_args, &estimator));
-  time_sub(&t0, time_current(&t1), &t0);
-  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+    solve_args.position[0] = ssp_rng_uniform_double(rng, 0.1, 0.9);
+    solve_args.position[1] = ssp_rng_uniform_double(rng, 0.1, 0.9);
+    solve_args.position[2] =
+      dim == SDIS_SCENE_2D ? 0 : ssp_rng_uniform_double(rng, 0.1, 0.9);
 
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
+    solve_args.nrealisations = N;
+    if(steady)
+      solve_args.time_range[0] = solve_args.time_range[1] = INF;
+    else {
+      solve_args.time_range[0] = 100 * (double)isimul;
+      solve_args.time_range[1] = 4 * solve_args.time_range[0];
+    }
 
-  switch(dim) {
+    time_current(&t0);
+    OK(sdis_solve_probe(scn, &solve_args, &estimator));
+    time_sub(&t0, time_current(&t1), &t0);
+    time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+    switch(dim) {
     case SDIS_SCENE_2D:
-      printf("Temperature at (%g %g) with phi=%g = %g ~ %g +/- %g\n",
-        SPLIT2(pos), interf->phi, ref, T.E, T.SE);
+      if(steady) {
+        ref = T0 + (1 - solve_args.position[0]) * interf->phi / LAMBDA;
+        printf("Steady temperature at (%g, %g) with Phi=%g = %g ~ %g +/- %g\n",
+          SPLIT2(solve_args.position), interf->phi, ref, T.E, T.SE);
+      } else {
+        printf("Mean temperature at (%g, %g) with t in [%g %g] and Phi=%g"
+          " ~ %g +/- %g\n",
+          SPLIT2(solve_args.position), SPLIT2(solve_args.time_range),
+          interf->phi, T.E, T.SE);
+      }
       break;
     case SDIS_SCENE_3D:
-      printf("Temperature at (%g %g %g) with phi=%g = %g ~ %g +/- %g\n",
-        SPLIT3(pos), interf->phi, ref, T.E, T.SE);
+      if(steady) {
+        ref = T0 + (1 - solve_args.position[0]) * interf->phi / LAMBDA;
+        printf("Steady temperature at (%g, %g, %g) with Phi=%g = %g ~ %g +/- %g\n",
+          SPLIT3(solve_args.position), interf->phi, ref, T.E, T.SE);
+      } else {
+        printf("Mean temperature at (%g, %g, %g) with t in [%g %g] and Phi=%g"
+          " ~ %g +/- %g\n",
+          SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+          interf->phi, T.E, T.SE);
+      }
       break;
     default: FATAL("Unreachable code.\n"); break;
-  }
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  printf("Elapsed time = %s\n", dump);
-  printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
+    }
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+    printf("Elapsed time = %s\n", dump);
+    printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
 
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, T.SE*3));
+    CHK(nfails + nreals == N);
+    CHK(nfails <= N/1000);
+    if(steady) CHK(eq_eps(T.E, ref, T.SE * 3));
 
-  time_current(&t0);
-  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
-  time_current(&t1);
-  OK(sdis_green_function_solve(green, time_range, &estimator2));
-  time_current(&t2);
+    time_current(&t0);
+    OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+    time_current(&t1);
+    OK(sdis_green_function_solve(green, &estimator2));
+    time_current(&t2);
 
-  OK(sdis_estimator_get_realisation_count(estimator2, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator2, &nfails));
-  OK(sdis_estimator_get_temperature(estimator2, &T));
+    OK(sdis_estimator_get_realisation_count(estimator2, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator2, &nfails));
+    OK(sdis_estimator_get_temperature(estimator2, &T));
 
-  switch(dim) {
+    switch(dim) {
     case SDIS_SCENE_2D:
-      printf("Green temperature at (%g %g) with phi=%g = %g ~ %g +/- %g\n",
-        SPLIT2(pos), interf->phi, ref, T.E, T.SE);
+      if(steady) {
+        ref = T0 + (1 - solve_args.position[0]) * interf->phi / LAMBDA;
+        printf("Steady Green temperature at (%g, %g) with Phi=%g = %g ~ %g +/- %g\n",
+          SPLIT2(solve_args.position), interf->phi, ref, T.E, T.SE);
+      } else {
+        printf("Mean Green temperature at (%g, %g) with t in [%g %g] and Phi=%g"
+          " ~ %g +/- %g\n",
+          SPLIT2(solve_args.position), SPLIT2(solve_args.time_range),
+          interf->phi, T.E, T.SE);
+      }
       break;
     case SDIS_SCENE_3D:
-      printf("Green temperature at (%g %g %g) with phi=%g = %g ~ %g +/- %g\n",
-        SPLIT3(pos), interf->phi, ref, T.E, T.SE);
+      if(steady) {
+        ref = T0 + (1 - solve_args.position[0]) * interf->phi / LAMBDA;
+        printf("Steady Green temperature at (%g, %g, %g) with Phi=%g = %g"
+          " ~ %g +/- %g\n",
+          SPLIT3(solve_args.position), interf->phi, ref, T.E, T.SE);
+      } else {
+        printf("Mean Green temperature at (%g, %g, %g) with t in [%g %g] and Phi=%g"
+          " ~ %g +/- %g\n",
+          SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+          interf->phi, T.E, T.SE);
+      }
       break;
     default: FATAL("Unreachable code.\n"); break;
+    }
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+    time_sub(&t0, &t1, &t0);
+    time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+    printf("Green estimation time = %s\n", dump);
+    time_sub(&t1, &t2, &t1);
+    time_dump(&t1, TIME_ALL, NULL, dump, sizeof(dump));
+    printf("Green solve time = %s\n", dump);
+
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn);
+
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+    printf("\n");
+
+    /* Check same green used at a different flux value */
+    interf->phi = 3 * PHI;
+
+    time_current(&t0);
+    OK(sdis_solve_probe(scn, &solve_args, &estimator));
+    time_sub(&t0, time_current(&t1), &t0);
+    time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+    switch(dim) {
+    case SDIS_SCENE_2D:
+      if(steady) {
+        ref = T0 + (1 - solve_args.position[0]) * interf->phi / LAMBDA;
+        printf("Steady temperature at (%g, %g) with Phi=%g = %g ~ %g +/- %g\n",
+          SPLIT2(solve_args.position), interf->phi, ref, T.E, T.SE);
+      } else {
+        printf("Mean temperature at (%g, %g) with t in [%g %g] and Phi=%g"
+          " ~ %g +/- %g\n",
+          SPLIT2(solve_args.position), SPLIT2(solve_args.time_range),
+          interf->phi, T.E, T.SE);
+      }
+      break;
+    case SDIS_SCENE_3D:
+      if(steady) {
+        ref = T0 + (1 - solve_args.position[0]) * interf->phi / LAMBDA;
+        printf("Steady temperature at (%g, %g, %g) with Phi=%g = %g"
+          " ~ %g +/- %g\n",
+          SPLIT3(solve_args.position), interf->phi, ref, T.E, T.SE);
+      } else {
+        printf("Mean temperature at (%g, %g, %g) with t in [%g %g] and Phi=%g"
+          " ~ %g +/- %g\n",
+          SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+          interf->phi, T.E, T.SE);
+      }
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+    }
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+    printf("Elapsed time = %s\n", dump);
+    printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
+
+    CHK(nfails + nreals == N);
+    CHK(nfails <= N/1000);
+    if(steady) CHK(eq_eps(T.E, ref, T.SE * 3));
+
+    time_current(&t0);
+    OK(sdis_green_function_solve(green, &estimator2));
+    time_sub(&t0, time_current(&t1), &t0);
+    time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+    printf("Green solve time = %s\n", dump);
+
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
+
+    printf("\n\n");
   }
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  time_sub(&t0, &t1, &t0);
-  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
-  printf("Green estimation time = %s\n", dump);
-  time_sub(&t1, &t2, &t1);
-  time_dump(&t1, TIME_ALL, NULL, dump, sizeof(dump));
-  printf("Green solve time = %s\n", dump);
-
-  check_green_function(green);
-  check_estimator_eq(estimator, estimator2);
-  check_green_serialization(green, scn, time_range);
-
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
-  printf("\n");
-
-  /* Check green used at a different phi */
-  interf->phi = 3 * PHI;
-
-  time_current(&t0);
-  OK(sdis_solve_probe(scn, &solve_args, &estimator));
-  time_sub(&t0, time_current(&t1), &t0);
-  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
-
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
-
-  ref = T0 + (1 - pos[0]) * interf->phi/LAMBDA;
-
-  switch (dim) {
-  case SDIS_SCENE_2D:
-    printf("Temperature at (%g %g) with phi=%g = %g ~ %g +/- %g\n",
-      SPLIT2(pos), interf->phi, ref, T.E, T.SE);
-    break;
-  case SDIS_SCENE_3D:
-    printf("Temperature at (%g %g %g) with phi=%g = %g ~ %g +/- %g\n",
-      SPLIT3(pos), interf->phi, ref, T.E, T.SE);
-    break;
-  default: FATAL("Unreachable code.\n"); break;
-  }
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
-  printf("Elapsed time = %s\n", dump);
-  printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
-
-  CHK(nfails + nreals == N);
-  CHK(nfails < N / 1000);
-  CHK(eq_eps(T.E, ref, T.SE * 3));
-
-  time_current(&t0);
-  OK(sdis_green_function_solve(green, time_range, &estimator2));
-  time_sub(&t0, time_current(&t1), &t0);
-  time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
-  printf("Green solve time = %s\n", dump);
-
-  check_green_function(green);
-  check_estimator_eq(estimator, estimator2);
-
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
-  OK(sdis_green_function_ref_put(green));
-
-  printf("\n");
 }
 
 /*******************************************************************************
@@ -293,13 +353,14 @@ main(int argc, char** argv)
   struct sdis_interface* interf_phi = NULL;
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* box_interfaces[12 /*#triangles*/];
   struct sdis_interface* square_interfaces[4/*#segments*/];
   struct interf* interf_props = NULL;
-  double pos[3];
+  struct ssp_rng* rng = NULL;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
@@ -365,14 +426,22 @@ main(int argc, char** argv)
   square_interfaces[3] = interf_T0;        /* Right */
 
   /* Create the box scene */
-  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
-    box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn));
+  scn_args.get_indices = box_get_indices;
+  scn_args.get_interface = box_get_interface;
+  scn_args.get_position = box_get_position;
+  scn_args.nprimitives = box_ntriangles;
+  scn_args.nvertices = box_nvertices;
+  scn_args.context = box_interfaces;
+  OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
   /* Create the square scene */
-  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
-    square_get_interface, square_nvertices, square_get_position,
-    square_interfaces, &square_scn));
+  scn_args.get_indices = square_get_indices;
+  scn_args.get_interface = square_get_interface;
+  scn_args.get_position = square_get_position;
+  scn_args.nprimitives = square_nsegments;
+  scn_args.nvertices = square_nvertices;
+  scn_args.context = square_interfaces;
+  OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_adiabatic));
@@ -380,15 +449,16 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_phi));
 
   /* Solve */
-  d3_splat(pos, 0.25);
+  OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
   printf(">> Box scene\n");
-  solve(box_scn, pos, interf_props);
+  solve(box_scn, rng, interf_props);
   printf(">> Square Scene\n");
-  solve(square_scn, pos, interf_props);
+  solve(square_scn, rng, interf_props);
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
   OK(sdis_device_ref_put(dev));
+  OK(ssp_rng_ref_put(rng));
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

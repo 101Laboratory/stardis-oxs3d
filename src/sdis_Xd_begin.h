@@ -105,7 +105,6 @@ static const struct XD(rwalk) XD(RWALK_NULL) = {
 struct XD(temperature) {
   res_T (*func)/* Next function to invoke in order to compute the temperature */
     (struct sdis_scene* scn,
-     const double fp_to_meter,
      const struct rwalk_context* ctx,
      struct XD(rwalk)* rwalk,
      struct ssp_rng* rng,

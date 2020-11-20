@@ -222,7 +222,7 @@ XD(solve_medium)
   ATOMIC res = RES_OK;
 
   if(!scn || !args || !args->medium || !args->nrealisations
-  || args->nrealisations > INT64_MAX || args->fp_to_meter <= 0) {
+  || args->nrealisations > INT64_MAX) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -321,27 +321,20 @@ XD(solve_medium)
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
     time_current(&t0);
-
-    if(!out_green) {
-      /* Sample the time */
-      time = sample_time(rng, args->time_range);
-
-      /* Prepare path registration if necessary */
-      if(register_paths) {
-        heat_path_init(scn->dev->allocator, &heat_path);
-        pheat_path = &heat_path;
-      }
-    } else {
-      /* Do not take care of the submitted time when registering the green
-       * function. Only steady systems are supported yet */
-      time = INF;
+    
+    time = sample_time(rng, args->time_range);
+    if(out_green) {
       res_local = green_function_create_path(greens[ithread], &green_path);
       if(res_local != RES_OK) {
         ATOMIC_SET(&res, res_local);
         goto error_it;
       }
-
       pgreen_path = &green_path;
+    }
+
+    if(register_paths) {
+      heat_path_init(scn->dev->allocator, &heat_path);
+      pheat_path = &heat_path;
     }
 
     /* Uniformly Sample an enclosure that surround the submitted medium and
@@ -356,9 +349,7 @@ XD(solve_medium)
 
     /* Run a probe realisation */
     res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng,
-      args->medium, pos, time, args->fp_to_meter,
-      args->ambient_radiative_temperature, args->reference_temperature,
-      pgreen_path, pheat_path, &weight);
+      args->medium, pos, time, pgreen_path, pheat_path, &weight);
 
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
@@ -504,7 +495,6 @@ XD(compute_power)
   || !args->medium
   || !args->nrealisations
   || args->nrealisations > INT64_MAX
-  || args->fp_to_meter <= 0
   || args->time_range[0] < 0
   || args->time_range[0] > args->time_range[1]
   || (  args->time_range[1] > DBL_MAX

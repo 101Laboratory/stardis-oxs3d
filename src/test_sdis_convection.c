@@ -183,6 +183,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_estimator* estimator2 = NULL;
   struct sdis_green_function* green = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = DUMMY_INTERFACE_SHADER;
@@ -245,14 +246,22 @@ main(int argc, char** argv)
   square_interfaces[3] = interf_T1; /* Right */
 
   /* Create the box scene */
-  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
-    box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn));
+  scn_args.get_indices = box_get_indices;
+  scn_args.get_interface = box_get_interface;
+  scn_args.get_position = box_get_position;
+  scn_args.nprimitives = box_ntriangles;
+  scn_args.nvertices = box_nvertices;
+  scn_args.context = box_interfaces;
+  OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
   /* Create the square scene */
-  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
-    square_get_interface, square_nvertices, square_get_position,
-    square_interfaces, &square_scn));
+  scn_args.get_indices = square_get_indices;
+  scn_args.get_interface = square_get_interface;
+  scn_args.get_position = square_get_position;
+  scn_args.nprimitives = square_nsegments;
+  scn_args.nvertices = square_nvertices;
+  scn_args.context = square_interfaces;
+  OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_T0));
@@ -297,10 +306,10 @@ main(int argc, char** argv)
 
     if(IS_INF(time)) { /* Check green function */
       OK(sdis_solve_probe_green_function(box_scn, &solve_args, &green));
-      OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+      OK(sdis_green_function_solve(green, &estimator2));
       check_green_function(green);
       check_estimator_eq(estimator, estimator2);
-      check_green_serialization(green, box_scn, solve_args.time_range);
+      check_green_serialization(green, box_scn);
       OK(sdis_estimator_ref_put(estimator2));
       OK(sdis_green_function_ref_put(green));
     }
@@ -339,10 +348,10 @@ main(int argc, char** argv)
 
     if(IS_INF(time)) { /* Check green function */
       OK(sdis_solve_probe_green_function(square_scn, &solve_args, &green));
-      OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+      OK(sdis_green_function_solve(green, &estimator2));
       check_green_function(green);
       check_estimator_eq(estimator, estimator2);
-      check_green_serialization(green, square_scn, solve_args.time_range);
+      check_green_serialization(green, square_scn);
       OK(sdis_estimator_ref_put(estimator2));
       OK(sdis_green_function_ref_put(green));
     }

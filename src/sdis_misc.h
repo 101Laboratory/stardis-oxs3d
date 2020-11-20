@@ -136,20 +136,18 @@ register_heat_vertex
 
 extern LOCAL_SYM res_T
 time_rewind_2d
-  (const struct sdis_medium* mdm, /* Medium into which the time is rewinded */
+  (struct sdis_medium* mdm, /* Medium into which the time is rewinded */
    struct ssp_rng* rng,
-   const double delta,
-   const double fp_to_meter,
+   const double dist_in_meter,
    const struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
    struct temperature_2d* T);
 
 extern LOCAL_SYM res_T
 time_rewind_3d
-  (const struct sdis_medium* mdm, /* Medium into which the time is rewinded */
+  (struct sdis_medium* mdm, /* Medium into which the time is rewinded */
    struct ssp_rng* rng,
-   const double delta,
-   const double fp_to_meter,
+   const double dist_in_meter,
    const struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
    struct temperature_3d* T);

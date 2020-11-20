@@ -220,6 +220,7 @@ main(int argc, char** argv)
   struct fluid* fluid_param = NULL;
   struct solid* solid_param = NULL;
   struct interf* interface_param = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -337,8 +338,13 @@ main(int argc, char** argv)
   }
 #endif
 
-  OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = ntris;
+  scn_args.nvertices = nverts;
+  scn_args.context = &ctx;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   BA(sdis_scene_get_medium_spread(NULL, solid0, &v0));
   BA(sdis_scene_get_medium_spread(scn, NULL, &v0));
@@ -366,9 +372,6 @@ main(int argc, char** argv)
   solve_args.medium = NULL;
   BA(sdis_solve_medium(scn, &solve_args, &estimator));
   solve_args.medium = solid0;
-  solve_args.fp_to_meter = 0;
-  BA(sdis_solve_medium(scn, &solve_args, &estimator));
-  solve_args.fp_to_meter = 1;
   solve_args.time_range[0] = solve_args.time_range[1] = -1;
   BA(sdis_solve_medium(scn, &solve_args, &estimator));
   solve_args.time_range[0] = 1;
@@ -418,8 +421,7 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   ctx.interf0 = solid0_fluid0;
   ctx.interf1 = solid0_fluid1;
-  OK(sdis_scene_create(dev, ntris, get_indices, get_interface, nverts,
-    get_position, &ctx, &scn));
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
   OK(sdis_scene_get_medium_spread(scn, solid0, &v));
   CHK(eq_eps(v, v0+v1, 1.e-6));
@@ -451,15 +453,12 @@ main(int argc, char** argv)
   solve_args.medium = solid1;
   BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
   solve_args.medium = solid0;
-  solve_args.fp_to_meter = 0;
-  BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
-  solve_args.fp_to_meter = 1;
   OK(sdis_solve_medium_green_function(scn, &solve_args, &green));
 
-  OK(sdis_green_function_solve(green, solve_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
-  check_green_serialization(green, scn, solve_args.time_range);
+  check_green_serialization(green, scn);
 
   OK(sdis_green_function_ref_put(green));
 

@@ -17,6 +17,7 @@
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
+#include "sdis_green.h"
 
 #include <star/ssp.h>
 
@@ -24,20 +25,18 @@
 
 res_T
 XD(time_rewind)
-  (const struct sdis_medium* mdm,
+  (struct sdis_medium* mdm,
    struct ssp_rng* rng,
-   const double delta,
-   const double fp_to_meter,
+   const double dist_in_meter,
    const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct XD(temperature)* T)
 {
-  const double delta_in_meter = delta * fp_to_meter;
   double temperature;
   double lambda, rho, cp;
   double tau, mu, t0;
   res_T res = RES_OK;
-  ASSERT(mdm && rng && delta && fp_to_meter && ctx && rwalk);
+  ASSERT(mdm && rng && ctx && rwalk && dist_in_meter > 0);
   ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
   ASSERT(T->done == 0);
 
@@ -48,11 +47,11 @@ XD(time_rewind)
   t0 = solid_get_t0(mdm); /* Limit time */
 
   /* Sample the time to reroll */
-  mu = (2*DIM*lambda)/(rho*cp*delta_in_meter*delta_in_meter);
+  mu = (2*DIM*lambda)/(rho*cp*dist_in_meter*dist_in_meter);
   tau = ssp_ran_exp(rng, mu);
 
   /* Increment the elapsed time */
-  ASSERT(rwalk->vtx.time > t0);
+  ASSERT(rwalk->vtx.time >= t0);
   rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
 
   if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
@@ -82,6 +81,12 @@ XD(time_rewind)
     vtx = heat_path_get_last_vertex(ctx->heat_path);
     vtx->time = rwalk->vtx.time;
     vtx->weight = T->value;
+  }
+
+  if(ctx->green_path) {
+    res = green_path_set_limit_vertex(ctx->green_path, mdm, &rwalk->vtx,
+      rwalk->elapsed_time);
+    if(res != RES_OK) goto error;
   }
 
 exit:

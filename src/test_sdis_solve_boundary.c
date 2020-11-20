@@ -66,7 +66,6 @@ fluid_get_temperature
   return ((const struct fluid*)sdis_data_cget(data))->temperature;
 }
 
-
 static double
 solid_get_calorific_capacity
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
@@ -109,7 +108,8 @@ solid_get_temperature
 {
   (void)data;
   CHK(vtx != NULL);
-  return UNKNOWN_TEMPERATURE;
+  if(vtx->time > 0) return UNKNOWN_TEMPERATURE;
+  return Tf;
 }
 
 /*******************************************************************************
@@ -186,6 +186,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator = NULL;
   struct sdis_estimator* estimator2 = NULL;
   struct sdis_green_function* green = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
@@ -217,7 +218,7 @@ main(int argc, char** argv)
   OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
   OK(sdis_data_ref_put(data));
 
-  /* Create the solid_medium */
+  /* Create the solid medium */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
@@ -278,14 +279,22 @@ main(int argc, char** argv)
   square_interfaces[3] = interf_H; /* Right */
 
   /* Create the box scene */
-  OK(sdis_scene_create(dev, box_ntriangles, box_get_indices,
-    box_get_interface, box_nvertices, box_get_position, box_interfaces,
-    &box_scn));
+  scn_args.get_indices = box_get_indices;
+  scn_args.get_interface = box_get_interface;
+  scn_args.get_position = box_get_position;
+  scn_args.nprimitives = box_ntriangles;
+  scn_args.nvertices = box_nvertices;
+  scn_args.context = box_interfaces;
+  OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
   /* Create the square scene */
-  OK(sdis_scene_2d_create(dev, square_nsegments, square_get_indices,
-    square_get_interface, square_nvertices, square_get_position,
-    square_interfaces, &square_scn));
+  scn_args.get_indices = square_get_indices;
+  scn_args.get_interface = square_get_interface;
+  scn_args.get_position = square_get_position;
+  scn_args.nprimitives = square_nsegments;
+  scn_args.nvertices = square_nvertices;
+  scn_args.context = square_interfaces;
+  OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 
   /* Release the interfaces */
   OK(sdis_interface_ref_put(interf_adiabatic));
@@ -346,9 +355,9 @@ main(int argc, char** argv)
   OK(GREEN(box_scn, &probe_args, &green));
 
   check_green_function(green);
-  OK(sdis_green_function_solve(green, probe_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
-  check_green_serialization(green, box_scn, probe_args.time_range);
+  check_green_serialization(green, box_scn);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -377,9 +386,9 @@ main(int argc, char** argv)
 
   OK(GREEN(square_scn, &probe_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, probe_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
-  check_green_serialization(green, square_scn, probe_args.time_range);
+  check_green_serialization(green, square_scn);
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
@@ -389,6 +398,22 @@ main(int argc, char** argv)
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
   BA(SOLVE(square_scn, &probe_args, &estimator));
   fluid_param->temperature = Tf;
+  
+  /* Right-side temperature at initial time */
+  probe_args.time_range[0] = 0;
+  probe_args.time_range[1] = 0;
+
+  probe_args.iprim = 6;
+  OK(SOLVE(box_scn, &probe_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
+
+  probe_args.iprim = 3;
+  OK(SOLVE(square_scn, &probe_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
 
   #undef F
   #undef SOLVE
@@ -469,9 +494,9 @@ main(int argc, char** argv)
 
   OK(GREEN(box_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
-  check_green_serialization(green, box_scn, bound_args.time_range);
+  check_green_serialization(green, box_scn);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -506,9 +531,9 @@ main(int argc, char** argv)
 
   OK(GREEN(square_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
-  check_green_serialization(green, square_scn, bound_args.time_range);
+  check_green_serialization(green, square_scn);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -539,9 +564,9 @@ main(int argc, char** argv)
 
   OK(GREEN(box_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
-  check_green_serialization(green, box_scn, bound_args.time_range);
+  check_green_serialization(green, box_scn);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
@@ -557,13 +582,33 @@ main(int argc, char** argv)
 
   OK(GREEN(square_scn, &bound_args, &green));
   check_green_function(green);
-  OK(sdis_green_function_solve(green, bound_args.time_range, &estimator2));
+  OK(sdis_green_function_solve(green, &estimator2));
   check_estimator(estimator2, N, ref);
-  check_green_serialization(green, square_scn, bound_args.time_range);
+  check_green_serialization(green, square_scn);
 
   OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
+
+  /* Right-side temperature at initial time */
+  bound_args.time_range[0] = 0;
+  bound_args.time_range[1] = 0;
+
+  prims[0] = 6;
+  prims[1] = 7;
+  bound_args.nprimitives = 2;
+  OK(SOLVE(box_scn, &bound_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
+
+  prims[0] = 3;
+  bound_args.nprimitives = 1;
+  OK(SOLVE(square_scn, &bound_args, &estimator));
+  check_estimator(estimator, N, Tf);
+
+  OK(sdis_estimator_ref_put(estimator));
+
   #undef SOLVE
   #undef GREEN
 

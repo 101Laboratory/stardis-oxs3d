@@ -43,9 +43,6 @@ probe_realisation_2d
    struct sdis_medium* medium,
    const double position[2],
    const double time,
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    struct green_path_handle* green_path, /* May be NULL */
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
@@ -58,9 +55,6 @@ probe_realisation_3d
    struct sdis_medium* medium,
    const double position[3],
    const double time,
-   const double fp_to_meter,/* Scale factor from floating point unit to meter */
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    struct green_path_handle* green_path, /* May be NULL */
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
@@ -76,9 +70,6 @@ boundary_realisation_2d
    const double u[1],
    const double time,
    const enum sdis_side side,
-   const double fp_to_meter,
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    struct green_path_handle* green_path, /* May be NULL */
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
@@ -91,9 +82,6 @@ boundary_realisation_3d
    const double uv[2],
    const double time,
    const enum sdis_side side,
-   const double fp_to_meter,
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    struct green_path_handle* green_path, /* May be NULL */
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
@@ -106,9 +94,6 @@ boundary_flux_realisation_2d
    const double uv[1],
    const double time,
    const enum sdis_side solid_side,
-   const double fp_to_meter,
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    const int flux_mask, /* Combination of enum flux_flag */
    double weight[FLUX_NAMES_COUNT__]);
 
@@ -120,9 +105,6 @@ boundary_flux_realisation_3d
    const double uv[2],
    const double time,
    const enum sdis_side solid_side,
-   const double fp_to_meter,
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    const int flux_mask, /* Combination of enum flux_flag */
    double weight[FLUX_NAMES_COUNT__]);
 
@@ -137,9 +119,6 @@ ray_realisation_3d
    const double position[3],
    const double direction[3],
    const double time,
-   const double fp_to_meter,
-   const double ambient_radiative_temperature,
-   const double reference_temperature,
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight);
 

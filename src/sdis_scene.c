@@ -125,31 +125,19 @@ scene_release(ref_T * ref)
 res_T
 sdis_scene_create
   (struct sdis_device* dev,
-   const size_t ntris, /* #triangles */
-   void (*indices)(const size_t itri, size_t ids[3], void*),
-   void (*interf)(const size_t itri, struct sdis_interface** bound, void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[3], void* ctx),
-   void* ctx,
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** out_scn)
 {
-  return scene_create_3d
-    (dev, ntris, indices, interf, nverts, position, ctx, out_scn);
+  return scene_create_3d(dev, args, out_scn);
 }
 
 res_T
 sdis_scene_2d_create
   (struct sdis_device* dev,
-   const size_t nsegs, /* #segments */
-   void (*indices)(const size_t iseg, size_t ids[2], void*),
-   void (*interf)(const size_t iseg, struct sdis_interface** bound, void*),
-   const size_t nverts, /* #vertices */
-   void (*position)(const size_t ivert, double pos[2], void* ctx),
-   void* ctx,
+   const struct sdis_scene_create_args* args,
    struct sdis_scene** out_scn)
 {
-  return scene_create_2d
-    (dev, nsegs, indices, interf, nverts, position, ctx, out_scn);
+  return scene_create_2d(dev, args, out_scn);
 }
 
 res_T
@@ -187,6 +175,66 @@ sdis_scene_get_aabb
     d3_set_f3(lower, low);
     d3_set_f3(upper, upp);
   }
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_fp_to_meter
+  (const struct sdis_scene* scn,
+   double* fp_to_meter)
+{
+  if(!scn || !fp_to_meter) return RES_BAD_ARG;
+  *fp_to_meter = scn->fp_to_meter;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_fp_to_meter
+  (struct sdis_scene* scn,
+   const double fp_to_meter)
+{
+  if(!scn || fp_to_meter <= 0) return RES_BAD_ARG;
+  scn->fp_to_meter = fp_to_meter;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_ambient_radiative_temperature
+  (const struct sdis_scene* scn,
+   double* trad)
+{
+  if(!scn || !trad) return RES_BAD_ARG;
+  *trad = scn->ambient_radiative_temperature;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_reference_temperature
+  (struct sdis_scene* scn,
+   const double tref)
+{
+  if(!scn || tref < 0) return RES_BAD_ARG;
+  scn->reference_temperature = tref;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_reference_temperature
+  (const struct sdis_scene* scn,
+   double* tref)
+{
+  if(!scn || !tref) return RES_BAD_ARG;
+  *tref = scn->reference_temperature;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_ambient_radiative_temperature
+  (struct sdis_scene* scn,
+   const double trad)
+{
+  if(!scn) return RES_BAD_ARG;
+  scn->ambient_radiative_temperature = trad;
   return RES_OK;
 }
 
@@ -424,6 +472,8 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   } else {
     S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
   }
+  WRITE(&scn->reference_temperature, 1);
+  WRITE(&scn->fp_to_meter, 1);
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;
     size_t ivert;

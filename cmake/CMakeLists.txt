@@ -56,8 +56,8 @@ rcmake_append_runtime_dirs(_runtime_dirs
 # Configure and define targets
 ###############################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 10)
-set(VERSION_PATCH 1)
+set(VERSION_MINOR 11)
+set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
@@ -175,7 +175,7 @@ if(NOT NO_TEST)
   endfunction()
 
   new_test(test_sdis_camera)
-  new_test(test_sdis_compute_mean_power)
+  new_test(test_sdis_compute_power)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
   new_test(test_sdis_convection)
@@ -213,7 +213,7 @@ if(NOT NO_TEST)
     add_test(test_sdis_volumic_power3_2d test_sdis_volumic_power3_2d)
   endif()
 
-  target_link_libraries(test_sdis_compute_mean_power Star3DUT)
+  target_link_libraries(test_sdis_compute_power Star3DUT)
   target_link_libraries(test_sdis_solid_random_walk_robustness Star3DUT)
   target_link_libraries(test_sdis_solve_medium Star3DUT)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)

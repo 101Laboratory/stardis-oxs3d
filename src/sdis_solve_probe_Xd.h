@@ -53,8 +53,7 @@ XD(solve_probe)
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
-  || args->fp_to_meter <= 0) {
+  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -62,16 +61,15 @@ XD(solve_probe)
     res = RES_BAD_ARG;
     goto error;
   }
-  if(out_estimator) {
-    if(args->time_range[0] < 0
-    || args->time_range[1] < args->time_range[0]
-    || (  args->time_range[1] > DBL_MAX
-       && args->time_range[0] != args->time_range[1])) {
-      res = RES_BAD_ARG;
-      goto error;
-    }
+  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
+    res = RES_BAD_ARG;
+    goto error;
   }
-
+  if(args->time_range[1] > DBL_MAX
+  && args->time_range[0] != args->time_range[1]) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
 
 #if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
@@ -153,16 +151,9 @@ XD(solve_probe)
     /* Begin time registration */
     time_current(&t0);
 
-    if(!out_green) {
-      time = sample_time(rng, args->time_range);
-      if(register_paths) {
-        heat_path_init(scn->dev->allocator, &heat_path);
-        pheat_path = &heat_path;
-      }
-    } else {
-      /* Do not take care of the submitted time when registering the green
-       * function. Only steady systems are supported */
-      time = INF;
+    time = sample_time(rng, args->time_range);
+
+    if(out_green) {
       res_local = green_function_create_path(greens[ithread], &green_path);
       if(res_local != RES_OK) {
         ATOMIC_SET(&res, res_local);
@@ -170,11 +161,13 @@ XD(solve_probe)
       }
       pgreen_path = &green_path;
     }
+    if(register_paths) {
+      heat_path_init(scn->dev->allocator, &heat_path);
+      pheat_path = &heat_path;
+    }
 
     res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng, medium,
-      args->position, time, args->fp_to_meter,
-      args->ambient_radiative_temperature, args->reference_temperature,
-      pgreen_path, pheat_path, &w);
+      args->position, time, pgreen_path, pheat_path, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {

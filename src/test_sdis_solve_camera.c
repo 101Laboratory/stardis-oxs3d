@@ -540,6 +540,7 @@ main(int argc, char** argv)
   struct sdis_interface* interf0 = NULL;
   struct sdis_interface* interf1 = NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
   struct ssp_rng* rng_state = NULL;
   struct fluid fluid_param = FLUID_NULL;
@@ -608,9 +609,15 @@ main(int argc, char** argv)
   /* Setup the scene */
   ntris = sa_size(geom.indices) / 3; /* #primitives */
   npos = sa_size(geom.positions) / 3; /* #positions */
-  OK(sdis_scene_create(dev, ntris, geometry_get_indices,
-    geometry_get_interface, npos, geometry_get_position,
-    &geom, &scn));
+  scn_args.get_indices = geometry_get_indices;
+  scn_args.get_interface = geometry_get_interface;
+  scn_args.get_position = geometry_get_position;
+  scn_args.nprimitives = ntris;
+  scn_args.nvertices = npos;
+  scn_args.trad = 300;
+  scn_args.tref = 300;
+  scn_args.context = &geom;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
 
 #if 0
   dump_mesh(stdout, geom.positions, sa_size(geom.positions)/3, geom.indices,
@@ -635,8 +642,6 @@ main(int argc, char** argv)
   solve_args.time_range[0] = INF;
   solve_args.image_resolution[0] = IMG_WIDTH;
   solve_args.image_resolution[1] = IMG_HEIGHT;
-  solve_args.ambient_radiative_temperature = 300;
-  solve_args.reference_temperature = 300;
   solve_args.spp = SPP;
 
   BA(sdis_solve_camera(NULL, &solve_args, &buf));
@@ -645,15 +650,9 @@ main(int argc, char** argv)
   solve_args.cam = NULL;
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   solve_args.cam = cam;
-  solve_args.fp_to_meter = 0;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, -1));
   BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.fp_to_meter = 1;
-  solve_args.ambient_radiative_temperature = -1;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.ambient_radiative_temperature = 300;
-  solve_args.reference_temperature = -1;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.reference_temperature = 300;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, 300));
   solve_args.time_range[0] = solve_args.time_range[1] = -1;
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   solve_args.time_range[0] = 1;

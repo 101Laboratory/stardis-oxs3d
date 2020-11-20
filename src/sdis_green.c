@@ -28,11 +28,16 @@
 #include <rsys/hash_table.h>
 #include <rsys/mem_allocator.h>
 #include <rsys/ref_count.h>
-
 #include <rsys/dynamic_array.h>
-#include <rsys/ref_count.h>
 
 #include <limits.h>
+
+/* Path used to estimate the green function */
+struct sdis_green_path {
+  /* Internal data. Should not be accessed */
+  void* green__;
+  size_t id__;
+};
 
 struct power_term {
   double term; /* Power term computed during green estimation */
@@ -77,6 +82,7 @@ flux_term_init(struct mem_allocator* allocator, struct flux_term* term)
 #include <rsys/dynamic_array.h>
 
 struct green_path {
+  double elapsed_time;
   struct darray_flux_term flux_terms; /* List of flux terms */
   struct darray_power_term power_terms; /* List of volumic power terms */
   union {
@@ -84,7 +90,7 @@ struct green_path {
     struct sdis_interface_fragment fragment;
   } limit;
   unsigned limit_id; /* Identifier of the limit medium/interface */
-  enum sdis_point_type limit_type;
+  enum sdis_green_path_end_type end_type;
 
   /* Indices of the last accessed medium/interface. Used to speed up the access
    * to the medium/interface. */
@@ -98,10 +104,11 @@ green_path_init(struct mem_allocator* allocator, struct green_path* path)
   ASSERT(path);
   darray_flux_term_init(allocator, &path->flux_terms);
   darray_power_term_init(allocator, &path->power_terms);
+  path->elapsed_time = -INF;
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
   path->limit.fragment = SDIS_INTERFACE_FRAGMENT_NULL;
   path->limit_id = UINT_MAX;
-  path->limit_type = SDIS_POINT_NONE;
+  path->end_type = SDIS_GREEN_PATH_END_TYPES_COUNT__;
   path->ilast_medium = UINT16_MAX;
   path->ilast_interf = UINT16_MAX;
 }
@@ -119,9 +126,10 @@ green_path_copy(struct green_path* dst, const struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
+  dst->elapsed_time = src->elapsed_time;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
-  dst->limit_type = src->limit_type;
+  dst->end_type = src->end_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
   res = darray_flux_term_copy(&dst->flux_terms, &src->flux_terms);
@@ -136,9 +144,10 @@ green_path_copy_and_clear(struct green_path* dst, struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
+  dst->elapsed_time = src->elapsed_time;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
-  dst->limit_type = src->limit_type;
+  dst->end_type = src->end_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
   res = darray_flux_term_copy_and_clear(&dst->flux_terms, &src->flux_terms);
@@ -154,9 +163,10 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
 {
   res_T res = RES_OK;
   ASSERT(dst && src);
+  dst->elapsed_time = src->elapsed_time;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
-  dst->limit_type = src->limit_type;
+  dst->end_type = src->end_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
   res = darray_flux_term_copy_and_release(&dst->flux_terms, &src->flux_terms);
@@ -180,6 +190,9 @@ green_path_write(const struct green_path* path, FILE* stream)
     }                                                                          \
   } (void)0
 
+  /* Write elapsed time */
+  WRITE(&path->elapsed_time, 1);
+
   /* Write the list of flux terms */
   sz = darray_flux_term_size_get(&path->flux_terms);
   WRITE(&sz, 1);
@@ -193,7 +206,7 @@ green_path_write(const struct green_path* path, FILE* stream)
   /* Write the limit point */
   WRITE(&path->limit, 1);
   WRITE(&path->limit_id, 1);
-  WRITE(&path->limit_type, 1);
+  WRITE(&path->end_type, 1);
 
   /* Write miscellaneous data */
   WRITE(&path->ilast_medium, 1);
@@ -227,6 +240,9 @@ green_path_read(struct green_path* path, FILE* stream)
     }                                                                          \
   } (void)0
 
+  /* Read elapsed time */
+  READ(&path->elapsed_time, 1);
+
   /* Read the list of flux terms */
   READ(&sz, 1);
   res = darray_flux_term_resize(&path->flux_terms, sz);
@@ -242,7 +258,7 @@ green_path_read(struct green_path* path, FILE* stream)
   /* Read the limit point */
   READ(&path->limit, 1);
   READ(&path->limit_id, 1);
-  READ(&path->limit_type, 1);
+  READ(&path->end_type, 1);
 
   /* Read the miscellaneous data */
   READ(&path->ilast_medium, 1);
@@ -400,7 +416,6 @@ green_function_fetch_interf
 static res_T
 green_function_solve_path
   (struct sdis_green_function* green,
-   const double time, /* Sampled time */
    const size_t ipath,
    double* weight)
 {
@@ -409,19 +424,18 @@ green_function_solve_path
   const struct green_path* path = NULL;
   const struct sdis_medium* medium = NULL;
   const struct sdis_interface* interf = NULL;
+  struct sdis_scene* scn = NULL;
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
   double power;
   double flux;
-  double temperature;
-  double time_curr;
+  double end_temperature;
   size_t i, n;
   res_T res = RES_OK;
   ASSERT(green && ipath < darray_green_path_size_get(&green->paths) && weight);
-  ASSERT(time > 0);
 
   path = darray_green_path_cdata_get(&green->paths) + ipath;
-  if(path->limit_type == SDIS_POINT_NONE) { /* Rejected path */
+  if(path->end_type == SDIS_GREEN_PATH_END_ERROR) { /* Rejected path */
     res = RES_BAD_OP;
     goto error;
   }
@@ -447,46 +461,31 @@ green_function_solve_path
     flux += flux_terms[i].term * interface_side_get_flux(interf, &frag);
   }
 
-  /* Setup time. */
-  switch(path->limit_type) {
-    case SDIS_FRAGMENT:
-      time_curr = time + path->limit.fragment.time;
+  /* Compute path's end temperature */
+  switch(path->end_type) {
+    case SDIS_GREEN_PATH_END_AT_INTERFACE:
       interf = green_function_fetch_interf(green, path->limit_id);
-      break;
-    case SDIS_VERTEX:
-      time_curr = time + path->limit.vertex.time;
-      medium = green_function_fetch_medium(green, path->limit_id);
-      break;
-    default: FATAL("Unreachable code.\n"); break;
-  }
-
-  if(time_curr <= 0
-  || (path->limit_type == SDIS_VERTEX && time_curr <= medium_get_t0(medium))) {
-    log_err(green->scn->dev,
-      "%s: invalid observation time \"%g\": the initial condition is reached "
-      "while instationary system are not supported by the green function.\n",
-      FUNC_NAME, time);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-  /* Compute limit condition */
-  switch(path->limit_type) {
-    case SDIS_FRAGMENT:
       frag = path->limit.fragment;
-      frag.time = time_curr;
-      temperature = interface_side_get_temperature(interf, &frag);
+      end_temperature = interface_side_get_temperature(interf, &frag);
       break;
-    case SDIS_VERTEX:
+    case SDIS_GREEN_PATH_END_IN_VOLUME:
+      medium = green_function_fetch_medium(green, path->limit_id);
       vtx = path->limit.vertex;
-      vtx.time = time_curr;
-      temperature = medium_get_temperature(medium, &vtx);
+      end_temperature = medium_get_temperature(medium, &vtx);
+      break;
+    case SDIS_GREEN_PATH_END_RADIATIVE:
+      SDIS(green_function_get_scene(green, &scn));
+      SDIS(scene_get_ambient_radiative_temperature(scn, &end_temperature));
+      if(end_temperature <  0) { /* Cannot be negative if used */
+        res = RES_BAD_ARG;
+        goto error;
+      }
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
 
   /* Compute the path weight */
-  *weight = power + flux + temperature;
+  *weight = power + flux + end_temperature;
 
 exit:
   return res;
@@ -840,11 +839,9 @@ sdis_green_function_ref_put(struct sdis_green_function* green)
 res_T
 sdis_green_function_solve
   (struct sdis_green_function* green,
-   const double time_range[2],
    struct sdis_estimator** out_estimator)
 {
   struct sdis_estimator* estimator = NULL;
-  struct ssp_rng* rng = NULL;
   size_t npaths;
   size_t ipath;
   size_t N = 0; /* #realisations */
@@ -852,20 +849,10 @@ sdis_green_function_solve
   double accum2 = 0;
   res_T res = RES_OK;
 
-  if(!green || !time_range || time_range[0] < 0
-  || time_range[1] < time_range[0] || !out_estimator) {
+  if(!green || !out_estimator) {
     res = RES_BAD_ARG;
     goto error;
   }
-
-  res = ssp_rng_create(green->scn->dev->allocator, &green->rng_type, &rng);
-  if(res != RES_OK) goto error;
-
-  /* Avoid correlation by defining the RNG state from the final state of the
-   * RNG used to estimate the green function */
-  rewind(green->rng_state);
-  res = ssp_rng_read(rng, green->rng_state);
-  if(res != RES_OK) goto error;
 
   npaths = darray_green_path_size_get(&green->paths);
 
@@ -875,10 +862,9 @@ sdis_green_function_solve
 
   /* Solve the green function */
   FOR_EACH(ipath, 0, npaths) {
-    const double time = sample_time(rng, time_range);
     double w;
 
-    res = green_function_solve_path(green, time, ipath, &w);
+    res = green_function_solve_path(green, ipath, &w);
     if(res == RES_BAD_OP) continue;
     if(res != RES_OK) goto error;
 
@@ -894,7 +880,6 @@ sdis_green_function_solve
     (estimator, green->realisation_time.sum, green->realisation_time.sum2);
 
 exit:
-  if(rng) SSP(rng_ref_put(rng));
   if(out_estimator) *out_estimator = estimator;
   return res;
 error:
@@ -1019,8 +1004,8 @@ sdis_green_function_create_from_stream
   READ(hash1, sizeof(hash256_T));
   if(!hash256_eq(hash0, hash1)) {
     log_err(green->scn->dev,
-      "%s: the submitted scene does not match scene used to estimate the green "
-      "function.\n", FUNC_NAME);
+      "%s: the submitted scene does not match the scene used to estimate the "
+      "green function.\n", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;
   }
@@ -1058,6 +1043,17 @@ error:
     green = NULL;
   }
   goto exit;
+}
+
+res_T
+sdis_green_function_get_scene
+  (const struct sdis_green_function* green, 
+   struct sdis_scene** scn)
+{
+  if(!green || !scn) return RES_BAD_ARG;
+  ASSERT(green->npaths_valid != SIZE_MAX);
+  *scn = green->scn;
+  return RES_OK;
 }
 
 res_T
@@ -1100,7 +1096,7 @@ sdis_green_function_for_each_path
     struct sdis_green_path path_handle;
     const struct green_path* path = darray_green_path_cdata_get(&green->paths)+ipath;
 
-    if(path->limit_type == SDIS_POINT_NONE) continue;
+    if(path->end_type == SDIS_GREEN_PATH_END_ERROR) continue;
 
     path_handle.green__ = green;
     path_handle.id__ = ipath;
@@ -1108,6 +1104,56 @@ sdis_green_function_for_each_path
     res = func(&path_handle, context);
     if(res != RES_OK) goto error;
   }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+sdis_green_path_get_elapsed_time
+  (struct sdis_green_path* path_handle, double* elapsed)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !elapsed) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+  *elapsed = path->elapsed_time;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+sdis_green_path_get_end_type
+  (struct sdis_green_path* path_handle, enum sdis_green_path_end_type* type)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !type) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+  *type = path->end_type;
 
 exit:
   return res;
@@ -1132,19 +1178,49 @@ sdis_green_path_get_limit_point
   ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
 
   path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
-  pt->type = path->limit_type;
 
-  switch(path->limit_type) {
-    case SDIS_FRAGMENT:
+  switch(path->end_type) {
+    case SDIS_GREEN_PATH_END_AT_INTERFACE:
       pt->data.itfrag.intface = green_function_fetch_interf(green, path->limit_id);
       pt->data.itfrag.fragment = path->limit.fragment;
+      pt->type = SDIS_FRAGMENT;
       break;
-    case SDIS_VERTEX:
+    case SDIS_GREEN_PATH_END_IN_VOLUME:
       pt->data.mdmvert.medium = green_function_fetch_medium(green, path->limit_id);
       pt->data.mdmvert.vertex = path->limit.vertex;
+      pt->type = SDIS_VERTEX;
+      break;
+    case SDIS_GREEN_PATH_END_RADIATIVE:
+      res = RES_BAD_OP;
+      goto error;
       break;
     default: FATAL("Unreachable code.\n"); break;
   }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+sdis_green_path_get_green_function
+  (struct sdis_green_path* path_handle,
+   struct sdis_green_function** out_green)
+
+{
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !out_green) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  *out_green = green;
 
 exit:
   return res;
@@ -1427,7 +1503,7 @@ green_function_finalize
   n = darray_green_path_size_get(&green->paths);
   FOR_EACH(i, 0, n) {
     const struct green_path* path = darray_green_path_cdata_get(&green->paths)+i;
-    green->npaths_valid += path->limit_type != SDIS_POINT_NONE;
+    green->npaths_valid += (path->end_type != SDIS_GREEN_PATH_END_ERROR);
   }
   green->npaths_invalid = n - green->npaths_valid;
 
@@ -1467,13 +1543,13 @@ green_path_set_limit_interface_fragment
 {
   res_T res = RES_OK;
   ASSERT(handle && interf && frag);
-  ASSERT(handle->path->limit_type == SDIS_POINT_NONE);
+  ASSERT(handle->path->end_type == SDIS_GREEN_PATH_END_TYPES_COUNT__);
   res = ensure_interface_registration(handle->green, interf);
   if(res != RES_OK) return res;
+  handle->path->elapsed_time = elapsed_time;
   handle->path->limit.fragment = *frag;
-  handle->path->limit.fragment.time = -elapsed_time;
   handle->path->limit_id = interface_get_id(interf);
-  handle->path->limit_type = SDIS_FRAGMENT;
+  handle->path->end_type = SDIS_GREEN_PATH_END_AT_INTERFACE;
   return RES_OK;
 }
 
@@ -1486,13 +1562,25 @@ green_path_set_limit_vertex
 {
   res_T res = RES_OK;
   ASSERT(handle && mdm && vert);
-  ASSERT(handle->path->limit_type == SDIS_POINT_NONE);
+  ASSERT(handle->path->end_type == SDIS_GREEN_PATH_END_TYPES_COUNT__);
   res = ensure_medium_registration(handle->green, mdm);
   if(res != RES_OK) return res;
+  handle->path->elapsed_time = elapsed_time;
   handle->path->limit.vertex = *vert;
-  handle->path->limit.vertex.time = -elapsed_time;
   handle->path->limit_id = medium_get_id(mdm);
-  handle->path->limit_type = SDIS_VERTEX;
+  handle->path->end_type = SDIS_GREEN_PATH_END_IN_VOLUME;
+  return RES_OK;
+}
+
+res_T
+green_path_set_limit_radiative
+  (struct green_path_handle* handle,
+   const double elapsed_time)
+{
+  ASSERT(handle);
+  ASSERT(handle->path->end_type == SDIS_GREEN_PATH_END_TYPES_COUNT__);
+  handle->path->elapsed_time = elapsed_time;
+  handle->path->end_type = SDIS_GREEN_PATH_END_RADIATIVE;
   return RES_OK;
 }
 
@@ -1612,4 +1700,3 @@ exit:
 error:
   goto exit;
 }
-
