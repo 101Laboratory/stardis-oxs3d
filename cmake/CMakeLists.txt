@@ -232,5 +232,5 @@ install(TARGETS sdis
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 install(FILES ${SDIS_FILES_INC_API} DESTINATION include/)
-install(FILES ${SDIS_FILES_DOC} DESTINATION share/doc/stardis)
+install(FILES ${SDIS_FILES_DOC} DESTINATION share/doc/stardis-solver)
 
