@@ -171,15 +171,6 @@ XD(convective_path)
     /* Cannot be in the fluid without starting there. */
     ASSERT(path_started_in_fluid);
 
-    if(ctx->green_path) {
-      log_err(scn->dev,
-        "%s: the upper bound of the convection cannot of an enclosure cannot be "
-        "null when registering the green function; initial condition is not "
-        "supported.\n", FUNC_NAME);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-
     rwalk->vtx.time = fluid_get_t0(rwalk->mdm);
     tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
     if(tmp >= 0) {

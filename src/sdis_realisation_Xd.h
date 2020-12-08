@@ -158,8 +158,7 @@ XD(probe_realisation)
   res = register_heat_vertex(heat_path, &rwalk.vtx, 0, type);
   if(res != RES_OK) goto error;
 
-  /* No initial condition with green */
-  if(!green_path && t0 >= rwalk.vtx.time) {
+  if(t0 >= rwalk.vtx.time) {
     double tmp;
     /* Check the initial condition. */
     rwalk.vtx.time = t0;
