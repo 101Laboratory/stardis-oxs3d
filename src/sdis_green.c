@@ -1191,6 +1191,7 @@ sdis_green_path_get_limit_point
       pt->type = SDIS_VERTEX;
       break;
     case SDIS_GREEN_PATH_END_RADIATIVE:
+    case SDIS_GREEN_PATH_END_ERROR:
       res = RES_BAD_OP;
       goto error;
       break;
