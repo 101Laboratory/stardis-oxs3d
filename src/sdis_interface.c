@@ -56,12 +56,19 @@ check_interface_shader
       " shader's pointer function for this attribute should be NULL.\n",
       caller_name);
   }
-
   if(shader->convection_coef_upper_bound < 0) {
     log_warn(dev,
       "%s: Invalid upper bound for convection coefficient (%g).\n",
       caller_name, shader->convection_coef_upper_bound);
     if(type[0] == SDIS_FLUID || type[1] == SDIS_FLUID) return 0;
+  }
+
+  if((type[0] != SDIS_SOLID || type[1] != SDIS_SOLID)
+  && shader->thermal_contact_resistance) {
+    log_warn(dev,
+      "%s: only solid/solid interface can have a thermal contact resistance. The "
+      " shader's pointer function for this attribute should be NULL.\n",
+      caller_name);
   }
 
   FOR_EACH(i, 0, 2) {

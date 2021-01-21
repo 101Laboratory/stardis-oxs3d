@@ -191,6 +191,7 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   dummy_interface_getter,
   0,
+  dummy_interface_getter,
   DUMMY_INTERFACE_SIDE_SHADER__,
   DUMMY_INTERFACE_SIDE_SHADER__
 };
