@@ -279,11 +279,12 @@ XD(boundary_flux_realisation)
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const size_t iprim,
+   struct htable_primitive_ids* self, /* NULL for probe computations */
    const double uv[DIM],
    const double time,
    const enum sdis_side solid_side,
    const int flux_mask,
-   double weight[3])
+   struct bound_flux_result* result)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
   struct XD(rwalk) rwalk;
@@ -292,6 +293,7 @@ XD(boundary_flux_realisation)
   struct sXd(primitive) prim;
   struct sdis_interface* interf = NULL;
   struct sdis_medium* fluid_mdm = NULL;
+  struct radiative_path_ctx rpctx = RADIATIVE_PATH_CTX_NULL__;
 
 #if SDIS_XD_DIMENSION == 2
   float st;
@@ -307,7 +309,7 @@ XD(boundary_flux_realisation)
   res_T res = RES_OK;
   const char compute_radiative = (flux_mask & FLUX_FLAG_RADIATIVE) != 0;
   const char compute_convective = (flux_mask & FLUX_FLAG_CONVECTIVE) != 0;
-  ASSERT(uv && weight && time >= 0 );
+  ASSERT(uv && result && time >= 0 );
 
 #if SDIS_XD_DIMENSION == 2
   #define SET_PARAM(Dest, Src) (Dest).u = (Src);
@@ -341,6 +343,7 @@ XD(boundary_flux_realisation)
     dX(set)(rwalk.vtx.P, P);                                                   \
     fX(set)(rwalk.hit.normal, N);                                              \
     T = XD(TEMPERATURE_NULL);                                                  \
+    T.ctx = NULL;                                                              \
   } (void)0
 
   /* Compute boundary temperature */
@@ -348,7 +351,7 @@ XD(boundary_flux_realisation)
   T.func = XD(boundary_path);
   res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) return res;
-  weight[0] = T.value;
+  result->Tboundary = T.value;
 
   /* Fetch the fluid medium */
   interf = scene_get_interface(scn, (unsigned)iprim);
@@ -357,10 +360,18 @@ XD(boundary_flux_realisation)
   /* Compute radiative temperature */
   if(compute_radiative) {
     RESET_WALK(fluid_side, fluid_mdm);
+    rpctx.self = self;
+    T.ctx = &rpctx;
     T.func = XD(radiative_path);
     res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) return res;
-    weight[1] = T.value;
+
+    if(rpctx.status == FIRST_ABS_SELF) {
+      result->Tradiative = -1;
+    } else {
+      ASSERT(T.value >= 0);
+      result->Tradiative = T.value;
+    }
   }
 
   /* Compute fluid temperature */
@@ -369,7 +380,7 @@ XD(boundary_flux_realisation)
     T.func = XD(convective_path);
     res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) return res;
-    weight[2] = T.value;
+    result->Tfluid = T.value;
   }
 
   #undef SET_PARAM

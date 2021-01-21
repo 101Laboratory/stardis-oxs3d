@@ -75,6 +75,7 @@ XD(trace_radiative_path)
     if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
       rwalk->hit_side = SDIS_SIDE_NULL__;
       if(ctx->Tarad >= 0) {
+        struct radiative_path_ctx* rpctx = T->ctx;
         T->value += ctx->Tarad;
         T->done = 1;
 
@@ -93,6 +94,9 @@ XD(trace_radiative_path)
           res = register_heat_vertex
             (ctx->heat_path, &vtx, T->value, SDIS_HEAT_VERTEX_RADIATIVE);
           if(res != RES_OK) goto error;
+        }
+        if(rpctx && rpctx->status == FIRST_ABS_NOT_DEF_YET) {
+          rpctx->status = FIRST_ABS_OTHER;
         }
         break;
       } else {
@@ -140,8 +144,21 @@ XD(trace_radiative_path)
     /* Switch in boundary temperature ? */
     r = ssp_rng_canonical(rng);
     if(r < epsilon) {
+      struct radiative_path_ctx* rpctx = T->ctx;
       T->func = XD(boundary_path);
       rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
+      if(rpctx && rpctx->status == FIRST_ABS_NOT_DEF_YET) {
+        /* Check if first absorption is with self or with other */
+        int is_self = rpctx->self
+          && htable_primitive_ids_find(rpctx->self, &rwalk->hit.prim.prim_id);
+        rpctx->status = is_self ? FIRST_ABS_SELF : FIRST_ABS_OTHER;
+        /* When computing radiative temperature and first absorption is with
+         * self, the end-of-path temperature is not used: just don't compute it! */
+        if(is_self) {
+          T->value = -1;
+          T->done = 1;
+        }
+      }
       break;
     }
 

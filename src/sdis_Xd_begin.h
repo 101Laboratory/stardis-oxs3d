@@ -109,10 +109,11 @@ struct XD(temperature) {
      struct XD(rwalk)* rwalk,
      struct ssp_rng* rng,
      struct XD(temperature)* temp);
+  void* ctx;
   double value; /* Current value of the temperature */
   int done;
 };
-static const struct XD(temperature) XD(TEMPERATURE_NULL) = { NULL, 0, 0 };
+static const struct XD(temperature) XD(TEMPERATURE_NULL) = { NULL, NULL, 0, 0 };
 
 #endif /* SDIX_<2|3>D_H */
 

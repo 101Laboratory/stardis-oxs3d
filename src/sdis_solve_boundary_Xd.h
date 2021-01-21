@@ -446,6 +446,8 @@ XD(solve_boundary_flux)
   int64_t irealisation;
   size_t i;
   size_t view_nprims;
+  struct htable_primitive_ids self;
+  int self_initialized = 0;
   int progress = 0;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
@@ -470,8 +472,12 @@ XD(solve_boundary_flux)
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
 #endif
 
+  htable_primitive_ids_init(scn->dev->allocator, &self);
+  self_initialized = 1;
   SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
   FOR_EACH(i, 0, args->nprimitives) {
+    char one = 1;
+    unsigned prim;
     if(args->primitives[i] >= view_nprims) {
       log_err(scn->dev,
         "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
@@ -481,6 +487,10 @@ XD(solve_boundary_flux)
       res = RES_BAD_ARG;
       goto error;
     }
+    prim = (unsigned)args->primitives[i];
+    /* We don't reject multiple occurences */
+    res = htable_primitive_ids_set(&self, &prim, &one);
+    if(res != RES_OK) goto error;
   }
 
   /* Create the Star-XD shape of the boundary */
@@ -572,7 +582,7 @@ XD(solve_boundary_flux)
     const struct sdis_interface* interf;
     const struct sdis_medium *fmd, *bmd;
     enum sdis_side solid_side, fluid_side;
-    double T_brf[3] = { 0, 0, 0 };
+    struct bound_flux_result result = BOUND_FLUX_RESULT_NULL__;
     const double Tref = scn->reference_temperature;
     double epsilon, hc, hr, imposed_flux, imposed_temp;
     size_t iprim;
@@ -655,8 +665,8 @@ XD(solve_boundary_flux)
     flux_mask = 0;
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
-    res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
-      solid_side, flux_mask, T_brf);
+    res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, &self, uv, time,
+      solid_side, flux_mask, &result);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);
@@ -666,16 +676,14 @@ XD(solve_boundary_flux)
       continue;
     } else if(res_simul == RES_OK) { /* Update accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
-      const double Tboundary = T_brf[0];
-      const double Tradiative = T_brf[1];
-      const double Tfluid = T_brf[2];
-      const double w_conv = hc * (Tboundary - Tfluid);
-      const double w_rad = hr * (Tboundary - Tradiative);
+      const double w_conv = hc * (result.Tboundary - result.Tfluid);
+      const double w_rad = (result.Tradiative < 0) ?
+        0 : hr * (result.Tboundary - result.Tradiative);
       const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
       const double w_total = w_conv + w_rad + w_imp;
       /* Temperature */
-      acc_temp->sum += Tboundary;
-      acc_temp->sum2 += Tboundary*Tboundary;
+      acc_temp->sum += result.Tboundary;
+      acc_temp->sum2 += result.Tboundary*result.Tboundary;
       ++acc_temp->count;
       /* Time */
       acc_time->sum += usec;
@@ -754,6 +762,7 @@ exit:
   if(view) SXD(scene_view_ref_put(view));
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
+  if(self_initialized) htable_primitive_ids_release(&self);
   return (res_T)res;
 error:
   if(estimator) {

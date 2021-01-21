@@ -20,6 +20,35 @@
 #include <rsys/float3.h>
 #include <star/ssp.h>
 
+struct htable_primitive_ids;
+
+#include <rsys/hash_table.h>
+#define HTABLE_NAME primitive_ids
+#define HTABLE_KEY unsigned
+#define HTABLE_DATA char
+#include <rsys/hash_table.h>
+
+struct bound_flux_result {
+  double Tradiative;
+  double Tboundary;
+  double Tfluid;
+};
+#define BOUND_FLUX_RESULT_NULL__ {0,0,0}
+static const struct bound_flux_result
+BOUND_FLUX_RESULT_NULL = BOUND_FLUX_RESULT_NULL__;
+
+enum rad_path_first_abs {
+  FIRST_ABS_NOT_DEF_YET,
+  FIRST_ABS_SELF,
+  FIRST_ABS_OTHER
+};
+
+struct radiative_path_ctx {
+  struct htable_primitive_ids* self;
+  enum rad_path_first_abs status;
+};
+#define RADIATIVE_PATH_CTX_NULL__ { NULL, FIRST_ABS_NOT_DEF_YET }
+
 struct accum {
   double sum; /* Sum of MC weights */
   double sum2; /* Sum of square MC weights */

@@ -23,8 +23,11 @@
 
 /* Forward declarations */
 struct green_path_handle;
+struct sdis_heat_path;
 struct sdis_scene;
 struct ssp_rng;
+struct htable_primitive_ids;
+struct bound_flux_result;
 
 enum flux_flag {
   FLUX_FLAG_CONVECTIVE = BIT(FLUX_CONVECTIVE),
@@ -91,22 +94,24 @@ boundary_flux_realisation_2d
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const size_t iprim,
+   struct htable_primitive_ids* self,
    const double uv[1],
    const double time,
    const enum sdis_side solid_side,
    const int flux_mask, /* Combination of enum flux_flag */
-   double weight[FLUX_NAMES_COUNT__]);
+   struct bound_flux_result* result);
 
 extern LOCAL_SYM res_T
 boundary_flux_realisation_3d
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const size_t iprim,
+   struct htable_primitive_ids* self,
    const double uv[2],
    const double time,
    const enum sdis_side solid_side,
    const int flux_mask, /* Combination of enum flux_flag */
-   double weight[FLUX_NAMES_COUNT__]);
+   struct bound_flux_result* result);
 
 /*******************************************************************************
  * Realisation along a given ray at a given time. Available only in 3D.
