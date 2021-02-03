@@ -30,14 +30,7 @@
  * The faces are adiabatic exept at x=0 where T(0)=T0 and at x=L where T(L)=TL.
  * At steady state: 
  *
- *    T(X0-) = (T0 * (R * LAMBDA1 / X0) * (1 + R * LAMBDA2 / (L - X0))
- *             + TL * (R * LAMBDA2 / (L - X0)))
- *           / ((1 + R * LAMBDA1 / X0) * (1 + R * LAMBDA2 / (L - X0)) - 1)
- *
- *    T(X0+) = T(X0-) * (1 + r * LAMBDA1 / X0) - T0 * r * LAMBDA1 / X0
- *
- *    T(x) is linear between T(0) and T(X0-) if x in [0 X0[
- *    T(x) is linear between T(X0+) and T(L) if x in ]X0 L]
+ *    Flux(x0) = (T(x0+) - T(x0-)) / R
  * 
  *             3D                    2D
  *
@@ -161,7 +154,7 @@ interface_get_contact_resistance
  * Helper functions
  ******************************************************************************/
 static void
-solve
+solve_probe
   (struct sdis_scene* scn,
    struct interf* interf_props,
    struct ssp_rng* rng)
@@ -169,21 +162,23 @@ solve
   char dump[128];
   struct time t0, t1;
   struct sdis_estimator* estimator;
-  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_solve_probe_boundary_args solve_args
+    = SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   size_t nreals;
   size_t nfails;
   double ref_L, ref_R;
   enum sdis_scene_dimension dim;
-  const int nsimuls = 8;
+  int nsimuls;
   int isimul;
   ASSERT(scn && interf_props && rng);
 
   OK(sdis_scene_get_dimension(scn, &dim));
 
+  nsimuls = (dim == SDIS_SCENE_2D) ? 2 : 4;
   FOR_EACH(isimul, 0, nsimuls) {
-    double x, ref;
+    double ref;
     double r = pow(10, ssp_rng_uniform_double(rng, -2, 2));
 
     interf_props->resistance = r;
@@ -195,25 +190,31 @@ solve
       / ((1 + r * LAMBDA1 / X0) * (1 + r * LAMBDA2 / (L - X0)) - 1);
 
     ref_R = ref_L * (1 + r * LAMBDA1 / X0) - T0 * r * LAMBDA1 / X0;
-        
-    if(isimul % 2) { /* In solid 1 */
-      x = ssp_rng_uniform_double(rng, 0.05 * X0, 0.95 * X0);
-      ref = T0 * (1 - x / X0) + ref_L * x / X0;
-    } else { /* In solid 2 */
-      x = X0 + ssp_rng_uniform_double(rng, 0.05 * (L - X0), 0.95 * (L - X0));
-      ref = ref_R * (1 - (x - X0) / (L - X0)) + TL * (x - X0) / (L - X0);
-    }
+    
+    if(dim == SDIS_SCENE_2D)
+      /* last segment */
+      solve_args.iprim = model2d_nsegments - 1;
+    else
+      /* last 2 triangles */
+      solve_args.iprim = model3d_ntriangles - ((isimul % 2) ? 2 : 1);
 
-    solve_args.position[0] = x;
-    solve_args.position[1] = ssp_rng_uniform_double(rng, 0.05 * L, 0.95 * L);
-    solve_args.position[2] = (dim == SDIS_SCENE_2D)
-      ? 0 : ssp_rng_uniform_double(rng, 0.05 * L, 0.95 * L);
+    solve_args.uv[0] =  ssp_rng_canonical(rng);
+    solve_args.uv[1] = (dim == SDIS_SCENE_2D)
+      ? 0 : ssp_rng_uniform_double(rng, 0, 1 - solve_args.uv[0]);
+
+    if(isimul < nsimuls / 2) {
+      solve_args.side = SDIS_FRONT;
+      ref = ref_L;
+    } else {
+      solve_args.side = SDIS_BACK;
+      ref = ref_R;
+    }
 
     solve_args.nrealisations = N;
     solve_args.time_range[0] = solve_args.time_range[1] = INF;
 
     time_current(&t0);
-    OK(sdis_solve_probe(scn, &solve_args, &estimator));
+    OK(sdis_solve_probe_boundary(scn, &solve_args, &estimator));
     time_sub(&t0, time_current(&t1), &t0);
     time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
 
@@ -224,12 +225,18 @@ solve
 
     switch(dim) {
     case SDIS_SCENE_2D:
-        printf("Steady temperature at (%g, %g) with R=%g = %g ~ %g +/- %g\n",
-          SPLIT2(solve_args.position), r, ref, T.E, T.SE);
+        printf("Steady temperature at (%lu/%s/%g) with R=%g = %g ~ %g +/- %g\n",
+          (unsigned long)solve_args.iprim,
+          (solve_args.side == SDIS_FRONT ? "front" : "back"),
+          solve_args.uv[0],
+          r, ref, T.E, T.SE);
       break;
     case SDIS_SCENE_3D:
-        printf("Steady temperature at (%g, %g, %g) with R=%g = %g ~ %g +/- %g\n",
-          SPLIT3(solve_args.position), r, ref, T.E, T.SE);
+        printf("Steady temperature at (%lu/%s/%g,%g) with R=%g = %g ~ %g +/- %g\n",
+          (unsigned long)solve_args.iprim,
+          (solve_args.side == SDIS_FRONT ? "front" : "back"),
+          SPLIT2(solve_args.uv),
+          r, ref, T.E, T.SE);
       break;
     default: FATAL("Unreachable code.\n"); break;
     }
@@ -239,6 +246,93 @@ solve
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N/1000);
+    CHK(eq_eps(T.E, ref, T.SE * 3));
+
+    OK(sdis_estimator_ref_put(estimator));
+  }
+}
+static void
+solve
+  (struct sdis_scene* scn,
+   struct interf* interf_props,
+   struct ssp_rng* rng)
+{
+  char dump[128];
+  struct time t0, t1;
+  struct sdis_estimator* estimator;
+  struct sdis_solve_boundary_args solve_args = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
+  const enum sdis_side all_front[] = { SDIS_FRONT, SDIS_FRONT };
+  const enum sdis_side all_back[] = { SDIS_BACK, SDIS_BACK };
+  size_t plist[2];
+  size_t nreals;
+  size_t nfails;
+  double ref_L, ref_R;
+  enum sdis_scene_dimension dim;
+  int nsimuls;
+  int isimul;
+  ASSERT(scn && interf_props && rng);
+
+  OK(sdis_scene_get_dimension(scn, &dim));
+
+  nsimuls = (dim == SDIS_SCENE_2D) ? 2 : 4;
+  FOR_EACH(isimul, 0, nsimuls) {
+    double ref;
+    double r = pow(10, ssp_rng_uniform_double(rng, -2, 2));
+
+    interf_props->resistance = r;
+
+    ref_L = (
+      T0 * (r * LAMBDA1 / X0) * (1 + r * LAMBDA2 / (L - X0))
+      + TL * (r * LAMBDA2 / (L - X0))
+      )
+      / ((1 + r * LAMBDA1 / X0) * (1 + r * LAMBDA2 / (L - X0)) - 1);
+
+    ref_R = ref_L * (1 + r * LAMBDA1 / X0) - T0 * r * LAMBDA1 / X0;
+
+    if(dim == SDIS_SCENE_2D) {
+      /* last segment */
+      solve_args.nprimitives = 1;
+      plist[0] = model2d_nsegments - 1;
+    } else {
+      /* last 2 triangles */
+      solve_args.nprimitives = 2;
+      plist[0] = model3d_ntriangles - 2;
+      plist[1] = model3d_ntriangles - 1;
+    }
+    solve_args.primitives = plist;
+
+    if(isimul < nsimuls / 2) {
+      solve_args.sides = all_front;
+      ref = ref_L;
+    } else {
+      solve_args.sides = all_back;
+      ref = ref_R;
+    }
+
+    solve_args.nrealisations = N;
+    solve_args.time_range[0] = solve_args.time_range[1] = INF;
+
+    time_current(&t0);
+    OK(sdis_solve_boundary(scn, &solve_args, &estimator));
+    time_sub(&t0, time_current(&t1), &t0);
+    time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
+
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+
+    printf("Steady temperature at the %s side with R=%g = %g ~ %g +/- %g\n",
+      (solve_args.sides[0] == SDIS_FRONT ? "front" : "back"),
+      r, ref, T.E, T.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+    printf("Elapsed time = %s\n", dump);
+    printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
+
+    CHK(nfails + nreals == N);
+    CHK(nfails <= N / 1000);
     CHK(eq_eps(T.E, ref, T.SE * 3));
 
     OK(sdis_estimator_ref_put(estimator));
@@ -427,8 +521,10 @@ main(int argc, char** argv)
   /* Solve */
   OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
   printf(">> Box scene\n");
+  solve_probe(box_scn, interf_props, rng);
   solve(box_scn, interf_props, rng);
   printf("\n>> Square scene\n");
+  solve_probe(square_scn, interf_props, rng);
   solve(square_scn, interf_props, rng);
 
   OK(sdis_scene_ref_put(box_scn));
