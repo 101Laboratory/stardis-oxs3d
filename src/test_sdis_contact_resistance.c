@@ -55,13 +55,13 @@
 #define N 10000 /* #realisations */
 
 #define T0 0.0
-#define LAMBDA1 0.2
+#define LAMBDA1 0.1
 
 #define TL 100.0
 #define LAMBDA2 0.2
 
 #define L 4.0
-#define X0 2.0
+#define X0 3.0
 
 #define DELTA1 X0/25.0
 #define DELTA2 (L-X0)/25.0
@@ -71,18 +71,18 @@
   ******************************************************************************/
 static const double model3d_vertices[12/*#vertices*/ * 3/*#coords per vertex*/]
 = {
-  0.0, 0.0, 0.0,
-  0.5, 0.0, 0.0,
-  1.0, 0.0, 0.0,
-  0.0, 1.0, 0.0,
-  0.5, 1.0, 0.0,
-  1.0, 1.0, 0.0,
-  0.0, 0.0, 1.0,
-  0.5, 0.0, 1.0,
-  1.0, 0.0, 1.0,
-  0.0, 1.0, 1.0,
-  0.5, 1.0, 1.0,
-  1.0, 1.0, 1.0
+  0, 0, 0,
+  X0, 0, 0,
+  L, 0, 0,
+  0, L, 0,
+  X0, L, 0,
+  L, L, 0,
+  0, 0, L,
+  X0, 0, L,
+  L, 0, L,
+  0, L, L,
+  X0, L, L,
+  L, L, L
 };
 static const size_t model3d_nvertices = sizeof(model3d_vertices) / sizeof(double[3]);
 
@@ -125,9 +125,9 @@ model3d_get_position(const size_t ivert, double pos[3], void* context)
   (void)context;
   CHK(pos);
   CHK(ivert < model3d_nvertices);
-  pos[0] = L * model3d_vertices[ivert * 3 + 0];
-  pos[1] = L * model3d_vertices[ivert * 3 + 1];
-  pos[2] = L * model3d_vertices[ivert * 3 + 2];
+  pos[0] = model3d_vertices[ivert * 3 + 0];
+  pos[1] = model3d_vertices[ivert * 3 + 1];
+  pos[2] = model3d_vertices[ivert * 3 + 2];
 }
 
 static INLINE void
@@ -143,12 +143,12 @@ model3d_get_interface(const size_t itri, struct sdis_interface** bound, void* co
  * Square geometry
  ******************************************************************************/
 static const double model2d_vertices[6/*#vertices*/ * 2/*#coords per vertex*/] = {
-  1.0, 0.0,
-  0.5, 0.0,
-  0.0, 0.0,
-  0.0, 1.0,
-  0.5, 1.0,
-  1.0, 1.0
+  L, 0,
+  X0, 0,
+  0, 0,
+  0, L,
+  X0, L,
+  L, L
 };
 static const size_t model2d_nvertices = sizeof(model2d_vertices) / sizeof(double[2]);
 
@@ -178,8 +178,8 @@ model2d_get_position(const size_t ivert, double pos[2], void* context)
   (void)context;
   CHK(pos);
   CHK(ivert < model2d_nvertices);
-  pos[0] = L * model2d_vertices[ivert * 2 + 0];
-  pos[1] = L * model2d_vertices[ivert * 2 + 1];
+  pos[0] = model2d_vertices[ivert * 2 + 0];
+  pos[1] = model2d_vertices[ivert * 2 + 1];
 }
 
 static INLINE void
