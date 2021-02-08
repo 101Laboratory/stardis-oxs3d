@@ -65,7 +65,7 @@ XD(time_rewind)
   /* Fetch initial temperature */
   temperature = solid_get_temperature(mdm, &rwalk->vtx);
   if(temperature < 0) {
-    log_err(mdm->dev, "%s: the path reaches the limit condition by the "
+    log_err(mdm->dev, "%s: the path reaches the limit condition but the "
       "temperature remains unknown.\n", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;
