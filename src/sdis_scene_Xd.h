@@ -24,6 +24,9 @@
 #include "sdis_scene_c.h"
 
 #include <star/ssp.h>
+#include <star/senc2d.h>
+#include <star/senc3d.h>
+
 #include <rsys/cstr.h>
 #include <rsys/float22.h>
 #include <rsys/float33.h>
@@ -569,7 +572,23 @@ XD(run_analyze)
   /* With il-formed scenes, scene creation can success without being able
    * to extract enclosures; in this case just fail */
   res = sencXd(scene_get_enclosure_count(senc_scn, &count));
-  if(res != RES_OK) goto error;
+  if(res != RES_OK) {
+    count = 0;
+#if DIM==2
+    senc2d_scene_get_overlapping_segments_count(senc_scn, &count);
+    if(count > 0)
+      log_err(scn->dev,
+        "%s: the scene includes overlapping segments.\n",
+        FUNC_NAME);
+#else
+    senc3d_scene_get_overlapping_triangles_count(senc_scn, &count);
+    if(count > 0)
+      log_err(scn->dev,
+        "%s: the scene includes overlapping triangles.\n",
+        FUNC_NAME);
+#endif
+    goto error;
+    }
 
 exit:
   if(senc) SENCXD(device_ref_put(senc));
