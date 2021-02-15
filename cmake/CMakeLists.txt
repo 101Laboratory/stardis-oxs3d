@@ -199,6 +199,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_medium)
   new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_transcient)
+  new_test(test_sdis_unstationary_atm)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4)
 
