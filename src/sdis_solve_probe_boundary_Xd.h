@@ -413,8 +413,8 @@ XD(solve_probe_boundary_flux)
     log_err(scn->dev,
       "%s: Attempt to compute a flux at a %s-%s interface.\n",
       FUNC_NAME,
-      (fmd->type == SDIS_FLUID ? "fluid" : "solid"),
-      (bmd->type == SDIS_FLUID ? "fluid" : "solid"));
+      (!fmd ? "undefined" : (fmd->type == SDIS_FLUID ? "fluid" : "solid")),
+      (!bmd ? "undefined" : (bmd->type == SDIS_FLUID ? "fluid" : "solid")));
     res = RES_BAD_ARG;
     goto error;
   }

@@ -1129,13 +1129,22 @@ XD(scene_get_medium)
     res = RES_BAD_OP;
     goto error;
   }
-
+  
+#if DIM == 2
+  if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
+    log_warn(scn->dev,
+      "%s: performance issue. Up to %lu primitives were tested to define the "
+      "current medium at {%g, %g}.\n",
+      FUNC_NAME, (unsigned long)iprim, SPLIT2(P));
+  }
+#else
   if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
     log_warn(scn->dev,
       "%s: performance issue. Up to %lu primitives were tested to define the "
       "current medium at {%g, %g, %g}.\n",
       FUNC_NAME, (unsigned long)iprim, SPLIT3(P));
   }
+#endif
 
 exit:
   *out_medium = medium;
