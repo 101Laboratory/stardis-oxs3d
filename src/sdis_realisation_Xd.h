@@ -279,7 +279,6 @@ XD(boundary_flux_realisation)
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const size_t iprim,
-   struct htable_primitive_ids* self, /* NULL for probe computations */
    const double uv[DIM],
    const double time,
    const enum sdis_side solid_side,
@@ -293,7 +292,6 @@ XD(boundary_flux_realisation)
   struct sXd(primitive) prim;
   struct sdis_interface* interf = NULL;
   struct sdis_medium* fluid_mdm = NULL;
-  struct radiative_path_ctx rpctx = RADIATIVE_PATH_CTX_NULL__;
 
 #if SDIS_XD_DIMENSION == 2
   float st;
@@ -343,7 +341,6 @@ XD(boundary_flux_realisation)
     dX(set)(rwalk.vtx.P, P);                                                   \
     fX(set)(rwalk.hit.normal, N);                                              \
     T = XD(TEMPERATURE_NULL);                                                  \
-    T.ctx = NULL;                                                              \
   } (void)0
 
   /* Compute boundary temperature */
@@ -360,18 +357,11 @@ XD(boundary_flux_realisation)
   /* Compute radiative temperature */
   if(compute_radiative) {
     RESET_WALK(fluid_side, fluid_mdm);
-    rpctx.self = self;
-    T.ctx = &rpctx;
     T.func = XD(radiative_path);
     res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
     if(res != RES_OK) return res;
-
-    if(rpctx.status == FIRST_ABS_SELF) {
-      result->Tradiative = -1;
-    } else {
-      ASSERT(T.value >= 0);
-      result->Tradiative = T.value;
-    }
+    ASSERT(T.value >= 0);
+    result->Tradiative = T.value;
   }
 
   /* Compute fluid temperature */

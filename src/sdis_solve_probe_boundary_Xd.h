@@ -513,8 +513,8 @@ XD(solve_probe_boundary_flux)
     flux_mask = 0;
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
-    res_simul = XD(boundary_flux_realisation)(scn, rng, args->iprim, NULL,
-      args->uv, time, solid_side, flux_mask, &result);
+    res_simul = XD(boundary_flux_realisation)(scn, rng, args->iprim, args->uv,
+      time, solid_side, flux_mask, &result);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);

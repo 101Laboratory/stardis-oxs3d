@@ -446,8 +446,6 @@ XD(solve_boundary_flux)
   int64_t irealisation;
   size_t i;
   size_t view_nprims;
-  struct htable_primitive_ids self;
-  int self_initialized = 0;
   int progress = 0;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
@@ -472,12 +470,8 @@ XD(solve_boundary_flux)
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
 #endif
 
-  htable_primitive_ids_init(scn->dev->allocator, &self);
-  self_initialized = 1;
   SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
   FOR_EACH(i, 0, args->nprimitives) {
-    char one = 1;
-    unsigned prim;
     if(args->primitives[i] >= view_nprims) {
       log_err(scn->dev,
         "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
@@ -487,10 +481,6 @@ XD(solve_boundary_flux)
       res = RES_BAD_ARG;
       goto error;
     }
-    prim = (unsigned)args->primitives[i];
-    /* We don't reject multiple occurences */
-    res = htable_primitive_ids_set(&self, &prim, &one);
-    if(res != RES_OK) goto error;
   }
 
   /* Create the Star-XD shape of the boundary */
@@ -665,7 +655,7 @@ XD(solve_boundary_flux)
     flux_mask = 0;
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
-    res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, &self, uv, time,
+    res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
       solid_side, flux_mask, &result);
 
     /* Stop time registration */
@@ -762,7 +752,6 @@ exit:
   if(view) SXD(scene_view_ref_put(view));
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
-  if(self_initialized) htable_primitive_ids_release(&self);
   return (res_T)res;
 error:
   if(estimator) {
