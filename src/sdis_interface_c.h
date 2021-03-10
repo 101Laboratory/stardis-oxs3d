@@ -89,6 +89,16 @@ interface_get_convection_coef
 }
 
 static INLINE double
+interface_get_thermal_contact_resistance
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  ASSERT(interf && frag);
+  return interf->shader.thermal_contact_resistance
+    ? interf->shader.thermal_contact_resistance(frag, interf->data) : 0;
+}
+
+static INLINE double
 interface_get_convection_coef_upper_bound
   (const struct sdis_interface* interf)
 {
