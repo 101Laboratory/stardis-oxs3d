@@ -253,7 +253,6 @@ check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   size_t nreals;
   size_t nfails;
-  double pos[2] = {0,0};
   size_t i;
 
   solve_args.nrealisations = N;
@@ -271,7 +270,7 @@ check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
     OK(sdis_estimator_get_failure_count(estimator, &nfails));
     Tc = T.E - 273.15; /* Convert in Celcius */
     printf("Temperature at (%g %g) = %g ~ %g +/- %g [%g, %g]\n",
-      SPLIT2(pos), refs[i].temperature, Tc, T.SE, Tc-3*T.SE, Tc+3*T.SE);
+      SPLIT2(refs[i].pos), refs[i].temperature, Tc, T.SE, Tc-3*T.SE, Tc+3*T.SE);
     printf("#realisations: %lu; #failures: %lu\n",
       (unsigned long)nreals, (unsigned long)nfails);
     /*CHK(eq_eps(Tc, refs[i].temperature, T.SE*3));*/
