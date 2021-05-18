@@ -114,7 +114,7 @@ variable the install directories of its dependencies.
 ### Version 0.11
 
 - Add support of unsteady green evaluation. The resulting green function can
-  then be used to quickly evaluate the system at the same time bit with
+  then be used to quickly evaluate the system at the same time but with
   different limit and initial conditions, volumetric powers and imposed fluxes.
 - Add checks on green re-evaluation to ensure that the system remains unchanged
   regarding its scale factor and its reference temperature.
