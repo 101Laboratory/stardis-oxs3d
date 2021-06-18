@@ -524,8 +524,7 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   }
 #endif
 
-  res = hash_sha256(scn->dev->allocator, data, len, hash);
-  if(res != RES_OK) goto error;
+  hash_sha256(data, len, hash);
 
 exit:
 #ifdef COMPILER_GCC
