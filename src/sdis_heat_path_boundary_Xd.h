@@ -587,15 +587,15 @@ XD(solid_solid_boundary_path)
     switch(rwalk->hit_side) {
       case SDIS_BACK:
         /* When coming from the BACK side, the probability to be reinjected on
-         * the FRONT side depends on the thermal contact resistance: it decrases
-         * when the TCR increases (and tends to 0 when TCR -> +\infty) */
+         * the FRONT side depends on the thermal contact resistance: it
+         * decreases when the TCR increases (and tends to 0 when TCR -> +inf) */
         proba = (tmp_front) / (tmp_front + tmp_back + tmp_r);
         break;
       case SDIS_FRONT:
         /* Same thing when coming from the FRONT side: the probability of
          * reinjection on the FRONT side depends on the thermal contact
          * resistance: it increases when the TCR increases (and tends to 1 when
-         * the TCR -> +\infty) */
+         * the TCR -> +inf) */
         proba = (tmp_front + tmp_r) / (tmp_front + tmp_back + tmp_r);
         break;
       default: FATAL("Unreachable code.\n"); break;
