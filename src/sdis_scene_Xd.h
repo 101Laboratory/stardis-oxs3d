@@ -455,6 +455,7 @@ XD(hit_filter_function)
   if(!ray_data || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
+  if(hit->distance <= 0) return 1;
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
     float pos[DIM];
