@@ -445,16 +445,19 @@ XD(hit_filter_function)
   (const struct sXd(hit)* hit,
    const float org[DIM],
    const float dir[DIM],
+   const float range[2],
    void* ray_data,
    void* global_data)
 {
   const struct hit_filter_data* filter_data = ray_data;
   const struct sXd(hit)* hit_from = &filter_data->XD(hit);
-  (void)org, (void)dir, (void)global_data;
+  (void)org, (void)dir, (void)global_data, (void)range;
 
   if(!ray_data || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
+
+  /* No displacement => assume self intersection */
   if(hit->distance <= 0) return 1;
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {

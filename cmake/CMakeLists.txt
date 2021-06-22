@@ -29,8 +29,8 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ###############################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.4 REQUIRED)
-find_package(Star3D 0.7 REQUIRED)
+find_package(Star2D 0.5 REQUIRED)
+find_package(Star3D 0.8 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc2D 0.5 REQUIRED)
 find_package(StarEnc3D 0.5 REQUIRED)
