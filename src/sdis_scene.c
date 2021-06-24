@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -524,8 +524,7 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   }
 #endif
 
-  res = hash_sha256(scn->dev->allocator, data, len, hash);
-  if(res != RES_OK) goto error;
+  hash_sha256(data, len, hash);
 
 exit:
 #ifdef COMPILER_GCC

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -572,7 +572,7 @@ XD(solve_boundary_flux)
     const struct sdis_interface* interf;
     const struct sdis_medium *fmd, *bmd;
     enum sdis_side solid_side, fluid_side;
-    double T_brf[3] = { 0, 0, 0 };
+    struct bound_flux_result result = BOUND_FLUX_RESULT_NULL__;
     const double Tref = scn->reference_temperature;
     double epsilon, hc, hr, imposed_flux, imposed_temp;
     size_t iprim;
@@ -656,7 +656,7 @@ XD(solve_boundary_flux)
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
     res_simul = XD(boundary_flux_realisation)(scn, rng, iprim, uv, time,
-      solid_side, flux_mask, T_brf);
+      solid_side, flux_mask, &result);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);
@@ -666,16 +666,14 @@ XD(solve_boundary_flux)
       continue;
     } else if(res_simul == RES_OK) { /* Update accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
-      const double Tboundary = T_brf[0];
-      const double Tradiative = T_brf[1];
-      const double Tfluid = T_brf[2];
-      const double w_conv = hc * (Tboundary - Tfluid);
-      const double w_rad = hr * (Tboundary - Tradiative);
+      const double w_conv = hc * (result.Tboundary - result.Tfluid);
+      const double w_rad = (result.Tradiative < 0) ?
+        0 : hr * (result.Tboundary - result.Tradiative);
       const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
       const double w_total = w_conv + w_rad + w_imp;
       /* Temperature */
-      acc_temp->sum += Tboundary;
-      acc_temp->sum2 += Tboundary*Tboundary;
+      acc_temp->sum += result.Tboundary;
+      acc_temp->sum2 += result.Tboundary*result.Tboundary;
       ++acc_temp->count;
       /* Time */
       acc_time->sum += usec;

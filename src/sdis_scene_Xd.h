@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,9 @@
 #include "sdis_scene_c.h"
 
 #include <star/ssp.h>
+#include <star/senc2d.h>
+#include <star/senc3d.h>
+
 #include <rsys/cstr.h>
 #include <rsys/float22.h>
 #include <rsys/float33.h>
@@ -442,16 +445,20 @@ XD(hit_filter_function)
   (const struct sXd(hit)* hit,
    const float org[DIM],
    const float dir[DIM],
+   const float range[2],
    void* ray_data,
    void* global_data)
 {
   const struct hit_filter_data* filter_data = ray_data;
   const struct sXd(hit)* hit_from = &filter_data->XD(hit);
-  (void)org, (void)dir, (void)global_data;
+  (void)org, (void)dir, (void)global_data, (void)range;
 
   if(!ray_data || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
+
+  /* No displacement => assume self intersection */
+  if(hit->distance <= 0) return 1;
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
     float pos[DIM];
@@ -547,7 +554,7 @@ XD(run_analyze)
 {
   struct geometry geom;
   struct sencXd(device)* senc = NULL;
-  struct sencXd(scene)* senc3d_scn = NULL;
+  struct sencXd(scene)* senc_scn = NULL;
   unsigned count;
   res_T res = RES_OK;
   ASSERT(scn && nprims && indices && interf && nverts && position && out_scn);
@@ -564,21 +571,37 @@ XD(run_analyze)
   res = sencXd(scene_create)(senc,
     SENCXD_(CONVENTION_NORMAL_BACK) | SENCXD_(CONVENTION_NORMAL_OUTSIDE),
     (unsigned)nprims, XD(geometry_indices), geometry_media,
-    (unsigned)nverts, XD(geometry_position), &geom, &senc3d_scn);
+    (unsigned)nverts, XD(geometry_position), &geom, &senc_scn);
   if(res != RES_OK) goto error;
   /* With il-formed scenes, scene creation can success without being able
    * to extract enclosures; in this case just fail */
-  res = sencXd(scene_get_enclosure_count(senc3d_scn, &count));
-  if(res != RES_OK) goto error;
+  res = sencXd(scene_get_enclosure_count(senc_scn, &count));
+  if(res != RES_OK) {
+    count = 0;
+#if DIM==2
+    senc2d_scene_get_overlapping_segments_count(senc_scn, &count);
+    if(count > 0)
+      log_err(scn->dev,
+        "%s: the scene includes overlapping segments.\n",
+        FUNC_NAME);
+#else
+    senc3d_scene_get_overlapping_triangles_count(senc_scn, &count);
+    if(count > 0)
+      log_err(scn->dev,
+        "%s: the scene includes overlapping triangles.\n",
+        FUNC_NAME);
+#endif
+    goto error;
+    }
 
 exit:
   if(senc) SENCXD(device_ref_put(senc));
-  if(out_scn) *out_scn = senc3d_scn;
+  if(out_scn) *out_scn = senc_scn;
   return res;
 error:
-  if(senc3d_scn) {
-    SENCXD(scene_ref_put(senc3d_scn));
-    senc3d_scn = NULL;
+  if(senc_scn) {
+    SENCXD(scene_ref_put(senc_scn));
+    senc_scn = NULL;
   }
   goto exit;
 }
@@ -589,17 +612,17 @@ error:
 static res_T
 XD(setup_properties)
   (struct sdis_scene* scn,
-   struct sencXd(scene)* senc3d_scn,
+   struct sencXd(scene)* senc_scn,
    void (*interf)(const size_t itri, struct sdis_interface**, void*),
    void* ctx)
 {
   unsigned iprim, nprims;
   res_T res = RES_OK;
-  ASSERT(scn && senc3d_scn && interf);
+  ASSERT(scn && senc_scn && interf);
 
   clear_properties(scn);
 
-  SENCXD(scene_get_primitives_count(senc3d_scn, &nprims));
+  SENCXD(scene_get_primitives_count(senc_scn, &nprims));
   FOR_EACH(iprim, 0, nprims) {
     struct prim_prop* prim_prop;
     struct sdis_interface* itface;
@@ -610,7 +633,7 @@ XD(setup_properties)
     size_t ninterfaces;
 
     /* Fetch the enclosures that the segment/triangle splits */
-    SENCXD(scene_get_primitive_enclosures(senc3d_scn, iprim, enclosures));
+    SENCXD(scene_get_primitive_enclosures(senc_scn, iprim, enclosures));
 
     /* Fetch the interface of the primitive */
     interf(iprim, &itface, ctx);
@@ -666,7 +689,7 @@ error:
 
 /* Build the Star-XD scene view of the whole scene */
 static res_T
-XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
+XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(scene)* senc_scn)
 {
   struct sXd(device)* sXd_dev = NULL;
   struct sXd(shape)* sXd_shape = NULL;
@@ -674,9 +697,9 @@ XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_sc
   struct sXd(vertex_data) vdata = SXD_VERTEX_DATA_NULL;
   unsigned nprims, nverts;
   res_T res = RES_OK;
-  ASSERT(scn && senc3d_scn);
+  ASSERT(scn && senc_scn);
 
-  SENCXD(scene_get_vertices_count(senc3d_scn, &nverts));
+  SENCXD(scene_get_vertices_count(senc_scn, &nverts));
 
   /* Setup the vertex data */
   vdata.usage = SXD_POSITION;
@@ -686,18 +709,18 @@ XD(setup_scene_geometry)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_sc
   /* Create the Star-XD geometry of the whole scene */
   #define CALL(Func)  { if(RES_OK != (res = Func)) goto error; } (void)0
   sXd_dev = scn->dev->sXd(dev);
-  SENCXD(scene_get_primitives_count(senc3d_scn, &nprims));
+  SENCXD(scene_get_primitives_count(senc_scn, &nprims));
 #if DIM == 2
   CALL(sXd(shape_create_line_segments)(sXd_dev, &sXd_shape));
   CALL(sXd(line_segments_set_hit_filter_function)(sXd_shape,
     XD(hit_filter_function), NULL));
   CALL(sXd(line_segments_setup_indexed_vertices)(sXd_shape, nprims,
-    XD(scene_indices), nverts, &vdata, 1, senc3d_scn));
+    XD(scene_indices), nverts, &vdata, 1, senc_scn));
 #else
   CALL(sXd(shape_create_mesh)(sXd_dev, &sXd_shape));
   CALL(sXd(mesh_set_hit_filter_function)(sXd_shape, XD(hit_filter_function), NULL));
   CALL(sXd(mesh_setup_indexed_vertices)(sXd_shape, nprims, XD(scene_indices),
-    nverts, &vdata, 1, senc3d_scn));
+    nverts, &vdata, 1, senc_scn));
 #endif
   CALL(sXd(scene_create)(sXd_dev, &sXd_scn));
   CALL(sXd(scene_attach_shape)(sXd_scn, sXd_shape));
@@ -814,19 +837,19 @@ error:
 /* Build the Star-XD scene view and define its associated data of the finite
  * fluid enclosures */
 static res_T
-XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc3d_scn)
+XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc_scn)
 {
   struct sencXd(enclosure)* enc = NULL;
   unsigned ienc, nencs;
   int inner_multi = 0;
   res_T res = RES_OK;
-  ASSERT(scn && senc3d_scn);
+  ASSERT(scn && senc_scn);
 
-  SENCXD(scene_get_enclosure_count(senc3d_scn, &nencs));
+  SENCXD(scene_get_enclosure_count(senc_scn, &nencs));
   FOR_EACH(ienc, 0, nencs) {
     struct sencXd(enclosure_header) header;
 
-    SENCXD(scene_get_enclosure(senc3d_scn, ienc, &enc));
+    SENCXD(scene_get_enclosure(senc_scn, ienc, &enc));
     SENCXD(enclosure_get_header(enc, &header));
 
     if(header.is_infinite) {
@@ -868,7 +891,7 @@ XD(scene_create)
    const struct sdis_scene_create_args* args,
    struct sdis_scene** out_scn)
 {
-  struct sencXd(scene)* senc3d_scn = NULL;
+  struct sencXd(scene)* senc_scn = NULL;
   struct sdis_scene* scn = NULL;
   res_T res = RES_OK;
 
@@ -905,34 +928,34 @@ XD(scene_create)
      args->nvertices,
      args->get_position,
      args->context,
-     &senc3d_scn);
+     &senc_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: error during the scene analysis.\n", FUNC_NAME);
     goto error;
   }
-  res = XD(setup_properties)(scn, senc3d_scn, args->get_interface, args->context);
+  res = XD(setup_properties)(scn, senc_scn, args->get_interface, args->context);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene interfaces and their media.\n",
       FUNC_NAME);
     goto error;
   }
-  res = XD(setup_scene_geometry)(scn, senc3d_scn);
+  res = XD(setup_scene_geometry)(scn, senc_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the scene geometry.\n", FUNC_NAME);
     goto error;
   }
-  res = XD(setup_enclosures)(scn, senc3d_scn);
+  res = XD(setup_enclosures)(scn, senc_scn);
   if(res != RES_OK) {
     log_err(dev, "%s: could not setup the enclosures.\n", FUNC_NAME);
     goto error;
   }
-  scn->sencXd(scn) = senc3d_scn;
+  scn->sencXd(scn) = senc_scn;
 
 exit:
   if(out_scn) *out_scn = scn;
   return res;
 error:
-  if(senc3d_scn) SENCXD(scene_ref_put(senc3d_scn));
+  if(senc_scn) SENCXD(scene_ref_put(senc_scn));
   if(scn) {
     SDIS(scene_ref_put(scn));
     scn = NULL;
@@ -1110,13 +1133,22 @@ XD(scene_get_medium)
     res = RES_BAD_OP;
     goto error;
   }
-
+  
+#if DIM == 2
+  if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
+    log_warn(scn->dev,
+      "%s: performance issue. Up to %lu primitives were tested to define the "
+      "current medium at {%g, %g}.\n",
+      FUNC_NAME, (unsigned long)iprim, SPLIT2(P));
+  }
+#else
   if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
     log_warn(scn->dev,
       "%s: performance issue. Up to %lu primitives were tested to define the "
       "current medium at {%g, %g, %g}.\n",
       FUNC_NAME, (unsigned long)iprim, SPLIT3(P));
   }
+#endif
 
 exit:
   *out_medium = medium;

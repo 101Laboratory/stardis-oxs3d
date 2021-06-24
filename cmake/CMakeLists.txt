@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+# Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.1)
 project(stardis C)
 enable_testing()
 
@@ -29,12 +29,12 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 # Check dependencies
 ###############################################################################
 find_package(RCMake 0.4 REQUIRED)
-find_package(Star2D 0.4 REQUIRED)
-find_package(Star3D 0.7 REQUIRED)
+find_package(Star2D 0.5 REQUIRED)
+find_package(Star3D 0.8 REQUIRED)
 find_package(StarSP 0.8 REQUIRED)
 find_package(StarEnc2D 0.5 REQUIRED)
 find_package(StarEnc3D 0.5 REQUIRED)
-find_package(RSys 0.10 REQUIRED)
+find_package(RSys 0.12 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
@@ -56,7 +56,7 @@ rcmake_append_runtime_dirs(_runtime_dirs
 # Configure and define targets
 ###############################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 11)
+set(VERSION_MINOR 12)
 set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
@@ -178,6 +178,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_compute_power)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
+  new_test(test_sdis_contact_resistance)
+  new_test(test_sdis_contact_resistance_2)
   new_test(test_sdis_convection)
   new_test(test_sdis_convection_non_uniform)
   new_test(test_sdis_data)
@@ -199,6 +201,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_medium)
   new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_transcient)
+  new_test(test_sdis_unstationary_atm)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4)
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,15 @@
 #include <rsys/float2.h>
 #include <rsys/float3.h>
 #include <star/ssp.h>
+
+struct bound_flux_result {
+  double Tradiative;
+  double Tboundary;
+  double Tfluid;
+};
+#define BOUND_FLUX_RESULT_NULL__ {0,0,0}
+static const struct bound_flux_result
+BOUND_FLUX_RESULT_NULL = BOUND_FLUX_RESULT_NULL__;
 
 struct accum {
   double sum; /* Sum of MC weights */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -413,8 +413,8 @@ XD(solve_probe_boundary_flux)
     log_err(scn->dev,
       "%s: Attempt to compute a flux at a %s-%s interface.\n",
       FUNC_NAME,
-      (fmd->type == SDIS_FLUID ? "fluid" : "solid"),
-      (bmd->type == SDIS_FLUID ? "fluid" : "solid"));
+      (!fmd ? "undefined" : (fmd->type == SDIS_FLUID ? "fluid" : "solid")),
+      (!bmd ? "undefined" : (bmd->type == SDIS_FLUID ? "fluid" : "solid")));
     res = RES_BAD_ARG;
     goto error;
   }
@@ -479,7 +479,7 @@ XD(solve_probe_boundary_flux)
     struct accum* acc_fimp = &acc_fi[ithread];
     double time, epsilon, hc, hr, imposed_flux, imposed_temp;
     int flux_mask = 0;
-    double T_brf[3] = { 0, 0, 0 };
+    struct bound_flux_result result = BOUND_FLUX_RESULT_NULL__;
     const double Tref = scn->reference_temperature;
     size_t n;
     int pcent;
@@ -514,7 +514,7 @@ XD(solve_probe_boundary_flux)
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
     res_simul = XD(boundary_flux_realisation)(scn, rng, args->iprim, args->uv,
-      time, solid_side, flux_mask, T_brf);
+      time, solid_side, flux_mask, &result);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);
@@ -524,16 +524,14 @@ XD(solve_probe_boundary_flux)
       continue;
     } else if(res_simul == RES_OK) { /* Update accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
-      const double Tboundary = T_brf[0];
-      const double Tradiative = T_brf[1];
-      const double Tfluid = T_brf[2];
-      const double w_conv = hc * (Tboundary - Tfluid);
-      const double w_rad = hr * (Tboundary - Tradiative);
+      const double w_conv = hc * (result.Tboundary - result.Tfluid);
+      const double w_rad = (result.Tradiative < 0) ?
+        0 : hr * (result.Tboundary - result.Tradiative);
       const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
       const double w_total = w_conv + w_rad + w_imp;
       /* Temperature */
-      acc_temp->sum += Tboundary;
-      acc_temp->sum2 += Tboundary*Tboundary;
+      acc_temp->sum += result.Tboundary;
+      acc_temp->sum2 += result.Tboundary*result.Tboundary;
       ++acc_temp->count;
       /* Time */
       acc_time->sum += usec;

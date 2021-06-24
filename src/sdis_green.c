@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1191,6 +1191,7 @@ sdis_green_path_get_limit_point
       pt->type = SDIS_VERTEX;
       break;
     case SDIS_GREEN_PATH_END_RADIATIVE:
+    case SDIS_GREEN_PATH_END_ERROR:
       res = RES_BAD_OP;
       goto error;
       break;

@@ -111,10 +111,17 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.12
+
+Add the support of thermal contact resistance between two solids: the new
+`thermal_contact_resistance` functor on the data structure `struct
+sdis_interface_shader` defines the thermal resistance contact in K.m^2.W^-1 at
+a given time and at a specific position onto the interface.
+
 ### Version 0.11
 
 - Add support of unsteady green evaluation. The resulting green function can
-  then be used to quickly evaluate the system at the same time bit with
+  then be used to quickly evaluate the system at the same time but with
   different limit and initial conditions, volumetric powers and imposed fluxes.
 - Add checks on green re-evaluation to ensure that the system remains unchanged
   regarding its scale factor and its reference temperature.
@@ -350,7 +357,7 @@ First version and implementation of the Stardis-Solver API.
 
 ## License
 
-Copyright (C) 2016-2020 |Meso|Star> (<contact@meso-star.com>). Stardis-Solver
+Copyright (C) 2016-2021 |Meso|Star> (<contact@meso-star.com>). Stardis-Solver
 is free software released under the GPLv3+ license: GNU GPL version 3 or later.
 You are welcome to redistribute it under certain conditions; refer to the
 COPYING files for details.

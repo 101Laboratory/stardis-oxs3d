@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,10 @@
 
 /* Forward declarations */
 struct green_path_handle;
+struct sdis_heat_path;
 struct sdis_scene;
 struct ssp_rng;
+struct bound_flux_result;
 
 enum flux_flag {
   FLUX_FLAG_CONVECTIVE = BIT(FLUX_CONVECTIVE),
@@ -95,7 +97,7 @@ boundary_flux_realisation_2d
    const double time,
    const enum sdis_side solid_side,
    const int flux_mask, /* Combination of enum flux_flag */
-   double weight[FLUX_NAMES_COUNT__]);
+   struct bound_flux_result* result);
 
 extern LOCAL_SYM res_T
 boundary_flux_realisation_3d
@@ -106,7 +108,7 @@ boundary_flux_realisation_3d
    const double time,
    const enum sdis_side solid_side,
    const int flux_mask, /* Combination of enum flux_flag */
-   double weight[FLUX_NAMES_COUNT__]);
+   struct bound_flux_result* result);
 
 /*******************************************************************************
  * Realisation along a given ray at a given time. Available only in 3D.

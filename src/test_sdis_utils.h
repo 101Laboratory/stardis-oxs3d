@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -191,6 +191,7 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   dummy_interface_getter,
   0,
+  dummy_interface_getter,
   DUMMY_INTERFACE_SIDE_SHADER__,
   DUMMY_INTERFACE_SIDE_SHADER__
 };

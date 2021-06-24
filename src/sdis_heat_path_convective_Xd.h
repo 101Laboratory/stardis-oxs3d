@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -170,15 +170,6 @@ XD(convective_path)
   if(enc->hc_upper_bound == 0) {
     /* Cannot be in the fluid without starting there. */
     ASSERT(path_started_in_fluid);
-
-    if(ctx->green_path) {
-      log_err(scn->dev,
-        "%s: the upper bound of the convection cannot of an enclosure cannot be "
-        "null when registering the green function; initial condition is not "
-        "supported.\n", FUNC_NAME);
-      res = RES_BAD_ARG;
-      goto error;
-    }
 
     rwalk->vtx.time = fluid_get_t0(rwalk->mdm);
     tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);

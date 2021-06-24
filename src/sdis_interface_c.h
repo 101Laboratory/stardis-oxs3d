@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,6 +86,16 @@ interface_get_convection_coef
   ASSERT(interf && frag);
   return interf->shader.convection_coef
     ? interf->shader.convection_coef(frag, interf->data) : 0;
+}
+
+static INLINE double
+interface_get_thermal_contact_resistance
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  ASSERT(interf && frag);
+  return interf->shader.thermal_contact_resistance
+    ? interf->shader.thermal_contact_resistance(frag, interf->data) : 0;
 }
 
 static INLINE double

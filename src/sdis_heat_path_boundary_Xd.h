@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -478,6 +478,7 @@ XD(solid_solid_boundary_path)
   double tmp;
   double r;
   double power;
+  double tcr;
   float dir0[DIM], dir1[DIM], dir2[DIM], dir3[DIM];
   float dir_front[DIM], dir_back[DIM];
   float* dir;
@@ -500,6 +501,9 @@ XD(solid_solid_boundary_path)
   solid_back = interface_get_medium(interf, SDIS_BACK);
   ASSERT(solid_front->type == SDIS_SOLID);
   ASSERT(solid_back->type == SDIS_SOLID);
+
+  /* Retrieve the thermal contact resistance */
+  tcr = interface_get_thermal_contact_resistance(interf, frag);
 
   /* Fetch the properties of the media */
   lambda_front = solid_get_thermal_conductivity(solid_front, &rwalk->vtx);
@@ -560,19 +564,44 @@ XD(solid_solid_boundary_path)
     goto error;
   }
 
-  /* Define the reinjection side. Note that the proba should be :
-   *    Lf/Df' / (Lf/Df' + Lb/Db')
-   *
-   * with L<f|b> the lambda of the <front|back> side and D<f|b>' the adjusted
-   * delta of the <front|back> side, i.e. :
-   *    D<f|b>' = reinject_dst_<front|back> / sqrt(DIM)
-   *
-   * Anyway, one can avoid to compute the adjusted delta by directly using the
-   * adjusted reinjection distance since the resulting proba is strictly the
-   * same; sqrt(DIM) can be simplified. */
   r = ssp_rng_canonical(rng);
-  proba = (lambda_front/reinject_dst_front)
-    / (lambda_front/reinject_dst_front + lambda_back/reinject_dst_back);
+  if(tcr == 0) { /* No thermal contact resistance */
+    /* Define the reinjection side. Note that the proba should be : Lf/Df' /
+     * (Lf/Df' + Lb/Db')
+     *
+     * with L<f|b> the lambda of the <front|back> side and D<f|b>' the adjusted
+     * delta of the <front|back> side, i.e. : D<f|b>' =
+     * reinject_dst_<front|back> / sqrt(DIM)
+     *
+     * Anyway, one can avoid to compute the adjusted delta by directly using the
+     * adjusted reinjection distance since the resulting proba is strictly the
+     * same; sqrt(DIM) can be simplified. */
+    proba = (lambda_front/reinject_dst_front)
+      / (lambda_front/reinject_dst_front + lambda_back/reinject_dst_back);
+  } else {
+    const double df = reinject_dst_front/sqrt(DIM);
+    const double db = reinject_dst_back/sqrt(DIM);
+    const double tmp_front = lambda_front/df;
+    const double tmp_back = lambda_back/db;
+    const double tmp_r = tcr*tmp_front*tmp_back;
+    switch(rwalk->hit_side) {
+      case SDIS_BACK:
+        /* When coming from the BACK side, the probability to be reinjected on
+         * the FRONT side depends on the thermal contact resistance: it
+         * decreases when the TCR increases (and tends to 0 when TCR -> +inf) */
+        proba = (tmp_front) / (tmp_front + tmp_back + tmp_r);
+        break;
+      case SDIS_FRONT:
+        /* Same thing when coming from the FRONT side: the probability of
+         * reinjection on the FRONT side depends on the thermal contact
+         * resistance: it increases when the TCR increases (and tends to 1 when
+         * the TCR -> +inf) */
+        proba = (tmp_front + tmp_r) / (tmp_front + tmp_back + tmp_r);
+        break;
+      default: FATAL("Unreachable code.\n"); break;
+    }
+  }
+
   if(r < proba) { /* Reinject in front */
     dir = dir_front;
     hit = &hit0;

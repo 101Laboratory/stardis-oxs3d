@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2020 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -221,11 +221,16 @@ struct sdis_interface_shader {
    * [0 convection_coef_upper_bound] */
   double convection_coef_upper_bound;
 
+  /* May be NULL for solid/fluid or if the thermal contact resistance is 0 onto
+   * the whole interface. */
+  sdis_interface_getter_T thermal_contact_resistance;  /* In K.m^2.W^-1 */
+
   struct sdis_interface_side_shader front;
   struct sdis_interface_side_shader back;
 };
 #define SDIS_INTERFACE_SHADER_NULL__ \
-  {NULL, 0, SDIS_INTERFACE_SIDE_SHADER_NULL__, SDIS_INTERFACE_SIDE_SHADER_NULL__}
+  {NULL, 0, NULL, SDIS_INTERFACE_SIDE_SHADER_NULL__, \
+   SDIS_INTERFACE_SIDE_SHADER_NULL__}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
