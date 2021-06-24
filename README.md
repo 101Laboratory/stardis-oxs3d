@@ -111,6 +111,13 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.12
+
+Add the support of thermal contact resistance between two solids: the new
+`thermal_contact_resistance` functor on the data structure `struct
+sdis_interface_shader` defines the thermal resistance contact in K.m^2.W^-1 at
+a given time and at a specific position onto the interface.
+
 ### Version 0.11
 
 - Add support of unsteady green evaluation. The resulting green function can
