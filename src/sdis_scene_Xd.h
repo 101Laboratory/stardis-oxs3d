@@ -1033,8 +1033,6 @@ XD(scene_get_medium)
 {
   struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
-  size_t nfailures = 0;
-  const size_t max_failures = 10;
   float P[DIM];
   /* Range of the parametric coordinate into which positions are challenged */
 #if DIM == 2
@@ -1089,23 +1087,13 @@ XD(scene_get_medium)
       fX(normalize)(dir, fX(sub)(dir, attr.value, P));
       SXD(scene_view_trace_ray(scn->sXd(view), P, dir, range, NULL, &hit));
 
-      /* Unforeseen error. One has to intersect a primitive ! */
-      if(SXD_HIT_NONE(&hit)) {
-        ++nfailures;
-        if(nfailures < max_failures) {
-          continue;
-        } else {
-          res = RES_BAD_ARG;
-          goto error;
-        }
-      }
-    /* Discard the hit if it is on a vertex/edge, and target a new position
-     * onto the current primitive */
+    /* Try another position onto the current primitive if there is no
+     * intersection or if it is on a vertex/edge */
     } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit, P, dir))
          && ++istep < nsteps);
 
-    /* The hits of all targeted positions on the current primitive are on
-     * vertices. Challenge positions on another primitive. */
+    /* No valid intersection is found on the current primitive. Challenge
+     * another. */
     if(istep >= nsteps) continue;
 
     fX(normalize)(N, hit.normal);
@@ -1133,7 +1121,7 @@ XD(scene_get_medium)
     res = RES_BAD_OP;
     goto error;
   }
-  
+
 #if DIM == 2
   if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
     log_warn(scn->dev,
@@ -1154,13 +1142,19 @@ exit:
   *out_medium = medium;
   return res;
 error:
+  {
+    /* RES_BAD_OP means that this is a recoverable issue. In such case, print a
+     * warning rather than an error. */
+    void (*log_func)(const struct sdis_device*, const char*, ...) =
+      (res == RES_BAD_OP ? log_warn : log_err);
 #if DIM == 2
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
-    FUNC_NAME, SPLIT2(pos));
+    log_func(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
+      FUNC_NAME, SPLIT2(pos));
 #else
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
-    FUNC_NAME, SPLIT3(pos));
+    log_func(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
+      FUNC_NAME, SPLIT3(pos));
 #endif
+  }
   goto exit;
 }
 
@@ -1230,13 +1224,6 @@ exit:
   *out_medium = medium;
   return res;
 error:
-#if DIM == 2
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
-    FUNC_NAME, SPLIT2(pos));
-#else
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
-    FUNC_NAME, SPLIT3(pos));
-#endif
   goto exit;
 }
 
