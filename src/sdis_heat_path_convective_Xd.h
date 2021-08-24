@@ -115,7 +115,7 @@ XD(convective_path)
 
   path_started_in_fluid = SXD_HIT_NONE(&rwalk->hit);
   if(path_started_in_fluid) { /* The path begins in the fluid */
-    const float range[2] = {0, FLT_MAX};
+    const float range[2] = {FLT_MIN, FLT_MAX};
     float dir[DIM] = {0};
     float org[DIM];
 

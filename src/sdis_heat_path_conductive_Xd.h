@@ -65,7 +65,7 @@ XD(sample_next_step)
 
   /* Use the previously sampled direction to estimate the minimum distance from
    * `pos' to the scene boundary */
-  f2(range, 0.f, delta_solid*RAY_RANGE_MAX_SCALE);
+  f2(range, FLT_MIN, delta_solid*RAY_RANGE_MAX_SCALE);
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dirs[0], range, NULL, &hits[0]));
   SXD(scene_view_trace_ray(scn->sXd(view), pos, dirs[1], range, NULL, &hits[1]));
   if(SXD_HIT_NONE(&hits[0]) && SXD_HIT_NONE(&hits[1])) {

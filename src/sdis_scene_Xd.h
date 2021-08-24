@@ -453,11 +453,12 @@ XD(hit_filter_function)
   const struct sXd(hit)* hit_from = &filter_data->XD(hit);
   (void)org, (void)dir, (void)global_data, (void)range;
 
-  if(!ray_data || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
+  /* No user defined data. Do not filter */
+  if(!ray_data || SXD_HIT_NONE(hit_from)) return 0;
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
-  /* No displacement => assume self intersection */
+  /* No displacement => assume self intersection in all situations */
   if(hit->distance <= 0) return 1;
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
@@ -1062,7 +1063,7 @@ XD(scene_get_medium)
     struct sXd(attrib) attr;
     struct sXd(primitive) prim;
     size_t iprim2;
-    const float range[2] = {0.f, FLT_MAX};
+    const float range[2] = {FLT_MIN, FLT_MAX};
     float N[DIM], dir[DIM], cos_N_dir;
     size_t istep = 0;
 
@@ -1187,7 +1188,7 @@ XD(scene_get_medium_in_closed_boundaries)
   FOR_EACH(idir, 0, 2*DIM) {
     struct sXd(hit) hit;
     float N[DIM];
-    const float range[2] = {0.f, FLT_MAX};
+    const float range[2] = {FLT_MIN, FLT_MAX};
     float cos_N_dir;
 
     /* Transform the directions to avoid to be aligned with the axis */

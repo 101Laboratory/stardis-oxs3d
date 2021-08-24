@@ -165,7 +165,7 @@ XD(sample_enclosure_position)
   FOR_EACH(ichallenge, 0, MAX_NCHALLENGES) {
     struct sXd(hit) hit = SXD_HIT_NULL;
     const float dir[3] = {1,0,0};
-    const float range[2] = {0, FLT_MAX};
+    const float range[2] = {FLT_MIN, FLT_MAX};
     float org[DIM];
 
     /* Generate an uniform position into the enclosure AABB */
