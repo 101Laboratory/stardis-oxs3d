@@ -453,11 +453,12 @@ XD(hit_filter_function)
   const struct sXd(hit)* hit_from = &filter_data->XD(hit);
   (void)org, (void)dir, (void)global_data, (void)range;
 
-  if(!ray_data || SXD_HIT_NONE(hit_from)) return 0; /* No filtering */
+  /* No user defined data. Do not filter */
+  if(!ray_data || SXD_HIT_NONE(hit_from)) return 0;
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
-  /* No displacement => assume self intersection */
+  /* No displacement => assume self intersection in all situations */
   if(hit->distance <= 0) return 1;
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
@@ -1033,8 +1034,6 @@ XD(scene_get_medium)
 {
   struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
-  size_t nfailures = 0;
-  const size_t max_failures = 10;
   float P[DIM];
   /* Range of the parametric coordinate into which positions are challenged */
 #if DIM == 2
@@ -1064,7 +1063,7 @@ XD(scene_get_medium)
     struct sXd(attrib) attr;
     struct sXd(primitive) prim;
     size_t iprim2;
-    const float range[2] = {0.f, FLT_MAX};
+    const float range[2] = {FLT_MIN, FLT_MAX};
     float N[DIM], dir[DIM], cos_N_dir;
     size_t istep = 0;
 
@@ -1089,23 +1088,13 @@ XD(scene_get_medium)
       fX(normalize)(dir, fX(sub)(dir, attr.value, P));
       SXD(scene_view_trace_ray(scn->sXd(view), P, dir, range, NULL, &hit));
 
-      /* Unforeseen error. One has to intersect a primitive ! */
-      if(SXD_HIT_NONE(&hit)) {
-        ++nfailures;
-        if(nfailures < max_failures) {
-          continue;
-        } else {
-          res = RES_BAD_ARG;
-          goto error;
-        }
-      }
-    /* Discard the hit if it is on a vertex/edge, and target a new position
-     * onto the current primitive */
+    /* Try another position onto the current primitive if there is no
+     * intersection or if it is on a vertex/edge */
     } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit, P, dir))
          && ++istep < nsteps);
 
-    /* The hits of all targeted positions on the current primitive are on
-     * vertices. Challenge positions on another primitive. */
+    /* No valid intersection is found on the current primitive. Challenge
+     * another. */
     if(istep >= nsteps) continue;
 
     fX(normalize)(N, hit.normal);
@@ -1133,7 +1122,7 @@ XD(scene_get_medium)
     res = RES_BAD_OP;
     goto error;
   }
-  
+
 #if DIM == 2
   if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
     log_warn(scn->dev,
@@ -1154,13 +1143,19 @@ exit:
   *out_medium = medium;
   return res;
 error:
+  {
+    /* RES_BAD_OP means that this is a recoverable issue. In such case, print a
+     * warning rather than an error. */
+    void (*log_func)(const struct sdis_device*, const char*, ...) =
+      (res == RES_BAD_OP ? log_warn : log_err);
 #if DIM == 2
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
-    FUNC_NAME, SPLIT2(pos));
+    log_func(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
+      FUNC_NAME, SPLIT2(pos));
 #else
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
-    FUNC_NAME, SPLIT3(pos));
+    log_func(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
+      FUNC_NAME, SPLIT3(pos));
 #endif
+  }
   goto exit;
 }
 
@@ -1193,7 +1188,7 @@ XD(scene_get_medium_in_closed_boundaries)
   FOR_EACH(idir, 0, 2*DIM) {
     struct sXd(hit) hit;
     float N[DIM];
-    const float range[2] = {0.f, FLT_MAX};
+    const float range[2] = {FLT_MIN, FLT_MAX};
     float cos_N_dir;
 
     /* Transform the directions to avoid to be aligned with the axis */
@@ -1230,13 +1225,6 @@ exit:
   *out_medium = medium;
   return res;
 error:
-#if DIM == 2
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
-    FUNC_NAME, SPLIT2(pos));
-#else
-  log_err(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
-    FUNC_NAME, SPLIT3(pos));
-#endif
   goto exit;
 }
 
