@@ -111,6 +111,12 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.12.1
+
+Updates the way numerical issues are handled during a conductive random walk.
+Previously, a zealous test would report a numerical error and stop the
+calculations when that error could be handled.
+
 ### Version 0.12
 
 Add the support of thermal contact resistance between two solids: the new
