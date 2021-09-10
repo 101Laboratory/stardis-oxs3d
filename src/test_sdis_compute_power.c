@@ -267,7 +267,7 @@ main(int argc, char** argv)
   ref = 4.0/3.0 * PI * POWER0;
   printf("Mean power of the solid0 = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.e-2, mpow.E, 3*mpow.SE);
+  check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Check results for solid 1 */
@@ -277,7 +277,7 @@ main(int argc, char** argv)
   ref = PI * 10 * POWER1;
   printf("Mean power of the solid1 = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.e-2, mpow.E, 3*mpow.SE);
+  check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Check for a not null time range */
@@ -288,7 +288,7 @@ main(int argc, char** argv)
   ref = PI * 10 * POWER1 / 10;
   printf("Mean power of the solid1 in [0, 10] s = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.e-2, mpow.E, 3*mpow.SE);
+  check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
   OK(sdis_estimator_ref_put(estimator));
 
   /* Reset the scene with only one solid medium */
@@ -309,7 +309,7 @@ main(int argc, char** argv)
   ref = 4.0/3.0*PI*POWER0 + PI*10*POWER1;
   printf("Mean power of the sphere+cylinder = %g ~ %g +/- %g\n",
     ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.5e-1, mpow.E, 3*mpow.SE);
+  check_intersection(ref, 1e-3*ref, mpow.E, 3*mpow.SE);
   OK(sdis_estimator_ref_put(estimator));
 
 #if 0
