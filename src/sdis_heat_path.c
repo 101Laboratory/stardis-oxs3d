@@ -33,12 +33,6 @@
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_conductive_Xd.h"
 
-/* Generate the boundary path routines */
-#define SDIS_XD_DIMENSION 2
-#include "sdis_heat_path_boundary_Xd.h"
-#define SDIS_XD_DIMENSION 3
-#include "sdis_heat_path_boundary_Xd.h"
-
 /*******************************************************************************
  * Exported functions
  ******************************************************************************/

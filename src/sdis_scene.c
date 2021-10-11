@@ -241,10 +241,10 @@ sdis_scene_set_ambient_radiative_temperature
 res_T
 sdis_scene_find_closest_point
   (const struct sdis_scene* scn,
-   const double pos[3],
+   const double pos[],
    const double radius,
    size_t* iprim,
-   double uv[2])
+   double uv[])
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {

@@ -66,7 +66,7 @@ static const double vertices[16/*#vertices*/*3/*#coords per vertex*/] = {
   0.1, 0.6, 0.5,
   0.1, 0.4, 0.5
 };
-static const size_t nvertices = sizeof(vertices)/sizeof(double[3]);
+static const size_t nvertices = sizeof(vertices)/(sizeof(double)*3);
 
 static const size_t indices[36/*#triangles*/*3/*#indices per triangle*/]= {
   0, 4, 5, 5, 1, 0, /* Cuboid left */
@@ -90,7 +90,7 @@ static const size_t indices[36/*#triangles*/*3/*#indices per triangle*/]= {
   8, 9, 10, 10, 11, 8, /* Cube back */
   12, 15, 14, 14, 13, 12 /* Cube front */
 };
-static const size_t ntriangles = sizeof(indices)/sizeof(size_t[3]);
+static const size_t ntriangles = sizeof(indices)/(sizeof(size_t)*3);
 
 /*******************************************************************************
  * Geometry

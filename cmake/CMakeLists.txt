@@ -68,6 +68,7 @@ set(SDIS_FILES_SRC
   sdis_estimator_buffer.c
   sdis_green.c
   sdis_heat_path.c
+  sdis_heat_path_boundary.c
   sdis_interface.c
   sdis_log.c
   sdis_medium.c
@@ -85,7 +86,11 @@ set(SDIS_FILES_INC
   sdis_estimator_c.h
   sdis_green.h
   sdis_heat_path.h
+  sdis_heat_path_boundary_c.h
   sdis_heat_path_boundary_Xd.h
+  sdis_heat_path_boundary_Xd_fixed_flux.h
+  sdis_heat_path_boundary_Xd_solid_fluid.h
+  sdis_heat_path_boundary_Xd_solid_solid.h
   sdis_heat_path_conductive_Xd.h
   sdis_heat_path_convective_Xd.h
   sdis_heat_path_radiative_Xd.h

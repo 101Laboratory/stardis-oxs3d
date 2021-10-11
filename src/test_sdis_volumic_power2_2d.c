@@ -99,7 +99,7 @@ static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
   0.1, 0.6,
   0.1, 0.4
 };
-static const size_t nvertices = sizeof(vertices)/sizeof(double[2]);
+static const size_t nvertices = sizeof(vertices)/(sizeof(double)*2);
 
 static const size_t indices[8/*#segments*/*2/*#indices per segment*/]= {
   0, 1, /* Rectangle left */
@@ -111,7 +111,7 @@ static const size_t indices[8/*#segments*/*2/*#indices per segment*/]= {
   6, 7, /* Square right */
   7, 4  /* Square bottom */
 };
-static const size_t nsegments = sizeof(indices)/sizeof(size_t[2]);
+static const size_t nsegments = sizeof(indices)/(sizeof(size_t)*2);
 
 /*******************************************************************************
  * Geometry

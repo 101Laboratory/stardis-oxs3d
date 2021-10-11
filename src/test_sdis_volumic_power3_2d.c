@@ -84,7 +84,7 @@ static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
   100000.5, 1.4, /* 6 */
   100000.5, 0.0  /* 7 */
 };
-static const size_t nvertices = sizeof(vertices)/sizeof(double[2]);
+static const size_t nvertices = sizeof(vertices)/(sizeof(double)*3);
 
 static const size_t indices[10/*#segments*/*2/*#indices per segment*/]= {
   0, 1,
@@ -98,7 +98,7 @@ static const size_t indices[10/*#segments*/*2/*#indices per segment*/]= {
   6, 1,
   2, 5
 };
-static const size_t nsegments = sizeof(indices)/sizeof(size_t[2]);
+static const size_t nsegments = sizeof(indices)/(sizeof(size_t)*2);
 
 /*******************************************************************************
  * Geometry
