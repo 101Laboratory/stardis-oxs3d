@@ -252,7 +252,7 @@ XD(solve_medium)
       scn->dev->nthreads, &rng_proxy);
     if(res != RES_OK) goto error;
   } else {
-    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+    res = ssp_rng_proxy_create(scn->dev->allocator, SSP_RNG_MT19937_64,
       scn->dev->nthreads, &rng_proxy);
     if(res != RES_OK) goto error;
   }
@@ -520,7 +520,7 @@ XD(compute_power)
       scn->dev->nthreads, &rng_proxy);
     if(res != RES_OK) goto error;
   } else {
-    res = ssp_rng_proxy_create(scn->dev->allocator, &ssp_rng_mt19937_64,
+    res = ssp_rng_proxy_create(scn->dev->allocator, SSP_RNG_MT19937_64,
       scn->dev->nthreads, &rng_proxy);
     if(res != RES_OK) goto error;
   }

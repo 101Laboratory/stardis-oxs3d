@@ -394,7 +394,7 @@ main(int argc, char** argv)
   Ts1 = T1 - tmp;
 
   /* Run the simulations */
-  OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
+  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
     struct sdis_mc time = SDIS_MC_NULL;

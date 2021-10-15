@@ -407,7 +407,7 @@ main(int argc, char** argv)
   /* Run the simulations */
   p_intface
     = (struct interfac*)sdis_data_get(sdis_interface_get_data(interfaces[4]));
-  OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
+  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
     struct sdis_mc time = SDIS_MC_NULL;
