@@ -58,7 +58,7 @@ static const double vertices[8/*#vertices*/*2/*#coords par vertex*/] = {
   -1.5,  1.0,
    1.5,  1.0
 };
-static const size_t nvertices = sizeof(vertices) / sizeof(double[2]);
+static const size_t nvertices = sizeof(vertices) / (2*sizeof(double));
 
 static const size_t indices[10/*#segments*/*2/*#indices per segment*/] = {
   0, 1, /* Solid bottom segment */
@@ -74,7 +74,7 @@ static const size_t indices[10/*#segments*/*2/*#indices per segment*/] = {
   3, 7, /* Right fluid top segment */
   7, 4 /* Right fluid right segment */
 };
-static const size_t nsegments = sizeof(indices) / sizeof(size_t[2]);
+static const size_t nsegments = sizeof(indices) / (2*sizeof(size_t));
 
 static void
 get_indices(const size_t iseg, size_t ids[2], void* ctx)

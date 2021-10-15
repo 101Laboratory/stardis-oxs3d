@@ -807,8 +807,8 @@ sdis_scene_ref_put
 SDIS_API res_T
 sdis_scene_get_aabb
   (const struct sdis_scene* scn,
-   double lower[3],
-   double upper[3]);
+   double lower[],
+   double upper[]);
 
 /* Get scene's fp_to_meter */
 SDIS_API res_T
@@ -857,10 +857,10 @@ sdis_scene_set_reference_temperature
 SDIS_API res_T
 sdis_scene_find_closest_point
   (const struct sdis_scene* scn,
-   const double pos[3], /* Query position */
+   const double pos[], /* Query position */
    const double radius, /* Maximum search distance around pos */
    size_t* iprim, /* Primitive index onto which the closest point lies */
-   double uv[2]); /* Parametric cordinate onto the primitive */
+   double uv[]); /* Parametric cordinate onto the primitive */
 
 /* Define the world space position of a point onto the primitive `iprim' whose
  * parametric coordinate is uv. */
@@ -868,8 +868,8 @@ SDIS_API res_T
 sdis_scene_get_boundary_position
   (const struct sdis_scene* scn,
    const size_t iprim, /* Primitive index */
-   const double uv[2], /* Parametric coordinate onto the primitive */
-   double pos[3]); /* World space position */
+   const double uv[], /* Parametric coordinate onto the primitive */
+   double pos[]); /* World space position */
 
 /* roject a world space position onto a primitive wrt its normal and compute
  * the parametric coordinates of the projected point onto the primitive. This
@@ -902,7 +902,7 @@ SDIS_API res_T
 sdis_scene_boundary_project_position
   (const struct sdis_scene* scn,
    const size_t iprim,
-   const double pos[3],
+   const double pos[],
    double uv[]);
 
 /* Get the 2D scene's enclosures. Only defined for a 2D scene. */

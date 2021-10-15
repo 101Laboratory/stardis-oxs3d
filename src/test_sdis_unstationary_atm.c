@@ -91,7 +91,7 @@ static const double model3d_vertices[12/*#vertices*/ * 3/*#coords per vertex*/]
   XH, XHpE, XHpE,
   XHpE, XHpE, XHpE
 };
-static const size_t model3d_nvertices = sizeof(model3d_vertices) / sizeof(double[3]);
+static const size_t model3d_nvertices = sizeof(model3d_vertices) / (3*sizeof(double));
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
@@ -113,7 +113,7 @@ static const size_t model3d_indices[22/*#triangles*/ * 3/*#indices per triangle*
   0, 1, 7, 7, 6, 0,     1, 2, 8, 8, 7, 1,    /* -Y */
   4, 10, 7, 7, 1, 4                          /* Inside */
 };
-static const size_t model3d_ntriangles = sizeof(model3d_indices) / sizeof(size_t[3]);
+static const size_t model3d_ntriangles = sizeof(model3d_indices) / (3*sizeof(size_t));
 
 static INLINE void
 model3d_get_indices(const size_t itri, size_t ids[3], void* context)
@@ -157,7 +157,7 @@ static const double model2d_vertices[6/*#vertices*/ * 2/*#coords per vertex*/] =
   XH, XHpE,
   XHpE, XHpE
 };
-static const size_t model2d_nvertices = sizeof(model2d_vertices) / sizeof(double[2]);
+static const size_t model2d_nvertices = sizeof(model2d_vertices) / (2*sizeof(double));
 
 static const size_t model2d_indices[7/*#segments*/ * 2/*#indices per segment*/] = {
   0, 1, 1, 2, /* Bottom */
@@ -166,7 +166,7 @@ static const size_t model2d_indices[7/*#segments*/ * 2/*#indices per segment*/] 
   5, 0,       /* Right */
   4, 1        /* Inside */
 };
-static const size_t model2d_nsegments = sizeof(model2d_indices) / sizeof(size_t[2]);
+static const size_t model2d_nsegments = sizeof(model2d_indices) / (2*sizeof(size_t));
 
 
 static INLINE void

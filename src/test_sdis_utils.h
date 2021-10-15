@@ -41,7 +41,7 @@ static const double box_vertices[8/*#vertices*/*3/*#coords per vertex*/] = {
   0.0, 1.0, 1.0,
   1.0, 1.0, 1.0
 };
-static const size_t box_nvertices = sizeof(box_vertices) / sizeof(double[3]);
+static const size_t box_nvertices = sizeof(box_vertices) / (3*sizeof(double));
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
@@ -61,7 +61,7 @@ static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
   2, 6, 7, 7, 3, 2, /* +Y */
   0, 1, 5, 5, 4, 0  /* -Y */
 };
-static const size_t box_ntriangles = sizeof(box_indices) / sizeof(size_t[3]);
+static const size_t box_ntriangles = sizeof(box_indices) / (3*sizeof(size_t));
 
 static INLINE void
 box_get_indices(const size_t itri, size_t ids[3], void* context)
@@ -103,7 +103,7 @@ static const double square_vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
   0.0, 1.0,
   1.0, 1.0
 };
-static const size_t square_nvertices = sizeof(square_vertices)/sizeof(double[2]);
+static const size_t square_nvertices = sizeof(square_vertices)/(2*sizeof(double));
 
 static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   0, 1, /* Bottom */
@@ -111,7 +111,7 @@ static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   2, 3, /* Top */
   3, 0 /* Right */
 };
-static const size_t square_nsegments = sizeof(square_indices)/sizeof(size_t[2]);
+static const size_t square_nsegments = sizeof(square_indices)/(2*sizeof(size_t));
 
 static INLINE void
 square_get_indices(const size_t iseg, size_t ids[2], void* context)

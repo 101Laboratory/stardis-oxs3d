@@ -26,8 +26,8 @@ ray_realisation_3d
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    struct sdis_medium* medium,
-   const double position[],
-   const double direction[],
+   const double position[3],
+   const double direction[3],
    const double time,
    struct sdis_heat_path* heat_path, /* May be NULL */
    double* weight)
