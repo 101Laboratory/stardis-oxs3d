@@ -116,7 +116,7 @@ XD(probe_realisation)
    struct sdis_scene* scn,
    struct ssp_rng* rng,
    struct sdis_medium* medium,
-   const double position[],
+   const double position[DIM],
    const double time,
    struct green_path_handle* green_path, /* May be NULL */
    struct sdis_heat_path* heat_path, /* May be NULL */
@@ -204,7 +204,7 @@ XD(boundary_realisation)
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const size_t iprim,
-   const double uv[2],
+   const double uv[DIM-1],
    const double time,
    const enum sdis_side side,
    struct green_path_handle* green_path, /* May be NULL */
@@ -279,7 +279,7 @@ XD(boundary_flux_realisation)
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const size_t iprim,
-   const double uv[DIM],
+   const double uv[DIM-1],
    const double time,
    const enum sdis_side solid_side,
    const int flux_mask,

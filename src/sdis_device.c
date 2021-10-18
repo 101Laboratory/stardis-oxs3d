@@ -148,7 +148,7 @@ create_rng_from_rng_proxy
    const struct ssp_rng_proxy* proxy,
    struct ssp_rng** out_rng)
 {
-  struct ssp_rng_type rng_type;
+  enum ssp_rng_type rng_type;
   struct ssp_rng* rng = NULL;
   FILE* stream = NULL;
   res_T res = RES_OK;
@@ -163,7 +163,7 @@ create_rng_from_rng_proxy
   }
 
   SSP(rng_proxy_get_type(proxy, &rng_type));
-  res = ssp_rng_create(dev->allocator, &rng_type, &rng);
+  res = ssp_rng_create(dev->allocator, rng_type, &rng);
   if(res != RES_OK) {
     log_err(dev, "Could not create the RNG -- %s\n", res_to_cstr(res));
     goto error;

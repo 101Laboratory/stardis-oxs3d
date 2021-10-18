@@ -274,7 +274,7 @@ build_interface_fragment_2d
   (struct sdis_interface_fragment* frag,
    const struct sdis_scene* scn,
    const unsigned iprim,
-   const double* uv,
+   const double uv[1],
    const enum sdis_side side)
 {
   struct s2d_attrib attr_P, attr_N;
@@ -317,7 +317,7 @@ build_interface_fragment_3d
   (struct sdis_interface_fragment* frag,
    const struct sdis_scene* scn,
    const unsigned iprim,
-   const double* uv,
+   const double uv[2],
    const enum sdis_side side)
 {
   struct s3d_attrib attr_P, attr_N;

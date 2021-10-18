@@ -69,7 +69,7 @@ static const double vertices[16/*#vertices*/*3/*#coords per vertex*/] = {
   -1.5, 1.0, 1.0,
    1.5, 1.0, 1.0,
 };
-static const size_t nvertices = sizeof(vertices) / sizeof(double[3]);
+static const size_t nvertices = sizeof(vertices) / (3*sizeof(double));
 
 static const size_t indices[32/*#triangles*/*3/*#indices per triangle*/] = {
   0, 2, 1, 1, 2, 3, /* Solid back face */
@@ -91,7 +91,7 @@ static const size_t indices[32/*#triangles*/*3/*#indices per triangle*/] = {
   3, 7, 11, 11, 7, 15, /* Right fluid top face */
   1, 9, 5, 5, 9, 13 /* Right fluid bottom face */
 };
-static const size_t ntriangles = sizeof(indices) / sizeof(size_t[3]);
+static const size_t ntriangles = sizeof(indices) / (3*sizeof(size_t));
 
 static void
 get_indices(const size_t itri, size_t ids[3], void* ctx)
@@ -407,7 +407,7 @@ main(int argc, char** argv)
   /* Run the simulations */
   p_intface
     = (struct interfac*)sdis_data_get(sdis_interface_get_data(interfaces[4]));
-  OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
+  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
   FOR_EACH(isimul, 0, nsimuls) {
     struct sdis_mc T = SDIS_MC_NULL;
     struct sdis_mc time = SDIS_MC_NULL;

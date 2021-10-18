@@ -186,8 +186,8 @@ check_sdis_scene_create_args(const struct sdis_scene_create_args* args)
 static INLINE int
 hit_on_vertex
   (const struct s2d_hit* hit,
-   const float org[3],
-   const float dir[3])
+   const float org[2],
+   const float dir[2])
 {
   struct s2d_attrib v0, v1;
   float E[2];

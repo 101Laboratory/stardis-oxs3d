@@ -111,6 +111,12 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.12.2
+
+- Sets the required version of Star-SampPling to 0.12. This version fixes
+  compilation errors with gcc 11 but introduces API breaks.
+- Fix warnings detected by gcc 11.
+
 ### Version 0.12.1
 
 Updates the way numerical issues are handled during a conductive random walk.

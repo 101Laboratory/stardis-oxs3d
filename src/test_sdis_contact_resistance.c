@@ -425,7 +425,7 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_R));
 
   /* Solve */
-  OK(ssp_rng_create(&allocator, &ssp_rng_kiss, &rng));
+  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
   printf(">> Box scene\n");
   solve(box_scn, interf_props, rng);
   printf("\n>> Square scene\n");
