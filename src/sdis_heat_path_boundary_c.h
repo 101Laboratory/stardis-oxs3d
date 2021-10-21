@@ -16,91 +16,131 @@
 #ifndef SDIS_HEAT_PATH_BOUNDARY_C_H
 #define SDIS_HEAT_PATH_BOUNDARY_C_H
 
+#include <star/s2d.h>
+#include <star/s3d.h>
 #include <rsys/rsys.h>
 
 /* Forward declarations */
 struct rwalk_2d;
 struct rwalk_3d;
-struct s2d_hit;
-struct s3d_hit;
 struct sdis_scene;
 struct sdis_medium;
 
 /*******************************************************************************
- * Helper functions
+ * Sample a reinjection step
  ******************************************************************************/
-extern LOCAL_SYM res_T
-select_reinjection_dir_2d
-  (const struct sdis_scene* scn,
-   const struct sdis_medium* mdm, /* Medium into which the reinjection occurs */
-   struct rwalk_2d* rwalk, /* Current random walk state */
-   const float dir0[2], /* Challenged direction */
-   const float dir1[2], /* Challanged direction */
-   const double delta, /* Max reinjection distance */
-   float reinject_dir[2], /* Selected direction */
-   float* reinject_dst, /* Effective reinjection distance */
-   int can_move, /* Define of the random wal pos can be moved or not */
-   int* move_pos, /* Define if the current random walk was moved. May be NULL */
-   struct s2d_hit* reinject_hit); /* Hit along the reinjection dir */
+struct sample_reinjection_step_args_2d {
+  struct ssp_rng* rng; /* Random number generator to use */
+  const struct sdis_medium* solid; /* Solid in which to reinject */
+  struct rwalk_2d* rwalk; /* Current state of the random walk */
+  double distance; /* Maximum Reinjection distance */
+  enum sdis_side side; /* Side of the boundary to re-inject */
+};
+
+struct sample_reinjection_step_args_3d {
+  struct ssp_rng* rng; /* Random number generator to use */
+  const struct sdis_medium* solid; /* Medium in which to reinject */
+  struct rwalk_3d* rwalk; /* Current random walk state */
+  double distance; /* Maximum Reinjection distance */
+  enum sdis_side side; /* Side of the boundary to re-inject */
+};
+
+struct reinjection_step_2d {
+  struct s2d_hit hit; /* Intersection along the reinjection direction */
+  float direction[2]; /* Reinjection direction */
+  float distance; /* Reinjection distance */
+};
+
+struct reinjection_step_3d {
+  struct s3d_hit hit; /* Intersection along the reinjection direction */
+  float direction[3]; /* Reinjection direction */
+  float distance; /* Reinjection distance */
+};
+
+#define SAMPLE_REINJECTION_STEP_ARGS_NULL___2d \
+  {NULL, NULL, NULL, -1, SDIS_SIDE_NULL__}
+#define SAMPLE_REINJECTION_STEP_ARGS_NULL___3d \
+  {NULL, NULL, NULL, -1, SDIS_SIDE_NULL__}
+static const struct sample_reinjection_step_args_2d
+SAMPLE_REINJECTION_STEP_ARGS_NULL_2d = SAMPLE_REINJECTION_STEP_ARGS_NULL___2d;
+static const struct sample_reinjection_step_args_3d
+SAMPLE_REINJECTION_STEP_ARGS_NULL_3d = SAMPLE_REINJECTION_STEP_ARGS_NULL___3d;
+
+#define REINJECTION_STEP_NULL___2d {S2D_HIT_NULL__, {0,0}, 0}
+#define REINJECTION_STEP_NULL___3d {S3D_HIT_NULL__, {0,0,0}, 0}
+static const struct reinjection_step_2d 
+REINJECTION_STEP_NULL_2d = REINJECTION_STEP_NULL___2d;
+static const struct reinjection_step_3d
+REINJECTION_STEP_NULL_3d = REINJECTION_STEP_NULL___3d;
 
 extern LOCAL_SYM res_T
-select_reinjection_dir_3d
+sample_reinjection_step_solid_fluid_2d
   (const struct sdis_scene* scn,
-   const struct sdis_medium* mdm, /* Medium into which the reinjection occurs */
-   struct rwalk_3d* rwalk, /* Current random walk state */
-   const float dir0[3], /* Challenged direction */
-   const float dir1[3], /* Challanged direction */
-   const double delta, /* Max reinjection distance */
-   float reinject_dir[3], /* Selected direction */
-   float* reinject_dst, /* Effective reinjection distance */
-   int can_move, /* Define of the random wal pos can be moved or not */
-   int* move_pos, /* Define if the current random walk was moved. May be NULL */
-   struct s3d_hit* reinject_hit); /* Hit along the reinjection dir */
+   const struct sample_reinjection_step_args_2d* args,
+   struct reinjection_step_2d* step);
 
 extern LOCAL_SYM res_T
-select_reinjection_dir_and_check_validity_2d
+sample_reinjection_step_solid_fluid_3d
   (const struct sdis_scene* scn,
-   const struct sdis_medium* mdm, /* Medium into which the reinjection occurs */
-   struct rwalk_2d* rwalk, /* Current random walk state */
-   const float dir0[2], /* Challenged direction */
-   const float dir1[2], /* Challanged direction */
-   const double delta, /* Max reinjection distance */
-   float out_reinject_dir[2], /* Selected direction */
-   float* out_reinject_dst, /* Effective reinjection distance */
-   int can_move, /* Define of the random wal pos can be moved or not */
-   int* move_pos, /* Define if the current random walk was moved. May be NULL */
-   int* is_valid, /* Define if the reinjection defines a valid pos */
-   struct s2d_hit* out_reinject_hit); /* Hit along the reinjection dir */
+   const struct sample_reinjection_step_args_3d* args,
+   struct reinjection_step_3d *step);
 
 extern LOCAL_SYM res_T
-select_reinjection_dir_and_check_validity_3d
+sample_reinjection_step_solid_solid_2d
   (const struct sdis_scene* scn,
-   const struct sdis_medium* mdm, /* Medium into which the reinjection occurs */
-   struct rwalk_3d* rwalk, /* Current random walk state */
-   const float dir0[3], /* Challenged direction */
-   const float dir1[3], /* Challanged direction */
-   const double delta, /* Max reinjection distance */
-   float out_reinject_dir[3], /* Selected direction */
-   float* out_reinject_dst, /* Effective reinjection distance */
-   int can_move, /* Define of the random wal pos can be moved or not */
-   int* move_pos, /* Define if the current random walk was moved. May be NULL */
-   int* is_valid, /* Define if the reinjection defines a valid pos */
-   struct s3d_hit* out_reinject_hit); /* Hit along the reinjection dir */
+   const struct sample_reinjection_step_args_2d* args_front,
+   const struct sample_reinjection_step_args_2d* args_back,
+   struct reinjection_step_2d* step_front,
+   struct reinjection_step_2d* step_back);
 
-/* Check that the interface fragment is consistent with the current state of
- * the random walk */
-extern LOCAL_SYM int
-check_rwalk_fragment_consistency_2d
-  (const struct rwalk_2d* rwalk,
-   const struct sdis_interface_fragment* frag);
-
-extern LOCAL_SYM int
-check_rwalk_fragment_consistency_3d
-  (const struct rwalk_3d* rwalk,
-   const struct sdis_interface_fragment* frag);
+extern LOCAL_SYM res_T
+sample_reinjection_step_solid_solid_3d
+  (const struct sdis_scene* scn,
+   const struct sample_reinjection_step_args_3d* args_front,
+   const struct sample_reinjection_step_args_3d* args_back,
+   struct reinjection_step_3d* step_front,
+   struct reinjection_step_3d* step_back);
 
 /*******************************************************************************
- * Boundary sub-paths 
+ * Reinject the random walk into a solid
+ ******************************************************************************/
+struct solid_reinjection_args_2d {
+  const struct reinjection_step_2d* reinjection; /* Reinjection to do */
+  const struct rwalk_context* rwalk_ctx;
+  struct rwalk_2d* rwalk; /* Current state of the random walk */
+  struct ssp_rng* rng; /* Random number generator */
+  struct temperature_2d* T;
+  double fp_to_meter;
+};
+
+struct solid_reinjection_args_3d {
+  const struct reinjection_step_3d* reinjection; /* Reinjection to do */
+  const struct rwalk_context* rwalk_ctx;
+  struct rwalk_3d* rwalk; /* Current state of the random walk */
+  struct ssp_rng* rng; /* Random number generator */
+  struct temperature_3d* T;
+  double fp_to_meter;
+};
+
+#define SOLID_REINJECTION_ARGS_NULL___2d {NULL,NULL,NULL,NULL,NULL,0}
+#define SOLID_REINJECTION_ARGS_NULL___3d {NULL,NULL,NULL,NULL,NULL,0}
+static const struct solid_reinjection_args_2d SOLID_REINJECTION_ARGS_NULL_2d =
+  SOLID_REINJECTION_ARGS_NULL___2d;
+static const struct solid_reinjection_args_3d SOLID_REINJECTION_ARGS_NULL_3d =
+  SOLID_REINJECTION_ARGS_NULL___3d;
+
+extern LOCAL_SYM res_T
+solid_reinjection_2d
+  (struct sdis_medium* solid,
+   struct solid_reinjection_args_2d* args);
+
+extern LOCAL_SYM res_T
+solid_reinjection_3d
+  (struct sdis_medium* solid,
+   struct solid_reinjection_args_3d* args);
+
+/*******************************************************************************
+ * Boundary sub-paths
  ******************************************************************************/
 extern LOCAL_SYM res_T
 solid_boundary_with_flux_path_2d

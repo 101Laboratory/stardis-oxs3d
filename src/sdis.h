@@ -207,8 +207,11 @@ struct sdis_interface_side_shader {
    * interface or if the emissivity is 0 onto the whole interface. */
   sdis_interface_getter_T emissivity; /* Overall emissivity. */
   sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
+
+  /* Reference temperature used in Picard 1 */
+  sdis_interface_getter_T reference_temperature;
 };
-#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL }
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL }
 static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
   SDIS_INTERFACE_SIDE_SHADER_NULL__;
 

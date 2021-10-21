@@ -38,126 +38,78 @@ XD(solid_boundary_with_flux_path)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  struct XD(rwalk) rwalk_saved;
+  /* Input/output arguments of the function used to sample a reinjection */
+  struct XD(sample_reinjection_step_args) samp_reinject_step_args =
+    XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
+  struct XD(reinjection_step) reinject_step = XD(REINJECTION_STEP_NULL);
+
+  /* Reinjection arguments */
+  struct XD(solid_reinjection_args) solid_reinject_args = 
+    XD(SOLID_REINJECTION_ARGS_NULL);
+
+  /* Data attached to the boundary */
   struct sdis_interface* interf = NULL;
-  struct sdis_medium* mdm = NULL;
-  double lambda;
-  double delta;
-  double delta_boundary;
-  double delta_in_meter;
-  double power;
-  double tmp;
-  struct sXd(hit) hit;
-  float dir0[DIM];
-  float dir1[DIM];
-  float reinject_dst;
-  /* In 2D it is useless to try to resample a reinjection direction since there
-   * is only one possible direction */
-  const int MAX_ATTEMPTS = DIM == 2 ? 1 : 10;
-  int iattempt = 0;
-  int reinjection_is_valid = 0;
+  struct sdis_medium* solid = NULL;
+
+  /* Miscellaneous terms */
+  double lambda; /* Solid conductivity */
+  double delta_boundary; /* Orthogonal reinjection dst at the boundary */
+  double delta; /* Orthogonal fitted reinjection dst at the boundary */
+  double delta_m; /* Delta in meters */
+  double flux_term;
+  enum sdis_side solid_side = SDIS_SIDE_NULL__;
   res_T res = RES_OK;
+
   ASSERT(frag && phi != SDIS_FLUX_NONE);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)ctx;
 
-  /* Fetch current interface  */
+  /* Retrieve the solid split by the interface */
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  solid = interface_get_medium(interf, frag->side);
+  solid_side = frag->side;
   ASSERT(phi == interface_side_get_flux(interf, frag));
+  ASSERT(solid->type == SDIS_SOLID);
 
-  /* Fetch incoming solid */
-  mdm = interface_get_medium(interf, frag->side);
-  ASSERT(mdm->type == SDIS_SOLID);
+  /* Fetch the solid properties */
+  lambda = solid_get_thermal_conductivity(solid, &rwalk->vtx);
+  delta = solid_get_delta(solid, &rwalk->vtx);
 
-  /* Fetch medium properties */
-  lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-  delta = solid_get_delta(mdm, &rwalk->vtx);
-
-  /* Compute the reinjection distance. It MUST ensure that the orthogonal
-   * distance from the boundary to the point to chalenge is equal to delta. */
+  /* Note that the reinjection distance is *FIXED*. It MUST ensure that the
+   * orthogonal distance from the boundary to the reinjection point is at most
+   * equal to delta. */
   delta_boundary = delta * sqrt(DIM);
 
-  rwalk_saved = *rwalk;
-  reinjection_is_valid = 0;
-  iattempt = 0;
-  do {
-    if(iattempt != 0) *rwalk = rwalk_saved;
-    /* Sample a reinjection direction */
-    XD(sample_reinjection_dir)(rwalk, rng, dir0);
+  /* Sample a reinjection step */
+  samp_reinject_step_args.rng = rng;
+  samp_reinject_step_args.solid = solid;
+  samp_reinject_step_args.rwalk = rwalk;
+  samp_reinject_step_args.distance = delta_boundary;
+  samp_reinject_step_args.side = solid_side;
+  res = XD(sample_reinjection_step_solid_fluid)
+    (scn, &samp_reinject_step_args, &reinject_step);
+  if(res != RES_OK) goto error;
 
-    /* Reflect the sampled direction around the normal */
-    XD(reflect)(dir1, dir0, rwalk->hit.normal);
-
-    if(frag->side == SDIS_BACK) {
-      fX(minus)(dir0, dir0);
-      fX(minus)(dir1, dir1);
-    }
-
-    /* Select the reinjection direction and distance */
-    res = XD(select_reinjection_dir_and_check_validity)(scn, mdm, rwalk, dir0,
-      dir1, delta_boundary, dir0, &reinject_dst, 1, NULL,
-      &reinjection_is_valid, &hit);
-    if(res != RES_OK) goto error;
-
-  } while(!reinjection_is_valid && ++iattempt < MAX_ATTEMPTS);
-
-  /* Could not find a valid reinjecton */
-  if(iattempt >= MAX_ATTEMPTS) {
-    *rwalk = rwalk_saved;
-    log_warn(scn->dev,
-      "%s: could not find a valid solid/fluid with flux reinjection "
-      "at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
-    res = RES_BAD_OP_IRRECOVERABLE;
-    goto error;
-  }
-
-  /* Define the orthogonal dst from the reinjection pos to the interface */
-  delta = reinject_dst / sqrt(DIM);
+  /* Define the orthogonal dst from the boundary to the reinjection position */
+  delta = reinject_step.distance / sqrt(DIM);
+  delta_m = delta * scn->fp_to_meter;
 
   /* Handle the flux */
-  delta_in_meter = delta * scn->fp_to_meter;
-  tmp = delta_in_meter / lambda;
-  T->value += phi * tmp;
+  flux_term = delta_m / lambda;
+  T->value += phi * flux_term;
   if(ctx->green_path) {
-    res = green_path_add_flux_term(ctx->green_path, interf, frag, tmp);
+    res = green_path_add_flux_term(ctx->green_path, interf, frag, flux_term);
     if(res != RES_OK) goto error;
   }
 
-  /* Handle the volumic power */
-  power = solid_get_volumic_power(mdm, &rwalk->vtx);
-  if(power != SDIS_VOLUMIC_POWER_NONE) {
-    delta_in_meter = reinject_dst * scn->fp_to_meter;
-    tmp = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
-    T->value += power * tmp;
-    if(ctx->green_path) {
-      res = green_path_add_power_term(ctx->green_path, mdm, &rwalk->vtx, tmp);
-      if(res != RES_OK) goto error;
-    }
-  }
-
-  /* Time rewind */
-  res = XD(time_rewind)(mdm, rng, reinject_dst * scn->fp_to_meter, ctx, rwalk, T);
-  if(res != RES_OK) goto error;
-  if(T->done) goto exit; /* Limit condition was reached */
-
-  /* Reinject. If the reinjection move the point too close of a boundary,
-   * assume that the zone is isotherm and move to the boundary. */
-  XD(move_pos)(rwalk->vtx.P, dir0, reinject_dst);
-  if(hit.distance == reinject_dst) {
-    T->func = XD(boundary_path);
-    rwalk->mdm = NULL;
-    rwalk->hit = hit;
-    rwalk->hit_side = fX(dot)(hit.normal, dir0) < 0 ? SDIS_FRONT : SDIS_BACK;
-  } else {
-    T->func = XD(conductive_path);
-    rwalk->mdm = mdm;
-    rwalk->hit = SXD_HIT_NULL;
-    rwalk->hit_side = SDIS_SIDE_NULL__;
-  }
-
-  /* Register the new vertex against the heat path */
-  res = register_heat_vertex
-    (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+  /* Perform the reinjection into the solid */
+  solid_reinject_args.reinjection = &reinject_step;
+  solid_reinject_args.rwalk_ctx = ctx;
+  solid_reinject_args.rwalk = rwalk;
+  solid_reinject_args.rng = rng;
+  solid_reinject_args.T = T;
+  solid_reinject_args.fp_to_meter = scn->fp_to_meter;
+  res = XD(solid_reinjection)(solid, &solid_reinject_args);
   if(res != RES_OK) goto error;
 
 exit:

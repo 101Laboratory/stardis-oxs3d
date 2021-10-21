@@ -165,35 +165,36 @@ dummy_interface_getter
 }
 
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  0
+  dummy_medium_getter, /* Calorific capacity */
+  dummy_medium_getter, /* Thermal conductivity */
+  dummy_medium_getter, /* Volumic mass */
+  dummy_medium_getter, /* Delta */
+  dummy_medium_getter, /* Volumic power */
+  dummy_medium_getter, /* Temperature */
+  0 /* Initial time */
 };
 
 static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  0
+  dummy_medium_getter, /* Calorific capacity */
+  dummy_medium_getter, /* Volumic mass */
+  dummy_medium_getter, /* Temperature */
+  0 /* Initial time */
 };
 
 
 #define DUMMY_INTERFACE_SIDE_SHADER__ {                                        \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter                                                       \
+  dummy_interface_getter, /* Temperature */                                    \
+  dummy_interface_getter, /* Flux */                                           \
+  dummy_interface_getter, /* Emissivity */                                     \
+  dummy_interface_getter, /* Specular fraction */                              \
+  dummy_interface_getter  /* Reference temperature */                          \
 }
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
-  dummy_interface_getter,
-  0,
-  dummy_interface_getter,
-  DUMMY_INTERFACE_SIDE_SHADER__,
-  DUMMY_INTERFACE_SIDE_SHADER__
+  dummy_interface_getter, /* Convection coef */
+  0, /* Upper bound of the convection coef */
+  dummy_interface_getter, /* Thermal contact resistance */
+  DUMMY_INTERFACE_SIDE_SHADER__, /* Front side */
+  DUMMY_INTERFACE_SIDE_SHADER__ /* Back side */
 };
 
 /*******************************************************************************
