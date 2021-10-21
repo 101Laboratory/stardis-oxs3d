@@ -111,6 +111,11 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.12.3
+
+Fix green paths ending in a fluid (transcient computation): The path's end was
+not correctly registred and the path was later treated as failed.
+
 ### Version 0.12.2
 
 - Sets the required version of Star-SampPling to 0.12. This version fixes

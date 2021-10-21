@@ -57,7 +57,7 @@ rcmake_append_runtime_dirs(_runtime_dirs
 ###############################################################################
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 12)
-set(VERSION_PATCH 2)
+set(VERSION_PATCH 3)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
