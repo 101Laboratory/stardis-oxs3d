@@ -220,8 +220,18 @@ XD(convective_path)
         if(tmp >= 0) {
           T->value += tmp;
           T->done = 1;
-          if(ctx->heat_path) { /* Update the weight of the last heat vertex */
-            heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
+          if(ctx->heat_path) {
+            /* Update the registered vertex data */
+            struct sdis_heat_vertex* vtx;
+            vtx = heat_path_get_last_vertex(ctx->heat_path);
+            vtx->time = rwalk->vtx.time;
+            vtx->weight = T->value;
+          }
+
+          if(ctx->green_path) {
+            res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm,
+              &rwalk->vtx, rwalk->elapsed_time);
+            if(res != RES_OK) goto error;
           }
           goto exit;
         }
