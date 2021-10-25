@@ -144,7 +144,7 @@ solid_reinjection_3d
  ******************************************************************************/
 extern LOCAL_SYM res_T
 solid_boundary_with_flux_path_2d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    const double phi,
@@ -154,7 +154,7 @@ solid_boundary_with_flux_path_2d
 
 extern LOCAL_SYM res_T
 solid_boundary_with_flux_path_3d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    const double phi,
@@ -164,7 +164,7 @@ solid_boundary_with_flux_path_3d
 
 extern LOCAL_SYM res_T
 solid_fluid_boundary_path_2d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_2d* rwalk,
@@ -173,7 +173,25 @@ solid_fluid_boundary_path_2d
 
 extern LOCAL_SYM res_T
 solid_fluid_boundary_path_3d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
+   const struct rwalk_context* ctx,
+   const struct sdis_interface_fragment* frag,
+   struct rwalk_3d* rwalk,
+   struct ssp_rng* rng,
+   struct temperature_3d* T);
+
+extern LOCAL_SYM res_T
+solid_fluid_boundary_picard1_path_2d
+  (struct sdis_scene* scn,
+   const struct rwalk_context* ctx,
+   const struct sdis_interface_fragment* frag,
+   struct rwalk_2d* rwalk,
+   struct ssp_rng* rng,
+   struct temperature_2d* T);
+
+extern LOCAL_SYM res_T
+solid_fluid_boundary_picard1_path_3d
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_3d* rwalk,
@@ -182,7 +200,7 @@ solid_fluid_boundary_path_3d
 
 extern LOCAL_SYM res_T
 solid_solid_boundary_path_2d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_2d* rwalk,
@@ -191,7 +209,7 @@ solid_solid_boundary_path_2d
 
 extern LOCAL_SYM res_T
 solid_solid_boundary_path_3d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_3d* rwalk,

@@ -19,6 +19,7 @@
 #include "sdis.h"
 
 #include <rsys/dynamic_array.h>
+#include <rsys/dynamic_array_size_t.h>
 #include <rsys/rsys.h>
 
 /* Forward declarations */
@@ -39,7 +40,12 @@ struct temperature_3d;
  * Heat path data structure
  ******************************************************************************/
 struct sdis_heat_path {
+  /* List of the path vertices */
   struct darray_heat_vertex vertices;
+
+  /* Indices of the vertices that mark a break in the path */
+  struct darray_size_t breaks;
+
   enum sdis_heat_path_flag status;
 };
 
@@ -97,6 +103,18 @@ heat_path_get_last_vertex(struct sdis_heat_path* path)
   sz = darray_heat_vertex_size_get(&path->vertices);
   ASSERT(sz);
   return darray_heat_vertex_data_get(&path->vertices) + (sz-1);
+}
+
+static INLINE res_T
+heat_path_add_break(struct sdis_heat_path* path)
+{
+  size_t id;
+  size_t sz;
+  ASSERT(path);
+  sz = darray_heat_vertex_size_get(&path->vertices);
+  if(sz == 0) return RES_OK; /* Nothing to do */
+  id = sz-1;
+  return darray_size_t_push_back(&path->breaks, &id);
 }
 
 /* Generate the dynamic array of heat paths */

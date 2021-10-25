@@ -90,6 +90,7 @@ set(SDIS_FILES_INC
   sdis_heat_path_boundary_Xd.h
   sdis_heat_path_boundary_Xd_fixed_flux.h
   sdis_heat_path_boundary_Xd_solid_fluid.h
+  sdis_heat_path_boundary_Xd_solid_fluid_picard1.h
   sdis_heat_path_boundary_Xd_solid_solid.h
   sdis_heat_path_conductive_Xd.h
   sdis_heat_path_convective_Xd.h

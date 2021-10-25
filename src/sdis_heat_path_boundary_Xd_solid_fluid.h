@@ -29,7 +29,7 @@
  ******************************************************************************/
 res_T
 XD(solid_fluid_boundary_path)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct XD(rwalk)* rwalk,
@@ -79,6 +79,7 @@ XD(solid_fluid_boundary_path)
   if(solid->type != SDIS_SOLID) {
     SWAP(struct sdis_medium*, solid, fluid);
     SWAP(enum sdis_side, solid_side, fluid_side);
+    ASSERT(fluid->type == SDIS_FLUID);
   }
 
   /* Setup a fragment for the fluid side */

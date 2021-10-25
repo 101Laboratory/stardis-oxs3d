@@ -30,7 +30,7 @@
  ******************************************************************************/
 res_T
 XD(solid_solid_boundary_path)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct XD(rwalk)* rwalk,
