@@ -209,12 +209,12 @@ sdis_scene_get_ambient_radiative_temperature
 }
 
 res_T
-sdis_scene_set_reference_temperature
+sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
-   const double tref)
+   const double trad)
 {
-  if(!scn || tref < 0) return RES_BAD_ARG;
-  scn->reference_temperature = tref;
+  if(!scn) return RES_BAD_ARG;
+  scn->ambient_radiative_temperature = trad;
   return RES_OK;
 }
 
@@ -229,12 +229,28 @@ sdis_scene_get_reference_temperature
 }
 
 res_T
-sdis_scene_set_ambient_radiative_temperature
+sdis_scene_set_reference_temperature
   (struct sdis_scene* scn,
-   const double trad)
+   const double tref)
 {
-  if(!scn) return RES_BAD_ARG;
-  scn->ambient_radiative_temperature = trad;
+  if(!scn || tref < 0) return RES_BAD_ARG;
+  scn->reference_temperature = tref;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_maximum_temperature(const struct sdis_scene* scn, double* tmax)
+{
+  if(!scn || !tmax) return RES_BAD_ARG;
+  *tmax = scn->maximum_temperature;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_maximum_temperature(struct sdis_scene* scn, const double tmax)
+{
+  if(!scn || tmax < 0) return RES_BAD_ARG;
+  scn->maximum_temperature = tmax;
   return RES_OK;
 }
 

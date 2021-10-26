@@ -46,10 +46,15 @@ ray_realisation_3d
   rwalk.hit_side = SDIS_SIDE_NULL__;
   rwalk.mdm = medium;
 
-  ctx.Tarad = scn->ambient_radiative_temperature;
-  ctx.Tref3 = scn->reference_temperature * scn->reference_temperature
-    * scn->reference_temperature;
   ctx.heat_path = heat_path;
+  ctx.Tarad = scn->ambient_radiative_temperature;
+  ctx.That = scn->maximum_temperature;
+  ctx.That2 = ctx.That * ctx.That;
+  ctx.That3 = ctx.That * ctx.That2;
+  ctx.Tref3 =
+    scn->reference_temperature
+  * scn->reference_temperature
+  * scn->reference_temperature;
 
   f3_set_d3(dir, direction);
 

@@ -182,6 +182,9 @@ XD(probe_realisation)
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
   ctx.Tarad = scn->ambient_radiative_temperature;
+  ctx.That = scn->maximum_temperature;
+  ctx.That2 = ctx.That * ctx.That;
+  ctx.That3 = ctx.That * ctx.That2;
   ctx.Tref3 =
     scn->reference_temperature
   * scn->reference_temperature
@@ -260,8 +263,13 @@ XD(boundary_realisation)
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
   ctx.Tarad = scn->ambient_radiative_temperature;
-  ctx.Tref3 = scn->reference_temperature * scn->reference_temperature
-    * scn->reference_temperature;
+  ctx.That = scn->maximum_temperature;
+  ctx.That2 = ctx.That * ctx.That;
+  ctx.That3 = ctx.That * ctx.That2;
+  ctx.Tref3 =
+    scn->reference_temperature
+  * scn->reference_temperature
+  * scn->reference_temperature;
 
   res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
@@ -300,8 +308,13 @@ XD(boundary_flux_realisation)
 #endif
   double P[SDIS_XD_DIMENSION];
   float N[SDIS_XD_DIMENSION];
-  const double Tr3 = scn->reference_temperature * scn->reference_temperature
-    * scn->reference_temperature;
+  const double That = scn->maximum_temperature;
+  const double That2 = That * That;
+  const double That3 = That * That2;
+  const double Tref3 =
+    scn->reference_temperature
+  * scn->reference_temperature
+  * scn->reference_temperature;
   const enum sdis_side fluid_side =
     (solid_side == SDIS_FRONT) ? SDIS_BACK : SDIS_FRONT;
   res_T res = RES_OK;
@@ -337,7 +350,10 @@ XD(boundary_flux_realisation)
     rwalk.hit.prim = prim;                                                     \
     SET_PARAM(rwalk.hit, st);                                                  \
     ctx.Tarad = scn->ambient_radiative_temperature;                            \
-    ctx.Tref3 = Tr3;                                                           \
+    ctx.Tref3 = Tref3;                                                         \
+    ctx.That = That;                                                           \
+    ctx.That2 = That2;                                                         \
+    ctx.That3 = That3;                                                         \
     dX(set)(rwalk.vtx.P, P);                                                   \
     fX(set)(rwalk.hit.normal, N);                                              \
     T = XD(TEMPERATURE_NULL);                                                  \

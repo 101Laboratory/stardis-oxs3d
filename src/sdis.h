@@ -366,7 +366,7 @@ struct sdis_scene_create_args {
   sdis_get_primitive_interface_T get_interface;
   sdis_get_vertex_position_T get_position;
 
- /* Pointer toward client side sent as the last argument of the callbacks */
+  /* Pointer toward client side sent as the last argument of the callbacks */
   void* context;
 
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
@@ -374,6 +374,7 @@ struct sdis_scene_create_args {
   double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
   double trad; /* Ambiant radiative temperature */
   double tref; /* Temperature used to linearize the radiative temperature */
+  double tmax; /* Maxium temperature used to linearize the radiative temp */
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -385,7 +386,8 @@ struct sdis_scene_create_args {
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
   -1.0, /* Ambient radiative temperature */                                    \
-  -1.0 /* Reference temperature */                                             \
+  -1.0, /* Reference temperature */                                            \
+  -1.0, /* Maximum temperature */                                              \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;
@@ -850,6 +852,19 @@ SDIS_API res_T
 sdis_scene_set_reference_temperature
   (struct sdis_scene* scn,
    const double tref);
+
+/* Get scene's maximum temperature */
+SDIS_API res_T
+sdis_scene_get_maximum_temperature
+  (const struct sdis_scene* scn,
+   double* tmax);
+
+/* Set scene's maximum temperature. Must be correctly defined if there is any
+ * radiative transfert in the scene. */
+SDIS_API res_T
+sdis_scene_set_maximum_temperature
+  (struct sdis_scene* scn,
+   const double tmax);
 
 /* Search the point onto the scene geometry that is the closest of `pos'. The
  * `radius' parameter controls the maximum search distance around `pos'. The
