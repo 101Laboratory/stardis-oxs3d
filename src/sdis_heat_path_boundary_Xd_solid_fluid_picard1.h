@@ -28,6 +28,41 @@
  * Helper functions
  ******************************************************************************/
 static INLINE res_T
+XD(check_Tref)
+  (const struct sdis_scene* scn,
+   const double pos[DIM],
+   const double Tref,
+   const char* func_name)
+{
+  ASSERT(scn && pos && func_name);
+
+#if DIM == 2
+  #define STR_VECX "%g %g"
+  #define SPLITX SPLIT2
+#else
+  #define STR_VECX "%g %g %g"
+  #define SPLITX SPLIT3
+#endif
+  if(Tref < 0) {
+    log_err(scn->dev,
+      "%s: invalid reference temperature `%gK' at the position `"STR_VECX"'.\n",
+      func_name, Tref, SPLITX(pos));
+    return RES_BAD_OP_IRRECOVERABLE;
+  }
+  if(Tref > scn->maximum_temperature) {
+    log_err(scn->dev,
+      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK'"
+      "at the position `"STR_VECX"' is greater than this temperature.\n",
+      func_name, scn->maximum_temperature, Tref, SPLITX(pos));
+    return RES_BAD_OP_IRRECOVERABLE;
+  }
+#undef STR_VECX
+#undef SPLITX
+
+  return RES_OK;
+}
+
+static INLINE res_T
 XD(rwalk_get_Tref)
   (const struct sdis_scene* scn,
    const struct XD(rwalk)* rwalk,
@@ -54,22 +89,16 @@ XD(rwalk_get_Tref)
     XD(setup_interface_fragment)
       (&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 
-    Tref = interface_side_get_reference_temperature(interf, &frag);
+    /* If the boundary temperature is known, use it as the reference
+     * temperature. */
+    Tref = interface_side_get_temperature(interf, &frag);
+    if(Tref < 0) {
+      Tref = interface_side_get_reference_temperature(interf, &frag);
+    }
   }
 
-  if(Tref < 0) {
-#if DIM == 2
-    log_err(scn->dev,
-      "%s: invalid reference temperature `%gK' at the position `%g %g'.\n",
-      FUNC_NAME, Tref, SPLIT2(rwalk->vtx.P));
-#else
-    log_err(scn->dev,
-      "%s: invalid reference temperature `%gK' at the position `%g %g %g'.\n",
-      FUNC_NAME, Tref, SPLIT3(rwalk->vtx.P));
-#endif
-    res = RES_BAD_OP_IRRECOVERABLE;
-    goto error;
-  }
+  res = XD(check_Tref)(scn, rwalk->vtx.P, Tref, FUNC_NAME);
+  if(res != RES_OK) goto error;
 
 exit:
   *out_Tref = Tref;
@@ -148,9 +177,17 @@ XD(solid_fluid_boundary_picard1_path)
   lambda = solid_get_thermal_conductivity(solid, &rwalk->vtx);
   delta = solid_get_delta(solid, &rwalk->vtx);
 
-  /* Fetch the boundary properties */
+  /* Fetch the boundary emissivity */
   epsilon = interface_side_get_emissivity(interf, &frag_fluid);
-  Tref = interface_side_get_reference_temperature(interf, &frag_fluid);
+
+  if(epsilon <= 0) {
+    Tref = 0;
+  } else {
+    /* Check the Tref */
+    Tref = interface_side_get_reference_temperature(interf, &frag_fluid);
+    res = XD(check_Tref)(scn, frag_fluid.P, Tref, FUNC_NAME);
+    if(res != RES_OK) goto error;
+  }
 
   /* Note that the reinjection distance is *FIXED*. It MUST ensure that the
    * orthogonal distance from the boundary to the reinjection point is at most
