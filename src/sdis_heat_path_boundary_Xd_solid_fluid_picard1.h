@@ -173,6 +173,10 @@ XD(solid_fluid_boundary_picard1_path)
     ASSERT(fluid->type == SDIS_FLUID);
   }
 
+  /* Setup a fragment for the fluid side */
+  frag_fluid = *frag;
+  frag_fluid.side = fluid_side;
+
   /* Fetch the solid properties */
   lambda = solid_get_thermal_conductivity(solid, &rwalk->vtx);
   delta = solid_get_delta(solid, &rwalk->vtx);
@@ -262,7 +266,10 @@ XD(solid_fluid_boundary_picard1_path)
 
     /* Sample a radiative path and get the Tref at its end.
      * TODO handle the registration of the path geometry */
-    T_s = *T; rwalk_s = *rwalk;
+    T_s = *T;
+    rwalk_s = *rwalk;
+    rwalk_s.mdm = fluid;
+    rwalk_s.hit_side = fluid_side;
     res = XD(radiative_path)(scn, ctx, &rwalk_s, rng, &T_s);
     if(res != RES_OK) goto error;
 
@@ -294,7 +301,6 @@ XD(solid_fluid_boundary_picard1_path)
 
     /* Null-collision, looping at the beginning */
   }
-
 
 exit:
   return res;
