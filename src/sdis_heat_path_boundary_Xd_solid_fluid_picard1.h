@@ -288,15 +288,27 @@ XD(solid_fluid_boundary_picard1_path)
       *rwalk = rwalk_s;
       *T = T_s;
       break;
-    } else if(ctx->heat_path) {
-      /* Null-collision: the sampled path is rejected. Add a break into the
-       * heat path geometry and restart it from the current position */
-      res = heat_path_add_break(ctx->heat_path);
-      if(res != RES_OK) goto error;
 
-      res = register_heat_vertex
-        (ctx->heat_path, &rwalk->vtx, T->value, current_vertex_type);
-      if(res != RES_OK) goto error;
+    /* Null collision: the sampled path is rejected. */
+    } else {
+
+      if(ctx->green_path) {
+        /* The limit condition of the green path could be set by the rejected
+         * sampled radiative path. Reset this limit condition. */
+        green_path_reset_limit(ctx->green_path);
+      }
+
+      if(ctx->heat_path) {
+        /* Add a break into the heat path geometry and restart it from the
+         * current position. The sampled radiative path becomes a branch of the
+         * current sampled path */
+        res = heat_path_add_break(ctx->heat_path);
+        if(res != RES_OK) goto error;
+
+        res = register_heat_vertex
+          (ctx->heat_path, &rwalk->vtx, T->value, current_vertex_type);
+        if(res != RES_OK) goto error;
+      }
     }
 
     /* Null-collision, looping at the beginning */

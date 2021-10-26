@@ -1541,6 +1541,15 @@ green_path_set_limit_radiative
 }
 
 res_T
+green_path_reset_limit(struct green_path_handle* handle)
+{
+  ASSERT(handle);
+  handle->path->elapsed_time = -INF;
+  handle->path->end_type = SDIS_GREEN_PATH_END_TYPES_COUNT__;
+  return RES_OK;
+}
+
+res_T
 green_path_add_power_term
   (struct green_path_handle* handle,
    struct sdis_medium* mdm,
