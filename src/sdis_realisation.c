@@ -51,11 +51,7 @@ ray_realisation_3d
   ctx.That = scn->maximum_temperature;
   ctx.That2 = ctx.That * ctx.That;
   ctx.That3 = ctx.That * ctx.That2;
-  ctx.Tref3 =
-    scn->reference_temperature
-  * scn->reference_temperature
-  * scn->reference_temperature;
-
+  
   f3_set_d3(dir, direction);
 
   /* Register the starting position against the heat path */

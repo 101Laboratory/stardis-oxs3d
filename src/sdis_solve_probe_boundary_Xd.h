@@ -480,7 +480,7 @@ XD(solve_probe_boundary_flux)
     double time, epsilon, hc, hr, imposed_flux, imposed_temp;
     int flux_mask = 0;
     struct bound_flux_result result = BOUND_FLUX_RESULT_NULL__;
-    const double Tref = scn->reference_temperature;
+    double Tref = -1;
     size_t n;
     int pcent;
     res_T res_simul = RES_OK;
@@ -496,6 +496,7 @@ XD(solve_probe_boundary_flux)
     frag.time = time;
     frag.side = fluid_side;
     epsilon = interface_side_get_emissivity(interf, &frag);
+    Tref = interface_side_get_reference_temperature(interf, &frag);
     hc = interface_get_convection_coef(interf, &frag);
     hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
     frag.side = solid_side;

@@ -237,8 +237,11 @@ struct interf {
   double epsilon;
   double specular_fraction;
   double temperature;
+  double reference_temperature;
 };
-static const struct interf INTERF_NULL = {0, 0, 0, UNKOWN_TEMPERATURE};
+static const struct interf INTERF_NULL = {
+  0, 0, 0, UNKOWN_TEMPERATURE, UNKOWN_TEMPERATURE
+};
 
 static double
 interface_get_convection_coef
@@ -270,6 +273,14 @@ interface_get_temperature
 {
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->temperature;
+}
+
+static double
+interface_get_reference_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interf*)sdis_data_cget(data))->reference_temperature;
 }
 
 /*******************************************************************************
@@ -372,10 +383,14 @@ create_interface
   if(sdis_medium_get_type(mdm_front) == SDIS_FLUID) {
     interface_shader.front.emissivity = interface_get_emissivity;
     interface_shader.front.specular_fraction = interface_get_specular_fraction;
+    interface_shader.front.reference_temperature = 
+      interface_get_reference_temperature;
   }
   if(sdis_medium_get_type(mdm_back) == SDIS_FLUID) {
     interface_shader.back.emissivity = interface_get_emissivity;
     interface_shader.back.specular_fraction = interface_get_specular_fraction;
+    interface_shader.back.reference_temperature =
+      interface_get_reference_temperature;
   }
   /* Create the interface */
   OK(sdis_interface_create
@@ -590,6 +605,7 @@ main(int argc, char** argv)
   interface_param.epsilon = 1;
   interface_param.specular_fraction = 1;
   interface_param.temperature = UNKOWN_TEMPERATURE;
+  interface_param.reference_temperature = 300;
   create_interface(dev, fluid1, solid, &interface_param, &interf1);
 
   /* Setup the cube geometry  */
@@ -615,7 +631,7 @@ main(int argc, char** argv)
   scn_args.nprimitives = ntris;
   scn_args.nvertices = npos;
   scn_args.trad = 300;
-  scn_args.tref = 300;
+  scn_args.tmax = 350;
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, &scn));
 

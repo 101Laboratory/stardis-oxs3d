@@ -141,6 +141,7 @@ struct interf {
   double hc;
   double epsilon;
   double specular_fraction;
+  double reference_temperature;
 };
 
 static double
@@ -165,6 +166,14 @@ interface_get_specular_fraction
 {
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
+}
+
+static double
+interface_get_reference_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interf*)sdis_data_cget(data))->reference_temperature;
 }
 
 /*******************************************************************************
@@ -324,6 +333,7 @@ main(int argc, char** argv)
   interface_shader.back.temperature = NULL;
   interface_shader.back.emissivity = interface_get_emissivity;
   interface_shader.back.specular_fraction = interface_get_specular_fraction;
+  interface_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &interf));
   OK(sdis_data_ref_put(data));
@@ -539,9 +549,10 @@ main(int argc, char** argv)
   /* Green and ambient radiative temperature */
   solve_args.nrealisations = N;
   OK(sdis_scene_set_ambient_radiative_temperature(scn, 300));
-  OK(sdis_scene_set_reference_temperature(scn, 300));
+  OK(sdis_scene_set_maximum_temperature(scn, 600));
 
   interface_param->epsilon = 1;
+  interface_param->reference_temperature = 500;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
@@ -555,6 +566,7 @@ main(int argc, char** argv)
 
   /* Check same green used at different ambient radiative temperature */
   OK(sdis_scene_set_ambient_radiative_temperature(scn, 600));
+  OK(sdis_scene_set_maximum_temperature(scn, 600));
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_green_function_solve(green, &estimator2));

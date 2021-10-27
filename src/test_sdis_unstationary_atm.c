@@ -307,6 +307,7 @@ struct interf {
   double temperature;
   double emissivity;
   double h;
+  double Tref;
 };
 
 static double
@@ -339,9 +340,55 @@ interface_get_emissivity
   return interf->emissivity;
 }
 
+static double
+interface_get_Tref
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  const struct interf* interf;
+  CHK(frag && data);
+  interf = sdis_data_cget(data);
+  return interf->Tref;
+}
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+static void
+create_interface
+  (struct sdis_device* dev,
+   struct sdis_medium* front,
+   struct sdis_medium* back,
+   const struct interf* interf,
+   struct sdis_interface** out_interf)
+{
+  struct sdis_interface_shader shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_data* data = NULL;
+
+  CHK(interf != NULL);
+
+  shader.front.temperature = interface_get_temperature;
+  shader.back.temperature = interface_get_temperature;
+  if(sdis_medium_get_type(front) != sdis_medium_get_type(back)) {
+    shader.convection_coef = interface_get_convection_coef;
+    shader.convection_coef_upper_bound = interf->h;
+  }
+  if(sdis_medium_get_type(front) == SDIS_FLUID) {
+    shader.front.emissivity = interface_get_emissivity;
+    shader.front.reference_temperature = interface_get_Tref;
+  }
+  if(sdis_medium_get_type(back) == SDIS_FLUID) {
+    shader.back.emissivity = interface_get_emissivity;
+    shader.back.reference_temperature = interface_get_Tref;
+  }
+
+  OK(sdis_data_create(dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data));
+  *((struct interf*)sdis_data_get(data)) = *interf;
+
+  OK(sdis_interface_create(dev, front, back, &shader, data, out_interf));
+  OK(sdis_data_ref_put(data));
+}
+
 static void
 solve_tbound1
   (struct sdis_scene* scn,
@@ -648,10 +695,9 @@ main(int argc, char** argv)
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* model3d_interfaces[22 /*#triangles*/];
   struct sdis_interface* model2d_interfaces[7/*#segments*/];
-  struct interf* interf_props = NULL;
+  struct interf interf_props;
   struct solid* solid_props = NULL;
   struct fluid* fluid_props = NULL;
   struct ssp_rng* rng = NULL;
@@ -716,66 +762,34 @@ main(int argc, char** argv)
   OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid_A));
   OK(sdis_data_ref_put(data));
 
-  /* Setup the interface shader */
-  interf_shader.front.temperature = interface_get_temperature;
-  interf_shader.back.temperature = interface_get_temperature;
-  interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.convection_coef_upper_bound = 0;
-
   /* Create the adiabatic interfaces */
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = 0;
-  OK(sdis_interface_create
-    (dev, fluid, dummy_solid, &interf_shader, data, &interf_adiabatic_1));
-  OK(sdis_data_ref_put(data));
-
-  interf_shader.convection_coef = NULL;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = 0;
-  OK(sdis_interface_create
-    (dev, solid, dummy_solid, &interf_shader, data, &interf_adiabatic_2));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.h = 0;
+  interf_props.emissivity = 0;
+  interf_props.Tref = TREF;
+  create_interface(dev, fluid, dummy_solid, &interf_props, &interf_adiabatic_1);
+  create_interface(dev, solid, dummy_solid, &interf_props, &interf_adiabatic_2);
 
   /* Create the P interface */
-  interf_shader.convection_coef_upper_bound = HC;
-  interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.front.emissivity = interface_get_emissivity;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = HC;
-  interf_props->emissivity = 1;
-  OK(sdis_interface_create
-    (dev, fluid, solid, &interf_shader, data, &interf_P));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.h = HC;
+  interf_props.emissivity = 1;
+  interf_props.Tref = TREF;
+  create_interface(dev, fluid, solid, &interf_props, &interf_P);
 
   /* Create the TG interface */
-  interf_shader.convection_coef_upper_bound = HG;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = TG;
-  interf_props->h = HG;
-  interf_props->emissivity = 1;
-  OK(sdis_interface_create
-    (dev, fluid, dummy_solid, &interf_shader, data, &interf_TG));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = TG;
+  interf_props.h = HG;
+  interf_props.emissivity = 1;
+  interf_props.Tref = UNKNOWN_TEMPERATURE;
+  create_interface(dev, fluid, dummy_solid, &interf_props, &interf_TG);
 
   /* Create the TA interface */
-  interf_shader.convection_coef_upper_bound = HA;
-  interf_shader.front.emissivity = NULL;
-  interf_shader.back.emissivity = interface_get_emissivity;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = HA;
-  interf_props->emissivity = 1;
-  OK(sdis_interface_create
-    (dev, solid, fluid_A, &interf_shader, data, &interf_TA));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.h = HA;
+  interf_props.emissivity = 1;
+  interf_props.Tref = TREF;
+  create_interface(dev, solid, fluid_A, &interf_props, &interf_TA);
 
   /* Release the media */
   OK(sdis_medium_ref_put(solid));
@@ -834,7 +848,10 @@ main(int argc, char** argv)
   scn_args.nvertices = model3d_nvertices;
   scn_args.context = model3d_interfaces;
   scn_args.trad = TR;
-  scn_args.tref = TREF;
+  scn_args.tmax = MMAX(T0_FLUID, T0_SOLID);
+  scn_args.tmax = MMAX(scn_args.tmax, TA);
+  scn_args.tmax = MMAX(scn_args.tmax, TG);
+  scn_args.tmax = MMAX(scn_args.tmax, TR);
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
   /* Create the square scene */
@@ -845,7 +862,10 @@ main(int argc, char** argv)
   scn_args.nvertices = model2d_nvertices;
   scn_args.context = model2d_interfaces;
   scn_args.trad = TR;
-  scn_args.tref = TREF;
+  scn_args.tmax = MMAX(T0_FLUID, T0_SOLID);
+  scn_args.tmax = MMAX(scn_args.tmax, TA);
+  scn_args.tmax = MMAX(scn_args.tmax, TG);
+  scn_args.tmax = MMAX(scn_args.tmax, TR);
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 
   /* Release the interfaces */

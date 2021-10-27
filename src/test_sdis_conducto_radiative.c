@@ -193,6 +193,7 @@ struct interfac {
   double convection_coef;
   double emissivity;
   double specular_fraction;
+  double Tref;
 };
 
 static double
@@ -227,6 +228,14 @@ interface_get_specular_fraction
   return ((const struct interfac*)sdis_data_cget(data))->specular_fraction;
 }
 
+static double
+interface_get_Tref
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interfac*)sdis_data_cget(data))->Tref;
+}
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
@@ -251,10 +260,12 @@ create_interface
   if(sdis_medium_get_type(front) == SDIS_FLUID) {
     shader.front.emissivity = interface_get_emissivity;
     shader.front.specular_fraction = interface_get_specular_fraction;
+    shader.front.reference_temperature = interface_get_Tref;
   }
   if(sdis_medium_get_type(back) == SDIS_FLUID) {
     shader.back.emissivity = interface_get_emissivity;
     shader.back.specular_fraction = interface_get_specular_fraction;
+    shader.back.reference_temperature = interface_get_Tref;
   }
   shader.convection_coef_upper_bound = MMAX(0, interf->convection_coef);
 
@@ -337,6 +348,7 @@ main(int argc, char** argv)
   interf.convection_coef = -1;
   interf.emissivity = -1;
   interf.specular_fraction = -1;
+  interf.Tref = Tref;
   create_interface(dev, solid, solid2, &interf, interfaces+0);
 
   /* Create the interface that emits radiative heat from the solid */
@@ -344,6 +356,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = emissivity;
   interf.specular_fraction = 1;
+  interf.Tref = Tref;
   create_interface(dev, solid, fluid, &interf, interfaces+1);
 
   /* Create the interface that forces the radiative heat to bounce */
@@ -351,6 +364,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 0;
   interf.specular_fraction = 1;
+  interf.Tref = Tref;
   create_interface(dev, fluid, solid2, &interf, interfaces+2);
 
   /* Create the interface with a limit condition of T0 Kelvin */
@@ -358,6 +372,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 1;
   interf.specular_fraction = 1;
+  interf.Tref = -1;
   create_interface(dev, fluid, solid2, &interf, interfaces+3);
 
   /* Create the interface with a limit condition of T1 Kelvin */
@@ -365,6 +380,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 1;
   interf.specular_fraction = 1;
+  interf.Tref = -1;
   create_interface(dev, fluid, solid2, &interf, interfaces+4);
 
   /* Setup the per primitive interface of the solid medium */
@@ -398,7 +414,7 @@ main(int argc, char** argv)
   scn_args.get_position = get_position;
   scn_args.nprimitives = ntriangles;
   scn_args.nvertices = nvertices;
-  scn_args.tref = Tref;
+  scn_args.tmax = MMAX(T0, T1);
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, &scn));
 
@@ -476,6 +492,7 @@ main(int argc, char** argv)
 
     /* Check same green used at a different temperature */
     p_intface->temperature = T1b = T1 + ((double)isimul + 1) * 10;
+    OK(sdis_scene_set_maximum_temperature(scn, MMAX(T0, T1b)));
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));

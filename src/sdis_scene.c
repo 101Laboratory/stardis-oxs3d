@@ -219,26 +219,6 @@ sdis_scene_set_ambient_radiative_temperature
 }
 
 res_T
-sdis_scene_get_reference_temperature
-  (const struct sdis_scene* scn,
-   double* tref)
-{
-  if(!scn || !tref) return RES_BAD_ARG;
-  *tref = scn->reference_temperature;
-  return RES_OK;
-}
-
-res_T
-sdis_scene_set_reference_temperature
-  (struct sdis_scene* scn,
-   const double tref)
-{
-  if(!scn || tref < 0) return RES_BAD_ARG;
-  scn->reference_temperature = tref;
-  return RES_OK;
-}
-
-res_T
 sdis_scene_get_maximum_temperature(const struct sdis_scene* scn, double* tmax)
 {
   if(!scn || !tmax) return RES_BAD_ARG;
@@ -488,7 +468,7 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   } else {
     S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
   }
-  WRITE(&scn->reference_temperature, 1);
+  WRITE(&scn->maximum_temperature, 1);
   WRITE(&scn->fp_to_meter, 1);
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;

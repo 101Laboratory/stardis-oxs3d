@@ -573,8 +573,7 @@ XD(solve_boundary_flux)
     const struct sdis_medium *fmd, *bmd;
     enum sdis_side solid_side, fluid_side;
     struct bound_flux_result result = BOUND_FLUX_RESULT_NULL__;
-    const double Tref = scn->reference_temperature;
-    double epsilon, hc, hr, imposed_flux, imposed_temp;
+    double epsilon, hc, hr, imposed_flux, imposed_temp, Tref;
     size_t iprim;
     double uv[DIM - 1];
     float st[DIM - 1];
@@ -638,6 +637,7 @@ XD(solve_boundary_flux)
 
     /* Fetch interface parameters */
     epsilon = interface_side_get_emissivity(interf, &frag);
+    Tref = interface_side_get_reference_temperature(interf, &frag);
     hc = interface_get_convection_coef(interf, &frag);
     hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
     frag.side = solid_side;

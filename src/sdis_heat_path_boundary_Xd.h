@@ -90,7 +90,7 @@ XD(boundary_path)
   if(mdm_front->type == mdm_back->type) {
     res = XD(solid_solid_boundary_path)(scn, ctx, &frag, rwalk, rng, T);
   } else {
-    res = XD(solid_fluid_boundary_path)(scn, ctx, &frag, rwalk, rng, T);
+    res = XD(solid_fluid_boundary_picard1_path)(scn, ctx, &frag, rwalk, rng, T);
   }
   if(res != RES_OK) goto error;
 

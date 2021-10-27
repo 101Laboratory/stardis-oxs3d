@@ -210,7 +210,6 @@ struct sdis_scene {
 
   double fp_to_meter;
   double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature; /* In Kelvin */
   double maximum_temperature; /* In Kelvin */
 
   ref_T ref;

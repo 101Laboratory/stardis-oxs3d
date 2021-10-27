@@ -373,8 +373,7 @@ struct sdis_scene_create_args {
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
   double trad; /* Ambiant radiative temperature */
-  double tref; /* Temperature used to linearize the radiative temperature */
-  double tmax; /* Maxium temperature used to linearize the radiative temp */
+  double tmax; /* Max temperature used to linearize the radiative temperature */
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -386,7 +385,6 @@ struct sdis_scene_create_args {
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
   -1.0, /* Ambient radiative temperature */                                    \
-  -1.0, /* Reference temperature */                                            \
   -1.0, /* Maximum temperature */                                              \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
@@ -839,19 +837,6 @@ SDIS_API res_T
 sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
    const double trad);
-
-/* Get scene's reference temperature */
-SDIS_API res_T
-sdis_scene_get_reference_temperature
-  (const struct sdis_scene* scn,
-   double* tref);
-
-/* Set scene's reference temperature. If set to 0, there is no radiative
- * transfert in the whole system */
-SDIS_API res_T
-sdis_scene_set_reference_temperature
-  (struct sdis_scene* scn,
-   const double tref);
 
 /* Get scene's maximum temperature */
 SDIS_API res_T
