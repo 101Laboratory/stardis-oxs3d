@@ -47,10 +47,8 @@ ray_realisation_3d
   rwalk.mdm = medium;
 
   ctx.heat_path = heat_path;
-  ctx.Tarad = scn->ambient_radiative_temperature;
-  ctx.That = scn->maximum_temperature;
-  ctx.That2 = ctx.That * ctx.That;
-  ctx.That3 = ctx.That * ctx.That2;
+  ctx.That2 = scn->tmax * scn->tmax;
+  ctx.That3 = scn->tmax * ctx.That2;
   
   f3_set_d3(dir, direction);
 

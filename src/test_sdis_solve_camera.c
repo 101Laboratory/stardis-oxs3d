@@ -557,6 +557,8 @@ main(int argc, char** argv)
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
+  struct sdis_ambient_radiative_temperature trad =
+    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   struct ssp_rng* rng_state = NULL;
   struct fluid fluid_param = FLUID_NULL;
   struct solid solid_param = SOLID_NULL;
@@ -630,7 +632,8 @@ main(int argc, char** argv)
   scn_args.get_position = geometry_get_position;
   scn_args.nprimitives = ntris;
   scn_args.nvertices = npos;
-  scn_args.trad = 300;
+  scn_args.trad.temperature = 300;
+  scn_args.trad.reference = 300;
   scn_args.tmax = 350;
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, &scn));
@@ -666,9 +669,12 @@ main(int argc, char** argv)
   solve_args.cam = NULL;
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   solve_args.cam = cam;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, -1));
+  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
+  trad.temperature = -1;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
   BA(sdis_solve_camera(scn, &solve_args, &buf));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, 300));
+  trad.temperature = 300;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
   solve_args.time_range[0] = solve_args.time_range[1] = -1;
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   solve_args.time_range[0] = 1;

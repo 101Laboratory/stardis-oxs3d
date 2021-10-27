@@ -387,6 +387,8 @@ green_function_solve_path
    const size_t ipath,
    double* weight)
 {
+  struct sdis_ambient_radiative_temperature trad = 
+    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   const struct power_term* power_terms = NULL;
   const struct flux_term* flux_terms = NULL;
   const struct green_path* path = NULL;
@@ -443,7 +445,8 @@ green_function_solve_path
       break;
     case SDIS_GREEN_PATH_END_RADIATIVE:
       SDIS(green_function_get_scene(green, &scn));
-      SDIS(scene_get_ambient_radiative_temperature(scn, &end_temperature));
+      SDIS(scene_get_ambient_radiative_temperature(scn, &trad));
+      end_temperature = trad.temperature;
       if(end_temperature <  0) { /* Cannot be negative if used */
         res = RES_BAD_ARG;
         goto error;

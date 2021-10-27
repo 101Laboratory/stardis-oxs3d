@@ -372,7 +372,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 1;
   interf.specular_fraction = 1;
-  interf.Tref = -1;
+  interf.Tref = T0;
   create_interface(dev, fluid, solid2, &interf, interfaces+3);
 
   /* Create the interface with a limit condition of T1 Kelvin */
@@ -380,7 +380,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 1;
   interf.specular_fraction = 1;
-  interf.Tref = -1;
+  interf.Tref = T1;
   create_interface(dev, fluid, solid2, &interf, interfaces+4);
 
   /* Setup the per primitive interface of the solid medium */

@@ -781,7 +781,7 @@ main(int argc, char** argv)
   interf_props.temperature = TG;
   interf_props.h = HG;
   interf_props.emissivity = 1;
-  interf_props.Tref = UNKNOWN_TEMPERATURE;
+  interf_props.Tref = TG;
   create_interface(dev, fluid, dummy_solid, &interf_props, &interf_TG);
 
   /* Create the TA interface */
@@ -847,7 +847,8 @@ main(int argc, char** argv)
   scn_args.nprimitives = model3d_ntriangles;
   scn_args.nvertices = model3d_nvertices;
   scn_args.context = model3d_interfaces;
-  scn_args.trad = TR;
+  scn_args.trad.temperature = TR;
+  scn_args.trad.reference = TR;
   scn_args.tmax = MMAX(T0_FLUID, T0_SOLID);
   scn_args.tmax = MMAX(scn_args.tmax, TA);
   scn_args.tmax = MMAX(scn_args.tmax, TG);
@@ -861,7 +862,8 @@ main(int argc, char** argv)
   scn_args.nprimitives = model2d_nsegments;
   scn_args.nvertices = model2d_nvertices;
   scn_args.context = model2d_interfaces;
-  scn_args.trad = TR;
+  scn_args.trad.temperature = TR;
+  scn_args.trad.reference = TR;
   scn_args.tmax = MMAX(T0_FLUID, T0_SOLID);
   scn_args.tmax = MMAX(scn_args.tmax, TA);
   scn_args.tmax = MMAX(scn_args.tmax, TG);

@@ -276,6 +276,8 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_ambient_radiative_temperature trad =
+    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   struct dump_path_context dump_ctx = DUMP_PATH_CONTEXT_NULL;
   struct context ctx;
   struct fluid* fluid_param;
@@ -548,11 +550,12 @@ main(int argc, char** argv)
 
   /* Green and ambient radiative temperature */
   solve_args.nrealisations = N;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, 300));
-  OK(sdis_scene_set_maximum_temperature(scn, 600));
+  trad.temperature = trad.reference = 300;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
+  OK(sdis_scene_set_maximum_temperature(scn, 300));
 
   interface_param->epsilon = 1;
-  interface_param->reference_temperature = 500;
+  interface_param->reference_temperature = 300;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
@@ -565,7 +568,8 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator2));
 
   /* Check same green used at different ambient radiative temperature */
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, 600));
+  trad.temperature = 600;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
   OK(sdis_scene_set_maximum_temperature(scn, 600));
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));

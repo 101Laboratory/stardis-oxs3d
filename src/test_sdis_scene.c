@@ -258,6 +258,8 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   double duplicated_vertices[] = { 0, 0, 0, 0 };
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_ambient_radiative_temperature trad =
+    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   double lower[2], upper[2];
   double u0, u1, u2, pos[2], pos1[2];
   double dst, fp, t;
@@ -353,15 +355,19 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 
   BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
   BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
-  BA(sdis_scene_get_ambient_radiative_temperature(NULL, &t));
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &t));
-  CHK(t == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad);
+  BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
+  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
+  CHK(trad.temperature == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature);
+  CHK(trad.reference == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference);
 
-  t = 100;
-  BA(sdis_scene_set_ambient_radiative_temperature(NULL, t));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, t));
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &t));
-  CHK(t == 100);
+  trad.temperature = 100;
+  trad.reference = 110;
+  BA(sdis_scene_set_ambient_radiative_temperature(NULL, &trad));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
+  trad = SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
+  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
+  CHK(trad.temperature == 100);
+  CHK(trad.reference == 110);
 
   BA(sdis_scene_get_maximum_temperature(NULL, NULL));
   BA(sdis_scene_get_maximum_temperature(scn, NULL));

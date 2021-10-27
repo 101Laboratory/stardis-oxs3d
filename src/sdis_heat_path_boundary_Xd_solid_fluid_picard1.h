@@ -49,11 +49,11 @@ XD(check_Tref)
       func_name, Tref, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
   }
-  if(Tref > scn->maximum_temperature) {
+  if(Tref > scn->tmax) {
     log_err(scn->dev,
       "%s: invalid maximum temperature `%gK'. The reference temperature `%gK'"
       "at the position `"STR_VECX"' is greater than this temperature.\n",
-      func_name, scn->maximum_temperature, Tref, SPLITX(pos));
+      func_name, scn->tmax, Tref, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
   }
 #undef STR_VECX
@@ -74,7 +74,12 @@ XD(rwalk_get_Tref)
   ASSERT(rwalk && T && out_Tref);
 
   if(T->done) {
-    Tref = T->value;
+    /* The path reaches a limit condition, i.e. it goes to the infinity and
+     * fetches the ambient radiative temperature. We do not use the limit
+     * conditions as the reference temperature to make the sampled paths
+     * independant of them. */
+    ASSERT(T->value == scn->trad.temperature);
+    Tref = scn->trad.reference;
   } else {
     struct sdis_interface_fragment frag;
     struct sdis_interface* interf = NULL;
@@ -89,12 +94,7 @@ XD(rwalk_get_Tref)
     XD(setup_interface_fragment)
       (&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 
-    /* If the boundary temperature is known, use it as the reference
-     * temperature. */
-    Tref = interface_side_get_temperature(interf, &frag);
-    if(Tref < 0) {
-      Tref = interface_side_get_reference_temperature(interf, &frag);
-    }
+    Tref = interface_side_get_reference_temperature(interf, &frag);
   }
 
   res = XD(check_Tref)(scn, rwalk->vtx.P, Tref, FUNC_NAME);

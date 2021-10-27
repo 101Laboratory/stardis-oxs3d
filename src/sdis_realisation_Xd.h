@@ -181,10 +181,8 @@ XD(probe_realisation)
 
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
-  ctx.Tarad = scn->ambient_radiative_temperature;
-  ctx.That = scn->maximum_temperature;
-  ctx.That2 = ctx.That * ctx.That;
-  ctx.That3 = ctx.That * ctx.That2;
+  ctx.That2 = scn->tmax * scn->tmax;
+  ctx.That3 = scn->tmax * ctx.That2;
 
   res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
@@ -258,10 +256,8 @@ XD(boundary_realisation)
 
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
-  ctx.Tarad = scn->ambient_radiative_temperature;
-  ctx.That = scn->maximum_temperature;
-  ctx.That2 = ctx.That * ctx.That;
-  ctx.That3 = ctx.That * ctx.That2;
+  ctx.That2 = scn->tmax * scn->tmax;
+  ctx.That3 = scn->tmax * ctx.That2;
 
   res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
@@ -300,7 +296,7 @@ XD(boundary_flux_realisation)
 #endif
   double P[SDIS_XD_DIMENSION];
   float N[SDIS_XD_DIMENSION];
-  const double That = scn->maximum_temperature;
+  const double That = scn->tmax;
   const double That2 = That * That;
   const double That3 = That * That2;
   const enum sdis_side fluid_side =
@@ -337,8 +333,6 @@ XD(boundary_flux_realisation)
     rwalk.mdm = (Mdm);                                                         \
     rwalk.hit.prim = prim;                                                     \
     SET_PARAM(rwalk.hit, st);                                                  \
-    ctx.Tarad = scn->ambient_radiative_temperature;                            \
-    ctx.That = That;                                                           \
     ctx.That2 = That2;                                                         \
     ctx.That3 = That3;                                                         \
     dX(set)(rwalk.vtx.P, P);                                                   \

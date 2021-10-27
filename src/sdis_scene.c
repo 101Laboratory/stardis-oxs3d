@@ -201,20 +201,20 @@ sdis_scene_set_fp_to_meter
 res_T
 sdis_scene_get_ambient_radiative_temperature
   (const struct sdis_scene* scn,
-   double* trad)
+   struct sdis_ambient_radiative_temperature* trad)
 {
   if(!scn || !trad) return RES_BAD_ARG;
-  *trad = scn->ambient_radiative_temperature;
+  *trad = scn->trad;
   return RES_OK;
 }
 
 res_T
 sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
-   const double trad)
+   const struct sdis_ambient_radiative_temperature* trad)
 {
   if(!scn) return RES_BAD_ARG;
-  scn->ambient_radiative_temperature = trad;
+  scn->trad = *trad;
   return RES_OK;
 }
 
@@ -222,7 +222,7 @@ res_T
 sdis_scene_get_maximum_temperature(const struct sdis_scene* scn, double* tmax)
 {
   if(!scn || !tmax) return RES_BAD_ARG;
-  *tmax = scn->maximum_temperature;
+  *tmax = scn->tmax;
   return RES_OK;
 }
 
@@ -230,7 +230,7 @@ res_T
 sdis_scene_set_maximum_temperature(struct sdis_scene* scn, const double tmax)
 {
   if(!scn || tmax < 0) return RES_BAD_ARG;
-  scn->maximum_temperature = tmax;
+  scn->tmax = tmax;
   return RES_OK;
 }
 
@@ -468,7 +468,8 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   } else {
     S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
   }
-  WRITE(&scn->maximum_temperature, 1);
+  WRITE(&scn->trad.reference, 1);
+  WRITE(&scn->tmax, 1);
   WRITE(&scn->fp_to_meter, 1);
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;

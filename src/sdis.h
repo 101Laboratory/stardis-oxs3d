@@ -360,6 +360,15 @@ typedef void
    double pos[], /* Output list of vertex coordinates */
    void* ctx);
 
+struct sdis_ambient_radiative_temperature {
+  double temperature; /* In Kelvin */
+  double reference; /* Used to linearise the radiative transfert */
+};
+#define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {-1, -1}
+static const struct sdis_ambient_radiative_temperature
+SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL = 
+  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__;
+
 struct sdis_scene_create_args {
   /* Functors to retrieve the geometric description */
   sdis_get_primitive_indices_T get_indices;
@@ -372,7 +381,7 @@ struct sdis_scene_create_args {
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
-  double trad; /* Ambiant radiative temperature */
+  struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
   double tmax; /* Max temperature used to linearize the radiative temperature */
 };
 
@@ -384,7 +393,7 @@ struct sdis_scene_create_args {
   0, /* #primitives */                                                         \
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
-  -1.0, /* Ambient radiative temperature */                                    \
+  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
   -1.0, /* Maximum temperature */                                              \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
@@ -829,14 +838,14 @@ sdis_scene_set_fp_to_meter
 SDIS_API res_T
 sdis_scene_get_ambient_radiative_temperature
   (const struct sdis_scene* scn,
-   double* trad);
+   struct sdis_ambient_radiative_temperature* trad);
 
 /* Set scene's ambient radiative temperature. If set negative, any sample
  * ending in ambient radiative temperature will fail */
 SDIS_API res_T
 sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
-   const double trad);
+   const struct sdis_ambient_radiative_temperature* trad);
 
 /* Get scene's maximum temperature */
 SDIS_API res_T

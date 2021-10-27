@@ -25,17 +25,14 @@ struct sdis_heat_path;
 struct rwalk_context {
   struct green_path_handle* green_path;
   struct sdis_heat_path* heat_path;
-  double Tarad; /* Ambient radiative temperature */
 
-  double That; /* Upper bound temperature */
+  /* That is the upper bound temperature */
   double That2; /* That^2 */
   double That3; /* That^3 */
 };
 #define RWALK_CONTEXT_NULL__ {                                                 \
   NULL, /* Green path */                                                       \
   NULL, /* Heat path */                                                        \
-  0, /* Ambient radiative temperature */                                       \
-  0, /* Temperature upper bound */                                             \
   0, /* (Temperature upper bound)^2 */                                         \
   0 /* (Temperature upper bound)^3 */                                          \
 }

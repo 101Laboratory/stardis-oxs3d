@@ -371,7 +371,7 @@ main(int argc, char** argv)
   interf.front.temperature = T0;
   interf.front.emissivity = 1;
   interf.front.specular_fraction = 1;
-  interf.front.reference_temperature = -1; /* Should not be fetched */
+  interf.front.reference_temperature = T0;
   create_interface(dev, fluid, solid2, &interf, interfaces+3);
 
   /* Create the interface with a limit condition of T1 Kelvin  */
@@ -379,7 +379,7 @@ main(int argc, char** argv)
   interf.front.temperature = T1;
   interf.front.emissivity = 1;
   interf.front.specular_fraction = 1;
-  interf.front.reference_temperature = -1; /* Should not be fetched */
+  interf.front.reference_temperature = T1;
   create_interface(dev, fluid, solid2, &interf, interfaces+4);
 
   /* Setup the per primitive interface of the solid medium */
