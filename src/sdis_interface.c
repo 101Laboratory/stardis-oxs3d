@@ -74,11 +74,13 @@ check_interface_shader
   FOR_EACH(i, 0, 2) {
     switch(type[i]) {
       case SDIS_SOLID:
-        if(shaders[i]->emissivity || shaders[i]->specular_fraction) {
+        if(shaders[i]->emissivity 
+        || shaders[i]->specular_fraction
+        || shaders[i]->reference_temperature) {
           log_warn(dev,
-            "%s: the interface side toward a solid can neither have the "
-            "emissivity nor the specular_fraction properties. The shader's "
-            " pointer functions for these attributes should be NULL.\n",
+            "%s: the interface side toward a solid cannot have an emissivity, "
+            "a specular_fraction or a reference temperature. The shader's "
+            "pointer functions for these attributes should be NULL.\n",
             caller_name);
         }
         break;
