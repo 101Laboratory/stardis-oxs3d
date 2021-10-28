@@ -23,6 +23,20 @@
 #include <star/ssp.h>
 
 /*
+ * The physical configuration is the following: a slab of fluid with known
+ * thermophysical properties but unknown temperature is located between a
+ * "ground" and a slab of solid, with also a unknown temperature profile. On
+ * the other side of the solid slab, is a "atmosphere" with known temperature,
+ * and known radiative temperature.
+ *
+ * Solving the system means: finding the temperature of the ground, of the
+ * fluid, of the boundaries, and also the temperature inside the solid, at
+ * various locations (the 1D slab is discretized in order to obtain the
+ * reference)
+ *
+ * The reference for this system comes from a numerical method and is not
+ * analytic.  Thus the compliance test MC VS reference is not the usual |MC -
+ * ref| <= 3*sigma but is |MC -ref| <= (Tmax -Tmin) * 0.01.
  *
  *          3D                                      2D
  *
@@ -59,6 +73,10 @@
 #define HA 400
 #define TR 260
 
+#define TMAX (MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), MMAX(TG, TA)), TR))
+#define TMIN (MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), MMIN(TG, TA)), TR))
+#define EPS ((TMAX-TMIN)*0.01)
+
 /* hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon
  * Tref = (hr / (4 * 5.6696e-8 * epsilon)) ^ 1/3, hr = 6 */
 #define TREF 297.974852286
@@ -73,9 +91,9 @@
 
 #define DELTA (XE/30.0)
 
-  /*******************************************************************************
-   * Box geometry
-   ******************************************************************************/
+/*******************************************************************************
+ * Box geometry
+ ******************************************************************************/
 static const double model3d_vertices[12/*#vertices*/*3/*#coords per vertex*/] = {
   0, 0, 0,
   XH, 0, 0,
@@ -460,7 +478,7 @@ solve_tbound1
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N/1000);
-    CHK(t[isimul] == 0 || eq_eps(T.E, ref[isimul], T.SE * 4));
+    CHK(eq_eps(T.E, ref[isimul], EPS));
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -537,7 +555,7 @@ solve_tbound2
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N/1000);
-    CHK(eq_eps(T.E, ref[isimul], T.SE * 4));
+    CHK(eq_eps(T.E, ref[isimul], EPS));
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -603,7 +621,7 @@ solve_tsolid
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N / 1000);
-    CHK(eq_eps(T.E, ref[isimul], T.SE * 4));
+    CHK(eq_eps(T.E, ref[isimul], EPS));
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -622,6 +640,7 @@ solve_tfluid
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
+  double eps;
   double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
   double ref[sizeof(t) / sizeof(*t)]
     = { 300, 309.53905, 309.67273, 309.73241, 309.76798, 309.79194, 309.80899,
@@ -666,7 +685,9 @@ solve_tfluid
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N / 1000);
-    CHK(eq_eps(T.E, ref[isimul], T.SE * 4));
+
+    eps = EPS;
+    CHK(eq_eps(T.E, ref[isimul], eps));
 
     OK(sdis_estimator_ref_put(estimator));
   }
