@@ -125,6 +125,7 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   BA(sdis_green_path_get_limit_point(NULL, &pt));
   BA(sdis_green_path_get_limit_point(path, NULL));
   if(end_type == SDIS_GREEN_PATH_END_RADIATIVE) {
+    struct sdis_ambient_radiative_temperature trad;
     struct sdis_green_function* green;
     struct sdis_scene* scn;
     BO(sdis_green_path_get_limit_point(path, &pt));
@@ -140,8 +141,9 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
 
     BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
     BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
-    BA(sdis_scene_get_ambient_radiative_temperature(NULL, &temp));
-    OK(sdis_scene_get_ambient_radiative_temperature(scn, &temp));
+    BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
+    OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
+    temp = trad.temperature;
   } else {
     OK(sdis_green_path_get_limit_point(path, &pt));
     switch(pt.type) {

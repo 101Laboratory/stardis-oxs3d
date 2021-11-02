@@ -142,6 +142,7 @@ struct interf {
   double temperature;
   double emissivity;
   double hc;
+  double reference_temperature;
 };
 
 static double
@@ -169,6 +170,15 @@ interface_get_convection_coef
   const struct interf* interf = sdis_data_cget(data);
   CHK(frag && data);
   return interf->hc;
+}
+
+static double
+interface_get_reference_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  const struct interf* interf = sdis_data_cget(data);
+  CHK(frag && data);
+  return interf->reference_temperature;
 }
 
 /*******************************************************************************
@@ -289,7 +299,9 @@ main(int argc, char** argv)
   interf_props->hc = H;
   interf_props->temperature = Tb;
   interf_props->emissivity = EPSILON;
+  interf_props->reference_temperature = Tb;
   interf_shader.back.emissivity = interface_get_emissivity;
+  interf_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_Tb));
   interf_shader.back.emissivity = NULL;
@@ -301,7 +313,9 @@ main(int argc, char** argv)
   interf_props->hc = H;
   interf_props->temperature = UNKNOWN_TEMPERATURE;
   interf_props->emissivity = EPSILON;
+  interf_props->reference_temperature = Tref;
   interf_shader.back.emissivity = interface_get_emissivity;
+  interf_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_H));
   interf_shader.back.emissivity = NULL;
@@ -331,8 +345,9 @@ main(int argc, char** argv)
   scn_args.get_position = box_get_position;
   scn_args.nprimitives = box_ntriangles;
   scn_args.nvertices = box_nvertices;
-  scn_args.trad = Trad;
-  scn_args.tref = Tref;
+  scn_args.trad.temperature = Trad;
+  scn_args.trad.reference = Trad;
+  scn_args.tmax = MMAX(MMAX(Tf, Trad), Tb);
   scn_args.context = box_interfaces;
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
@@ -342,8 +357,9 @@ main(int argc, char** argv)
   scn_args.get_position = square_get_position;
   scn_args.nprimitives = square_nsegments;
   scn_args.nvertices = square_nvertices;
-  scn_args.trad = Trad;
-  scn_args.tref = Tref;
+  scn_args.trad.temperature = Trad;
+  scn_args.trad.reference = Trad;
+  scn_args.tmax = MMAX(MMAX(Tf, Trad), Tb);
   scn_args.context = square_interfaces;
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 

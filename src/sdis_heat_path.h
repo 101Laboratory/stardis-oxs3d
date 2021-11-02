@@ -19,6 +19,7 @@
 #include "sdis.h"
 
 #include <rsys/dynamic_array.h>
+#include <rsys/dynamic_array_size_t.h>
 #include <rsys/rsys.h>
 
 /* Forward declarations */
@@ -39,7 +40,12 @@ struct temperature_3d;
  * Heat path data structure
  ******************************************************************************/
 struct sdis_heat_path {
+  /* List of the path vertices */
   struct darray_heat_vertex vertices;
+
+  /* Indices of the vertices that mark a break in the path */
+  struct darray_size_t breaks;
+
   enum sdis_heat_path_flag status;
 };
 
@@ -49,6 +55,7 @@ heat_path_init(struct mem_allocator* allocator, struct sdis_heat_path* path)
   ASSERT(path);
   path->status = SDIS_HEAT_PATH_NONE;
   darray_heat_vertex_init(allocator, &path->vertices);
+  darray_size_t_init(allocator, &path->breaks);
 }
 
 static INLINE void
@@ -56,30 +63,46 @@ heat_path_release(struct sdis_heat_path* path)
 {
   ASSERT(path);
   darray_heat_vertex_release(&path->vertices);
+  darray_size_t_release(&path->breaks);
 }
 
 static INLINE res_T
 heat_path_copy(struct sdis_heat_path* dst, const struct sdis_heat_path* src)
 {
+  res_T res = RES_OK;
   ASSERT(dst && src);
   dst->status = src->status;
-  return darray_heat_vertex_copy(&dst->vertices, &src->vertices);
+  res = darray_heat_vertex_copy(&dst->vertices, &src->vertices);
+  if(res != RES_OK) return res;
+  res = darray_size_t_copy(&dst->breaks, &src->breaks);
+  if(res != RES_OK) return res;
+  return RES_OK;
 }
 
 static INLINE res_T
 heat_path_copy_and_release(struct sdis_heat_path* dst, struct sdis_heat_path* src)
 {
+  res_T res = RES_OK;
   ASSERT(dst && src);
   dst->status = src->status;
-  return darray_heat_vertex_copy_and_release(&dst->vertices, &src->vertices);
+  res = darray_heat_vertex_copy_and_release(&dst->vertices, &src->vertices);
+  if(res != RES_OK) return res;
+  res = darray_size_t_copy_and_release(&dst->breaks, &src->breaks);
+  if(res != RES_OK) return res;
+  return RES_OK;
 }
 
 static INLINE res_T
 heat_path_copy_and_clear(struct sdis_heat_path* dst, struct sdis_heat_path* src)
 {
+  res_T res = RES_OK;
   ASSERT(dst && src);
   dst->status = src->status;
-  return darray_heat_vertex_copy_and_clear(&dst->vertices, &src->vertices);
+  res = darray_heat_vertex_copy_and_clear(&dst->vertices, &src->vertices);
+  if(res != RES_OK) return res;
+  res = darray_size_t_copy_and_clear(&dst->breaks, &src->breaks);
+  if(res != RES_OK) return res;
+  return RES_OK;
 }
 
 static INLINE res_T
@@ -97,6 +120,18 @@ heat_path_get_last_vertex(struct sdis_heat_path* path)
   sz = darray_heat_vertex_size_get(&path->vertices);
   ASSERT(sz);
   return darray_heat_vertex_data_get(&path->vertices) + (sz-1);
+}
+
+static INLINE res_T
+heat_path_add_break(struct sdis_heat_path* path)
+{
+  size_t id;
+  size_t sz;
+  ASSERT(path);
+  sz = darray_heat_vertex_size_get(&path->vertices);
+  if(sz == 0) return RES_OK; /* Nothing to do */
+  id = sz-1;
+  return darray_size_t_push_back(&path->breaks, &id);
 }
 
 /* Generate the dynamic array of heat paths */

@@ -912,8 +912,8 @@ XD(scene_create)
   SDIS(device_ref_get(dev));
   scn->dev = dev;
   scn->fp_to_meter = args->fp_to_meter;
-  scn->ambient_radiative_temperature = args->trad;
-  scn->reference_temperature = args->tref;
+  scn->trad = args->trad;
+  scn->tmax = args->tmax;
   scn->outer_enclosure_id = UINT_MAX;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_medium_init(dev->allocator, &scn->media);

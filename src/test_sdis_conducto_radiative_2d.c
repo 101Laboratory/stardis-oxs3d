@@ -58,7 +58,7 @@ static const double vertices[8/*#vertices*/*2/*#coords par vertex*/] = {
   -1.5,  1.0,
    1.5,  1.0
 };
-static const size_t nvertices = sizeof(vertices) / (2*sizeof(double));
+static const size_t nvertices = sizeof(vertices) / (sizeof(double)*2);
 
 static const size_t indices[10/*#segments*/*2/*#indices per segment*/] = {
   0, 1, /* Solid bottom segment */
@@ -74,7 +74,7 @@ static const size_t indices[10/*#segments*/*2/*#indices per segment*/] = {
   3, 7, /* Right fluid top segment */
   7, 4 /* Right fluid right segment */
 };
-static const size_t nsegments = sizeof(indices) / (2*sizeof(size_t));
+static const size_t nsegments = sizeof(indices) / (sizeof(size_t)*2);
 
 static void
 get_indices(const size_t iseg, size_t ids[2], void* ctx)
@@ -158,11 +158,12 @@ struct interfac {
     double temperature;
     double emissivity;
     double specular_fraction;
+    double reference_temperature;
   } front, back;
 };
 
 static const struct interfac INTERFACE_NULL = {
-  0, {-1, -1, -1}, {-1, -1, -1}
+  0, {-1, -1, -1, -1}, {-1, -1, -1, -1}
 };
 
 static double
@@ -223,6 +224,22 @@ interface_get_specular_fraction
   return f;
 }
 
+static double
+interface_get_reference_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  const struct interfac* interf;
+  double T = -1;
+  CHK(data != NULL && frag != NULL);
+  interf = sdis_data_cget(data);
+  switch(frag->side) {
+    case SDIS_FRONT: T = interf->front.reference_temperature; break;
+    case SDIS_BACK: T = interf->back.reference_temperature; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return T;
+}
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
@@ -250,10 +267,12 @@ create_interface
   if(type_f == SDIS_FLUID) {
     shader.front.emissivity = interface_get_emissivity;
     shader.front.specular_fraction = interface_get_specular_fraction;
+    shader.front.reference_temperature = interface_get_reference_temperature;
   }
   if(type_b == SDIS_FLUID) {
     shader.back.emissivity = interface_get_emissivity;
     shader.back.specular_fraction = interface_get_specular_fraction;
+    shader.back.reference_temperature = interface_get_reference_temperature;
   }
   shader.convection_coef_upper_bound = MMAX(0, interf->convection_coef);
 
@@ -336,6 +355,7 @@ main(int argc, char** argv)
   interf.back.temperature = UNKNOWN_TEMPERATURE;
   interf.back.emissivity = emissivity;
   interf.back.specular_fraction = -1; /* Should not be fetched */
+  interf.back.reference_temperature = Tref;
   create_interface(dev, solid, fluid, &interf, interfaces+1);
 
   /* Create the interface that forces the radiative heat to bounce */
@@ -343,6 +363,7 @@ main(int argc, char** argv)
   interf.front.temperature = UNKNOWN_TEMPERATURE;
   interf.front.emissivity = 0;
   interf.front.specular_fraction = 1;
+  interf.front.reference_temperature = Tref;
   create_interface(dev, fluid, solid2, &interf, interfaces+2);
 
   /* Create the interface with a limit condition of T0 Kelvin */
@@ -350,6 +371,7 @@ main(int argc, char** argv)
   interf.front.temperature = T0;
   interf.front.emissivity = 1;
   interf.front.specular_fraction = 1;
+  interf.front.reference_temperature = T0;
   create_interface(dev, fluid, solid2, &interf, interfaces+3);
 
   /* Create the interface with a limit condition of T1 Kelvin  */
@@ -357,6 +379,7 @@ main(int argc, char** argv)
   interf.front.temperature = T1;
   interf.front.emissivity = 1;
   interf.front.specular_fraction = 1;
+  interf.front.reference_temperature = T1;
   create_interface(dev, fluid, solid2, &interf, interfaces+4);
 
   /* Setup the per primitive interface of the solid medium */
@@ -384,8 +407,8 @@ main(int argc, char** argv)
   scn_args.get_position = get_position;
   scn_args.nprimitives = nsegments;
   scn_args.nvertices = nvertices;
-  scn_args.tref = Tref;
   scn_args.context = &geom;
+  scn_args.tmax = MMAX(T0, T1);
   OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   hr = 4*BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;

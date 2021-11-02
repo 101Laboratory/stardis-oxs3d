@@ -207,8 +207,11 @@ struct sdis_interface_side_shader {
    * interface or if the emissivity is 0 onto the whole interface. */
   sdis_interface_getter_T emissivity; /* Overall emissivity. */
   sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
+
+  /* Reference temperature used in Picard 1 */
+  sdis_interface_getter_T reference_temperature;
 };
-#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL }
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL }
 static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
   SDIS_INTERFACE_SIDE_SHADER_NULL__;
 
@@ -357,20 +360,29 @@ typedef void
    double pos[], /* Output list of vertex coordinates */
    void* ctx);
 
+struct sdis_ambient_radiative_temperature {
+  double temperature; /* In Kelvin */
+  double reference; /* Used to linearise the radiative transfert */
+};
+#define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {-1, -1}
+static const struct sdis_ambient_radiative_temperature
+SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL = 
+  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__;
+
 struct sdis_scene_create_args {
   /* Functors to retrieve the geometric description */
   sdis_get_primitive_indices_T get_indices;
   sdis_get_primitive_interface_T get_interface;
   sdis_get_vertex_position_T get_position;
 
- /* Pointer toward client side sent as the last argument of the callbacks */
+  /* Pointer toward client side sent as the last argument of the callbacks */
   void* context;
 
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
-  double trad; /* Ambiant radiative temperature */
-  double tref; /* Temperature used to linearize the radiative temperature */
+  struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
+  double tmax; /* Max temperature used to linearize the radiative temperature */
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -381,8 +393,8 @@ struct sdis_scene_create_args {
   0, /* #primitives */                                                         \
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
-  -1.0, /* Ambient radiative temperature */                                    \
-  -1.0 /* Reference temperature */                                             \
+  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
+  -1.0, /* Maximum temperature */                                              \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;
@@ -826,27 +838,27 @@ sdis_scene_set_fp_to_meter
 SDIS_API res_T
 sdis_scene_get_ambient_radiative_temperature
   (const struct sdis_scene* scn,
-   double* trad);
+   struct sdis_ambient_radiative_temperature* trad);
 
 /* Set scene's ambient radiative temperature. If set negative, any sample
  * ending in ambient radiative temperature will fail */
 SDIS_API res_T
 sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
-   const double trad);
+   const struct sdis_ambient_radiative_temperature* trad);
 
-/* Get scene's reference temperature */
+/* Get scene's maximum temperature */
 SDIS_API res_T
-sdis_scene_get_reference_temperature
+sdis_scene_get_maximum_temperature
   (const struct sdis_scene* scn,
-   double* tref);
+   double* tmax);
 
-/* Set scene's reference temperature. If set to 0, there is no radiative
- * transfert in the whole system */
+/* Set scene's maximum temperature. Must be correctly defined if there is any
+ * radiative transfert in the scene. */
 SDIS_API res_T
-sdis_scene_set_reference_temperature
+sdis_scene_set_maximum_temperature
   (struct sdis_scene* scn,
-   const double tref);
+   const double tmax);
 
 /* Search the point onto the scene geometry that is the closest of `pos'. The
  * `radius' parameter controls the maximum search distance around `pos'. The

@@ -47,7 +47,7 @@ static const double vertices[12/*#vertices*/*3/*#coords per vertex*/] = {
   1.0, 0.0, 1.0,
   1.0, 1.0, 1.0
 };
-static const size_t nvertices = sizeof(vertices) / (3*sizeof(double));
+static const size_t nvertices = sizeof(vertices) / (sizeof(double)*3);
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
@@ -67,7 +67,7 @@ static const size_t indices[22/*#triangles*/*3/*#indices per triangle*/] = {
   0, 2, 1, 1, 2, 3, 1, 3, 8, 8, 3, 9, /* Z min */
   4, 5, 6, 6, 5, 7, 5,10, 7, 7,10,11  /* Z max */
 };
-static const size_t ntriangles = sizeof(indices) / (3*sizeof(size_t));
+static const size_t ntriangles = sizeof(indices) / (sizeof(size_t)*3);
 
 /*******************************************************************************
  * Box geometry functions

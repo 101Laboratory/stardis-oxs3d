@@ -209,8 +209,8 @@ struct sdis_scene {
   unsigned outer_enclosure_id;
 
   double fp_to_meter;
-  double ambient_radiative_temperature; /* In Kelvin */
-  double reference_temperature;
+  struct sdis_ambient_radiative_temperature trad;
+  double tmax; /* Maximum temperature of the system (In Kelvin) */
 
   ref_T ref;
   struct sdis_device* dev;

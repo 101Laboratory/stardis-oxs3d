@@ -41,7 +41,7 @@ static const double box_vertices[8/*#vertices*/*3/*#coords per vertex*/] = {
   0.0, 1.0, 1.0,
   1.0, 1.0, 1.0
 };
-static const size_t box_nvertices = sizeof(box_vertices) / (3*sizeof(double));
+static const size_t box_nvertices = sizeof(box_vertices) / (sizeof(double)*3);
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
@@ -61,7 +61,7 @@ static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
   2, 6, 7, 7, 3, 2, /* +Y */
   0, 1, 5, 5, 4, 0  /* -Y */
 };
-static const size_t box_ntriangles = sizeof(box_indices) / (3*sizeof(size_t));
+static const size_t box_ntriangles = sizeof(box_indices) / (sizeof(size_t)*3);
 
 static INLINE void
 box_get_indices(const size_t itri, size_t ids[3], void* context)
@@ -103,7 +103,7 @@ static const double square_vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
   0.0, 1.0,
   1.0, 1.0
 };
-static const size_t square_nvertices = sizeof(square_vertices)/(2*sizeof(double));
+static const size_t square_nvertices = sizeof(square_vertices)/(sizeof(double)*2);
 
 static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   0, 1, /* Bottom */
@@ -111,7 +111,7 @@ static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   2, 3, /* Top */
   3, 0 /* Right */
 };
-static const size_t square_nsegments = sizeof(square_indices)/(2*sizeof(size_t));
+static const size_t square_nsegments = sizeof(square_indices)/(sizeof(size_t)*2);
 
 static INLINE void
 square_get_indices(const size_t iseg, size_t ids[2], void* context)
@@ -165,35 +165,36 @@ dummy_interface_getter
 }
 
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  0
+  dummy_medium_getter, /* Calorific capacity */
+  dummy_medium_getter, /* Thermal conductivity */
+  dummy_medium_getter, /* Volumic mass */
+  dummy_medium_getter, /* Delta */
+  dummy_medium_getter, /* Volumic power */
+  dummy_medium_getter, /* Temperature */
+  0 /* Initial time */
 };
 
 static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  0
+  dummy_medium_getter, /* Calorific capacity */
+  dummy_medium_getter, /* Volumic mass */
+  dummy_medium_getter, /* Temperature */
+  0 /* Initial time */
 };
 
 
 #define DUMMY_INTERFACE_SIDE_SHADER__ {                                        \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter                                                       \
+  dummy_interface_getter, /* Temperature */                                    \
+  dummy_interface_getter, /* Flux */                                           \
+  dummy_interface_getter, /* Emissivity */                                     \
+  dummy_interface_getter, /* Specular fraction */                              \
+  dummy_interface_getter  /* Reference temperature */                          \
 }
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
-  dummy_interface_getter,
-  0,
-  dummy_interface_getter,
-  DUMMY_INTERFACE_SIDE_SHADER__,
-  DUMMY_INTERFACE_SIDE_SHADER__
+  dummy_interface_getter, /* Convection coef */
+  0, /* Upper bound of the convection coef */
+  dummy_interface_getter, /* Thermal contact resistance */
+  DUMMY_INTERFACE_SIDE_SHADER__, /* Front side */
+  DUMMY_INTERFACE_SIDE_SHADER__ /* Back side */
 };
 
 /*******************************************************************************

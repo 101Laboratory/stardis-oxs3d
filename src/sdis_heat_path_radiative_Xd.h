@@ -74,8 +74,8 @@ XD(trace_radiative_path)
 #endif
     if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
       rwalk->hit_side = SDIS_SIDE_NULL__;
-      if(ctx->Tarad >= 0) {
-        T->value += ctx->Tarad;
+      if(scn->trad.temperature >= 0) {
+        T->value += scn->trad.temperature;
         T->done = 1;
 
         if(ctx->green_path) {
@@ -104,7 +104,7 @@ XD(trace_radiative_path)
           "such temperature, one has to setup a valid ambient radiative "
           "temperature, i.e. it must be greater or equal to 0.\n",
           FUNC_NAME,
-          ctx->Tarad,
+          scn->trad.temperature,
           SPLIT3(rwalk->vtx.P));
         res = RES_BAD_OP;
         goto error;
