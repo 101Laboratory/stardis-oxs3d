@@ -25,94 +25,10 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
- * Helper functions
- ******************************************************************************/
-static INLINE res_T
-XD(check_Tref)
-  (const struct sdis_scene* scn,
-   const double pos[DIM],
-   const double Tref,
-   const char* func_name)
-{
-  ASSERT(scn && pos && func_name);
-
-#if DIM == 2
-  #define STR_VECX "%g %g"
-  #define SPLITX SPLIT2
-#else
-  #define STR_VECX "%g %g %g"
-  #define SPLITX SPLIT3
-#endif
-  if(Tref < 0) {
-    log_err(scn->dev,
-      "%s: invalid reference temperature `%gK' at the position `"STR_VECX"'.\n",
-      func_name, Tref, SPLITX(pos));
-    return RES_BAD_OP_IRRECOVERABLE;
-  }
-  if(Tref > scn->tmax) {
-    log_err(scn->dev,
-      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK'"
-      "at the position `"STR_VECX"' is greater than this temperature.\n",
-      func_name, scn->tmax, Tref, SPLITX(pos));
-    return RES_BAD_OP_IRRECOVERABLE;
-  }
-#undef STR_VECX
-#undef SPLITX
-
-  return RES_OK;
-}
-
-static INLINE res_T
-XD(rwalk_get_Tref)
-  (const struct sdis_scene* scn,
-   const struct XD(rwalk)* rwalk,
-   const struct XD(temperature)* T,
-   double* out_Tref)
-{
-  double Tref = -1;
-  res_T res = RES_OK;
-  ASSERT(rwalk && T && out_Tref);
-
-  if(T->done) {
-    /* The path reaches a limit condition, i.e. it goes to the infinity and
-     * fetches the ambient radiative temperature. We do not use the limit
-     * conditions as the reference temperature to make the sampled paths
-     * independant of them. */
-    ASSERT(T->value == scn->trad.temperature);
-    Tref = scn->trad.reference;
-  } else {
-    struct sdis_interface_fragment frag;
-    struct sdis_interface* interf = NULL;
-    ASSERT(!SXD_HIT_NONE(&rwalk->hit));
-
-    /* Fetch the interface where the random walk ends */
-    interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-    ASSERT(rwalk->hit_side!=SDIS_FRONT || interf->medium_front->type==SDIS_FLUID);
-    ASSERT(rwalk->hit_side!=SDIS_BACK || interf->medium_back->type==SDIS_FLUID);
-
-    /* Fragment on the fluid side of the boundary onto which the rwalk ends */
-    XD(setup_interface_fragment)
-      (&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
-
-    Tref = interface_side_get_reference_temperature(interf, &frag);
-  }
-
-  res = XD(check_Tref)(scn, rwalk->vtx.P, Tref, FUNC_NAME);
-  if(res != RES_OK) goto error;
-
-exit:
-  *out_Tref = Tref;
-  return res;
-error:
-  Tref = -1;
-  goto exit;
-}
-
-/*******************************************************************************
  * Boundary path between a solid and a fluid
  ******************************************************************************/
 res_T
-XD(solid_fluid_boundary_picard1_path)
+XD(solid_fluid_boundary_picardN_path)
   (struct sdis_scene* scn,
    const struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
@@ -126,10 +42,6 @@ XD(solid_fluid_boundary_picard1_path)
   struct XD(reinjection_step) reinject_step =
     XD(REINJECTION_STEP_NULL);
 
-  /* Temperature and random walk state of the sampled radiative path */
-  struct XD(temperature) T_s;
-  struct XD(rwalk) rwalk_s;
-
   /* Fragment on the fluid side of the boundary */
   struct sdis_interface_fragment frag_fluid;
 
@@ -141,13 +53,12 @@ XD(solid_fluid_boundary_picard1_path)
   double h_cond; /* Conductive coefficient */
   double h_conv; /* Convective coefficient */
   double h_radi_hat; /* Radiative coefficient with That */
+  double h_radi_min;
   double h_hat; /* Sum of h_<conv|cond|rad_hat> */
   double p_conv; /* Convective proba */
   double p_cond; /* Conductive proba */
 
   double epsilon; /* Interface emissivity */
-  double Tref; /* Reference temperature */
-  double Tref_s; /* Reference temperature of the sampled radiative path */
   double lambda; /* Solid conductivity */
   double delta_boundary; /* Orthogonal reinjection dst at the boundary */
   double delta; /* Orthogonal fitted reinjection dst at the boundary */
@@ -184,15 +95,6 @@ XD(solid_fluid_boundary_picard1_path)
   /* Fetch the boundary emissivity */
   epsilon = interface_side_get_emissivity(interf, &frag_fluid);
 
-  if(epsilon <= 0) {
-    Tref = 0;
-  } else {
-    /* Check the Tref */
-    Tref = interface_side_get_reference_temperature(interf, &frag_fluid);
-    res = XD(check_Tref)(scn, frag_fluid.P, Tref, FUNC_NAME);
-    if(res != RES_OK) goto error;
-  }
-
   /* Note that the reinjection distance is *FIXED*. It MUST ensure that the
    * orthogonal distance from the boundary to the reinjection point is at most
    * equal to delta. */
@@ -214,7 +116,7 @@ XD(solid_fluid_boundary_picard1_path)
   /* Compute the convective, conductive and the upper bound radiative coef */
   h_conv = interface_get_convection_coef(interf, frag);
   h_cond = lambda / (delta * scn->fp_to_meter);
-  h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * ctx->That3 * epsilon;
+  h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * That3 * epsilon;
 
   /* Compute a global upper bound coefficient */
   h_hat = h_conv + h_cond + h_radi_hat;
@@ -223,17 +125,12 @@ XD(solid_fluid_boundary_picard1_path)
   p_conv = h_conv / h_hat;
   p_cond = h_cond / h_hat;
 
-  /* Fetch the current heat vertex type. This will be used below to restart the
-   * registration of the heat path geometry after a null collision */
-  if(ctx->heat_path) {
-    current_vertex_type = heat_path_get_last_vertex(ctx->heat_path)->type;
-  }
-
   /* Null collision */
   for(;;) {
-    double h_radi; /* Radiative coefficient */
-    double p_radi; /* Radiative proba */
-
+    double h_radi, h_radi_min, h_radi_max; /* Radiative coefficients */
+    double p_radi, p_radi_min, p_radi_max; /* Radiative probas */
+    double T0, T1, T2, T3, T4, T5; /* Computed temperatures */
+    
     r = ssp_rng_canonical(rng);
 
     /* Switch in convective path */
@@ -241,7 +138,7 @@ XD(solid_fluid_boundary_picard1_path)
       T->func = XD(convective_path);
       rwalk->mdm = fluid;
       rwalk->hit_side = fluid_side;
-      break;
+      break exit;
     }
 
     /* Switch in conductive path */
@@ -258,59 +155,76 @@ XD(solid_fluid_boundary_picard1_path)
       solid_reinject_args.fp_to_meter = scn->fp_to_meter;
       res = XD(solid_reinjection)(solid, &solid_reinject_args);
       if(res != RES_OK) goto error;
-      break;
+      break exit;
     }
 
-    /* From there, we know the path is either a radiative path or a
-     * null-collision */
-
-    /* Sample a radiative path and get the Tref at its end. */
+    /* Sample a radiative path */
     T_s = *T;
     rwalk_s = *rwalk;
-    rwalk_s.mdm = fluid;
+    rwalk_s.mdm = fluid_side;
     rwalk_s.hit_side = fluid_side;
     res = XD(radiative_path)(scn, ctx, &rwalk_s, rng, &T_s);
     if(res != RES_OK) goto error;
 
-    /* Get the Tref at the end of the candidate radiative path */
-    res = XD(rwalk_get_Tref)(scn, &rwalk_s, &T_s, &Tref_s);
-    if(res != RES_OK) goto error;
+    h_radi_min = 4.0 * BOLTZMANN_CONSTANT * Tmin3 * epsilon;
+    p_radi_min = h_radi_min / h_radi_hat;
 
-    h_radi = BOLTZMANN_CONSTANT * epsilon *
-      ( Tref*Tref*Tref
-      + Tref*Tref * Tref_s
-      + Tref * Tref_s*Tref_s
-      + Tref_s*Tref_s*Tref_s);
+    /* Switch in radiative path */
+    if(r < p_cond + p_cond + p_radi_min) { *rwalk = rwalk_s; *T = T_s; break; }
 
-    p_radi = h_radi / h_hat;
-    if(r < p_conv + p_cond + p_radi) { /* Radiative path */
-      *rwalk = rwalk_s;
-      *T = T_s;
-      break;
+    #define COMPUTE_TEMPERATURE(Result, RWalk, Temperature) {                  \
+      struct XD(temperature) T_p = *(Temperature);                             \
+      struct XD(rwalk) rwalk_p = *(RWalk);                                     \
+      res = XD(compute_temperature)(scn, ctx, &rwalk_p, rng, &T_p);            \
+      if(res != RES_OK) goto error;                                            \
+      Result = (Temperature)->temperature;                                     \
+    } (void)0
 
-    /* Null collision: the sampled path is rejected. */
-    } else {
+    #define CHECK_PMIN_PMAX() {                                                \
+      p_radi_min = h_radi_min / h_radi_hat;                                    \
+      p_radi_max = h_radi_max / h_radi_hat;                                    \
+      /* Switch in radiative path */                                           \
+      if(r < p_cond + p_conv + p_radi_min) { *rwalk=rwalk_s; *T=T_s; break; }  \
+      /* Null collision reject the sampled path */                             \
+      if(r > p_cond + p_conv + p_radi_max) { continue; /* Null collision */ }  \
+    } (void)0
 
-      if(ctx->green_path) {
-        /* The limit condition of the green path could be set by the rejected
-         * sampled radiative path. Reset this limit condition. */
-        green_path_reset_limit(ctx->green_path);
-      }
+    COMPUTE_TEMPERATURE(T0, &rwalk_s, &T_s);
+    h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 * 3*Tmin2*T0);
+    h_radi_max = BOLTZMANN_CONSTANT*(That3 * 3*That2*T0);
+    CHECK_PMIN_PMAX();
+    
+    COMPUTE_TEMPERATURE(T1, &rwalk_s, &T_s);
+    h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 + Tmin2*T0 + 2*Tmin*T0*T1);
+    h_radi_max = BOLTZMANN_CONSTANT*(That3 + That2*T0 + 2*That*T0*T1);
+    CHECK_PMIN_PMAX();
+    
+    COMPUTE_TEMPERATURE(T2, &rwalk_s, &T_s);
+    h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 + Tmin2*T0 + Tmin*T0*T1 + T0*T1*T2);
+    h_radi_max = BOLTZMANN_CONSTANT*(That3 + That2*T0 + That*T0*T1 + T0*T1*T2);
+    CHECK_PMIN_PMAX();
 
-      if(ctx->heat_path) {
-        /* Add a break into the heat path geometry and restart it from the
-         * current position. The sampled radiative path becomes a branch of the
-         * current sampled path */
-        res = heat_path_add_break(ctx->heat_path);
-        if(res != RES_OK) goto error;
+    COMPUTE_TEMPERATURE(T3, rwalk, T);
+    h_radi_min = BOLTZMANN_CONSTANT*(Tmin2*T3 + Tmin*T0*T3 + T0*T1*T3 + T0*T1*T2);
+    h_radi_max = BOLTZMANN_CONSTANT*(That2*T3 + That*T0*T3 + T0*T1*T3 + T0*T1*T2);
+    CHECK_PMIN_PMAX();
 
-        res = register_heat_vertex
-          (ctx->heat_path, &rwalk->vtx, T->value, current_vertex_type);
-        if(res != RES_OK) goto error;
-      }
-    }
+    COMPUTE_TEMPERATURE(T4, rwalk, T);
+    h_radi_min = BOLTZMANN_CONSTANT*(Tmin*T3*T4 + T0*T3*T4 + T0*T1*T3 + T0*T1*T2);
+    h_radi_max = BOLTZMANN_CONSTANT*(That*T3*T4 + T0*T3*T4 + T0*T1*T3 + T0*T1*T2);
+    CHECK_PMIN_PMAX();
+
+    COMPUTE_TEMPERATURE(T5, rwalk, T);
+    h_radi = BOLTZMANN_CONSTANT*(T3*T4*T5 + T0*T3*T4 + T0*T1*T3 + T0*T1*T2);
+    p_radi = h_radi / h_radi_hat;
+
+    /* Switch in radiative path */
+    if(r < p_cond + p_conv + p_radi) { *rwalk=rwalk_s; *T=T_s; break; }
 
     /* Null-collision, looping at the beginning */
+
+    #undef COMPUTE_TEMPERATURE
+    #undef CHECK_PMIN_PMAX
   }
 
 exit:
@@ -320,3 +234,4 @@ error:
 }
 
 #include "sdis_Xd_end.h"
+

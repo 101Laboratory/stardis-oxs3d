@@ -199,6 +199,24 @@ solid_fluid_boundary_picard1_path_3d
    struct temperature_3d* T);
 
 extern LOCAL_SYM res_T
+solid_fluid_boundary_picardN_path_2d
+  (struct sdis_scene* scn,
+   const struct rwalk_context* ctx,
+   const struct sdis_interface_fragment* frag,
+   struct rwalk_2d* rwalk,
+   struct ssp_rng* rng,
+   struct temperature_2d* T);
+
+extern LOCAL_SYM res_T
+solid_fluid_boundary_picardN_path_3d
+  (struct sdis_scene* scn,
+   const struct rwalk_context* ctx,
+   const struct sdis_interface_fragment* frag,
+   struct rwalk_3d* rwalk,
+   struct ssp_rng* rng,
+   struct temperature_3d* T);
+
+extern LOCAL_SYM res_T
 solid_solid_boundary_path_2d
   (struct sdis_scene* scn,
    const struct rwalk_context* ctx,

@@ -55,7 +55,9 @@ XD(compute_temperature)
     heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
   }
 
-  do {
+  /* TODO incremente Picard order */
+
+  while(!T->done) {
     /* Save the current random walk state */
     const struct XD(rwalk) rwalk_bkp = *rwalk;
     const struct XD(temperature) T_bkp = *T;
@@ -94,8 +96,9 @@ XD(compute_temperature)
       }
       heat_vtx = NULL; /* Notify that the first vertex is finalized */
     }
+  }
 
-  } while(!T->done);
+  /* TODO Decrement Picard order */
 
 exit:
 #ifndef NDEBUG
