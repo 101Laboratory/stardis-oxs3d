@@ -27,12 +27,12 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
- * Helper functions
+ * Local functions
  ******************************************************************************/
-static res_T
+res_T
 XD(compute_temperature)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
@@ -51,11 +51,12 @@ XD(compute_temperature)
   res_T res = RES_OK;
   ASSERT(scn && ctx && rwalk && rng && T);
 
+  ctx->nbranchings += 1;
+  CHK(ctx->nbranchings <= scn->max_branchings);
+
   if(ctx->heat_path && T->func == XD(boundary_path)) {
     heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
   }
-
-  /* TODO incremente Picard order */
 
   while(!T->done) {
     /* Save the current random walk state */
@@ -98,21 +99,17 @@ XD(compute_temperature)
     }
   }
 
-  /* TODO Decrement Picard order */
 
 exit:
 #ifndef NDEBUG
   sa_release(stack);
 #endif
+  ctx->nbranchings -= 1;
   return res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res;
 error:
   goto exit;
 }
 
-
-/*******************************************************************************
- * Local functions
- ******************************************************************************/
 res_T
 XD(probe_realisation)
   (const size_t irealisation, /* For debug */

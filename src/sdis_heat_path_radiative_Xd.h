@@ -33,7 +33,7 @@ res_T
 XD(trace_radiative_path)
   (struct sdis_scene* scn,
    const float ray_dir[3],
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
@@ -188,7 +188,7 @@ error:
 res_T
 XD(radiative_path)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)

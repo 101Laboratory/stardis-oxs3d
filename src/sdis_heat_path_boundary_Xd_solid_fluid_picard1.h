@@ -114,7 +114,7 @@ error:
 res_T
 XD(solid_fluid_boundary_picard1_path)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,

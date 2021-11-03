@@ -106,7 +106,7 @@ sample_reinjection_step_solid_solid_3d
  ******************************************************************************/
 struct solid_reinjection_args_2d {
   const struct reinjection_step_2d* reinjection; /* Reinjection to do */
-  const struct rwalk_context* rwalk_ctx;
+  struct rwalk_context* rwalk_ctx;
   struct rwalk_2d* rwalk; /* Current state of the random walk */
   struct ssp_rng* rng; /* Random number generator */
   struct temperature_2d* T;
@@ -115,7 +115,7 @@ struct solid_reinjection_args_2d {
 
 struct solid_reinjection_args_3d {
   const struct reinjection_step_3d* reinjection; /* Reinjection to do */
-  const struct rwalk_context* rwalk_ctx;
+  struct rwalk_context* rwalk_ctx;
   struct rwalk_3d* rwalk; /* Current state of the random walk */
   struct ssp_rng* rng; /* Random number generator */
   struct temperature_3d* T;
@@ -145,7 +145,7 @@ solid_reinjection_3d
 extern LOCAL_SYM res_T
 solid_boundary_with_flux_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    const double phi,
    struct rwalk_2d* rwalk,
@@ -155,7 +155,7 @@ solid_boundary_with_flux_path_2d
 extern LOCAL_SYM res_T
 solid_boundary_with_flux_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    const double phi,
    struct rwalk_3d* rwalk,
@@ -163,27 +163,9 @@ solid_boundary_with_flux_path_3d
    struct temperature_3d* T);
 
 extern LOCAL_SYM res_T
-solid_fluid_boundary_path_2d
-  (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
-   const struct sdis_interface_fragment* frag,
-   struct rwalk_2d* rwalk,
-   struct ssp_rng* rng,
-   struct temperature_2d* T);
-
-extern LOCAL_SYM res_T
-solid_fluid_boundary_path_3d
-  (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
-   const struct sdis_interface_fragment* frag,
-   struct rwalk_3d* rwalk,
-   struct ssp_rng* rng,
-   struct temperature_3d* T);
-
-extern LOCAL_SYM res_T
 solid_fluid_boundary_picard1_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
@@ -192,7 +174,7 @@ solid_fluid_boundary_picard1_path_2d
 extern LOCAL_SYM res_T
 solid_fluid_boundary_picard1_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,
@@ -201,7 +183,7 @@ solid_fluid_boundary_picard1_path_3d
 extern LOCAL_SYM res_T
 solid_fluid_boundary_picardN_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
@@ -210,7 +192,7 @@ solid_fluid_boundary_picardN_path_2d
 extern LOCAL_SYM res_T
 solid_fluid_boundary_picardN_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,
@@ -219,7 +201,7 @@ solid_fluid_boundary_picardN_path_3d
 extern LOCAL_SYM res_T
 solid_solid_boundary_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
@@ -228,7 +210,7 @@ solid_solid_boundary_path_2d
 extern LOCAL_SYM res_T
 solid_solid_boundary_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,

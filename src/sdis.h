@@ -382,7 +382,12 @@ struct sdis_scene_create_args {
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
   struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
+  double tmin; /* Min temperature */
   double tmax; /* Max temperature used to linearize the radiative temperature */
+
+  /* Maximum number of heat path branchings. Actually the Picard order 
+   * used to estimate the radiative temperature is max_branchings+1 */
+  size_t max_branchings;
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -394,7 +399,9 @@ struct sdis_scene_create_args {
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
+  0.0, /* Minimum temperature */                                               \
   -1.0, /* Maximum temperature */                                              \
+  0 /* Maximum branchings */                                                   \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;

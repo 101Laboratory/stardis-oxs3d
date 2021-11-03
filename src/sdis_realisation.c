@@ -47,8 +47,12 @@ ray_realisation_3d
   rwalk.mdm = medium;
 
   ctx.heat_path = heat_path;
-  ctx.That2 = scn->tmax * scn->tmax;
-  ctx.That3 = scn->tmax * ctx.That2;
+  ctx.Tmin  = scn->tmin;
+  ctx.Tmin2 = ctx.Tmin * ctx.Tmin;
+  ctx.Tmin3 = ctx.Tmin * ctx.Tmin2;
+  ctx.That  = scn->tmax;
+  ctx.That2 = ctx.That * ctx.That;
+  ctx.That3 = ctx.That * ctx.That2;
   
   f3_set_d3(dir, direction);
 

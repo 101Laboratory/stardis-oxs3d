@@ -29,7 +29,7 @@
 static res_T
 XD(register_heat_vertex_in_fluid)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    const double weight)
 {
@@ -70,7 +70,7 @@ XD(register_heat_vertex_in_fluid)
 res_T
 XD(convective_path)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)

@@ -210,7 +210,14 @@ struct sdis_scene {
 
   double fp_to_meter;
   struct sdis_ambient_radiative_temperature trad;
+  double tmin; /* Minimum temperature of the system (In Kelvin) */
   double tmax; /* Maximum temperature of the system (In Kelvin) */
+
+  /* Maximum branchings i.e. the maximum number of times
+   * XD(compute_temperature) can be called. It controls the number of
+   * ramifications of the heat path and currently corresponds to the Picard
+   * order used to estimate the radiative temperature. */
+  size_t max_branchings;
 
   ref_T ref;
   struct sdis_device* dev;

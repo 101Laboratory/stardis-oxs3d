@@ -26,15 +26,27 @@ struct rwalk_context {
   struct green_path_handle* green_path;
   struct sdis_heat_path* heat_path;
 
-  /* That is the upper bound temperature */
+  double Tmin; /* Lower bound temperature */
+  double Tmin2; /* Tmin^2 */
+  double Tmin3; /* Tmin^3 */
+
+  double That; /* Upper bound temperature */
   double That2; /* That^2 */
   double That3; /* That^3 */
+
+  /* Number of heat path branchings */
+  size_t nbranchings;
 };
 #define RWALK_CONTEXT_NULL__ {                                                 \
   NULL, /* Green path */                                                       \
   NULL, /* Heat path */                                                        \
-  0, /* (Temperature upper bound)^2 */                                         \
-  0 /* (Temperature upper bound)^3 */                                          \
+  0, /* Tmin */                                                                \
+  0, /* Tmin^2 */                                                              \
+  0, /* Tmin^3 */                                                              \
+  0, /* That */                                                                \
+  0, /* That^2 */                                                              \
+  0, /* That^3 */                                                              \
+  SIZE_MAX, /* #branchings */                                                  \
 }
 static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
 
@@ -112,7 +124,7 @@ static const struct XD(rwalk) XD(RWALK_NULL) = {
 struct XD(temperature) {
   res_T (*func)/* Next function to invoke in order to compute the temperature */
     (struct sdis_scene* scn,
-     const struct rwalk_context* ctx,
+     struct rwalk_context* ctx,
      struct XD(rwalk)* rwalk,
      struct ssp_rng* rng,
      struct XD(temperature)* temp);
