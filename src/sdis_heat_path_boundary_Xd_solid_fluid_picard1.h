@@ -78,7 +78,6 @@ XD(rwalk_get_Tref)
      * fetches the ambient radiative temperature. We do not use the limit
      * conditions as the reference temperature to make the sampled paths
      * independant of them. */
-    ASSERT(T->value == scn->trad.temperature);
     Tref = scn->trad.reference;
   } else {
     struct sdis_interface_fragment frag;
