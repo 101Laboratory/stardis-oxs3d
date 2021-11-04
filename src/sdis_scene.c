@@ -221,18 +221,44 @@ sdis_scene_set_ambient_radiative_temperature
 }
 
 res_T
-sdis_scene_get_maximum_temperature(const struct sdis_scene* scn, double* tmax)
+sdis_scene_get_temperature_range
+  (const struct sdis_scene* scn,
+   double t_range[2])
 {
-  if(!scn || !tmax) return RES_BAD_ARG;
-  *tmax = scn->tmax;
+  if(!scn || !t_range) return RES_BAD_ARG;
+  t_range[0]  = scn->tmin;
+  t_range[1]  = scn->tmax;
   return RES_OK;
 }
 
 res_T
-sdis_scene_set_maximum_temperature(struct sdis_scene* scn, const double tmax)
+sdis_scene_set_temperature_range
+  (struct sdis_scene* scn,
+   const double t_range[2])
 {
-  if(!scn || tmax < 0) return RES_BAD_ARG;
-  scn->tmax = tmax;
+  if(!scn || !t_range) return RES_BAD_ARG;
+  scn->tmin = t_range[0];
+  scn->tmax = t_range[1];
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_max_branchings
+  (const struct sdis_scene* scn,
+   size_t* max_branchings)
+{
+  if(!scn || !max_branchings) return RES_BAD_ARG;
+  *max_branchings = scn->max_branchings;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_max_branchings
+  (struct sdis_scene* scn,
+   const size_t max_branchings)
+{
+  if(!scn) return RES_BAD_ARG;
+  scn->max_branchings = max_branchings;
   return RES_OK;
 }
 

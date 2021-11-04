@@ -76,13 +76,16 @@ XD(sample_path)
   res_T res = RES_OK;
   ASSERT(rwalk_from && rng && T);
 
+  /* Clean-up the output variable */
   *T = XD(TEMPERATURE_NULL);
 
+  /* Init the random walk */
   rwalk.vtx = rwalk_from->vtx;
   rwalk.mdm = rwalk_from->mdm;
   rwalk.hit = rwalk_from->hit;
   rwalk.hit_side = rwalk_from->hit_side;
 
+  /* Start the registration of a new heat path */
   if(ctx->heat_path) {
     struct sdis_heat_vertex heat_vtx = SDIS_HEAT_VERTEX_NULL;
 
@@ -97,10 +100,18 @@ XD(sample_path)
     if(res != RES_OK) goto error;
   }
 
+  /* Sample the path */
   res = XD(compute_temperature)(scn, ctx, &rwalk, rng, T);
   if(res != RES_OK) goto error;
 
+  /* Check the returned temperature */
   ASSERT(T->done);
+  if(T->value < scn->tmin || scn->tmax < T->value) {
+    log_err(scn->dev, "%s: invalid temperature range `[%g, %g]K` regarding the "
+      "retrieved temperature %gK.\n", FUNC_NAME, scn->tmin, scn->tmax, T->value);
+    res = RES_BAD_OP_IRRECOVERABLE;
+    goto error;
+  }
 
 exit:
   return res;

@@ -913,8 +913,8 @@ XD(scene_create)
   scn->dev = dev;
   scn->fp_to_meter = args->fp_to_meter;
   scn->trad = args->trad;
-  scn->tmin = args->tmin;
-  scn->tmax = args->tmax;
+  scn->tmin = args->t_range[0];
+  scn->tmax = args->t_range[1];
   scn->outer_enclosure_id = UINT_MAX;
   scn->max_branchings = args->max_branchings;
   darray_interf_init(dev->allocator, &scn->interfaces);

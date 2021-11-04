@@ -408,7 +408,8 @@ main(int argc, char** argv)
   scn_args.nprimitives = nsegments;
   scn_args.nvertices = nvertices;
   scn_args.context = &geom;
-  scn_args.tmax = MMAX(T0, T1);
+  scn_args.t_range[0] = MMIN(T0, T1);
+  scn_args.t_range[1] = MMAX(T0, T1);
   OK(sdis_scene_2d_create(dev, &scn_args, &scn));
 
   hr = 4*BOLTZMANN_CONSTANT * Tref*Tref*Tref * emissivity;

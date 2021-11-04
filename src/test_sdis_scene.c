@@ -261,8 +261,9 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   struct sdis_ambient_radiative_temperature trad =
     SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   double lower[2], upper[2];
+  double t_range[2];
   double u0, u1, u2, pos[2], pos1[2];
-  double dst, fp, t;
+  double dst, fp;
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
@@ -369,19 +370,24 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   CHK(trad.temperature == 100);
   CHK(trad.reference == 110);
 
-  BA(sdis_scene_get_maximum_temperature(NULL, NULL));
-  BA(sdis_scene_get_maximum_temperature(scn, NULL));
-  BA(sdis_scene_get_maximum_temperature(NULL, &t));
-  OK(sdis_scene_get_maximum_temperature(scn, &t));
-  CHK(t == SDIS_SCENE_CREATE_ARGS_DEFAULT.tmax);
+  BA(sdis_scene_get_temperature_range(NULL, NULL));
+  BA(sdis_scene_get_temperature_range(scn, NULL));
+  BA(sdis_scene_get_temperature_range(NULL, t_range));
+  OK(sdis_scene_get_temperature_range(scn, t_range));
+  CHK(t_range[0] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]);
+  CHK(t_range[1] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[1]);
 
-  t = -1;
-  BA(sdis_scene_set_maximum_temperature(NULL, t));
-  BA(sdis_scene_set_maximum_temperature(scn, t));
-  t = 100;
-  OK(sdis_scene_set_maximum_temperature(scn, t));
-  OK(sdis_scene_get_maximum_temperature(scn, &t));
-  CHK(t == 100);
+  t_range[0] = 1;
+  t_range[1] = 100;
+
+  BA(sdis_scene_set_temperature_range(NULL, t_range));
+  BA(sdis_scene_set_temperature_range(scn, NULL));
+  OK(sdis_scene_set_temperature_range(scn, t_range));
+  t_range[0] = -1;
+  t_range[1] = -1;
+  OK(sdis_scene_get_temperature_range(scn, t_range));
+  CHK(t_range[0] == 1);
+  CHK(t_range[1] == 100);
 
   BA(sdis_scene_get_boundary_position(NULL, 1, &u0, pos));
   BA(sdis_scene_get_boundary_position(scn, 4, &u0, pos));

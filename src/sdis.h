@@ -362,7 +362,7 @@ typedef void
 
 struct sdis_ambient_radiative_temperature {
   double temperature; /* In Kelvin */
-  double reference; /* Used to linearise the radiative transfert */
+  double reference; /* Used to linearise the radiative transfer */
 };
 #define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {-1, -1}
 static const struct sdis_ambient_radiative_temperature
@@ -382,8 +382,9 @@ struct sdis_scene_create_args {
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
   struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
-  double tmin; /* Min temperature */
-  double tmax; /* Max temperature used to linearize the radiative temperature */
+
+  /* Min/max temperature used to linearise the radiative temperature */
+  double t_range[2];
 
   /* Maximum number of heat path branchings. Actually the Picard order 
    * used to estimate the radiative temperature is max_branchings+1 */
@@ -399,8 +400,7 @@ struct sdis_scene_create_args {
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
-  0.0, /* Minimum temperature */                                               \
-  -1.0, /* Maximum temperature */                                              \
+  {0.0, -1.0}, /* Temperature range */                                         \
   0 /* Maximum branchings */                                                   \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
@@ -854,18 +854,34 @@ sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
    const struct sdis_ambient_radiative_temperature* trad);
 
-/* Get scene's maximum temperature */
+/* Get scene's minimum/maximum temperature */
 SDIS_API res_T
-sdis_scene_get_maximum_temperature
+sdis_scene_get_temperature_range
   (const struct sdis_scene* scn,
-   double* tmax);
+   double t_range[2]);
 
-/* Set scene's maximum temperature. Must be correctly defined if there is any
- * radiative transfert in the scene. */
+/* Set scene's minimum/maximum temperature. Must be correctly defined if there
+ * is any radiative transfer in the scene */
 SDIS_API res_T
-sdis_scene_set_maximum_temperature
+sdis_scene_set_temperature_range
   (struct sdis_scene* scn,
-   const double tmax);
+   const double t_range[2]);
+
+/* Get the maximum number of branchings for the sampled paths. */
+SDIS_API res_T
+sdis_scene_get_max_branchings
+  (const struct sdis_scene* scn,
+   size_t* max_branchings);
+
+/* Set the maximum number of branchings for the sampled paths. A value greater
+ * than zero enables the estimation of T4 radiative transfer by using the
+ * Picard's algorithm. In others words, 'max_branchings+1' is the order of the
+ * Picard's recursion: at order one (i.e. max_branchings==0), the radiative
+ * transfer is linearised */
+SDIS_API res_T
+sdis_scene_set_max_branchings
+  (struct sdis_scene* scn,
+   const size_t max_branchings);
 
 /* Search the point onto the scene geometry that is the closest of `pos'. The
  * `radius' parameter controls the maximum search distance around `pos'. The

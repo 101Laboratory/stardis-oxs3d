@@ -37,7 +37,7 @@
  *   o--- X      +------+----------+------+ (1.1,1)
  *               |      |##########|      |
  *               |      |##########|      |
- *          300K | E=1  |##########| E=1  | 350K
+ *          280K | E=1  |##########| E=1  | 350K
  *               |      |##########|      |
  *               |      |##########|      |
  *       (-1,-1) +------+----------+------+
@@ -512,7 +512,8 @@ create_scene_3d
   scn_args.get_position = get_position_3d;
   scn_args.nprimitives = nprimitives_3d;
   scn_args.nvertices = nvertices_3d;
-  scn_args.tmax = 350;
+  scn_args.t_range[0] = 280;
+  scn_args.t_range[1] = 350;
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, scn));
 }
@@ -554,7 +555,8 @@ create_scene_2d
   scn_args.get_position = get_position_2d;
   scn_args.nprimitives = nprimitives_2d;
   scn_args.nvertices = nvertices_2d;
-  scn_args.tmax = 350;
+  scn_args.t_range[0] = 280;
+  scn_args.t_range[1] = 350;
   scn_args.context = &geom;
   OK(sdis_scene_2d_create(dev, &scn_args, scn));
 }
@@ -671,6 +673,21 @@ main(int argc, char** argv)
   test_picard1(scn_2d, &ref);
   test_picard1(scn_3d, &ref);
   printf("\n");
+
+#if 0
+  /* Test picardN  */
+  printf("Test Picard1 using T4 as a reference\n");
+  ref.T  = 320.37126474482994;
+  ref.T1 = 312.12650299072266;
+  ref.T2 = 328.61602649893723;
+  pinterf_props[SOLID_FLUID_mX]->Tref = 300;
+  pinterf_props[SOLID_FLUID_pX]->Tref = 300;
+  pinterf_props[BOUNDARY_mX]->Tref = 280;
+  pinterf_props[BOUNDARY_pX]->Tref = 350;
+  test_picard1(scn_2d, &ref);
+  test_picard1(scn_3d, &ref);
+  printf("\n");
+#endif
 
   /* Add volumic power */
   psolid_props->volumic_power = 1000;
