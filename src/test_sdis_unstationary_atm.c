@@ -89,7 +89,7 @@
 
 #define X_PROBE (XH + 0.2 * XE)
 
-#define DELTA (XE/30.0)
+#define DELTA (XE/40.0)
 
 /*******************************************************************************
  * Box geometry
@@ -114,11 +114,11 @@ static const size_t model3d_nvertices = sizeof(model3d_vertices)/(sizeof(double)
  * triangle.
  *        ,3---,4---,5          ,3----4----5        ,4
  *      ,' | ,' | ,'/|        ,'/| \  | \  |      ,'/|
- *    9----10---11 / |      9' / |  \ |  \ |    10 / |          Y
- *    |',  |',  | / ,2      | / ,0---,1---,2    | / ,1          |
+ *    9----10---11 / |      9' / |  \ |  \ |    10 / |       Y
+ *    |',  |',  | / ,2      | / ,0---,1---,2    | / ,1       |
  *    |  ',|  ',|/,'        |/,' | ,' | ,'      |/,'         o--X
- *    6----7----8'          6----7'---8'        7              /
- *  Front, right         Back, left and       Internal        Z
+ *    6----7----8'          6----7'---8'        7           /
+ *  Front, right         Back, left and       Internal     Z
  * and Top faces          bottom faces         face */
 static const size_t model3d_indices[22/*#triangles*/*3/*#indices per triangle*/] = {
   0, 3, 1, 1, 3, 4,     1, 4, 2, 2, 4, 5,    /* -Z */
@@ -421,10 +421,11 @@ solve_tbound1
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
-  double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 290.046375, 289.903935, 289.840490, 289.802690, 289.777215,
-        289.759034, 289.745710, 289.735826, 289.728448, 289.722921 };
+  const double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    290.046375, 289.903935, 289.840490, 289.802690, 289.777215, 289.759034,
+    289.745710, 289.735826, 289.728448, 289.722921
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn && rng);
@@ -475,9 +476,8 @@ solve_tbound1
     printf("Elapsed time = %s\n", dump);
     printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
 
-    CHK(nfails + nreals == N);
-    CHK(nfails <= N/1000);
     CHK(eq_eps(T.E, ref[isimul], EPS));
+    /*CHK(eq_eps(T.E, ref[isimul], T.SE*3));*/
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -498,10 +498,11 @@ solve_tbound2
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
-  double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 309.08032, 309.34626, 309.46525, 309.53625, 309.58408,
-       309.618121, 309.642928, 309.661167, 309.674614, 309.684524 };
+  const double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    309.08032, 309.34626, 309.46525, 309.53625, 309.58408, 309.618121,
+    309.642928, 309.661167, 309.674614, 309.684524
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn && rng);
@@ -555,6 +556,7 @@ solve_tbound2
     CHK(nfails + nreals == N);
     CHK(nfails <= N/1000);
     CHK(eq_eps(T.E, ref[isimul], EPS));
+    /*CHK(eq_eps(T.E, ref[isimul], T.SE*3));*/
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -574,10 +576,11 @@ solve_tsolid
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
-  double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 300, 300.87408, 302.25832, 303.22164, 303.89954, 304.39030,
-        304.75041, 305.01595, 305.21193, 305.35641, 305.46271 };
+  const double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    300, 300.87408, 302.25832, 303.22164, 303.89954, 304.39030, 304.75041,
+    305.01595, 305.21193, 305.35641, 305.46271
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn && rng);
@@ -621,6 +624,7 @@ solve_tsolid
     CHK(nfails + nreals == N);
     CHK(nfails <= N / 1000);
     CHK(eq_eps(T.E, ref[isimul], EPS));
+    /*CHK(eq_eps(T.E, ref[isimul], T.SE*3));*/
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -640,10 +644,11 @@ solve_tfluid
   size_t nfails;
   enum sdis_scene_dimension dim;
   double eps;
-  double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 300, 309.53905, 309.67273, 309.73241, 309.76798, 309.79194, 309.80899,
-        309.82141, 309.83055, 309.83728, 309.84224 };
+  const double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    300, 309.53905, 309.67273, 309.73241, 309.76798, 309.79194, 309.80899,
+    309.82141, 309.83055, 309.83728, 309.84224
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn);
@@ -834,7 +839,7 @@ main(int argc, char** argv)
   model3d_interfaces[10] = interf_TA;
   model3d_interfaces[11] = interf_TA;
   /* Top */
-  model3d_interfaces[12] = interf_adiabatic_1; 
+  model3d_interfaces[12] = interf_adiabatic_1;
   model3d_interfaces[13] = interf_adiabatic_1;
   model3d_interfaces[14] = interf_adiabatic_2;
   model3d_interfaces[15] = interf_adiabatic_2;
@@ -869,10 +874,8 @@ main(int argc, char** argv)
   scn_args.context = model3d_interfaces;
   scn_args.trad.temperature = TR;
   scn_args.trad.reference = TR;
-  scn_args.tmax = MMAX(T0_FLUID, T0_SOLID);
-  scn_args.tmax = MMAX(scn_args.tmax, TA);
-  scn_args.tmax = MMAX(scn_args.tmax, TG);
-  scn_args.tmax = MMAX(scn_args.tmax, TR);
+  scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
+  scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
   /* Create the square scene */
@@ -884,10 +887,8 @@ main(int argc, char** argv)
   scn_args.context = model2d_interfaces;
   scn_args.trad.temperature = TR;
   scn_args.trad.reference = TR;
-  scn_args.tmax = MMAX(T0_FLUID, T0_SOLID);
-  scn_args.tmax = MMAX(scn_args.tmax, TA);
-  scn_args.tmax = MMAX(scn_args.tmax, TG);
-  scn_args.tmax = MMAX(scn_args.tmax, TR);
+  scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
+  scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 
   /* Release the interfaces */

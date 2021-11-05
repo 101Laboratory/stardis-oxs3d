@@ -243,22 +243,22 @@ sdis_scene_set_temperature_range
 }
 
 res_T
-sdis_scene_get_max_branchings
+sdis_scene_get_picard_order
   (const struct sdis_scene* scn,
-   size_t* max_branchings)
+   size_t* picard_order)
 {
-  if(!scn || !max_branchings) return RES_BAD_ARG;
-  *max_branchings = scn->max_branchings;
+  if(!scn || !picard_order) return RES_BAD_ARG;
+  *picard_order = scn->max_branchings+1;
   return RES_OK;
 }
 
 res_T
-sdis_scene_set_max_branchings
+sdis_scene_set_picard_order
   (struct sdis_scene* scn,
-   const size_t max_branchings)
+   const size_t picard_order)
 {
-  if(!scn) return RES_BAD_ARG;
-  scn->max_branchings = max_branchings;
+  if(!scn || picard_order < 1) return RES_BAD_ARG;
+  scn->max_branchings = scene_get_picard_order(scn);
   return RES_OK;
 }
 

@@ -303,5 +303,13 @@ scene_is_2d(const struct sdis_scene* scn)
   return scn->s2d_view != NULL;
 }
 
+static FINLINE size_t
+scene_get_picard_order(const struct sdis_scene* scn)
+{
+  ASSERT(scn);
+  return scn->max_branchings+1;
+}
+
+
 #endif /* SDIS_SCENE_C_H */
 

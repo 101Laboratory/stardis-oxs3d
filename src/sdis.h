@@ -386,9 +386,8 @@ struct sdis_scene_create_args {
   /* Min/max temperature used to linearise the radiative temperature */
   double t_range[2];
 
-  /* Maximum number of heat path branchings. Actually the Picard order 
-   * used to estimate the radiative temperature is max_branchings+1 */
-  size_t max_branchings;
+  /* Picard order used to estimate the radiative temperature */
+  size_t picard_order;
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -401,7 +400,7 @@ struct sdis_scene_create_args {
   1.0, /* #Floating point to meter scale factor */                             \
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
   {0.0, -1.0}, /* Temperature range */                                         \
-  0 /* Maximum branchings */                                                   \
+  1 /* Picard order */                                                         \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;
@@ -867,21 +866,19 @@ sdis_scene_set_temperature_range
   (struct sdis_scene* scn,
    const double t_range[2]);
 
-/* Get the maximum number of branchings for the sampled paths. */
+/* Get the picard recursion order. */
 SDIS_API res_T
-sdis_scene_get_max_branchings
+sdis_scene_get_picard_order
   (const struct sdis_scene* scn,
-   size_t* max_branchings);
+   size_t* picard_order);
 
-/* Set the maximum number of branchings for the sampled paths. A value greater
- * than zero enables the estimation of T4 radiative transfer by using the
- * Picard's algorithm. In others words, 'max_branchings+1' is the order of the
- * Picard's recursion: at order one (i.e. max_branchings==0), the radiative
- * transfer is linearised */
-SDIS_API res_T
-sdis_scene_set_max_branchings
+/* Set the Picard recursion order to estimate the radiative temperature. An
+ * order of one means that the radiative temperature is linearized, while
+ * higher orders allow the estimation of the T4 radiative transfer. */
+ SDIS_API res_T
+sdis_scene_set_picard_order
   (struct sdis_scene* scn,
-   const size_t max_branchings);
+   const size_t picard_order);
 
 /* Search the point onto the scene geometry that is the closest of `pos'. The
  * `radius' parameter controls the maximum search distance around `pos'. The
