@@ -70,6 +70,14 @@ XD(solve_probe_boundary)
     res = RES_BAD_ARG;
     goto error;
   }
+  if(out_green && scene_get_picard_order(scn) != 1) {
+    log_err(scn->dev, "%s: the evaluation of the green function does not make "
+      "sense when dealing with the non-linearities of the system; i.e. picard "
+      "order must be set to 1 while it is currently set to %lu.\n",
+      FUNC_NAME, (unsigned long)scene_get_picard_order(scn));
+    res = RES_BAD_ARG;
+    goto error;
+  }
 
 #if SDIS_XD_DIMENSION == 2
   if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
