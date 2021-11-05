@@ -40,7 +40,7 @@ restart_heat_path
   size_t nbreaks = 0;
   res_T res = RES_OK;
 
-  if(path) goto exit;
+  if(!path) goto exit;
   ASSERT(vtx);
 
   nbreaks = darray_size_t_size_get(&path->breaks);
@@ -78,6 +78,7 @@ XD(sample_path)
 
   /* Clean-up the output variable */
   *T = XD(TEMPERATURE_NULL);
+  T->func = XD(boundary_path);
 
   /* Init the random walk */
   rwalk.vtx = rwalk_from->vtx;
@@ -286,7 +287,7 @@ XD(solid_fluid_boundary_picardN_path)
     if(ctx->heat_path) hvtx_s = *heat_path_get_last_vertex(ctx->heat_path);
 
     h_radi_min = 4.0 * BOLTZMANN_CONSTANT * Tmin3 * epsilon;
-    p_radi_min = h_radi_min / h_radi_hat;
+    p_radi_min = h_radi_min / h_hat;
 
     /* Switch in radiative path */
     if(r < p_conv + p_cond + p_radi_min) { *rwalk = rwalk_s; *T = T_s; break; }
@@ -311,16 +312,16 @@ XD(solid_fluid_boundary_picardN_path)
     } (void)0
 
     #define CHECK_PMIN_PMAX {                                                  \
-      p_radi_min = h_radi_min*epsilon / h_radi_hat;                            \
-      p_radi_max = h_radi_max*epsilon / h_radi_hat;                            \
+      p_radi_min = h_radi_min*epsilon / h_hat;                                 \
+      p_radi_max = h_radi_max*epsilon / h_hat;                                 \
       if(r < p_conv + p_cond + p_radi_min) { SWITCH_IN_RADIATIVE; break; }     \
       if(r > p_conv + p_cond + p_radi_max) { NULL_COLLISION; continue; }       \
     } (void)0
 
     /* Sample a 1st heat path at the end of the radiative path */
     COMPUTE_TEMPERATURE(T0, &rwalk_s);
-    h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 * 3*Tmin2*T0);
-    h_radi_max = BOLTZMANN_CONSTANT*(That3 * 3*That2*T0);
+    h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 + 3*Tmin2*T0);
+    h_radi_max = BOLTZMANN_CONSTANT*(That3 + 3*That2*T0);
     CHECK_PMIN_PMAX;
 
     /* Sample a 2nd heat path at the end of the radiative path */
@@ -350,7 +351,7 @@ XD(solid_fluid_boundary_picardN_path)
     /* Sample a 3rd heat path at the current position onto the interface */
     COMPUTE_TEMPERATURE(T5, rwalk);
     h_radi = BOLTZMANN_CONSTANT*(T3*T4*T5 + T0*T3*T4 + T0*T1*T3 + T0*T1*T2);
-    p_radi = h_radi * epsilon / h_radi_hat;
+    p_radi = h_radi * epsilon / h_hat;
 
     /* Switch in radiative path */
     if(r < p_cond + p_conv + p_radi) { SWITCH_IN_RADIATIVE; break; }
