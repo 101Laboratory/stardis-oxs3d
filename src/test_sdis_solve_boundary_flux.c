@@ -347,7 +347,8 @@ main(int argc, char** argv)
   scn_args.nvertices = box_nvertices;
   scn_args.trad.temperature = Trad;
   scn_args.trad.reference = Trad;
-  scn_args.tmax = MMAX(MMAX(Tf, Trad), Tb);
+  scn_args.t_range[0] = MMIN(MMIN(Tf, Trad), Tb);
+  scn_args.t_range[1] = MMAX(MMAX(Tf, Trad), Tb);
   scn_args.context = box_interfaces;
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
@@ -359,7 +360,8 @@ main(int argc, char** argv)
   scn_args.nvertices = square_nvertices;
   scn_args.trad.temperature = Trad;
   scn_args.trad.reference = Trad;
-  scn_args.tmax = MMAX(MMAX(Tf, Trad), Tb);
+  scn_args.t_range[0] = MMIN(MMIN(Tf, Trad), Tb);
+  scn_args.t_range[1] = MMAX(MMAX(Tf, Trad), Tb);
   scn_args.context = square_interfaces;
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 

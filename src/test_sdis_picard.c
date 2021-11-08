@@ -37,7 +37,7 @@
  *   o--- X      +------+----------+------+ (1.1,1)
  *               |      |##########|      |
  *               |      |##########|      |
- *          300K | E=1  |##########| E=1  | 350K
+ *          280K | E=1  |##########| E=1  | 350K
  *               |      |##########|      |
  *               |      |##########|      |
  *       (-1,-1) +------+----------+------+
@@ -512,7 +512,8 @@ create_scene_3d
   scn_args.get_position = get_position_3d;
   scn_args.nprimitives = nprimitives_3d;
   scn_args.nvertices = nvertices_3d;
-  scn_args.tmax = 350;
+  scn_args.t_range[0] = 280;
+  scn_args.t_range[1] = 350;
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, scn));
 }
@@ -554,7 +555,8 @@ create_scene_2d
   scn_args.get_position = get_position_2d;
   scn_args.nprimitives = nprimitives_2d;
   scn_args.nvertices = nvertices_2d;
-  scn_args.tmax = 350;
+  scn_args.t_range[0] = 280;
+  scn_args.t_range[1] = 350;
   scn_args.context = &geom;
   OK(sdis_scene_2d_create(dev, &scn_args, scn));
 }
@@ -580,6 +582,8 @@ main(int argc, char** argv)
   struct reference_result ref = REFERENCE_RESULT_NULL;
   struct interf interf_props;
   struct interf* pinterf_props[INTERFACES_COUNT__];
+
+  double t_range[2];
 
   size_t i;
   (void)argc, (void)argv;
@@ -671,6 +675,54 @@ main(int argc, char** argv)
   test_picard1(scn_2d, &ref);
   test_picard1(scn_3d, &ref);
   printf("\n");
+
+  /* Test picard2  */
+  printf("Test Picard2 with a constant Tref of 300K\n");
+  ref.T  = 320.37126474482994;
+  ref.T1 = 312.12650299072266;
+  ref.T2 = 328.61602649893723;
+  pinterf_props[SOLID_FLUID_mX]->Tref = 300;
+  pinterf_props[SOLID_FLUID_pX]->Tref = 300;
+  pinterf_props[BOUNDARY_mX]->Tref = 300;
+  pinterf_props[BOUNDARY_pX]->Tref = 300;
+  OK(sdis_scene_set_picard_order(scn_2d, 2));
+  OK(sdis_scene_set_picard_order(scn_3d, 2));
+  test_picard1(scn_2d, &ref);
+  test_picard1(scn_3d, &ref);
+  OK(sdis_scene_set_picard_order(scn_2d, 1));
+  OK(sdis_scene_set_picard_order(scn_3d, 1));
+  printf("\n");
+
+  t_range[0] = 200;
+  t_range[1] = 500;
+  OK(sdis_scene_set_temperature_range(scn_2d, t_range));
+  OK(sdis_scene_set_temperature_range(scn_3d, t_range));
+  OK(sdis_scene_set_picard_order(scn_2d, 3));
+  OK(sdis_scene_set_picard_order(scn_3d, 3));
+
+  /* Test picard2  */
+  printf("Test Picard3 with a delta T of 300K\n");
+  ref.T  = 416.4023;
+  ref.T1 = 372.7557;
+  ref.T2 = 460.0489;
+  pinterf_props[BOUNDARY_mX]->temperature = t_range[0];
+  pinterf_props[BOUNDARY_pX]->temperature = t_range[1];
+  pinterf_props[SOLID_FLUID_mX]->Tref = 350;
+  pinterf_props[SOLID_FLUID_pX]->Tref = 450;
+  pinterf_props[BOUNDARY_mX]->Tref = pinterf_props[BOUNDARY_mX]->temperature;
+  pinterf_props[BOUNDARY_pX]->Tref = pinterf_props[BOUNDARY_pX]->temperature;
+  test_picard1(scn_2d, &ref);
+  test_picard1(scn_3d, &ref);
+  printf("\n");
+
+  t_range[0] = 280;
+  t_range[1] = 350;
+  OK(sdis_scene_set_temperature_range(scn_2d, t_range));
+  OK(sdis_scene_set_temperature_range(scn_3d, t_range));
+  OK(sdis_scene_set_picard_order(scn_2d, 1));
+  OK(sdis_scene_set_picard_order(scn_3d, 1));
+  pinterf_props[BOUNDARY_mX]->temperature = t_range[0];
+  pinterf_props[BOUNDARY_pX]->temperature = t_range[1];
 
   /* Add volumic power */
   psolid_props->volumic_power = 1000;

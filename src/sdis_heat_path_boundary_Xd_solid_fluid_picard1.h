@@ -113,7 +113,7 @@ error:
 res_T
 XD(solid_fluid_boundary_picard1_path)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
@@ -263,8 +263,7 @@ XD(solid_fluid_boundary_picard1_path)
     /* From there, we know the path is either a radiative path or a
      * null-collision */
 
-    /* Sample a radiative path and get the Tref at its end.
-     * TODO handle the registration of the path geometry */
+    /* Sample a radiative path and get the Tref at its end. */
     T_s = *T;
     rwalk_s = *rwalk;
     rwalk_s.mdm = fluid;

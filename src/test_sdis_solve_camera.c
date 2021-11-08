@@ -634,7 +634,8 @@ main(int argc, char** argv)
   scn_args.nvertices = npos;
   scn_args.trad.temperature = 300;
   scn_args.trad.reference = 300;
-  scn_args.tmax = 350;
+  scn_args.t_range[0] = 300;
+  scn_args.t_range[1] = 350;
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, &scn));
 

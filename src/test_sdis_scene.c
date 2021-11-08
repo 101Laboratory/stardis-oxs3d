@@ -139,6 +139,9 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   scn_args.fp_to_meter = 0;
   BA(sdis_scene_create(dev, &scn_args, &scn));
   scn_args.fp_to_meter = 1;
+  scn_args.picard_order = 0;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.picard_order = 1;
   /* Duplicated vertex */
   ctx.positions = duplicated_vertices;
   ctx.indices = dup_vrtx_indices;
@@ -261,8 +264,9 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   struct sdis_ambient_radiative_temperature trad =
     SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   double lower[2], upper[2];
+  double t_range[2];
   double u0, u1, u2, pos[2], pos1[2];
-  double dst, fp, t;
+  double dst, fp;
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
@@ -270,6 +274,7 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   size_t i;
   size_t iprim;
   size_t dup_vrtx_indices[] = { 0, 1 };
+  size_t picard_order;
   enum sdis_scene_dimension dim;
 
   ctx.positions = square_vertices;
@@ -304,6 +309,9 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   scn_args.fp_to_meter = 0;
   BA(sdis_scene_2d_create(dev, &scn_args, &scn));
   scn_args.fp_to_meter = 1;
+  scn_args.picard_order = 0;
+  BA(sdis_scene_create(dev, &scn_args, &scn));
+  scn_args.picard_order = 1;
   /* Duplicated vertex */
   ctx.positions = duplicated_vertices;
   ctx.indices = dup_vrtx_indices;
@@ -369,19 +377,35 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   CHK(trad.temperature == 100);
   CHK(trad.reference == 110);
 
-  BA(sdis_scene_get_maximum_temperature(NULL, NULL));
-  BA(sdis_scene_get_maximum_temperature(scn, NULL));
-  BA(sdis_scene_get_maximum_temperature(NULL, &t));
-  OK(sdis_scene_get_maximum_temperature(scn, &t));
-  CHK(t == SDIS_SCENE_CREATE_ARGS_DEFAULT.tmax);
+  BA(sdis_scene_get_temperature_range(NULL, NULL));
+  BA(sdis_scene_get_temperature_range(scn, NULL));
+  BA(sdis_scene_get_temperature_range(NULL, t_range));
+  OK(sdis_scene_get_temperature_range(scn, t_range));
+  CHK(t_range[0] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]);
+  CHK(t_range[1] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[1]);
 
-  t = -1;
-  BA(sdis_scene_set_maximum_temperature(NULL, t));
-  BA(sdis_scene_set_maximum_temperature(scn, t));
-  t = 100;
-  OK(sdis_scene_set_maximum_temperature(scn, t));
-  OK(sdis_scene_get_maximum_temperature(scn, &t));
-  CHK(t == 100);
+  t_range[0] = 1;
+  t_range[1] = 100;
+
+  BA(sdis_scene_set_temperature_range(NULL, t_range));
+  BA(sdis_scene_set_temperature_range(scn, NULL));
+  OK(sdis_scene_set_temperature_range(scn, t_range));
+  t_range[0] = -1;
+  t_range[1] = -1;
+  OK(sdis_scene_get_temperature_range(scn, t_range));
+  CHK(t_range[0] == 1);
+  CHK(t_range[1] == 100);
+
+  BA(sdis_scene_get_picard_order(NULL, &picard_order));
+  BA(sdis_scene_get_picard_order(scn, NULL));
+  OK(sdis_scene_get_picard_order(scn, &picard_order));
+  CHK(picard_order == SDIS_SCENE_CREATE_ARGS_DEFAULT.picard_order);
+  CHK(picard_order == 1);
+  OK(sdis_scene_set_picard_order(scn, 3));
+  OK(sdis_scene_get_picard_order(scn, &picard_order));
+  CHK(picard_order == 3);
+  BA(sdis_scene_set_picard_order(scn, 0));
+  OK(sdis_scene_set_picard_order(scn, 1));
 
   BA(sdis_scene_get_boundary_position(NULL, 1, &u0, pos));
   BA(sdis_scene_get_boundary_position(scn, 4, &u0, pos));

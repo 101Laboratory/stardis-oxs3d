@@ -35,6 +35,25 @@ enum flux_flag {
 };
 
 /*******************************************************************************
+ * Helper function used to compute a temperature
+ ******************************************************************************/
+extern LOCAL_SYM res_T
+compute_temperature_2d
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk_2d* rwalk,
+   struct ssp_rng* rng,
+   struct temperature_2d* T);
+
+extern LOCAL_SYM res_T
+compute_temperature_3d
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk_3d* rwalk,
+   struct ssp_rng* rng,
+   struct temperature_3d* T);
+
+/*******************************************************************************
  * Realisation at a given position and time IN a medium
  ******************************************************************************/
 extern LOCAL_SYM res_T

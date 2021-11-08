@@ -150,7 +150,7 @@ extern LOCAL_SYM res_T
 trace_radiative_path_2d
   (struct sdis_scene* scn,
    const float ray_dir[3],
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
    struct temperature_2d* temperature);
@@ -159,7 +159,7 @@ extern LOCAL_SYM res_T
 trace_radiative_path_3d
   (struct sdis_scene* scn,
    const float ray_dir[3],
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,
    struct temperature_3d* temperature);
@@ -167,7 +167,7 @@ trace_radiative_path_3d
 extern LOCAL_SYM res_T
 radiative_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
    struct temperature_2d* temperature);
@@ -175,7 +175,7 @@ radiative_path_2d
 extern LOCAL_SYM res_T
 radiative_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,
    struct temperature_3d* temperature);
@@ -186,7 +186,7 @@ radiative_path_3d
 extern LOCAL_SYM res_T
 convective_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
    struct temperature_2d* temperature);
@@ -194,7 +194,7 @@ convective_path_2d
 extern LOCAL_SYM res_T
 convective_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,
    struct temperature_3d* temperature);
@@ -205,7 +205,7 @@ convective_path_3d
 extern LOCAL_SYM res_T
 conductive_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
    struct temperature_2d* temperature);
@@ -213,7 +213,7 @@ conductive_path_2d
 extern LOCAL_SYM res_T
 conductive_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,
    struct temperature_3d* temperature);
@@ -224,7 +224,7 @@ conductive_path_3d
 extern LOCAL_SYM res_T
 boundary_path_2d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
    struct temperature_2d* temperature);
@@ -232,7 +232,7 @@ boundary_path_2d
 extern LOCAL_SYM res_T
 boundary_path_3d
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
    struct ssp_rng* rng,
    struct temperature_3d* temperature);

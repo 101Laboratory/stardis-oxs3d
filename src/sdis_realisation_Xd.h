@@ -27,12 +27,12 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
- * Helper functions
+ * Local functions
  ******************************************************************************/
-static res_T
+res_T
 XD(compute_temperature)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
@@ -51,11 +51,14 @@ XD(compute_temperature)
   res_T res = RES_OK;
   ASSERT(scn && ctx && rwalk && rng && T);
 
+  ctx->nbranchings += 1;
+  CHK(ctx->nbranchings <= scn->max_branchings);
+
   if(ctx->heat_path && T->func == XD(boundary_path)) {
     heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
   }
 
-  do {
+  while(!T->done) {
     /* Save the current random walk state */
     const struct XD(rwalk) rwalk_bkp = *rwalk;
     const struct XD(temperature) T_bkp = *T;
@@ -94,22 +97,19 @@ XD(compute_temperature)
       }
       heat_vtx = NULL; /* Notify that the first vertex is finalized */
     }
+  }
 
-  } while(!T->done);
 
 exit:
 #ifndef NDEBUG
   sa_release(stack);
 #endif
+  ctx->nbranchings -= 1;
   return res == RES_BAD_OP_IRRECOVERABLE ? RES_BAD_OP : res;
 error:
   goto exit;
 }
 
-
-/*******************************************************************************
- * Local functions
- ******************************************************************************/
 res_T
 XD(probe_realisation)
   (const size_t irealisation, /* For debug */
@@ -181,8 +181,12 @@ XD(probe_realisation)
 
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
-  ctx.That2 = scn->tmax * scn->tmax;
-  ctx.That3 = scn->tmax * ctx.That2;
+  ctx.Tmin  = scn->tmin;
+  ctx.Tmin2 = ctx.Tmin * ctx.Tmin;
+  ctx.Tmin3 = ctx.Tmin * ctx.Tmin2;
+  ctx.That  = scn->tmax;
+  ctx.That2 = ctx.That * ctx.That;
+  ctx.That3 = ctx.That * ctx.That2;
 
   res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
@@ -256,8 +260,12 @@ XD(boundary_realisation)
 
   ctx.green_path = green_path;
   ctx.heat_path = heat_path;
-  ctx.That2 = scn->tmax * scn->tmax;
-  ctx.That3 = scn->tmax * ctx.That2;
+  ctx.Tmin  = scn->tmin;
+  ctx.Tmin2 = ctx.Tmin * ctx.Tmin;
+  ctx.Tmin3 = ctx.Tmin * ctx.Tmin2;
+  ctx.That  = scn->tmax;
+  ctx.That2 = ctx.That * ctx.That;
+  ctx.That3 = ctx.That * ctx.That2;
 
   res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
   if(res != RES_OK) goto error;
@@ -296,6 +304,9 @@ XD(boundary_flux_realisation)
 #endif
   double P[SDIS_XD_DIMENSION];
   float N[SDIS_XD_DIMENSION];
+  const double Tmin = scn->tmin;
+  const double Tmin2 = Tmin * Tmin;
+  const double Tmin3 = Tmin * Tmin2;
   const double That = scn->tmax;
   const double That2 = That * That;
   const double That3 = That * That2;
@@ -333,6 +344,9 @@ XD(boundary_flux_realisation)
     rwalk.mdm = (Mdm);                                                         \
     rwalk.hit.prim = prim;                                                     \
     SET_PARAM(rwalk.hit, st);                                                  \
+    ctx.Tmin  = Tmin;                                                          \
+    ctx.Tmin3 = Tmin3;                                                         \
+    ctx.That  = That;                                                          \
     ctx.That2 = That2;                                                         \
     ctx.That3 = That3;                                                         \
     dX(set)(rwalk.vtx.P, P);                                                   \

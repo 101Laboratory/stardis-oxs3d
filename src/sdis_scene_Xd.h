@@ -120,7 +120,8 @@ check_sdis_scene_create_args(const struct sdis_scene_create_args* args)
       && args->nprimitives < UINT_MAX
       && args->nvertices
       && args->nvertices < UINT_MAX
-      && args->fp_to_meter > 0;
+      && args->fp_to_meter > 0
+      && args->picard_order > 0;
 }
 
 #endif /* SDIS_SCENE_XD_H */
@@ -913,8 +914,10 @@ XD(scene_create)
   scn->dev = dev;
   scn->fp_to_meter = args->fp_to_meter;
   scn->trad = args->trad;
-  scn->tmax = args->tmax;
+  scn->tmin = args->t_range[0];
+  scn->tmax = args->t_range[1];
   scn->outer_enclosure_id = UINT_MAX;
+  scn->max_branchings = args->picard_order - 1;
   darray_interf_init(dev->allocator, &scn->interfaces);
   darray_medium_init(dev->allocator, &scn->media);
   darray_prim_prop_init(dev->allocator, &scn->prim_props);

@@ -286,6 +286,7 @@ main(int argc, char** argv)
   struct ssp_rng* rng_state = NULL;
   enum sdis_estimator_type type;
   FILE* stream = NULL;
+  double t_range[2];
   double ref;
   const size_t N = 1000;
   const size_t N_dump = 10;
@@ -551,8 +552,10 @@ main(int argc, char** argv)
   /* Green and ambient radiative temperature */
   solve_args.nrealisations = N;
   trad.temperature = trad.reference = 300;
+  t_range[0] = 300;
+  t_range[1] = 300;
   OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
-  OK(sdis_scene_set_maximum_temperature(scn, 300));
+  OK(sdis_scene_set_temperature_range(scn, t_range));
 
   interface_param->epsilon = 1;
   interface_param->reference_temperature = 300;
@@ -569,8 +572,10 @@ main(int argc, char** argv)
 
   /* Check same green used at different ambient radiative temperature */
   trad.temperature = 600;
+  t_range[0] = 300;
+  t_range[1] = 600;
   OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
-  OK(sdis_scene_set_maximum_temperature(scn, 600));
+  OK(sdis_scene_set_temperature_range(scn, t_range));
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_green_function_solve(green, &estimator2));

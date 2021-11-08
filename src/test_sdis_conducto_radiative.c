@@ -278,6 +278,53 @@ create_interface
 }
 
 /*******************************************************************************
+ * Test that the evaluation of the green function failed with a picard order
+ * greater than 1, i.e. when one want to handle the non-linearties of the
+ * system.
+ ******************************************************************************/
+static void
+test_invalidity_picardN_green
+  (struct sdis_scene* scn,
+   struct sdis_medium* solid)
+{
+  struct sdis_solve_probe_args probe = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_solve_boundary_args bound = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
+  struct sdis_solve_medium_args mdm = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
+  struct sdis_solve_probe_boundary_args probe_bound =
+    SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
+
+  struct sdis_green_function* green = NULL;
+  size_t picard_order;
+  CHK(scn);
+
+  OK(sdis_scene_get_picard_order(scn, &picard_order));
+  CHK(picard_order == 1);
+
+  OK(sdis_scene_set_picard_order(scn, 2));
+
+  probe.position[0] = 0;
+  probe.position[1] = 0;
+  probe.position[2] = 0;
+  BA(sdis_solve_probe_green_function(scn, &probe, &green));
+
+  probe_bound.iprim = 2; /* Solid left */
+  probe_bound.uv[0] = 0.3;
+  probe_bound.uv[1] = 0.3;
+  probe_bound.side = SDIS_FRONT;
+  BA(sdis_solve_probe_boundary_green_function(scn, &probe_bound, &green));
+
+  bound.primitives = &probe_bound.iprim;
+  bound.sides = &probe_bound.side;
+  bound.nprimitives = 1;
+  BA(sdis_solve_boundary_green_function(scn, &bound, &green));
+
+  mdm.medium = solid;
+  BA(sdis_solve_medium_green_function(scn, &mdm, &green));
+
+  OK(sdis_scene_set_picard_order(scn, picard_order));
+}
+
+/*******************************************************************************
  * Test
  ******************************************************************************/
 int
@@ -306,6 +353,7 @@ main(int argc, char** argv)
   const double T0 = 300; /* Fixed temperature on the left side of the system */
   const double T1 = 310; /* Fixed temperature on the right side of the system */
   const double thickness = 2.0; /* Thickness of the solid along X */
+  double t_range[2];
   double Ts0, Ts1, hr, tmp;
   struct interfac* p_intface;
   (void)argc, (void)argv;
@@ -414,7 +462,8 @@ main(int argc, char** argv)
   scn_args.get_position = get_position;
   scn_args.nprimitives = ntriangles;
   scn_args.nvertices = nvertices;
-  scn_args.tmax = MMAX(T0, T1);
+  scn_args.t_range[0] = MMIN(T0, T1);
+  scn_args.t_range[1] = MMAX(T0, T1);
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, &scn));
 
@@ -492,7 +541,9 @@ main(int argc, char** argv)
 
     /* Check same green used at a different temperature */
     p_intface->temperature = T1b = T1 + ((double)isimul + 1) * 10;
-    OK(sdis_scene_set_maximum_temperature(scn, MMAX(T0, T1b)));
+    t_range[0] = MMIN(T0, T1b);
+    t_range[1] = MMAX(T0, T1b);
+    OK(sdis_scene_set_temperature_range(scn, t_range));
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -538,6 +589,8 @@ main(int argc, char** argv)
 
     printf("\n\n");
   }
+
+  test_invalidity_picardN_green(scn, solid);
 
   /* Release memory */
   OK(sdis_scene_ref_put(scn));

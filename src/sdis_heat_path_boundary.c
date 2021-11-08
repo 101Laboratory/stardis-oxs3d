@@ -32,6 +32,10 @@
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_boundary_Xd_solid_fluid_picard1.h"
 #define SDIS_XD_DIMENSION 2
+#include "sdis_heat_path_boundary_Xd_solid_fluid_picardN.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_heat_path_boundary_Xd_solid_fluid_picardN.h"
+#define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_boundary_Xd_solid_solid.h"
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_boundary_Xd_solid_solid.h"
