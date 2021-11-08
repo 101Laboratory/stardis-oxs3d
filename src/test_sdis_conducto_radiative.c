@@ -283,7 +283,7 @@ create_interface
  * system.
  ******************************************************************************/
 static void
-test_invalidity_green_picardN
+test_invalidity_picardN_green
   (struct sdis_scene* scn,
    struct sdis_medium* solid)
 {
@@ -590,7 +590,7 @@ main(int argc, char** argv)
     printf("\n\n");
   }
 
-  test_invalidity_green_picardN(scn, solid);
+  test_invalidity_picardN_green(scn, solid);
 
   /* Release memory */
   OK(sdis_scene_ref_put(scn));
