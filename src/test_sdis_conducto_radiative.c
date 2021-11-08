@@ -278,6 +278,53 @@ create_interface
 }
 
 /*******************************************************************************
+ * Test that the evaluation of the green function failed with a picard order
+ * greater than 1, i.e. when one want to handle the non-linearties of the
+ * system.
+ ******************************************************************************/
+static void
+test_invalidity_green_picardN
+  (struct sdis_scene* scn,
+   struct sdis_medium* solid)
+{
+  struct sdis_solve_probe_args probe = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_solve_boundary_args bound = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
+  struct sdis_solve_medium_args mdm = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
+  struct sdis_solve_probe_boundary_args probe_bound =
+    SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
+
+  struct sdis_green_function* green = NULL;
+  size_t picard_order;
+  CHK(scn);
+
+  OK(sdis_scene_get_picard_order(scn, &picard_order));
+  CHK(picard_order == 1);
+
+  OK(sdis_scene_set_picard_order(scn, 2));
+
+  probe.position[0] = 0;
+  probe.position[1] = 0;
+  probe.position[2] = 0;
+  BA(sdis_solve_probe_green_function(scn, &probe, &green));
+
+  probe_bound.iprim = 2; /* Solid left */
+  probe_bound.uv[0] = 0.3;
+  probe_bound.uv[1] = 0.3;
+  probe_bound.side = SDIS_FRONT;
+  BA(sdis_solve_probe_boundary_green_function(scn, &probe_bound, &green));
+
+  bound.primitives = &probe_bound.iprim;
+  bound.sides = &probe_bound.side;
+  bound.nprimitives = 1;
+  BA(sdis_solve_boundary_green_function(scn, &bound, &green));
+
+  mdm.medium = solid;
+  BA(sdis_solve_medium_green_function(scn, &mdm, &green));
+
+  OK(sdis_scene_set_picard_order(scn, picard_order));
+}
+
+/*******************************************************************************
  * Test
  ******************************************************************************/
 int
@@ -542,6 +589,8 @@ main(int argc, char** argv)
 
     printf("\n\n");
   }
+
+  test_invalidity_green_picardN(scn, solid);
 
   /* Release memory */
   OK(sdis_scene_ref_put(scn));
