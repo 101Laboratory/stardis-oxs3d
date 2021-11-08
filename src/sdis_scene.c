@@ -248,7 +248,7 @@ sdis_scene_get_picard_order
    size_t* picard_order)
 {
   if(!scn || !picard_order) return RES_BAD_ARG;
-  *picard_order = scn->max_branchings+1;
+  *picard_order = scene_get_picard_order(scn);
   return RES_OK;
 }
 
@@ -258,7 +258,7 @@ sdis_scene_set_picard_order
    const size_t picard_order)
 {
   if(!scn || picard_order < 1) return RES_BAD_ARG;
-  scn->max_branchings = scene_get_picard_order(scn);
+  scn->max_branchings = picard_order-1;
   return RES_OK;
 }
 
