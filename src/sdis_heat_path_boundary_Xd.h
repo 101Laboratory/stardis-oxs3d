@@ -89,10 +89,10 @@ XD(boundary_path)
 
   if(mdm_front->type == mdm_back->type) {
     res = XD(solid_solid_boundary_path)(scn, ctx, &frag, rwalk, rng, T);
-  } else if(ctx->nbranchings == scn->max_branchings) {
+  } else if(ctx->nbranchings == ctx->max_branchings) {
     res = XD(solid_fluid_boundary_picard1_path)(scn, ctx, &frag, rwalk, rng, T);
   } else {
-    ASSERT(ctx->nbranchings < scn->max_branchings);
+    ASSERT(ctx->nbranchings < ctx->max_branchings);
     res = XD(solid_fluid_boundary_picardN_path)(scn, ctx, &frag, rwalk, rng, T);
   }
   if(res != RES_OK) goto error;

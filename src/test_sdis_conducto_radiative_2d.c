@@ -301,32 +301,33 @@ test_invalidity_picardN_green
     SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
 
   struct sdis_green_function* green = NULL;
-  size_t picard_order;
   CHK(scn);
 
-  OK(sdis_scene_get_picard_order(scn, &picard_order));
-  CHK(picard_order == 1);
-
-  OK(sdis_scene_set_picard_order(scn, 2));
+  CHK(probe.picard_order == 1);
+  CHK(probe_bound.picard_order == 1);
+  CHK(bound.picard_order == 1);
+  CHK(mdm.picard_order == 1);
 
   probe.position[0] = 0;
   probe.position[1] = 0;
+  probe.picard_order = 2;
   BA(sdis_solve_probe_green_function(scn, &probe, &green));
 
   probe_bound.iprim = 1; /* Solid left */
   probe_bound.uv[0] = 0.5;
   probe_bound.side = SDIS_FRONT;
+  probe_bound.picard_order = 2;
   BA(sdis_solve_probe_boundary_green_function(scn, &probe_bound, &green));
 
   bound.primitives = &probe_bound.iprim;
   bound.sides = &probe_bound.side;
   bound.nprimitives = 1;
+  bound.picard_order = 2;
   BA(sdis_solve_boundary_green_function(scn, &bound, &green));
 
   mdm.medium = solid;
+  mdm.picard_order = 2;
   BA(sdis_solve_medium_green_function(scn, &mdm, &green));
-
-  OK(sdis_scene_set_picard_order(scn, picard_order));
 }
 
 /*******************************************************************************

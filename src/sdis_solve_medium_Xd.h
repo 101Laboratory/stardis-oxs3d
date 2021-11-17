@@ -135,6 +135,36 @@ sample_medium_enclosure
   return enc_cumul_found->enc;
 }
 
+static INLINE res_T
+check_solve_medium_args(const struct sdis_solve_medium_args* args)
+{
+  if(!args) return RES_BAD_ARG;
+
+  /* Check the medium */
+  if(!args->medium) return RES_BAD_ARG;
+
+  /* Check #realisations */
+  if(!args->nrealisations || args->nrealisations > INT64_MAX) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check time range */
+  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
+    return RES_BAD_ARG;
+  }
+  if(args->time_range[1] > DBL_MAX
+  && args->time_range[0] != args->time_range[1]) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check picard order */
+  if(args->picard_order < 1) {
+    return RES_BAD_ARG;
+  }
+
+  return RES_OK;
+}
+
 #endif /* !SDIS_SOLVE_MEDIUM_XD_H */
 
 /*******************************************************************************
@@ -221,30 +251,24 @@ XD(solve_medium)
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !args || !args->medium || !args->nrealisations
-  || args->nrealisations > INT64_MAX) {
+  if(!scn) {
     res = RES_BAD_ARG;
     goto error;
   }
+
+  res = check_solve_medium_args(args);
+  if(res != RES_OK) goto error;
+
   if(!out_estimator && !out_green) {
     res = RES_BAD_ARG;
     goto error;
   }
-  if(out_estimator) {
-    if(args->time_range[0] < 0
-    || args->time_range[0] > args->time_range[1]
-    || (  args->time_range[1] > DBL_MAX
-       && args->time_range[0] != args->time_range[1])) {
-      res = RES_BAD_ARG;
-      goto error;
-    }
-  }
 
-  if(out_green && scene_get_picard_order(scn) != 1) {
+  if(out_green && args->picard_order != 1) {
     log_err(scn->dev, "%s: the evaluation of the green function does not make "
       "sense when dealing with the non-linearities of the system; i.e. picard "
       "order must be set to 1 while it is currently set to %lu.\n",
-      FUNC_NAME, (unsigned long)scene_get_picard_order(scn));
+      FUNC_NAME, (unsigned long)args->picard_order);
     res = RES_BAD_ARG;
     goto error;
   }
@@ -309,6 +333,7 @@ XD(solve_medium)
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct probe_realisation_args realis_args = PROBE_REALISATION_ARGS_NULL;
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
@@ -330,7 +355,7 @@ XD(solve_medium)
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
     time_current(&t0);
-    
+
     time = sample_time(rng, args->time_range);
     if(out_green) {
       res_local = green_function_create_path(greens[ithread], &green_path);
@@ -357,9 +382,15 @@ XD(solve_medium)
     }
 
     /* Run a probe realisation */
-    res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng,
-      args->medium, pos, time, pgreen_path, pheat_path, &weight);
-
+    realis_args.rng = rng;
+    realis_args.medium = args->medium;
+    realis_args.time = time;
+    realis_args.picard_order = args->picard_order;
+    realis_args.green_path = pgreen_path;
+    realis_args.heat_path = pheat_path;
+    realis_args.irealisation = (size_t)irealisation;
+    dX(set)(realis_args.position, pos);
+    res_simul = XD(probe_realisation)(scn, &realis_args, &weight);
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
       ATOMIC_SET(&res, res_simul);
       goto error_it;

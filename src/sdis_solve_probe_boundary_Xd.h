@@ -28,6 +28,47 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
+ * Helper function
+ ******************************************************************************/
+#ifndef SDIS_SOLVE_PROBE_BOUNDARY_XD_H
+#define SDIS_SOLVE_PROBE_BOUNDARY_XD_H
+
+static INLINE res_T
+check_solve_probe_boundary_args
+  (const struct sdis_solve_probe_boundary_args* args)
+{
+  if(!args) return RES_BAD_ARG;
+
+  /* Check #realisations */
+  if(!args->nrealisations || args->nrealisations > INT64_MAX) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check side */
+  if((unsigned)args->side >= SDIS_SIDE_NULL__) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check time range */
+  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
+    return RES_BAD_ARG;
+  }
+  if(args->time_range[1] > DBL_MAX
+  && args->time_range[0] != args->time_range[1]) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check picard order */
+  if(args->picard_order < 1) {
+    return RES_BAD_ARG;
+  }
+
+  return RES_OK;
+}
+
+#endif /* SDIS_SOLVE_PROBE_BOUNDARY_XD_H */
+
+/*******************************************************************************
  * Local functions
  ******************************************************************************/
 static res_T
@@ -52,29 +93,24 @@ XD(solve_probe_boundary)
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
-  || ((unsigned)args->side >= SDIS_SIDE_NULL__)) {
+  if(!scn) {
     res = RES_BAD_ARG;
     goto error;
   }
+
+  res = check_solve_probe_boundary_args(args);
+  if(res != RES_OK) goto error;
+
   if(!out_estimator && !out_green) {
     res = RES_BAD_ARG;
     goto error;
   }
-  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-  if(args->time_range[1] > DBL_MAX
-  && args->time_range[0] != args->time_range[1]) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-  if(out_green && scene_get_picard_order(scn) != 1) {
+
+  if(out_green && args->picard_order != 1) {
     log_err(scn->dev, "%s: the evaluation of the green function does not make "
       "sense when dealing with the non-linearities of the system; i.e. picard "
       "order must be set to 1 while it is currently set to %lu.\n",
-      FUNC_NAME, (unsigned long)scene_get_picard_order(scn));
+      FUNC_NAME, (unsigned long)args->picard_order);
     res = RES_BAD_ARG;
     goto error;
   }
@@ -175,6 +211,7 @@ XD(solve_probe_boundary)
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct boundary_realisation_args realis_args = BOUNDARY_REALISATION_ARGS_NULL;
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
@@ -211,8 +248,19 @@ XD(solve_probe_boundary)
       pheat_path = &heat_path;
     }
 
-    res_simul = XD(boundary_realisation)(scn, rng, args->iprim, args->uv, time,
-      args->side, pgreen_path, pheat_path, &w);
+    /* Invoke the boundary realisation */
+    realis_args.rng = rng;
+    realis_args.iprim = args->iprim;
+    realis_args.time = time;
+    realis_args.picard_order = args->picard_order;
+    realis_args.side = args->side;
+    realis_args.green_path = pgreen_path;
+    realis_args.heat_path = pheat_path;
+    realis_args.uv[0] = args->uv[0];
+#if SDIS_XD_DIMENSION == 3
+    realis_args.uv[1] = args->uv[1];
+#endif
+    res_simul = XD(boundary_realisation)(scn, &realis_args, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
@@ -476,6 +524,8 @@ XD(solve_probe_boundary_flux)
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct boundary_flux_realisation_args realis_args =
+      BOUNDARY_FLUX_REALISATION_ARGS_NULL;
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
@@ -522,8 +572,19 @@ XD(solve_probe_boundary_flux)
     flux_mask = 0;
     if(hr > 0) flux_mask |= FLUX_FLAG_RADIATIVE;
     if(hc > 0) flux_mask |= FLUX_FLAG_CONVECTIVE;
-    res_simul = XD(boundary_flux_realisation)(scn, rng, args->iprim, args->uv,
-      time, solid_side, flux_mask, &result);
+
+    /* Invoke the boundary flux realisation */
+    realis_args.rng = rng;
+    realis_args.iprim = args->iprim;
+    realis_args.time = time;
+    realis_args.picard_order = args->picard_order;
+    realis_args.solid_side = solid_side;
+    realis_args.flux_mask = flux_mask;
+    realis_args.uv[0] = args->uv[0];
+#if SDIS_XD_DIMENSION == 3
+    realis_args.uv[1] = args->uv[1];
+#endif
+    res_simul = XD(boundary_flux_realisation)(scn, &realis_args, &result);
 
     /* Stop time registration */
     time_sub(&t0, time_current(&t1), &t0);

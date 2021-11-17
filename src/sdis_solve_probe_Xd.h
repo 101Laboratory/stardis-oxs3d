@@ -28,6 +28,41 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
+ * Helper function
+ ******************************************************************************/
+#ifndef SDIS_SOLVE_PROBE_XD_H
+#define SDIS_SOLVE_PROBE_XD_H
+
+static INLINE res_T
+check_solve_probe_args(const struct sdis_solve_probe_args* args)
+{
+  if(!args) return RES_BAD_ARG;
+
+  /* Check #realisations */
+  if(!args->nrealisations || args->nrealisations > INT64_MAX) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check time range */
+  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
+    return RES_BAD_ARG;
+  }
+  if(args->time_range[1] > DBL_MAX
+  && args->time_range[0] != args->time_range[1]) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check picard order */
+  if(args->picard_order < 1) {
+    return RES_BAD_ARG;
+  }
+
+  return RES_OK;
+}
+
+#endif /* SDIS_SOLVE_PROBE_XD_H */
+
+/*******************************************************************************
  * Generic solve function
  ******************************************************************************/
 static res_T
@@ -53,28 +88,24 @@ XD(solve_probe)
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX) {
+  if(!scn) {
     res = RES_BAD_ARG;
     goto error;
   }
+
+  res = check_solve_probe_args(args);
+  if(res != RES_OK) goto error;
+
   if(!out_estimator && !out_green) {
     res = RES_BAD_ARG;
     goto error;
   }
-  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-  if(args->time_range[1] > DBL_MAX
-  && args->time_range[0] != args->time_range[1]) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-  if(out_green && scene_get_picard_order(scn) != 1) {
+
+  if(out_green && args->picard_order != 1) {
     log_err(scn->dev, "%s: the evaluation of the green function does not make "
       "sense when dealing with the non-linearities of the system; i.e. picard "
       "order must be set to 1 while it is currently set to %lu.\n",
-      FUNC_NAME, (unsigned long)scene_get_picard_order(scn));
+      FUNC_NAME, (unsigned long)args->picard_order);
     res = RES_BAD_ARG;
     goto error;
   }
@@ -138,6 +169,7 @@ XD(solve_probe)
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
+    struct probe_realisation_args realis_args = PROBE_REALISATION_ARGS_NULL;
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
@@ -174,8 +206,16 @@ XD(solve_probe)
       pheat_path = &heat_path;
     }
 
-    res_simul = XD(probe_realisation)((size_t)irealisation, scn, rng, medium,
-      args->position, time, pgreen_path, pheat_path, &w);
+    /* Invoke the probe realisation */
+    realis_args.rng = rng;
+    realis_args.medium = medium;
+    realis_args.time = time;
+    realis_args.picard_order = args->picard_order;
+    realis_args.green_path = pgreen_path;
+    realis_args.heat_path = pheat_path;
+    realis_args.irealisation = (size_t)irealisation;
+    dX(set)(realis_args.position, args->position);
+    res_simul = XD(probe_realisation)(scn, &realis_args, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {

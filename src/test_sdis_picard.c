@@ -397,7 +397,10 @@ struct reference_result {
 static const struct reference_result REFERENCE_RESULT_NULL = {0,0,0};
 
 static void
-test_picard1(struct sdis_scene* scn, const struct reference_result* ref)
+test_picard
+  (struct sdis_scene* scn,
+   const size_t picard_order,
+   const struct reference_result* ref)
 {
   struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_solve_boundary_args bound_args = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
@@ -406,7 +409,7 @@ test_picard1(struct sdis_scene* scn, const struct reference_result* ref)
   enum sdis_scene_dimension dim;
   size_t prims[2];
   enum sdis_side sides[2];
-  CHK(scn);
+  CHK(scn && ref && picard_order >= 1);
 
   OK(sdis_scene_get_dimension(scn, &dim));
   switch(dim) {
@@ -419,6 +422,7 @@ test_picard1(struct sdis_scene* scn, const struct reference_result* ref)
   probe_args.position[0] = 0.05;
   probe_args.position[1] = 0;
   probe_args.position[2] = 0;
+  probe_args.picard_order = picard_order;
   OK(sdis_solve_probe(scn, &probe_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &mc));
   printf("Temperature at `%g %g %g' = %g ~ %g +/- %g\n", 
@@ -441,6 +445,7 @@ test_picard1(struct sdis_scene* scn, const struct reference_result* ref)
   bound_args.nrealisations = N;
   bound_args.primitives = prims;
   bound_args.sides = sides;
+  bound_args.picard_order = picard_order;
   OK(sdis_solve_boundary(scn, &bound_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &mc));
   printf("T1 = %g ~ %g +/- %g\n", ref->T1, mc.E, mc.SE);
@@ -462,6 +467,7 @@ test_picard1(struct sdis_scene* scn, const struct reference_result* ref)
   bound_args.nrealisations = N;
   bound_args.primitives = prims;
   bound_args.sides = sides;
+  bound_args.picard_order = picard_order;
   OK(sdis_solve_boundary(scn, &bound_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &mc));
   printf("T2 = %g ~ %g +/- %g\n", ref->T2, mc.E, mc.SE);
@@ -659,8 +665,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
   pinterf_props[BOUNDARY_mX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
-  test_picard1(scn_2d, &ref);
-  test_picard1(scn_3d, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
 
   /* Test picard1 using T4 as a reference */
@@ -672,8 +678,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_pX]->Tref = ref.T2;
   pinterf_props[BOUNDARY_mX]->Tref = 280;
   pinterf_props[BOUNDARY_pX]->Tref = 350;
-  test_picard1(scn_2d, &ref);
-  test_picard1(scn_3d, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
 
   /* Test picard2  */
@@ -685,20 +691,14 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
   pinterf_props[BOUNDARY_mX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
-  OK(sdis_scene_set_picard_order(scn_2d, 2));
-  OK(sdis_scene_set_picard_order(scn_3d, 2));
-  test_picard1(scn_2d, &ref);
-  test_picard1(scn_3d, &ref);
-  OK(sdis_scene_set_picard_order(scn_2d, 1));
-  OK(sdis_scene_set_picard_order(scn_3d, 1));
+  test_picard(scn_2d, 2/*Picard order*/, &ref);
+  test_picard(scn_3d, 2/*Picard order*/, &ref);
   printf("\n");
 
   t_range[0] = 200;
   t_range[1] = 500;
   OK(sdis_scene_set_temperature_range(scn_2d, t_range));
   OK(sdis_scene_set_temperature_range(scn_3d, t_range));
-  OK(sdis_scene_set_picard_order(scn_2d, 3));
-  OK(sdis_scene_set_picard_order(scn_3d, 3));
 
   /* Test picard2  */
   printf("Test Picard3 with a delta T of 300K\n");
@@ -711,16 +711,14 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_pX]->Tref = 450;
   pinterf_props[BOUNDARY_mX]->Tref = pinterf_props[BOUNDARY_mX]->temperature;
   pinterf_props[BOUNDARY_pX]->Tref = pinterf_props[BOUNDARY_pX]->temperature;
-  test_picard1(scn_2d, &ref);
-  test_picard1(scn_3d, &ref);
+  test_picard(scn_2d, 3/*Picard order*/, &ref);
+  test_picard(scn_3d, 3/*Picard order*/, &ref);
   printf("\n");
 
   t_range[0] = 280;
   t_range[1] = 350;
   OK(sdis_scene_set_temperature_range(scn_2d, t_range));
   OK(sdis_scene_set_temperature_range(scn_3d, t_range));
-  OK(sdis_scene_set_picard_order(scn_2d, 1));
-  OK(sdis_scene_set_picard_order(scn_3d, 1));
   pinterf_props[BOUNDARY_mX]->temperature = t_range[0];
   pinterf_props[BOUNDARY_pX]->temperature = t_range[1];
 
@@ -737,8 +735,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
   pinterf_props[BOUNDARY_mX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
-  test_picard1(scn_2d, &ref);
-  test_picard1(scn_3d, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
 
   /* Test picard1 with a volumic power and T4 a the reference */
@@ -750,8 +748,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_pX]->Tref = ref.T2;
   pinterf_props[BOUNDARY_mX]->Tref = 280;
   pinterf_props[BOUNDARY_pX]->Tref = 350;
-  test_picard1(scn_2d, &ref);
-  test_picard1(scn_3d, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
 
   /* Release memory */

@@ -13,8 +13,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_medium_c.h"
 #include "sdis_realisation.h"
 
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static INLINE int
+check_ray_realisatio_args(const struct ray_realisation_args* args)
+{
+  return args
+      && args->rng
+      && args->medium
+      && args->medium->type == SDIS_FLUID
+      && args->time >= 0
+      && args->picard_order > 0;
+}
+
+/*******************************************************************************
+ * Local functions
+ ******************************************************************************/
 /* Generate the generic realisations */
 #define SDIS_XD_DIMENSION 2
 #include "sdis_realisation_Xd.h"
@@ -24,12 +42,7 @@
 res_T
 ray_realisation_3d
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   struct sdis_medium* medium,
-   const double position[3],
-   const double direction[3],
-   const double time,
-   struct sdis_heat_path* heat_path, /* May be NULL */
+   struct ray_realisation_args* args,
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
@@ -37,34 +50,35 @@ ray_realisation_3d
   struct temperature_3d T = TEMPERATURE_NULL_3d;
   float dir[3];
   res_T res = RES_OK;
-  ASSERT(scn && position && direction && time>=0 && weight);
-  ASSERT(medium && medium->type == SDIS_FLUID);
+  ASSERT(scn && weight && check_ray_realisatio_args(args));
 
-  d3_set(rwalk.vtx.P, position);
-  rwalk.vtx.time = time;
+  d3_set(rwalk.vtx.P, args->position);
+  rwalk.vtx.time = args->time;
   rwalk.hit = S3D_HIT_NULL;
   rwalk.hit_side = SDIS_SIDE_NULL__;
-  rwalk.mdm = medium;
+  rwalk.mdm = args->medium;
 
-  ctx.heat_path = heat_path;
+  ctx.heat_path = args->heat_path;
   ctx.Tmin  = scn->tmin;
   ctx.Tmin2 = ctx.Tmin * ctx.Tmin;
   ctx.Tmin3 = ctx.Tmin * ctx.Tmin2;
   ctx.That  = scn->tmax;
   ctx.That2 = ctx.That * ctx.That;
   ctx.That3 = ctx.That * ctx.That2;
+  ctx.max_branchings = args->picard_order - 1;
   
-  f3_set_d3(dir, direction);
+  f3_set_d3(dir, args->direction);
 
   /* Register the starting position against the heat path */
-  res = register_heat_vertex(heat_path, &rwalk.vtx, 0, SDIS_HEAT_VERTEX_RADIATIVE);
+  res = register_heat_vertex
+    (args->heat_path, &rwalk.vtx, 0, SDIS_HEAT_VERTEX_RADIATIVE);
   if(res != RES_OK) goto error;
 
-  res = trace_radiative_path_3d(scn, dir, &ctx, &rwalk, rng, &T);
+  res = trace_radiative_path_3d(scn, dir, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
 
   if(!T.done) {
-    res = compute_temperature_3d(scn, &ctx, &rwalk, rng, &T);
+    res = compute_temperature_3d(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) goto error;
   }
 

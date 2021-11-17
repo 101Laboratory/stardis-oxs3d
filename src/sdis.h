@@ -385,9 +385,6 @@ struct sdis_scene_create_args {
 
   /* Min/max temperature used to linearise the radiative temperature */
   double t_range[2];
-
-  /* Picard order used to estimate the radiative temperature */
-  size_t picard_order;
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -399,8 +396,7 @@ struct sdis_scene_create_args {
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
-  {0.0, -1.0}, /* Temperature range */                                         \
-  1 /* Picard order */                                                         \
+  {0.0, -1.0} /* Temperature range */                                          \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;
@@ -412,6 +408,12 @@ struct sdis_solve_probe_args {
   size_t nrealisations; /* #realisations */
   double position[3]; /* Probe position */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
@@ -419,6 +421,7 @@ struct sdis_solve_probe_args {
   10000, /* #realisations */                                                   \
   {0,0,0}, /* Position  */                                                     \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
   NULL /* RNG state */                                                         \
 }
@@ -431,6 +434,12 @@ struct sdis_solve_probe_boundary_args {
   size_t iprim; /* Identifier of the primitive on which the probe lies */
   double uv[2]; /* Parametric coordinates of the probe onto the primitve */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   enum sdis_side side; /* Side of iprim on which the probe lies */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
@@ -440,6 +449,7 @@ struct sdis_solve_probe_boundary_args {
   0, /* Primitive identifier */                                                \
   {0,0}, /* UV */                                                              \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_SIDE_NULL__,                                                            \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL /* RNG state */                                                         \
@@ -454,6 +464,12 @@ struct sdis_solve_boundary_args {
   const enum sdis_side* sides; /* Per primitive side to consider */
   size_t nprimitives; /* #primitives */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
@@ -463,6 +479,7 @@ struct sdis_solve_boundary_args {
   NULL, /* Per primitive side */                                               \
   0, /* #primitives */                                                         \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL /* RNG state */                                                         \
 }
@@ -473,6 +490,12 @@ struct sdis_solve_medium_args {
   size_t nrealisations; /* #realisations */
   struct sdis_medium* medium; /* Medium to solve */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
@@ -480,6 +503,7 @@ struct sdis_solve_medium_args {
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL /* RNG state */                                                         \
 }
@@ -491,6 +515,12 @@ struct sdis_solve_probe_boundary_flux_args {
   size_t iprim; /* Identifier of the primitive on which the probe lies */
   double uv[2]; /* Parametric coordinates of the probe onto the primitve */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
@@ -498,6 +528,7 @@ struct sdis_solve_probe_boundary_flux_args {
   0, /* Primitive identifier */                                                \
   {0,0}, /* UV */                                                              \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   NULL /* RNG state */                                                         \
 }
 static const struct sdis_solve_probe_boundary_flux_args
@@ -509,6 +540,12 @@ struct sdis_solve_boundary_flux_args {
   const size_t* primitives; /* List of boundary primitives to handle */
   size_t nprimitives; /* #primitives */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
 };
 #define SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                              \
@@ -516,6 +553,7 @@ struct sdis_solve_boundary_flux_args {
   NULL, /* List or primitive ids */                                            \
   0, /* #primitives */                                                         \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   NULL /* RNG state */                                                         \
 }
 static const struct sdis_solve_boundary_flux_args
@@ -525,6 +563,12 @@ SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
 struct sdis_solve_camera_args {
   struct sdis_camera* cam; /* Point of view */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   size_t image_resolution[2]; /* Image resolution */
   size_t spp; /* #samples per pixel */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
@@ -532,6 +576,7 @@ struct sdis_solve_camera_args {
 #define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
   NULL, /* Camera */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   {512,512}, /* Image resolution */                                            \
   256, /* #realisations per pixel */                                           \
   SDIS_HEAT_PATH_NONE                                                          \
@@ -865,20 +910,6 @@ SDIS_API res_T
 sdis_scene_set_temperature_range
   (struct sdis_scene* scn,
    const double t_range[2]);
-
-/* Get the picard recursion order. */
-SDIS_API res_T
-sdis_scene_get_picard_order
-  (const struct sdis_scene* scn,
-   size_t* picard_order);
-
-/* Set the Picard recursion order to estimate the radiative temperature. An
- * order of one means that the radiative temperature is linearized, while
- * higher orders allow the estimation of the T4 radiative transfer. */
- SDIS_API res_T
-sdis_scene_set_picard_order
-  (struct sdis_scene* scn,
-   const size_t picard_order);
 
 /* Search the point onto the scene geometry that is the closest of `pos'. The
  * `radius' parameter controls the maximum search distance around `pos'. The

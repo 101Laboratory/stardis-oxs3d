@@ -27,6 +27,52 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
+ * Non generic helper functions
+ ******************************************************************************/
+#ifndef SDIS_REALISATION_XD_H
+#define SDIS_REALISATION_XD_H
+
+static INLINE int
+check_probe_realisation_args(const struct probe_realisation_args* args)
+{
+  return args
+      && args->rng
+      && args->medium
+      && args->time >= 0
+      && args->picard_order > 0;
+}
+
+static INLINE int
+check_boundary_realisation_args(const struct boundary_realisation_args* args)
+{
+  return args
+      && args->rng
+      && args->uv[0] >= 0
+      && args->uv[0] <= 1
+      && args->uv[1] >= 0 
+      && args->uv[1] <= 1
+      && args->time >= 0
+      && args->picard_order > 0
+      && (args->side == SDIS_FRONT || args->side == SDIS_BACK);
+}
+
+static INLINE int
+check_boundary_flux_realisation_args
+  (const struct boundary_flux_realisation_args* args)
+{
+  return args
+      && args->rng
+      && args->uv[0] >= 0
+      && args->uv[0] <= 1
+      && args->uv[1] >= 0 
+      && args->uv[1] <= 1
+      && args->time >= 0
+      && args->picard_order > 0
+      && (args->solid_side == SDIS_FRONT || args->solid_side == SDIS_BACK);
+}
+#endif /* SDIS_REALISATION_XD_H */
+
+/*******************************************************************************
  * Local functions
  ******************************************************************************/
 res_T
@@ -52,7 +98,7 @@ XD(compute_temperature)
   ASSERT(scn && ctx && rwalk && rng && T);
 
   ctx->nbranchings += 1;
-  CHK(ctx->nbranchings <= scn->max_branchings);
+  CHK(ctx->nbranchings <= ctx->max_branchings);
 
   if(ctx->heat_path && T->func == XD(boundary_path)) {
     heat_vtx = heat_path_get_last_vertex(ctx->heat_path);
@@ -112,14 +158,8 @@ error:
 
 res_T
 XD(probe_realisation)
-  (const size_t irealisation, /* For debug */
-   struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   struct sdis_medium* medium,
-   const double position[DIM],
-   const double time,
-   struct green_path_handle* green_path, /* May be NULL */
-   struct sdis_heat_path* heat_path, /* May be NULL */
+  (struct sdis_scene* scn,
+   struct probe_realisation_args* args,
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
@@ -131,38 +171,37 @@ XD(probe_realisation)
     (const struct sdis_medium* mdm,
      const struct sdis_rwalk_vertex* vtx);
   res_T res = RES_OK;
-  ASSERT(medium && position && weight && time >= 0);
-  (void)irealisation;
+  ASSERT(scn && weight && check_probe_realisation_args(args));
 
-  switch(medium->type) {
+  switch(args->medium->type) {
     case SDIS_FLUID:
       T.func = XD(convective_path);
       get_initial_temperature = fluid_get_temperature;
-      t0 = fluid_get_t0(medium);
+      t0 = fluid_get_t0(args->medium);
       break;
     case SDIS_SOLID:
       T.func = XD(conductive_path);
       get_initial_temperature = solid_get_temperature;
-      t0 = solid_get_t0(medium);
+      t0 = solid_get_t0(args->medium);
       break;
     default: FATAL("Unreachable code\n"); break;
   }
 
-  dX(set)(rwalk.vtx.P, position);
-  rwalk.vtx.time = time;
+  dX(set)(rwalk.vtx.P, args->position);
+  rwalk.vtx.time = args->time;
 
   /* Register the starting position against the heat path */
-  type = medium->type == SDIS_SOLID
+  type = args->medium->type == SDIS_SOLID
     ? SDIS_HEAT_VERTEX_CONDUCTION
     : SDIS_HEAT_VERTEX_CONVECTION;
-  res = register_heat_vertex(heat_path, &rwalk.vtx, 0, type);
+  res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0, type);
   if(res != RES_OK) goto error;
 
   if(t0 >= rwalk.vtx.time) {
     double tmp;
     /* Check the initial condition. */
     rwalk.vtx.time = t0;
-    tmp = get_initial_temperature(medium, &rwalk.vtx);
+    tmp = get_initial_temperature(args->medium, &rwalk.vtx);
     if(tmp >= 0) {
       *weight = tmp;
       goto exit;
@@ -177,18 +216,19 @@ XD(probe_realisation)
   }
 
   rwalk.hit = SXD_HIT_NULL;
-  rwalk.mdm = medium;
+  rwalk.mdm = args->medium;
 
-  ctx.green_path = green_path;
-  ctx.heat_path = heat_path;
+  ctx.green_path = args->green_path;
+  ctx.heat_path = args->heat_path;
   ctx.Tmin  = scn->tmin;
   ctx.Tmin2 = ctx.Tmin * ctx.Tmin;
   ctx.Tmin3 = ctx.Tmin * ctx.Tmin2;
   ctx.That  = scn->tmax;
   ctx.That2 = ctx.That * ctx.That;
   ctx.That3 = ctx.That * ctx.That2;
+  ctx.max_branchings = args->picard_order - 1;
 
-  res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
+  res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
 
   ASSERT(T.value >= 0);
@@ -203,13 +243,7 @@ error:
 res_T
 XD(boundary_realisation)
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   const size_t iprim,
-   const double uv[DIM-1],
-   const double time,
-   const enum sdis_side side,
-   struct green_path_handle* green_path, /* May be NULL */
-   struct sdis_heat_path* heat_path, /* May be NULL */
+   struct boundary_realisation_args* args,
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
@@ -222,23 +256,23 @@ XD(boundary_realisation)
   float st[2];
 #endif
   res_T res = RES_OK;
-  ASSERT(uv && weight && time >= 0);
+  ASSERT(scn && weight && check_boundary_realisation_args(args));
 
   T.func = XD(boundary_path);
-  rwalk.hit_side = side;
+  rwalk.hit_side = args->side;
   rwalk.hit.distance = 0;
-  rwalk.vtx.time = time;
+  rwalk.vtx.time = args->time;
   rwalk.mdm = NULL; /* The random walk is at an interface between 2 media */
 
 #if SDIS_XD_DIMENSION == 2
-  st = (float)uv[0];
+  st = (float)args->uv[0];
 #else
-  f2_set_d2(st, uv);
+  f2_set_d2(st, args->uv);
 #endif
 
   /* Fetch the primitive */
   SXD(scene_view_get_primitive
-    (scn->sXd(view), (unsigned int)iprim, &rwalk.hit.prim));
+    (scn->sXd(view), (unsigned int)args->iprim, &rwalk.hit.prim));
 
   /* Retrieve the world space position of the probe onto the primitive */
   SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_POSITION, st, &attr));
@@ -254,20 +288,21 @@ XD(boundary_realisation)
   f2_set(rwalk.hit.uv, st);
 #endif
 
-  res = register_heat_vertex(heat_path, &rwalk.vtx, 0/*weight*/,
+  res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0/*weight*/,
     SDIS_HEAT_VERTEX_CONDUCTION);
   if(res != RES_OK) goto error;
 
-  ctx.green_path = green_path;
-  ctx.heat_path = heat_path;
+  ctx.green_path = args->green_path;
+  ctx.heat_path = args->heat_path;
   ctx.Tmin  = scn->tmin;
   ctx.Tmin2 = ctx.Tmin * ctx.Tmin;
   ctx.Tmin3 = ctx.Tmin * ctx.Tmin2;
   ctx.That  = scn->tmax;
   ctx.That2 = ctx.That * ctx.That;
   ctx.That3 = ctx.That * ctx.That2;
+  ctx.max_branchings = args->picard_order - 1;
 
-  res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
+  res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
 
   *weight = T.value;
@@ -281,12 +316,7 @@ error:
 res_T
 XD(boundary_flux_realisation)
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   const size_t iprim,
-   const double uv[DIM-1],
-   const double time,
-   const enum sdis_side solid_side,
-   const int flux_mask,
+   struct boundary_flux_realisation_args* args,
    struct bound_flux_result* result)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
@@ -304,29 +334,36 @@ XD(boundary_flux_realisation)
 #endif
   double P[SDIS_XD_DIMENSION];
   float N[SDIS_XD_DIMENSION];
-  const double Tmin = scn->tmin;
-  const double Tmin2 = Tmin * Tmin;
-  const double Tmin3 = Tmin * Tmin2;
-  const double That = scn->tmax;
-  const double That2 = That * That;
-  const double That3 = That * That2;
-  const enum sdis_side fluid_side =
-    (solid_side == SDIS_FRONT) ? SDIS_BACK : SDIS_FRONT;
+  double Tmin, Tmin2, Tmin3;
+  double That, That2, That3;
+  enum sdis_side fluid_side;
   res_T res = RES_OK;
-  const char compute_radiative = (flux_mask & FLUX_FLAG_RADIATIVE) != 0;
-  const char compute_convective = (flux_mask & FLUX_FLAG_CONVECTIVE) != 0;
-  ASSERT(uv && result && time >= 0 );
+  char compute_radiative;
+  char compute_convective;
+  ASSERT(scn && result && check_boundary_flux_realisation_args(args));
 
 #if SDIS_XD_DIMENSION == 2
   #define SET_PARAM(Dest, Src) (Dest).u = (Src);
-  st = (float)uv[0];
+  st = (float)args->uv[0];
 #else
   #define SET_PARAM(Dest, Src) f2_set((Dest).uv, (Src));
-  f2_set_d2(st, uv);
+  f2_set_d2(st, args->uv);
 #endif
 
+  Tmin = scn->tmin;
+  Tmin2 = Tmin * Tmin;
+  Tmin3 = Tmin * Tmin2;
+  That = scn->tmax;
+  That2 = That * That;
+  That3 = That * That2;
+
+  fluid_side = (args->solid_side/*solid*/==SDIS_FRONT) ? SDIS_BACK : SDIS_FRONT;
+
+  compute_radiative = (args->flux_mask & FLUX_FLAG_RADIATIVE) != 0;
+  compute_convective = (args->flux_mask & FLUX_FLAG_CONVECTIVE) != 0;
+
   /* Fetch the primitive */
-  SXD(scene_view_get_primitive(scn->sXd(view), (unsigned int)iprim, &prim));
+  SXD(scene_view_get_primitive(scn->sXd(view), (unsigned int)args->iprim, &prim));
 
   /* Retrieve the world space position of the probe onto the primitive */
   SXD(primitive_get_attrib(&prim, SXD_POSITION, st, &attr));
@@ -340,7 +377,7 @@ XD(boundary_flux_realisation)
     rwalk = XD(RWALK_NULL);                                                    \
     rwalk.hit_side = (Side);                                                   \
     rwalk.hit.distance = 0;                                                    \
-    rwalk.vtx.time = time;                                                     \
+    rwalk.vtx.time = args->time;                                               \
     rwalk.mdm = (Mdm);                                                         \
     rwalk.hit.prim = prim;                                                     \
     SET_PARAM(rwalk.hit, st);                                                  \
@@ -349,27 +386,28 @@ XD(boundary_flux_realisation)
     ctx.That  = That;                                                          \
     ctx.That2 = That2;                                                         \
     ctx.That3 = That3;                                                         \
+    ctx.max_branchings = args->picard_order - 1;                               \
     dX(set)(rwalk.vtx.P, P);                                                   \
     fX(set)(rwalk.hit.normal, N);                                              \
     T = XD(TEMPERATURE_NULL);                                                  \
   } (void)0
 
   /* Compute boundary temperature */
-  RESET_WALK(solid_side, NULL);
+  RESET_WALK(args->solid_side, NULL);
   T.func = XD(boundary_path);
-  res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
+  res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) return res;
   result->Tboundary = T.value;
 
   /* Fetch the fluid medium */
-  interf = scene_get_interface(scn, (unsigned)iprim);
+  interf = scene_get_interface(scn, (unsigned)args->iprim);
   fluid_mdm = interface_get_medium(interf, fluid_side);
 
   /* Compute radiative temperature */
   if(compute_radiative) {
     RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(radiative_path);
-    res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
+    res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) return res;
     ASSERT(T.value >= 0);
     result->Tradiative = T.value;
@@ -379,7 +417,7 @@ XD(boundary_flux_realisation)
   if(compute_convective) {
     RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(convective_path);
-    res = XD(compute_temperature)(scn, &ctx, &rwalk, rng, &T);
+    res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) return res;
     result->Tfluid = T.value;
   }

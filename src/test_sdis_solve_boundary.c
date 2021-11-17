@@ -333,6 +333,9 @@ main(int argc, char** argv)
   probe_args.time_range[1] = 0;
   BA(SOLVE(box_scn, &probe_args, &estimator));
   probe_args.time_range[0] = probe_args.time_range[1] = INF;
+  probe_args.picard_order = 0;
+  BA(SOLVE(box_scn, &probe_args, &estimator));
+  probe_args.picard_order = 1;
 
   OK(SOLVE(box_scn, &probe_args, &estimator));
   OK(sdis_scene_get_boundary_position
@@ -464,6 +467,9 @@ main(int argc, char** argv)
   bound_args.time_range[1] = 0;
   BA(SOLVE(box_scn, &bound_args, &estimator));
   bound_args.time_range[0] = bound_args.time_range[1] = INF;
+  bound_args.picard_order = 0;
+  BA(SOLVE(box_scn, &bound_args, &estimator));
+  bound_args.picard_order = 1;
 
   /* Average temperature on the right side of the box */
   OK(SOLVE(box_scn, &bound_args, &estimator));

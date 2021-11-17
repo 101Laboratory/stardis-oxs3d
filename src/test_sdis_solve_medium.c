@@ -453,6 +453,9 @@ main(int argc, char** argv)
   solve_args.medium = solid1;
   BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
   solve_args.medium = solid0;
+  solve_args.picard_order = 0;
+  BA(sdis_solve_medium_green_function(scn, &solve_args, &green));
+  solve_args.picard_order = 1;
   OK(sdis_solve_medium_green_function(scn, &solve_args, &green));
 
   OK(sdis_green_function_solve(green, &estimator2));

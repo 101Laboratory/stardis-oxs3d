@@ -72,6 +72,7 @@ solve_pixel
    const size_t nrealisations,
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
+   const size_t picard_order,
    struct sdis_estimator* estimator)
 {
   struct accum acc_temp = ACCUM_NULL;
@@ -84,6 +85,7 @@ solve_pixel
   ASSERT(estimator && time_range);
 
   FOR_EACH(irealisation, 0, nrealisations) {
+    struct ray_realisation_args realis_args = RAY_REALISATION_ARGS_NULL;
     struct time t0, t1;
     double samp[2]; /* Pixel sample */
     double ray_pos[3];
@@ -111,8 +113,14 @@ solve_pixel
     camera_ray(cam, samp, ray_pos, ray_dir);
 
     /* Launch the realisation */
-    res_simul = ray_realisation_3d(scn, rng, mdm, ray_pos, ray_dir,
-      time, pheat_path, &w);
+    realis_args.rng = rng;
+    realis_args.medium = mdm;
+    realis_args.time = time;
+    realis_args.picard_order = picard_order;
+    realis_args.heat_path = pheat_path;
+    d3_set(realis_args.position, ray_pos);
+    d3_set(realis_args.direction, ray_dir);
+    res_simul = ray_realisation_3d(scn, &realis_args, &w);
 
     /* Handle fatal error */
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
@@ -172,6 +180,7 @@ solve_tile
    const size_t spp, /* #samples per pixel */
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
+   const size_t picard_order,
    struct sdis_estimator_buffer* buf)
 {
   size_t mcode; /* Morton code of the tile pixel */
@@ -201,7 +210,7 @@ solve_tile
     estimator = estimator_buffer_grab(buf, ipix[0], ipix[1]);
 
     res = solve_pixel(scn, rng, mdm, cam, time_range,
-      ipix, spp, register_paths, pix_sz, estimator);
+      ipix, spp, register_paths, pix_sz, picard_order, estimator);
     if(res != RES_OK) goto error;
   }
 
@@ -439,7 +448,8 @@ sdis_solve_camera
 
     /* Draw the tile */
     res_local = solve_tile(scn, rng, medium, args->cam, args->time_range,
-      tile_org, tile_sz, args->spp, args->register_paths, pix_sz, buf);
+      tile_org, tile_sz, args->spp, args->register_paths, pix_sz,
+      args->picard_order, buf);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;
