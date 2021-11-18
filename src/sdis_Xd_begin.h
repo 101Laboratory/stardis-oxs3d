@@ -36,8 +36,9 @@ struct rwalk_context {
 
   /* Maximum branchings i.e. the maximum number of times
    * XD(compute_temperature) can be called. It controls the number of
-   * ramifications of the heat path and currently corresponds to the Picard
-   * order used to estimate the radiative temperature. */
+   * ramifications of the heat path and currently is correlated to the Picard
+   * order used to estimate the radiative temperature. max_branchings ==
+   * picard_order-1 */
   size_t max_branchings;
 
   /* Number of heat path branchings */
@@ -57,11 +58,19 @@ struct rwalk_context {
 }
 static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
 
+static INLINE size_t
+get_picard_order(const struct rwalk_context* ctx)
+{
+  ASSERT(ctx);
+  return ctx->max_branchings + 1;
+}
+
 #endif /* SDIS_XD_BEGIN_H */
 
 #ifdef SDIS_XD_BEGIN_H__
   #error "This header is already included without its associated sdis_Xd_end.h file."
 #endif
+
 #define SDIS_XD_BEGIN_H__
 
 /* Check prerequisite */

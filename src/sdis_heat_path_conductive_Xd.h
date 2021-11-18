@@ -210,8 +210,8 @@ struct XD(handle_volumic_power_args) {
   double power; /* Volumic power */
   double lambda; /* Conductivity  */
 
-  float delta_solid; /* Maximum length of a diffusive step */
-  float delta; /* Length of the current diffusive step */
+  float delta_solid; /* Challenged length of a diffusive step */
+  float delta; /* Current length of the current diffusive step */
 
   size_t picard_order;
 };
@@ -234,7 +234,7 @@ XD(check_handle_volumic_power_args)
       && args->lambda >= 0
       && args->delta_solid > 0
       && args->delta >= 0
-      && args->delta_solid >= args->delta
+      && args->delta_solid >= 0
       && args->picard_order > 0;
 }
 
@@ -441,6 +441,7 @@ XD(conductive_path)
     handle_volpow_args.lambda = lambda;
     handle_volpow_args.delta_solid = delta_solid;
     handle_volpow_args.delta = delta;
+    handle_volpow_args.picard_order = get_picard_order(ctx);
     res = XD(handle_volumic_power)(scn, &handle_volpow_args, &power_term, T);
     if(res != RES_OK) goto error;
 
