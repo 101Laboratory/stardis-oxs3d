@@ -530,6 +530,61 @@ error:
   goto exit;
 }
 
+static res_T
+XD(handle_volumic_power)
+  (struct sdis_medium* solid,
+   struct rwalk_context* rwalk_ctx,
+   struct XD(rwalk)* rwalk,
+   const double reinject_dst_m,
+   struct XD(temperature)* T)
+{
+  double power;
+  double lambda;
+  double power_term;
+  size_t picard_order;
+  res_T res = RES_OK;
+
+  /* Check pre-conditions */
+  ASSERT(solid && rwalk_ctx && rwalk && T && reinject_dst_m > 0);
+
+  /* Fetch the volumic power */
+  power = solid_get_volumic_power(solid, &rwalk->vtx);
+  if(power == SDIS_VOLUMIC_POWER_NONE) goto exit; /* Do nothing */
+
+  /* Currently, the power term can be correctly taken into account only when
+   * the radiative temperature is linearized, i.e. when the picard order is
+   * equal to 1 */
+  picard_order = get_picard_order(rwalk_ctx);
+  if(picard_order > 1) {
+    log_err(solid->dev,
+     "%s: invalid not null volumic power '%g' kg/m^3. Could not manage a "
+     "volumic power when the picard order is not equal to 1; Picard order is "
+     "currently set to %lu.\n",
+     FUNC_NAME, power, (unsigned long)picard_order);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Fetch the conductivity */
+  lambda = solid_get_thermal_conductivity(solid, &rwalk->vtx);
+
+  /* Compute the power term and handle the volumic power */
+  power_term = (reinject_dst_m * reinject_dst_m)/ (2.0 * DIM * lambda);
+  T->value += power * power_term;
+
+  /* Update the green path with the power term */
+  if(rwalk_ctx->green_path) {
+    res = green_path_add_power_term
+      (rwalk_ctx->green_path, solid, &rwalk->vtx, power_term);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
@@ -751,32 +806,16 @@ XD(solid_reinjection)
   (struct sdis_medium* solid,
    struct XD(solid_reinjection_args)* args)
 {
-  double power;
-  double lambda;
   double reinject_dst_m; /* Reinjection distance in meters */
   res_T res = RES_OK;
   ASSERT(solid && XD(check_solid_reinjection_args)(args));
 
   reinject_dst_m = args->reinjection->distance * args->fp_to_meter;
 
-  /* Fetch solid properties */
-  lambda = solid_get_thermal_conductivity(solid, &args->rwalk->vtx);
-  power = solid_get_volumic_power(solid, &args->rwalk->vtx);
-
-  /* Handle the volumic power */
-  if(power != SDIS_VOLUMIC_POWER_NONE) {
-    const double reinject_dst_m_sqr = reinject_dst_m * reinject_dst_m;
-    const double power_term = reinject_dst_m_sqr / (2.0 * DIM * lambda);
-
-    args->T->value += power * power_term;
-
-    /* Update the green */
-    if(args->rwalk_ctx->green_path) {
-      res = green_path_add_power_term
-        (args->rwalk_ctx->green_path, solid, &args->rwalk->vtx, power_term);
-      if(res != RES_OK) goto error;
-    }
-  }
+  /* Manage the volumic power */
+  res = XD(handle_volumic_power)
+    (solid, args->rwalk_ctx, args->rwalk, reinject_dst_m, args->T);
+  if(res != RES_OK) goto error;
 
   /* Time rewind */
   res = XD(time_rewind)
