@@ -601,6 +601,7 @@ main(int argc, char** argv)
   solid_props.lambda = 1.15;
   solid_props.rho = 1000;
   solid_props.cp = 800;
+  solid_props.volumic_power = SDIS_VOLUMIC_POWER_NONE;
   create_solid(dev, &solid_props, &solid);
 
   /* Dummy solid medium */
