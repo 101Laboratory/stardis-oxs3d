@@ -51,18 +51,32 @@ XD(solid_boundary_with_flux_path)
   struct sdis_interface* interf = NULL;
   struct sdis_medium* solid = NULL;
 
-  /* Miscellaneous terms */
+  /* Miscellaneous variables */
   double lambda; /* Solid conductivity */
   double delta_boundary; /* Orthogonal reinjection dst at the boundary */
   double delta; /* Orthogonal fitted reinjection dst at the boundary */
   double delta_m; /* Delta in meters */
   double flux_term;
+  size_t picard_order;
   enum sdis_side solid_side = SDIS_SIDE_NULL__;
   res_T res = RES_OK;
 
   ASSERT(frag && phi != SDIS_FLUX_NONE);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
   (void)ctx;
+
+  /* Currently, the flux can be correctly taken into account only when the
+   * radiative temperature is linearized, i.e. when the picard order is equal
+   * to 1 */
+  picard_order = get_picard_order(ctx);
+  if(picard_order > 1 && phi > 0) {
+    log_err(scn->dev,
+      "%s: invalid flux '%g' W/m^2. Could not manage a flux != 0 when the "
+      "picard order is not equal to 1; Picard order is currently set to %lu.\n",
+      FUNC_NAME, phi, (unsigned long)picard_order);
+    res = RES_BAD_ARG;
+    goto error;
+  }
 
   /* Retrieve the solid split by the interface */
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);

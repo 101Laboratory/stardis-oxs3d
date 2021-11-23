@@ -153,6 +153,7 @@ solve
   ASSERT(scn && rng && interf);
 
   OK(sdis_scene_get_dimension(scn, &dim));
+
   FOR_EACH(isimul, 0, nsimuls) {
     int steady = (isimul % 2) == 0;
 
@@ -335,6 +336,15 @@ solve
 
     printf("\n\n");
   }
+
+  /* Picard N is not supported with a flux != 0 */
+  solve_args.position[0] = 0.1;
+  solve_args.position[1] = 0.1;
+  solve_args.position[2] = dim == SDIS_SCENE_2D ? 0 : 0.1;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+  solve_args.picard_order = 2;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
 }
 
 /*******************************************************************************
