@@ -130,6 +130,13 @@ struct sdis_mc {
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
 
+/* Informations on the Stardis-Solver library */
+struct sdis_info {
+  int mpi_enable; /* Define if Stardis-Solver was built with MPI support */
+};
+#define SDIS_INFO_NULL__ {0}
+static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
+
 /*******************************************************************************
  * Data type used to describe physical properties
  ******************************************************************************/
@@ -1307,6 +1314,13 @@ sdis_solve_medium_green_function
   (struct sdis_scene* scn,
    const struct sdis_solve_medium_args* args,
    struct sdis_green_function** green);
+
+/*******************************************************************************
+ * Retrieve infos from the Stardis-Solver library
+ ******************************************************************************/
+SDIS_API res_T
+sdis_get_info
+  (struct sdis_info* info);
 
 END_DECLS
 

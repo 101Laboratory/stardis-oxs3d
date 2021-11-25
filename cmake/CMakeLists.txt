@@ -70,6 +70,7 @@ set(VERSION_PATCH 3)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
+  sdis.c
   sdis_camera.c
   sdis_data.c
   sdis_device.c
@@ -192,6 +193,7 @@ if(NOT NO_TEST)
     register_test(${_name} ${_name})
   endfunction()
 
+  new_test(test_sdis)
   new_test(test_sdis_camera)
   new_test(test_sdis_compute_power)
   new_test(test_sdis_conducto_radiative)
@@ -241,6 +243,11 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
+
+  if(USE_MPI)
+    set_target_properties(test_sdis PROPERTIES
+      COMPILE_DEFINITIONS "SDIS_USE_MPI")
+  endif()
 
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)
 
