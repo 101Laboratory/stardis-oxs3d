@@ -211,10 +211,7 @@ device_release(ref_T* ref)
  ******************************************************************************/
 res_T
 sdis_device_create
-  (struct logger* logger,
-   struct mem_allocator* mem_allocator,
-   const unsigned nthreads_hint,
-   const int verbose,
+  (const struct sdis_device_create_args* args,
    struct sdis_device** out_dev)
 {
   struct logger* log = NULL;
@@ -222,18 +219,18 @@ sdis_device_create
   struct mem_allocator* allocator = NULL;
   res_T res = RES_OK;
 
-  if(nthreads_hint == 0 || !out_dev) {
+  if(!check_sdis_device_create_args(args) || !out_dev) {
     res = RES_BAD_ARG;
     goto error;
   }
 
-  allocator = mem_allocator ? mem_allocator : &mem_default_allocator;
+  allocator = args->allocator ? args->allocator : &mem_default_allocator;
   dev = MEM_CALLOC(allocator, 1, sizeof(struct sdis_device));
   if(!dev) {
-    if(verbose) {
+    if(args->verbosity) {
       #define ERR_STR STR(FUNC_NAME)": could not allocate the Stardis device -- %s."
-      if(logger) {
-        logger_print(logger, LOG_ERROR, ERR_STR, res_to_cstr(res));
+      if(args->logger) {
+        logger_print(args->logger, LOG_ERROR, ERR_STR, res_to_cstr(res));
       } else {
         fprintf(stderr, MSG_ERROR_PREFIX ERR_STR, res_to_cstr(res));
       }
@@ -243,8 +240,8 @@ sdis_device_create
     goto error;
   }
   dev->allocator = allocator;
-  dev->verbose = verbose;
-  dev->nthreads = MMIN(nthreads_hint, (unsigned)omp_get_num_procs());
+  dev->verbose = args->verbosity;
+  dev->nthreads = MMIN(args->nthreads_hint, (unsigned)omp_get_num_procs());
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
@@ -252,8 +249,8 @@ sdis_device_create
   str_init(allocator, &dev->mpi_err_str);
 #endif
 
-  if(logger) {
-    dev->logger = logger;
+  if(args->logger) {
+    dev->logger = args->logger;
   } else {
     setup_log_default(dev);
   }
@@ -276,8 +273,18 @@ sdis_device_create
     goto error;
   }
 
-  res = mpi_init(dev);
-  if(res != RES_OK) goto error;
+#ifdef SDIS_USE_MPI
+  if(args->use_mpi) {
+    res = mpi_init(dev);
+    if(res != RES_OK) goto error;
+  }
+#else
+  if(args->use_mpi) {
+    log_warn(dev,
+      "%s: Stardis-Solver is built without the support of the Message Passing "
+      "Interface. MPI cannot be used for parallel computations.\n", FUNC_NAME);
+   }
+#endif
 
 exit:
   if(out_dev) *out_dev = dev;

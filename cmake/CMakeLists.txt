@@ -247,6 +247,8 @@ if(NOT NO_TEST)
   if(USE_MPI)
     set_target_properties(test_sdis PROPERTIES
       COMPILE_DEFINITIONS "SDIS_USE_MPI")
+    set_target_properties(test_sdis_device PROPERTIES
+      COMPILE_DEFINITIONS "SDIS_USE_MPI")
   endif()
 
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)

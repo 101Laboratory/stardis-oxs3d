@@ -19,7 +19,6 @@
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -32,8 +31,7 @@ main(int argc, char** argv)
   struct sdis_interface_shader shader2 = SDIS_INTERFACE_SHADER_NULL;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
@@ -144,8 +142,6 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_medium_ref_put(solid));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

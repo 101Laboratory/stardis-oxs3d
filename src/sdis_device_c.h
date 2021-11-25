@@ -22,8 +22,18 @@
 #include <rsys/free_list.h>
 #include <rsys/logger.h>
 #include <rsys/ref_count.h>
+#include <rsys/str.h>
+
+#ifdef SDIS_USE_MPI
+  #ifndef NDEBUG
+    #define MPI(Func) ASSERT(MPI_##Func == MPI_SUCCESS)
+  #else
+    #define MPI(Func) MPI_##Func
+  #endif
+#endif
 
 /* Forward declarations */
+struct mutex;
 struct ssp_rng;
 struct ssp_rng_proxy;
 
@@ -37,6 +47,14 @@ struct sdis_device {
   struct mem_allocator* allocator;
   unsigned nthreads;
   int verbose;
+
+#ifdef SDIS_USE_MPI
+  int mpi_rank; /* Rank of the process in the MPI group */
+  int mpi_nprocs; /* Overall #processes in the MPI group */
+  struct str mpi_err_str; /* String used to store the MPI error string */
+
+  struct mutex* mpi_mutex; /* Protect MPI calls from concurrent threads */
+#endif
 
   struct flist_name interfaces_names;
   struct flist_name media_names;

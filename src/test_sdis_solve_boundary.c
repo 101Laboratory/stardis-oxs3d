@@ -173,7 +173,6 @@ int
 main(int argc, char** argv)
 {
   FILE* fp = NULL;
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -203,8 +202,7 @@ main(int argc, char** argv)
   enum sdis_side sides[4];
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Temporary file used to dump heat paths */
   CHK((fp = tmpfile()) != NULL);
@@ -624,8 +622,6 @@ main(int argc, char** argv)
 
   CHK(fclose(fp) == 0);
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

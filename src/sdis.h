@@ -130,6 +130,24 @@ struct sdis_mc {
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
 
+/* Input arguments of the sdis_device_create function */
+struct sdis_device_create_args {
+  struct logger* logger; /* NULL <=> default logger */
+  struct mem_allocator* allocator; /* NULL <=> default allocator */
+  unsigned nthreads_hint; /* Hint on the number of threads to use */
+  int verbosity; /* Verbosity level */
+
+  /* Use the Message Passing Interface to distribute work between processes.
+   * This option is taken into account only if Stardis-Solver is compiled with
+   * MPI support */
+  int use_mpi;
+};
+#define SDIS_DEVICE_CREATE_ARGS_DEFAULT__ {                                    \
+  NULL, NULL, SDIS_NTHREADS_DEFAULT, 1, 0                                      \
+}
+static const struct sdis_device_create_args SDIS_DEVICE_CREATE_ARGS_DEFAULT =
+  SDIS_DEVICE_CREATE_ARGS_DEFAULT__;
+
 /* Informations on the Stardis-Solver library */
 struct sdis_info {
   int mpi_enable; /* Define if Stardis-Solver was built with MPI support */
@@ -614,10 +632,7 @@ BEGIN_DECLS
  ******************************************************************************/
 SDIS_API res_T
 sdis_device_create
-  (struct logger* logger, /* May be NULL <=> use default logger */
-   struct mem_allocator* allocator, /* May be NULL <=> use default allocator */
-   const unsigned nthreads_hint, /* Hint on the number of threads to use */
-   const int verbose, /* Verbosity level */
+  (const struct sdis_device_create_args* args,
    struct sdis_device** dev);
 
 SDIS_API res_T

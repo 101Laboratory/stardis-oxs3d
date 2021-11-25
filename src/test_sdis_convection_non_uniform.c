@@ -175,7 +175,6 @@ create_interface
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc mc_time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
@@ -208,8 +207,7 @@ main(int argc, char** argv)
   int i;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   OK(sdis_data_create(dev, sizeof(int), ALIGNOF(int), NULL, &is_stationary));
   *((int*)sdis_data_get(is_stationary)) = 0;
@@ -376,8 +374,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   OK(sdis_data_ref_put(is_stationary));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

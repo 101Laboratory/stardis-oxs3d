@@ -540,7 +540,6 @@ dump_image(const struct sdis_estimator_buffer* buf)
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct geometry geom = GEOMETRY_NULL;
   struct s3dut_mesh* msh = NULL;
   struct s3dut_mesh_data msh_data;
@@ -572,8 +571,7 @@ main(int argc, char** argv)
   double up[3];
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Create the fluid0 */
   fluid_param.temperature = 350;
@@ -611,14 +609,14 @@ main(int argc, char** argv)
   create_interface(dev, fluid1, solid, &interface_param, &interf1);
 
   /* Setup the cube geometry  */
-  OK(s3dut_create_cuboid(&allocator, 2, 2, 2, &msh));
+  OK(s3dut_create_cuboid(NULL, 2, 2, 2, &msh));
   OK(s3dut_mesh_get_data(msh, &msh_data));
   geometry_add_shape(&geom, msh_data.positions, msh_data.nvertices,
     msh_data.indices, msh_data.nprimitives, NULL, interf1);
   OK(s3dut_mesh_ref_put(msh));
 
   /* Setup the sphere geometry */
-  OK(s3dut_create_sphere(&allocator, 0.5, 32, 16, &msh));
+  OK(s3dut_create_sphere(NULL, 0.5, 32, 16, &msh));
   OK(s3dut_mesh_get_data(msh, &msh_data));
   geometry_add_shape(&geom, msh_data.positions, msh_data.nvertices,
     msh_data.indices, msh_data.nprimitives, NULL, interf0);
@@ -743,8 +741,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   geometry_release(&geom);
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

@@ -573,8 +573,6 @@ create_scene_2d
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
-
   struct sdis_device* dev = NULL;
   struct sdis_scene* scn_2d = NULL;
   struct sdis_scene* scn_3d = NULL;
@@ -594,8 +592,7 @@ main(int argc, char** argv)
   size_t i;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Solid medium */
   solid_props.lambda = 1.15;
@@ -766,8 +763,6 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(dummy));
   OK(sdis_device_ref_put(dev));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

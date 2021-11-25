@@ -271,6 +271,7 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator3 = NULL;
   struct sdis_green_function* green = NULL;
   const struct sdis_heat_path* path = NULL;
+  struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
@@ -296,7 +297,8 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  dev_args.allocator = &allocator;
+  OK(sdis_device_create(&dev_args, &dev));
 
   /* Create the fluid medium */
   OK(sdis_data_create

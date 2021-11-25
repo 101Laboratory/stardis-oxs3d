@@ -238,7 +238,6 @@ interface_get_temperature
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct solid* solid_param = NULL;
   struct fluid* fluid_param = NULL;
   struct interf* interf_param = NULL;
@@ -271,8 +270,7 @@ main(int argc, char** argv)
   size_t nreals;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;
@@ -469,8 +467,6 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

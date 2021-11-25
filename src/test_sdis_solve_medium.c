@@ -197,7 +197,6 @@ interface_get_specular_fraction
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct s3dut_super_formula f0 = S3DUT_SUPER_FORMULA_NULL;
   struct s3dut_super_formula f1 = S3DUT_SUPER_FORMULA_NULL;
   struct s3dut_mesh* msh0 = NULL;
@@ -234,8 +233,7 @@ main(int argc, char** argv)
   size_t nverts;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   fluid_shader.temperature = fluid_get_temperature;
 
@@ -309,13 +307,13 @@ main(int argc, char** argv)
   /* Create the mesh0 */
   f0.A = 1; f0.B = 1; f0.M = 3; f0.N0 = 1; f0.N1 = 1; f0.N2 = 2;
   f1.A = 1; f1.B = 1; f1.M = 10; f1.N0 = 1; f1.N1 = 1; f1.N2 = 3;
-  OK(s3dut_create_super_shape(&allocator, &f0, &f1, 1, 64, 32, &msh0));
+  OK(s3dut_create_super_shape(NULL, &f0, &f1, 1, 64, 32, &msh0));
   OK(s3dut_mesh_get_data(msh0, &ctx.msh0));
 
   /* Create the mesh1 */
   f0.A = 1; f0.B = 1; f0.M = 10; f0.N0 = 1; f0.N1 = 1; f0.N2 = 5;
   f1.A = 1; f1.B = 1; f1.M = 1; f1.N0 = 1; f1.N1 = 1; f1.N2 = 1;
-  OK(s3dut_create_super_shape(&allocator, &f0, &f1, 1, 64, 32, &msh1));
+  OK(s3dut_create_super_shape(NULL, &f0, &f1, 1, 64, 32, &msh1));
   OK(s3dut_mesh_get_data(msh1, &ctx.msh1));
 
   /* Create the scene */
@@ -481,8 +479,6 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(solid1_fluid1));
   OK(sdis_scene_ref_put(scn));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

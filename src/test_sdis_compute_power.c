@@ -164,7 +164,6 @@ solid_get_volumic_power
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct context ctx;
   struct s3dut_mesh* sphere = NULL;
   struct s3dut_mesh* cylinder = NULL;
@@ -189,8 +188,7 @@ main(int argc, char** argv)
   double ref = 0;
   (void)argc, (void) argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
@@ -219,8 +217,8 @@ main(int argc, char** argv)
   ctx.interf1 = interf1;
 
   /* Create the geometry */
-  OK(s3dut_create_sphere(&allocator, 1, 512, 256, &sphere));
-  OK(s3dut_create_cylinder(&allocator, 1, 10, 512, 8, &cylinder));
+  OK(s3dut_create_sphere(NULL, 1, 512, 256, &sphere));
+  OK(s3dut_create_cylinder(NULL, 1, 10, 512, 8, &cylinder));
   OK(s3dut_mesh_get_data(sphere, &ctx.msh0));
   OK(s3dut_mesh_get_data(cylinder, &ctx.msh1));
 
@@ -338,8 +336,6 @@ main(int argc, char** argv)
   OK(s3dut_mesh_ref_put(sphere));
   OK(s3dut_mesh_ref_put(cylinder));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

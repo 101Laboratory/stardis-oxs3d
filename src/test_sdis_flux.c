@@ -353,7 +353,6 @@ solve
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -373,8 +372,7 @@ main(int argc, char** argv)
   struct ssp_rng* rng = NULL;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Create the dummy fluid medium */
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
@@ -459,7 +457,7 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_phi));
 
   /* Solve */
-  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
+  OK(ssp_rng_create(NULL, SSP_RNG_KISS, &rng));
   printf(">> Box scene\n");
   solve(box_scn, rng, interf_props);
   printf(">> Square Scene\n");
@@ -470,8 +468,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   OK(ssp_rng_ref_put(rng));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }
