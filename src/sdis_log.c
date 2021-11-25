@@ -90,9 +90,15 @@ log_info(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
-  va_start(vargs_list, msg);
-  log_msg(dev, LOG_OUTPUT, msg, vargs_list);
-  va_end(vargs_list);
+#ifdef SDIS_USE_MPI
+  /* Log standard messages only on master process */
+  if(dev->mpi_rank == 0)
+#endif
+  {
+    va_start(vargs_list, msg);
+    log_msg(dev, LOG_OUTPUT, msg, vargs_list);
+    va_end(vargs_list);
+  }
 }
 
 void
@@ -101,6 +107,7 @@ log_err(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
+  /* Log errors on all processes */
   va_start(vargs_list, msg);
   log_msg(dev, LOG_ERROR, msg, vargs_list);
   va_end(vargs_list);
@@ -112,8 +119,14 @@ log_warn(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
-  va_start(vargs_list, msg);
-  log_msg(dev, LOG_WARNING, msg, vargs_list);
-  va_end(vargs_list);
+#ifdef SDIS_USE_MPI
+  /* Log warnings only on master process */
+  if(dev->mpi_rank == 0)
+#endif
+  {
+    va_start(vargs_list, msg);
+    log_msg(dev, LOG_WARNING, msg, vargs_list);
+    va_end(vargs_list);
+  }
 }
 
