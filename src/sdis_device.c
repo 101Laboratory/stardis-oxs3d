@@ -27,9 +27,166 @@
 
 #include <omp.h>
 
+#ifdef SDIS_USE_MPI
+  #include <mpi.h>
+#endif
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+#ifdef SDIS_USE_MPI
+
+static const char*
+mpi_error_string(struct sdis_device* dev, const int mpi_err)
+{
+  int res_mpi = MPI_SUCCESS;
+  int len;
+  ASSERT(dev);
+
+  res_mpi = MPI_Error_string(mpi_err, str_get(&dev->mpi_err_str), &len);
+  return res_mpi == MPI_SUCCESS
+    ? str_get(&dev->mpi_err_str) : "Invalid MPI error";
+}
+
+static const char*
+mpi_thread_support_string(const int val)
+{
+  switch(val) {
+    case MPI_THREAD_SINGLE: return "MPI_THREAD_SINGLE";
+    case MPI_THREAD_FUNNELED: return "MPI_THREAD_FUNNELED";
+    case MPI_THREAD_SERIALIZED: return "MPI_THREAD_SERIALIZED";
+    case MPI_THREAD_MULTIPLE: return "MPI_THREAD_MULTIPLE";
+    default: FATAL("Unreachable code.\n"); break;
+  }
+}
+
+static res_T
+mpi_print_proc_info(struct sdis_device* dev)
+{
+  char proc_name[MPI_MAX_PROCESSOR_NAME];
+  int proc_name_len;
+  char* proc_names = NULL;
+  uint32_t* proc_nthreads = NULL;
+  uint32_t nthreads = 0;
+  int iproc;
+  res_T res = RES_OK;
+  ASSERT(dev);
+
+  /* On process 0, allocate the arrays to stored gathered data */
+  if(dev->mpi_rank == 0) {
+
+    /* Allocate the array to store the per process name */
+    proc_names = MEM_CALLOC(dev->allocator, (size_t)dev->mpi_nprocs,
+      MPI_MAX_PROCESSOR_NAME*sizeof(*proc_names));
+    if(!proc_names) {
+      res = RES_MEM_ERR;
+      log_err(dev,
+        "Could not allocate the temporary memory for MPI process names -- "
+        "%s.\n", res_to_cstr(res));
+      goto error;
+    }
+
+    /* Allocate the array to store the per process #threads */
+    proc_nthreads = MEM_CALLOC(dev->allocator, (size_t)dev->mpi_nprocs,
+      sizeof(*proc_nthreads));
+    if(!proc_nthreads) {
+      res = RES_MEM_ERR;
+      log_err(dev,
+        "Could not allocate the temporary memory for the #threads of the MPI "
+        "processes -- %s.\n", res_to_cstr(res));
+      goto error;
+    }
+  }
+
+  /* Gather the process name to the process 0 */
+  MPI(Get_processor_name(proc_name, &proc_name_len));
+  MPI(Gather(proc_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, proc_names,
+    MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, MPI_COMM_WORLD));
+
+  /* Gather the #threads to process 0*/
+  nthreads = (uint32_t)dev->nthreads;
+  MPI(Gather(&nthreads, 1, MPI_UINT32_T, proc_nthreads, 1, MPI_UINT32_T, 0,
+    MPI_COMM_WORLD));
+
+  if(dev->mpi_rank == 0) {
+    FOR_EACH(iproc, 0, dev->mpi_nprocs) {
+      log_info(dev, "Process %d -- %s; #threads: %u\n",
+        iproc, proc_names + iproc*MPI_MAX_PROCESSOR_NAME, proc_nthreads[iproc]);
+    }
+  }
+
+exit:
+  if(proc_names) MEM_RM(dev->allocator, proc_names);
+  if(proc_nthreads) MEM_RM(dev->allocator, proc_nthreads);
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+mpi_init(struct sdis_device* dev)
+{
+  int res_mpi = MPI_SUCCESS;
+  int is_init = 0;
+  int thread_support = 0;
+  res_T res = RES_OK;
+  ASSERT(dev);
+
+  #define CALL_MPI(Func, ErrMsg) {                                             \
+    res_mpi = MPI_##Func;                                                      \
+    if(res_mpi != MPI_SUCCESS) {                                               \
+      log_err(dev, ErrMsg" - %s\n", mpi_error_string(dev, res_mpi));           \
+      res = RES_UNKNOWN_ERR;                                                   \
+      goto error;                                                              \
+    }                                                                          \
+  } (void)0
+
+  CALL_MPI(Initialized(&is_init),
+    "Error querying the MPI init state");
+
+  if(!is_init) {
+    log_err(dev,
+      "MPI is not initialized. The MPI_Init[_thread] function must be called "
+      "priorly to the creation of the Stardis device.\n");
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  CALL_MPI(Query_thread(&thread_support),
+    "Error querying the MPI thread support");
+
+  if(thread_support < MPI_THREAD_SERIALIZED) {
+    log_err(dev,
+     "The provided MPI implementation does not support serialized API calls "
+     "from multiple threads. The thread support is limited to %s.\n",
+     mpi_thread_support_string(thread_support));
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  CALL_MPI(Comm_rank(MPI_COMM_WORLD, &dev->mpi_rank),
+    "Error retrieving the MPI rank");
+  CALL_MPI(Comm_size(MPI_COMM_WORLD, &dev->mpi_nprocs),
+    "Error retrieving the size of the MPI group");
+
+  #undef CALL_MPI
+
+  mpi_print_proc_info(dev);
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+#endif /* SDIS_USE_MPI */
+
+static INLINE int
+check_sdis_device_create_args(const struct sdis_device_create_args* args)
+{
+  return args && args->nthreads_hint != 0;
+}
+
 static void
 device_release(ref_T* ref)
 {
@@ -43,6 +200,9 @@ device_release(ref_T* ref)
   ASSERT(flist_name_is_empty(&dev->media_names));
   flist_name_release(&dev->interfaces_names);
   flist_name_release(&dev->media_names);
+#ifdef SDIS_USE_MPI
+  str_release(&dev->mpi_err_str);
+#endif
   MEM_RM(dev->allocator, dev);
 }
 
@@ -88,6 +248,9 @@ sdis_device_create
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
+#ifdef SDIS_USE_MPI
+  str_init(allocator, &dev->mpi_err_str);
+#endif
 
   if(logger) {
     dev->logger = logger;
@@ -102,6 +265,7 @@ sdis_device_create
     log_err(dev,
       "%s: could not create the Star-2D device on Stardis -- %s.\n",
       FUNC_NAME, res_to_cstr(res));
+    goto error;
   }
 
   res = s3d_device_create(log, allocator, 0, &dev->s3d_dev);
@@ -111,6 +275,9 @@ sdis_device_create
       FUNC_NAME, res_to_cstr(res));
     goto error;
   }
+
+  res = mpi_init(dev);
+  if(res != RES_OK) goto error;
 
 exit:
   if(out_dev) *out_dev = dev;

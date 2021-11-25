@@ -21,6 +21,9 @@ include(CMakeDependentOption)
 
 set(SDIS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/../src)
 option(NO_TEST "Do not build tests" OFF)
+option(USE_MPI
+  "Enable the support of distributed parallelism \
+using the Message Passing Interface specification." ON)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS
   "Perform basic and advanced tests" OFF "NOT NO_TEST" OFF)
@@ -48,6 +51,12 @@ include_directories(
   ${StarEnc2D_INCLUDE_DIR}
   ${StarEnc3D_INCLUDE_DIR}
   ${RSys_INCLUDE_DIR})
+
+if(USE_MPI)
+  find_package(MPI 2 REQUIRED)
+  set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
+  include_directories(${MPI_INCLUDE_PATH})
+endif()
 
 rcmake_append_runtime_dirs(_runtime_dirs
   RSys Star2D Star3D StarSP StarEnc2D StarEnc3D)
@@ -152,6 +161,10 @@ if(CMAKE_COMPILER_IS_GNUCC)
   set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif()
 
+if(USE_MPI)
+  set_target_properties(sdis PROPERTIES COMPILE_DEFINITIONS "SDIS_USE_MPI")
+endif()
+
 rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
 
 ###############################################################################
@@ -228,7 +241,7 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
-  
+
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)
 
 endif()
@@ -242,4 +255,3 @@ install(TARGETS sdis
   RUNTIME DESTINATION bin)
 install(FILES ${SDIS_FILES_INC_API} DESTINATION include/)
 install(FILES ${SDIS_FILES_DOC} DESTINATION share/doc/stardis-solver)
-
