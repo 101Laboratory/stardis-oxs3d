@@ -150,7 +150,7 @@ static const struct sdis_device_create_args SDIS_DEVICE_CREATE_ARGS_DEFAULT =
 
 /* Informations on the Stardis-Solver library */
 struct sdis_info {
-  int mpi_enable; /* Define if Stardis-Solver was built with MPI support */
+  int mpi_enabled; /* Define if Stardis-Solver was built with MPI support */
 };
 #define SDIS_INFO_NULL__ {0}
 static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;

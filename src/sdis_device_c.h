@@ -24,7 +24,7 @@
 #include <rsys/ref_count.h>
 #include <rsys/str.h>
 
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
   #ifndef NDEBUG
     #define MPI(Func) ASSERT(MPI_##Func == MPI_SUCCESS)
   #else
@@ -48,12 +48,13 @@ struct sdis_device {
   unsigned nthreads;
   int verbose;
 
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
   int mpi_rank; /* Rank of the process in the MPI group */
   int mpi_nprocs; /* Overall #processes in the MPI group */
   struct str mpi_err_str; /* String used to store the MPI error string */
 
   struct mutex* mpi_mutex; /* Protect MPI calls from concurrent threads */
+  int use_mpi;
 #endif
 
   struct flist_name interfaces_names;

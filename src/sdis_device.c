@@ -20,6 +20,7 @@
 #include <rsys/cstr.h>
 #include <rsys/logger.h>
 #include <rsys/mem_allocator.h>
+#include <rsys/mutex.h>
 
 #include <star/s2d.h>
 #include <star/s3d.h>
@@ -27,14 +28,14 @@
 
 #include <omp.h>
 
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
   #include <mpi.h>
 #endif
 
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
 
 static const char*
 mpi_error_string(struct sdis_device* dev, const int mpi_err)
@@ -171,20 +172,103 @@ mpi_init(struct sdis_device* dev)
 
   #undef CALL_MPI
 
+  dev->mpi_mutex = mutex_create();
+  if(!dev->mpi_mutex) {
+    log_err(dev,
+      "Error creating the mutex used to protect the MPI calls.\n");
+    res = RES_MEM_ERR;
+    goto error;
+  }
+
   mpi_print_proc_info(dev);
 
+exit:
+  return res;
+error:
+  if(dev->mpi_mutex) {
+    mutex_destroy(dev->mpi_mutex);
+    dev->mpi_mutex = NULL;
+  }
+  goto exit;
+}
+
+#endif /* SDIS_ENABLE_MPI */
+
+static INLINE int
+check_sdis_device_create_args(const struct sdis_device_create_args* args)
+{
+  return args && args->nthreads_hint != 0;
+}
+
+static INLINE res_T
+setup_logger
+  (struct sdis_device* dev,
+   const struct sdis_device_create_args* args)
+{
+  ASSERT(dev && args);
+  if(args->logger) {
+    dev->logger = args->logger;
+  } else {
+    setup_log_default(dev);
+  }
+  return RES_OK;
+}
+
+static INLINE res_T
+setup_star2d(struct sdis_device* dev)
+{
+  res_T res = RES_OK;
+  ASSERT(dev);
+  res = s2d_device_create(dev->logger, dev->allocator, 0, &dev->s2d_dev);
+  if(res != RES_OK) {
+    log_err(dev,
+      "Could not create the Star-2D device for Stardis-Solver -- %s.\n",
+      res_to_cstr(res));
+    goto error;
+  }
 exit:
   return res;
 error:
   goto exit;
 }
 
-#endif /* SDIS_USE_MPI */
-
-static INLINE int
-check_sdis_device_create_args(const struct sdis_device_create_args* args)
+static INLINE res_T
+setup_star3d(struct sdis_device* dev)
 {
-  return args && args->nthreads_hint != 0;
+  res_T res = RES_OK;
+  ASSERT(dev);
+  res = s3d_device_create(dev->logger, dev->allocator, 0, &dev->s3d_dev);
+  if(res != RES_OK) {
+    log_err(dev,
+      "Could not create the Star-3D device for Stardis-Solver -- %s.\n",
+      res_to_cstr(res));
+    goto error;
+  }
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static INLINE res_T
+setup_mpi(struct sdis_device* dev, const struct sdis_device_create_args* args)
+{
+  ASSERT(dev && args);
+#ifdef SDIS_ENABLE_MPI
+  dev->use_mpi = args->use_mpi;
+  if(args->use_mpi) {
+    const res_T res = mpi_init(dev);
+    if(res != RES_OK) return res;
+  }
+#else
+  if(args->use_mpi) {
+    log_warn(dev,
+      "Stardis-Solver is built without the support of the Message Passing "
+      "Interface. MPI cannot be used for parallel computations.\n");
+  }
+#endif
+  return RES_OK;
+
 }
 
 static void
@@ -200,7 +284,8 @@ device_release(ref_T* ref)
   ASSERT(flist_name_is_empty(&dev->media_names));
   flist_name_release(&dev->interfaces_names);
   flist_name_release(&dev->media_names);
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
+  if(dev->mpi_mutex) mutex_destroy(dev->mpi_mutex);
   str_release(&dev->mpi_err_str);
 #endif
   MEM_RM(dev->allocator, dev);
@@ -214,7 +299,6 @@ sdis_device_create
   (const struct sdis_device_create_args* args,
    struct sdis_device** out_dev)
 {
-  struct logger* log = NULL;
   struct sdis_device* dev = NULL;
   struct mem_allocator* allocator = NULL;
   res_T res = RES_OK;
@@ -245,55 +329,27 @@ sdis_device_create
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
   str_init(allocator, &dev->mpi_err_str);
 #endif
 
-  if(args->logger) {
-    dev->logger = args->logger;
-  } else {
-    setup_log_default(dev);
-  }
+  res = setup_logger(dev, args);
+  if(res != RES_OK) goto error;
+  res = setup_star2d(dev);
+  if(res != RES_OK) goto error;
+  res = setup_star3d(dev);
+  if(res != RES_OK) goto error;
+  res = setup_mpi(dev, args);
+  if(res != RES_OK) goto error;
+
   log_info(dev, "Use %lu %s.\n", (unsigned long)dev->nthreads,
     dev->nthreads == 1 ? "thread" : "threads");
-
-  res = s2d_device_create(log, allocator, 0, &dev->s2d_dev);
-  if(res != RES_OK) {
-    log_err(dev,
-      "%s: could not create the Star-2D device on Stardis -- %s.\n",
-      FUNC_NAME, res_to_cstr(res));
-    goto error;
-  }
-
-  res = s3d_device_create(log, allocator, 0, &dev->s3d_dev);
-  if(res != RES_OK) {
-    log_err(dev,
-      "%s: could not create the Star-3D device on Stardis -- %s.\n",
-      FUNC_NAME, res_to_cstr(res));
-    goto error;
-  }
-
-#ifdef SDIS_USE_MPI
-  if(args->use_mpi) {
-    res = mpi_init(dev);
-    if(res != RES_OK) goto error;
-  }
-#else
-  if(args->use_mpi) {
-    log_warn(dev,
-      "%s: Stardis-Solver is built without the support of the Message Passing "
-      "Interface. MPI cannot be used for parallel computations.\n", FUNC_NAME);
-   }
-#endif
 
 exit:
   if(out_dev) *out_dev = dev;
   return res;
 error:
-  if(dev) {
-    SDIS(device_ref_put(dev));
-    dev = NULL;
-  }
+  if(dev) { SDIS(device_ref_put(dev)); dev = NULL; }
   goto exit;
 }
 

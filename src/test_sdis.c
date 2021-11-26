@@ -24,10 +24,10 @@ main(int argc, char** argv)
 
   BA(sdis_get_info(NULL));
   OK(sdis_get_info(&info));
-#ifdef SDIS_USE_MPI
-  CHK(info.mpi_enable);
+#ifdef SDIS_ENABLE_MPI
+  CHK(info.mpi_enabled);
 #else
-  CHK(!info.mpi_enable);
+  CHK(!info.mpi_enabled);
 #endif
   return 0;
 }

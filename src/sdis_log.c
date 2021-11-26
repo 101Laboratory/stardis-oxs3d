@@ -90,7 +90,7 @@ log_info(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
   /* Log standard messages only on master process */
   if(dev->mpi_rank == 0)
 #endif
@@ -119,7 +119,7 @@ log_warn(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
   /* Log warnings only on master process */
   if(dev->mpi_rank == 0)
 #endif

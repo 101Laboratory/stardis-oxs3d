@@ -21,7 +21,7 @@ include(CMakeDependentOption)
 
 set(SDIS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/../src)
 option(NO_TEST "Do not build tests" OFF)
-option(USE_MPI
+option(ENABLE_MPI
   "Enable the support of distributed parallelism \
 using the Message Passing Interface specification." ON)
 
@@ -52,7 +52,7 @@ include_directories(
   ${StarEnc3D_INCLUDE_DIR}
   ${RSys_INCLUDE_DIR})
 
-if(USE_MPI)
+if(ENABLE_MPI)
   find_package(MPI 2 REQUIRED)
   set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   include_directories(${MPI_INCLUDE_PATH})
@@ -91,6 +91,7 @@ set(SDIS_FILES_INC_API
   sdis.h)
 
 set(SDIS_FILES_INC
+  sdis_c.h
   sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
@@ -119,6 +120,11 @@ set(SDIS_FILES_INC
   sdis_solve_probe_boundary_Xd.h
   sdis_Xd_begin.h
   sdis_Xd_end.h)
+
+if(ENABLE_MPI)
+  set(SDIS_FILES_SRC ${SDIS_FILES_SRC} sdis_mpi.c)
+  set(SDIS_FILES_INC ${SDIS_FILES_INC} sdis_mpi.h)
+endif()
 
 set(SDIS_FILES_DOC COPYING README.md)
 
@@ -162,8 +168,8 @@ if(CMAKE_COMPILER_IS_GNUCC)
   set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif()
 
-if(USE_MPI)
-  set_target_properties(sdis PROPERTIES COMPILE_DEFINITIONS "SDIS_USE_MPI")
+if(ENABLE_MPI)
+  set_target_properties(sdis PROPERTIES COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
 endif()
 
 rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
@@ -244,11 +250,11 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
-  if(USE_MPI)
+  if(ENABLE_MPI)
     set_target_properties(test_sdis PROPERTIES
-      COMPILE_DEFINITIONS "SDIS_USE_MPI")
+      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
     set_target_properties(test_sdis_device PROPERTIES
-      COMPILE_DEFINITIONS "SDIS_USE_MPI")
+      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
   endif()
 
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)

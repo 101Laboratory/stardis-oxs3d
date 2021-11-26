@@ -18,7 +18,7 @@
 
 #include <rsys/logger.h>
 
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
 #include <mpi.h>
 #endif
 
@@ -37,7 +37,7 @@ main(int argc, char** argv)
   struct logger logger;
   struct mem_allocator allocator;
   struct sdis_device* dev;
-#ifdef SDIS_USE_MPI
+#ifdef SDIS_ENABLE_MPI
   int provided;
 #endif
   (void)argc, (void)argv;
@@ -89,7 +89,7 @@ main(int argc, char** argv)
   args.use_mpi = 1;
   args.verbosity = 1;
 
-#ifndef SDIS_USE_MPI
+#ifndef SDIS_ENABLE_MPI
   OK(sdis_device_create(&args, &dev));
   OK(sdis_device_ref_put(dev));
 #else

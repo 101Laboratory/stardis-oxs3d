@@ -13,6 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_c.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
 #include "sdis_log.h"
@@ -72,18 +73,30 @@ XD(solve_probe)
    struct sdis_green_function** out_green, /* May be NULL <=> No green func */
    struct sdis_estimator** out_estimator) /* May be NULL <=> No estimator */
 {
+  /* Time registration */
+  struct time solve_t0, solve_t1;
+  char buf[128]; /* Temporary buffer used to store formated time */
+
+  /* Device variables */
+  struct mem_allocator* allocator = NULL;
+  size_t nthreads = 0;
+
+  /* Stardis variables */
   struct sdis_medium* medium = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_green_function* green = NULL;
   struct sdis_green_function** greens = NULL;
+
+  /* Random Number generator */
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** rngs = NULL;
-  struct accum* acc_temps = NULL;
-  struct accum* acc_times = NULL;
+
+  /* Miscellaneous */
+  struct accum* per_thread_acc_temp = NULL;
+  struct accum* per_thread_acc_time = NULL;
   size_t nrealisations = 0;
   int64_t irealisation = 0;
-  size_t i;
-  int progress = 0;
+  int32_t* progress = NULL; /* Per process progress bar */
   int register_paths = SDIS_HEAT_PATH_NONE;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
@@ -116,32 +129,22 @@ XD(solve_probe)
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
 #endif
 
-  /* Create the proxy RNG */
-  if(args->rng_state) {
-    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
-      scn->dev->nthreads, &rng_proxy);
-    if(res != RES_OK) goto error;
-  } else {
-    res = ssp_rng_proxy_create(scn->dev->allocator, SSP_RNG_MT19937_64,
-      scn->dev->nthreads, &rng_proxy);
-    if(res != RES_OK) goto error;
-  }
+  nthreads = scn->dev->nthreads;
+  allocator = scn->dev->allocator;
 
-  /* Create the per thread RNG */
-  rngs = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*rngs));
-  if(!rngs) { res = RES_MEM_ERR; goto error; }
-  FOR_EACH(i, 0, scn->dev->nthreads) {
-    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
-    if(res != RES_OK) goto error;
-  }
+  /* Create the per thread RNGs */
+  res = create_per_thread_rng(scn->dev, args->rng_state, &rng_proxy, &rngs);
+  if(res != RES_OK) goto error;
+
+  /* Allocate the per process progress status */
+  res = alloc_process_progress(scn->dev, &progress);
+  if(res != RES_OK) goto error;
 
   /* Create the per thread accumulators */
-  acc_temps = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_temps));
-  if(!acc_temps) { res = RES_MEM_ERR; goto error; }
-  acc_times = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_times));
-  if(!acc_times) { res = RES_MEM_ERR; goto error; }
+  per_thread_acc_temp = MEM_CALLOC(allocator, nthreads, sizeof(struct accum));
+  per_thread_acc_time = MEM_CALLOC(allocator, nthreads, sizeof(struct accum));
+  if(!per_thread_acc_temp) { res = RES_MEM_ERR; goto error; }
+  if(!per_thread_acc_time) { res = RES_MEM_ERR; goto error; }
 
   /* Retrieve the medium in which the submitted position lies */
   res = scene_get_medium(scn, args->position, NULL, &medium);
@@ -149,12 +152,8 @@ XD(solve_probe)
 
   /* Create the per thread green function */
   if(out_green) {
-    greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
-    if(!greens) { res = RES_MEM_ERR; goto error; }
-    FOR_EACH(i, 0, scn->dev->nthreads) {
-      res = green_function_create(scn, &greens[i]);
-      if(res != RES_OK) goto error;
-    }
+    res = create_per_thread_green_function(scn, &greens);
+    if(res != RES_OK) goto error;
   }
 
   /* Create the estimator */
@@ -163,8 +162,13 @@ XD(solve_probe)
     if(res != RES_OK) goto error;
   }
 
+  print_progress(scn->dev, progress, "Solving probe temperature: ");
+
+  /* Begin time registration of the computation */
+  time_current(&solve_t0);
+
   /* Here we go! Launch the Monte Carlo estimation */
-  nrealisations = args->nrealisations;
+  nrealisations = compute_process_realisations_count(scn->dev, args->nrealisations);
   register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
@@ -173,8 +177,8 @@ XD(solve_probe)
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
     struct ssp_rng* rng = rngs[ithread];
-    struct accum* acc_temp = &acc_temps[ithread];
-    struct accum* acc_time = &acc_times[ithread];
+    struct accum* acc_temp = &per_thread_acc_temp[ithread];
+    struct accum* acc_time = &per_thread_acc_time[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
     struct sdis_heat_path* pheat_path = NULL;
@@ -188,19 +192,17 @@ XD(solve_probe)
 
     if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
 
-    /* Begin time registration */
+    /* Begin time registration of the realisation */
     time_current(&t0);
 
     time = sample_time(rng, args->time_range);
 
     if(out_green) {
       res_local = green_function_create_path(greens[ithread], &green_path);
-      if(res_local != RES_OK) {
-        ATOMIC_SET(&res, res_local);
-        goto error_it;
-      }
+      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); goto error_it; }
       pgreen_path = &green_path;
     }
+
     if(register_paths) {
       heat_path_init(scn->dev->allocator, &heat_path);
       pheat_path = &heat_path;
@@ -252,14 +254,16 @@ XD(solve_probe)
       acc_time->sum += usec; acc_time->sum2 += usec*usec; ++acc_time->count;
     }
 
-    /* Update progress */
+    /* Update the progress status */
     n = (size_t)ATOMIC_INCR(&nsolved_realisations);
     pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
+
     #pragma omp critical
-    if(pcent > progress) {
-      progress = pcent;
-      log_info(scn->dev, "Solving probe temperature: %3d%%\r", progress);
+    if(pcent > progress[0]) {
+      progress[0] = pcent;
+      print_progress_update(scn->dev, progress, "Solving probe temperature: ");
     }
+
   exit_it:
     if(pheat_path) heat_path_release(pheat_path);
     continue;
@@ -268,25 +272,25 @@ XD(solve_probe)
   }
   if(res != RES_OK) goto error;
 
-  /* Add a new line after the progress status */
-  log_info(scn->dev, "Solving probe temperature: %3d%%\n", progress);
+  /* Synchronise processes */
+  waiting_for_process_completion(scn->dev);
 
-  /* Setup the estimated temperature and per realisation time */
+  print_progress_update(scn->dev, progress, "Solving probe temperature: ");
+  log_info(scn->dev, "\n");
+
+  /* Report computation time */
+  time_sub(&solve_t0, time_current(&solve_t1), &solve_t0);
+  time_dump(&solve_t0, TIME_ALL, NULL, buf, sizeof(buf));
+  log_info(scn->dev, "Probe temperature solved in %s.\n", buf);
+
+  /* Setup the estimated values */
   if(out_estimator) {
-    struct accum acc_temp;
-    struct accum acc_time;
-
-    sum_accums(acc_temps, scn->dev->nthreads, &acc_temp);
-    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
-    ASSERT(acc_temp.count == acc_time.count);
-
-    estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
-    estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
-    estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
-    res = estimator_save_rng_state(estimator, rng_proxy);
+    res = setup_estimator(estimator, rng_proxy, per_thread_acc_temp,
+      per_thread_acc_time, args->nrealisations);
     if(res != RES_OK) goto error;
   }
 
+  /* TODO handle for MPI */
   if(out_green) {
     struct accum acc_time;
 
@@ -297,26 +301,17 @@ XD(solve_probe)
     if(res != RES_OK) goto error;
 
     /* Finalize the estimated green */
-    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
+    sum_accums(per_thread_acc_time, scn->dev->nthreads, &acc_time);
     res = green_function_finalize(green, rng_proxy, &acc_time);
     if(res != RES_OK) goto error;
   }
 
 exit:
-  if(rngs) {
-    FOR_EACH(i, 0, scn->dev->nthreads)  {
-      if(rngs[i]) SSP(rng_ref_put(rngs[i]));
-    }
-    MEM_RM(scn->dev->allocator, rngs);
-  }
-  if(greens) {
-    FOR_EACH(i, 0, scn->dev->nthreads) {
-      if(greens[i]) SDIS(green_function_ref_put(greens[i]));
-    }
-    MEM_RM(scn->dev->allocator, greens);
-  }
-  if(acc_temps) MEM_RM(scn->dev->allocator, acc_temps);
-  if(acc_times) MEM_RM(scn->dev->allocator, acc_times);
+  if(rngs) destroy_per_thread_rng(scn->dev, rngs);
+  if(greens) destroy_per_thread_green_function(scn, greens);
+  if(progress) free_process_progress(scn->dev, progress);
+  if(per_thread_acc_temp) MEM_RM(scn->dev->allocator, per_thread_acc_temp);
+  if(per_thread_acc_time) MEM_RM(scn->dev->allocator, per_thread_acc_time);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;

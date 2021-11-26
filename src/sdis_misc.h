@@ -16,6 +16,8 @@
 #ifndef SDIS_MISC_H
 #define SDIS_MISC_H
 
+#include "sdis_heat_path.h"
+
 #include <rsys/float2.h>
 #include <rsys/float3.h>
 #include <star/ssp.h>
