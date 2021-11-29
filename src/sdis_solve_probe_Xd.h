@@ -338,6 +338,10 @@ exit:
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;
+
+  /* Synchronise processes */
+  waiting_for_process_completion(scn->dev);
+
   return (res_T)res;
 error:
   if(green) {
