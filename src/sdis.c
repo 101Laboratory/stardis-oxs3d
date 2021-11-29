@@ -42,7 +42,7 @@ static void
 rewind_progress_printing(struct sdis_device* dev)
 {
   size_t i;
-  if(dev->use_mpi || dev->mpi_nprocs == 1) return;
+  if(!dev->use_mpi || dev->mpi_nprocs == 1) return;
   FOR_EACH(i, 0, dev->mpi_nprocs-1) {
     log_info(dev, "\033[1A\r"); /* Move up */
   }
@@ -83,10 +83,10 @@ create_per_thread_rng
   ASSERT(dev && out_proxy && out_rngs);
 
   rngs = MEM_CALLOC(dev->allocator, dev->nthreads, sizeof(*rngs));
-  if(!rngs) { 
+  if(!rngs) {
     log_err(dev, "Could not allocate the list of per thread RNG.\n");
     res = RES_MEM_ERR;
-    goto error; 
+    goto error;
   }
 
   /* Create the RNG proxy */
@@ -146,7 +146,7 @@ create_per_thread_green_function
 
   greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
   if(!greens) {
-    log_err(scn->dev, 
+    log_err(scn->dev,
       "Could not allocate the list of per thread green function.\n");
     res = RES_MEM_ERR;
     goto error;
