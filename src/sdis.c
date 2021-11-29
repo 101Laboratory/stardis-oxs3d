@@ -411,16 +411,12 @@ print_progress
   if(!dev->use_mpi) {
     log_info(dev, "%s%3d%%\r", label, progress[0]);
   } else {
+    int i;
     if(dev->mpi_rank != 0) return;
-    if(dev->mpi_nprocs == 1) {
-      log_info(dev, "%s%3d%%\r", label, progress[0]);
-    } else {
-      int i;
-      mpi_fetch_progress(dev, progress);
-      FOR_EACH(i, 0, dev->mpi_nprocs) {
-        log_info(dev, "Process %d -- %s%3d%%%c",
-          i, label, progress[i], i == dev->mpi_nprocs - 1 ? '\r' : '\n');
-      }
+    mpi_fetch_progress(dev, progress);
+    FOR_EACH(i, 0, dev->mpi_nprocs) {
+      log_info(dev, "Process %d -- %s%3d%%%c",
+        i, label, progress[i], i == dev->mpi_nprocs - 1 ? '\r' : '\n');
     }
   }
 #endif
