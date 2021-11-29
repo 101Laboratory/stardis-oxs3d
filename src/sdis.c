@@ -292,10 +292,11 @@ gather_accumulators
     goto exit;
   }
 
+  nprocs = (size_t)dev->mpi_nprocs;
   per_proc_acc_temp = MEM_CALLOC(dev->allocator, nprocs, sizeof(struct accum));
   per_proc_acc_time = MEM_CALLOC(dev->allocator, nprocs, sizeof(struct accum));
-  if(per_proc_acc_temp) { res = RES_MEM_ERR; goto error; }
-  if(per_proc_acc_time) { res = RES_MEM_ERR; goto error; }
+  if(!per_proc_acc_temp) { res = RES_MEM_ERR; goto error; }
+  if(!per_proc_acc_time) { res = RES_MEM_ERR; goto error; }
 
   /* Gather thread accumulators */
   sum_accums(per_thread_acc_temp, dev->nthreads, &per_proc_acc_temp[0]);
