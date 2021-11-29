@@ -98,6 +98,7 @@ XD(solve_probe)
   int64_t irealisation = 0;
   int32_t* progress = NULL; /* Per process progress bar */
   int register_paths = SDIS_HEAT_PATH_NONE;
+  int is_master_process = 1;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
@@ -129,6 +130,10 @@ XD(solve_probe)
   if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
 #endif
 
+#ifdef SDIS_ENABLE_MPI
+  is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
+#endif
+
   nthreads = scn->dev->nthreads;
   allocator = scn->dev->allocator;
 
@@ -156,8 +161,9 @@ XD(solve_probe)
     if(res != RES_OK) goto error;
   }
 
-  /* Create the estimator */
-  if(out_estimator) {
+  /* Create the estimator on the master process only. No estimator is needed
+   * for non master process */
+  if(out_estimator && is_master_process) {
     res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
     if(res != RES_OK) goto error;
   }
@@ -299,7 +305,7 @@ XD(solve_probe)
   }
 
   /* TODO handle for MPI */
-  if(out_green) {
+  if(out_green && is_master_process) {
     struct accum acc_time;
 
     /* Redux the per thread green function into the green of the 1st thread */
