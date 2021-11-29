@@ -72,7 +72,7 @@ void
 mpi_waiting_for_request(struct sdis_device* dev, MPI_Request* req)
 {
   struct timespec t;
-  ASSERT(dev && dev->use_mpi && dev->mpi_rank == 0 && req);
+  ASSERT(dev && dev->use_mpi && req);
 
   /* Setup the suspend time of the process while waiting for a request */
   t.tv_sec = 0;
