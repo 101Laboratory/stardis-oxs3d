@@ -278,12 +278,16 @@ gather_accumulators
    struct accum* acc_temp,
    struct accum* acc_time)
 {
+  char buf[128];
+  struct time t0, t1;
   struct accum* per_proc_acc_temp = NULL;
   struct accum* per_proc_acc_time = NULL;
   size_t nprocs = 0;
   res_T res = RES_OK;
   ASSERT(dev && per_thread_acc_temp && per_thread_acc_time);
   ASSERT(acc_temp && acc_time);
+
+  time_current(&t0);
 
   if(!dev->use_mpi) {
     /* Gather thread accumulators */
@@ -345,6 +349,11 @@ gather_accumulators
   }
 
 exit:
+  if(res == RES_OK) {
+    time_sub(&t0, time_current(&t1), &t0);
+    time_dump(&t0, TIME_ALL, NULL, buf, sizeof(buf));
+    log_info(dev, "Accumulators gathered in %s.\n",  buf);
+  }
   if(per_proc_acc_temp) MEM_RM(dev->allocator, per_proc_acc_temp);
   if(per_proc_acc_time) MEM_RM(dev->allocator, per_proc_acc_time);
   return res;
@@ -357,36 +366,16 @@ res_T
 setup_estimator
   (struct sdis_estimator* estimator,
    const struct ssp_rng_proxy* proxy,
-   const struct accum* per_thread_acc_temp,
-   const struct accum* per_thread_acc_time,
+   const struct accum* acc_temp,
+   const struct accum* acc_time,
    const size_t nrealisations)
 {
-  char buf[128];
-  struct time t0, t1;
-  struct accum acc_temp = ACCUM_NULL;
-  struct accum acc_time = ACCUM_NULL;
   res_T res = RES_OK;
+  ASSERT(estimator && proxy && acc_temp && acc_time);
 
-  ASSERT(estimator && proxy && per_thread_acc_temp && per_thread_acc_time);
-
-  time_current(&t0);
-
-  /* Gather the accumulators from concurrent threads & processes */
-  gather_accumulators
-    (estimator->dev,
-     per_thread_acc_temp, 
-     per_thread_acc_time,
-     &acc_temp,
-     &acc_time);
-  ASSERT(acc_temp.count == acc_time.count);
-
-  time_sub(&t0, time_current(&t1), &t0);
-  time_dump(&t0, TIME_ALL, NULL, buf, sizeof(buf));
-  log_info(estimator->dev, "Accumulators gathered in %s.\n",  buf);
-
-  estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
-  estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
-  estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+  estimator_setup_realisations_count(estimator, nrealisations, acc_temp->count);
+  estimator_setup_temperature(estimator, acc_temp->sum, acc_temp->sum2);
+  estimator_setup_realisation_time(estimator, acc_time->sum, acc_time->sum2);
 
   /* TODO correctly handle RNG state with MPI. Currently, we only store the RNG
    * proxy state of the master process, but non-master processes can rely on
@@ -399,7 +388,7 @@ setup_estimator
 #ifdef SDIS_ENABLE_MPI
   if(estimator->dev->use_mpi) {
     log_warn(estimator->dev,
-      "The estimator RNG state is not well defined when MPI is used.");
+      "The estimator RNG state is not well defined when MPI is used.\n");
   }
 #endif
 

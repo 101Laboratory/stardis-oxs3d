@@ -285,9 +285,17 @@ XD(solve_probe)
 
   /* Setup the estimated values */
   if(out_estimator) {
-    res = setup_estimator(estimator, rng_proxy, per_thread_acc_temp,
-      per_thread_acc_time, args->nrealisations);
-    if(res != RES_OK) goto error;
+    struct accum acc_temp, acc_time;
+
+    res = gather_accumulators
+      (scn->dev, per_thread_acc_temp, per_thread_acc_time, &acc_temp, &acc_time);
+    if(res != RES_OK) goto exit;
+
+    if(is_master_process) {
+      res = setup_estimator
+        (estimator, rng_proxy, &acc_temp, &acc_time, args->nrealisations);
+      if(res != RES_OK) goto error;
+    }
   }
 
   /* TODO handle for MPI */
