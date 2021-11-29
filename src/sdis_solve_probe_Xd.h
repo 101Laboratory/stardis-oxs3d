@@ -330,8 +330,8 @@ XD(solve_probe)
   }
 
 exit:
-  if(rngs) destroy_per_thread_rng(scn->dev, rngs);
-  if(greens) destroy_per_thread_green_function(scn, greens);
+  if(rngs) release_per_thread_rng(scn->dev, rngs);
+  if(greens) release_per_thread_green_function(scn, greens);
   if(progress) free_process_progress(scn->dev, progress);
   if(per_thread_acc_temp) MEM_RM(scn->dev->allocator, per_thread_acc_temp);
   if(per_thread_acc_time) MEM_RM(scn->dev->allocator, per_thread_acc_time);

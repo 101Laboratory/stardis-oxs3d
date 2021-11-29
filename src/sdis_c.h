@@ -43,7 +43,7 @@ create_per_thread_rng
    struct ssp_rng** rngs[]);
 
 extern LOCAL_SYM void
-destroy_per_thread_rng
+release_per_thread_rng
   (struct sdis_device* dev,
    struct ssp_rng* rngs[]);
 
@@ -53,7 +53,7 @@ create_per_thread_green_function
    struct sdis_green_function** greens[]);
 
 extern LOCAL_SYM void
-destroy_per_thread_green_function
+release_per_thread_green_function
   (struct sdis_scene* scn,
    struct sdis_green_function* greens[]);
 

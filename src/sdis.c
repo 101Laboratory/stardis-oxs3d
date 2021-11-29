@@ -119,13 +119,13 @@ exit:
   *out_proxy = proxy;
   return res;
 error:
-  if(rngs) { destroy_per_thread_rng(dev, rngs); rngs = NULL; }
+  if(rngs) { release_per_thread_rng(dev, rngs); rngs = NULL; }
   if(proxy) { SSP(rng_proxy_ref_put(proxy)); proxy = NULL; }
   goto exit;
 }
 
 void
-destroy_per_thread_rng(struct sdis_device* dev, struct ssp_rng* rngs[])
+release_per_thread_rng(struct sdis_device* dev, struct ssp_rng* rngs[])
 {
   size_t i;
   ASSERT(dev);
@@ -162,14 +162,14 @@ exit:
   return res;
 error:
   if(greens) {
-    destroy_per_thread_green_function(scn, greens);
+    release_per_thread_green_function(scn, greens);
     greens = NULL;
   }
   goto exit;
 }
 
 void
-destroy_per_thread_green_function
+release_per_thread_green_function
   (struct sdis_scene* scn,
    struct sdis_green_function* greens[])
 {
