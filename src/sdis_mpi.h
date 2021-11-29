@@ -23,14 +23,6 @@
 #include <rsys/rsys.h>
 #include <mpi.h>
 
-/* Id of the messages sent between processes */
-enum mpi_sdis_message {
-  MPI_SDIS_MSG_PROGRESS, /* Progress status */
-  MPI_SDIS_MSG_ACCUM_TEMP, /* Temperature accumulator */
-  MPI_SDIS_MSG_ACCUM_TIME, /* Time accumulator */
-  MPI_SDIS_MSG_COUNT__
-};
-
 /* Forward declarations */
 struct sdis_device;
 

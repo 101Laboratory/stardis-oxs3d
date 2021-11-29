@@ -74,7 +74,7 @@ XD(solve_probe)
    struct sdis_estimator** out_estimator) /* May be NULL <=> No estimator */
 {
   /* Time registration */
-  struct time solve_t0, solve_t1;
+  struct time time0, time1;
   char buf[128]; /* Temporary buffer used to store formated time */
 
   /* Device variables */
@@ -171,7 +171,7 @@ XD(solve_probe)
   print_progress(scn->dev, progress, "Solving probe temperature: ");
 
   /* Begin time registration of the computation */
-  time_current(&solve_t0);
+  time_current(&time0);
 
   /* Here we go! Launch the Monte Carlo estimation */
   nrealisations = compute_process_realisations_count(scn->dev, args->nrealisations);
@@ -285,17 +285,26 @@ XD(solve_probe)
   log_info(scn->dev, "\n");
 
   /* Report computation time */
-  time_sub(&solve_t0, time_current(&solve_t1), &solve_t0);
-  time_dump(&solve_t0, TIME_ALL, NULL, buf, sizeof(buf));
+  time_sub(&time0, time_current(&time1), &time0);
+  time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
   log_info(scn->dev, "Probe temperature solved in %s.\n", buf);
 
   /* Setup the estimated values */
   if(out_estimator) {
     struct accum acc_temp, acc_time;
 
+    time_current(&time0);
+
     res = gather_accumulators
-      (scn->dev, per_thread_acc_temp, per_thread_acc_time, &acc_temp, &acc_time);
-    if(res != RES_OK) goto exit;
+      (scn->dev, MPI_SDIS_MSG_ACCUM_TEMP, per_thread_acc_temp, &acc_temp);
+    if(res != RES_OK) goto error;
+    res = gather_accumulators
+      (scn->dev, MPI_SDIS_MSG_ACCUM_TIME, per_thread_acc_time, &acc_time);
+    if(res != RES_OK) goto error;
+
+    time_sub(&time0, time_current(&time1), &time0);
+    time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+    log_info(scn->dev, "Accumulators gathered in %s.\n",  buf);
 
     if(is_master_process) {
       res = setup_estimator

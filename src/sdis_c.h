@@ -18,9 +18,20 @@
 
 #include <rsys/rsys.h>
 
+/* Id of the messages sent between processes */
+enum mpi_sdis_message {
+  MPI_SDIS_MSG_PROGRESS, /* Progress status */
+  MPI_SDIS_MSG_ACCUM_TEMP, /* Temperature accumulator */
+  MPI_SDIS_MSG_ACCUM_TIME, /* Time accumulator */
+  MPI_SDIS_MSG_COUNT__
+};
+
 /* Forward declarations */
 struct accum;
 struct sdis_device;
+struct sdis_estimator;
+struct sdis_green_function;
+struct sdis_scene;
 struct ssp_rng;
 struct ssp_rng_proxy;
 
@@ -67,25 +78,23 @@ compute_process_realisations_count
   (const struct sdis_device* dev,
    const size_t overall_realisations_count);
 
-/* Gather the accumulators and sum them in acc_<temp|time>. With MPI, non
- * master processes store in acc_<temp|time> the gathering of their per thread
- * accumulators that are sent to the master process. The master process gathers
- * their per thread accumulators and the per process ones and save the result
- * in acc_<temp|time> */
+/* Gather the accumulators and sum them in acc. With MPI, non master processes
+ * store in acc the gathering of their per thread accumulators that are sent to
+ * the master process. The master process gathers the per thread accumulators
+ * and the per process ones and save the result in acc */
 extern LOCAL_SYM res_T
 gather_accumulators
   (struct sdis_device* dev,
-   const struct accum* per_thread_acc_temp,
-   const struct accum* per_thread_acc_time,
-   struct accum* acc_temp,
-   struct accum* acc_time);
+   const enum mpi_sdis_message msg,
+   const struct accum* per_thread_acc,
+   struct accum* acc);
 
 extern LOCAL_SYM res_T
 setup_estimator
   (struct sdis_estimator* estimator,
    const struct ssp_rng_proxy* proxy,
-   const struct accum* per_thread_acc_temp,
-   const struct accum* per_thread_acc_time,
+   const struct accum* acc_temp,
+   const struct accum* acc_time,
    const size_t overall_realisations_count);
 
 extern LOCAL_SYM res_T

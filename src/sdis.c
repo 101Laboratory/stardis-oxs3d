@@ -256,15 +256,14 @@ compute_process_realisations_count
 res_T
 gather_accumulators
   (struct sdis_device* dev,
-   const struct accum* per_thread_acc_temp,
-   const struct accum* per_thread_acc_time,
-   struct accum* acc_temp,
-   struct accum* acc_time)
+   const enum mpi_sdis_message msg,
+   const struct accum* per_thread_acc,
+   struct accum* acc)
 {
+  (void)msg;
   ASSERT(dev);
   /* Gather thread accumulators */
-  sum_accums(per_thread_acc_temp, dev->nthreads, acc_temp);
-  sum_accums(per_thread_acc_time, dev->nthreads, acc_time);
+  sum_accums(per_thread_acc, dev->nthreads, acc);
   return RES_OK;
 }
 #endif
@@ -273,52 +272,38 @@ gather_accumulators
 res_T
 gather_accumulators
   (struct sdis_device* dev,
-   const struct accum* per_thread_acc_temp,
-   const struct accum* per_thread_acc_time,
-   struct accum* acc_temp,
-   struct accum* acc_time)
+   const enum mpi_sdis_message msg,
+   const struct accum* per_thread_acc,
+   struct accum* acc)
 {
-  char buf[128];
-  struct time t0, t1;
-  struct accum* per_proc_acc_temp = NULL;
-  struct accum* per_proc_acc_time = NULL;
+  struct accum* per_proc_acc = NULL;
   size_t nprocs = 0;
   res_T res = RES_OK;
-  ASSERT(dev && per_thread_acc_temp && per_thread_acc_time);
-  ASSERT(acc_temp && acc_time);
-
-  time_current(&t0);
+  ASSERT(dev && per_thread_acc && acc);
 
   if(!dev->use_mpi) {
     /* Gather thread accumulators */
-    sum_accums(per_thread_acc_temp, dev->nthreads, acc_temp);
-    sum_accums(per_thread_acc_time, dev->nthreads, acc_time);
+    sum_accums(per_thread_acc, dev->nthreads, acc);
     goto exit;
   }
 
   nprocs = (size_t)dev->mpi_nprocs;
-  per_proc_acc_temp = MEM_CALLOC(dev->allocator, nprocs, sizeof(struct accum));
-  per_proc_acc_time = MEM_CALLOC(dev->allocator, nprocs, sizeof(struct accum));
-  if(!per_proc_acc_temp) { res = RES_MEM_ERR; goto error; }
-  if(!per_proc_acc_time) { res = RES_MEM_ERR; goto error; }
+  per_proc_acc = MEM_CALLOC(dev->allocator, nprocs, sizeof(struct accum));
+  if(!per_proc_acc) { res = RES_MEM_ERR; goto error; }
 
   /* Gather thread accumulators */
-  sum_accums(per_thread_acc_temp, dev->nthreads, &per_proc_acc_temp[0]);
-  sum_accums(per_thread_acc_time, dev->nthreads, &per_proc_acc_time[0]);
+  sum_accums(per_thread_acc, dev->nthreads, &per_proc_acc[0]);
 
   /* Non master process */
   if(dev->mpi_rank != 0) {
 
-    /* Send the temperature/time accumulator to the master process */
+    /* Send the accumulator to the master process */
     mutex_lock(dev->mpi_mutex);
-    MPI(Send(&per_proc_acc_temp[0], sizeof(per_proc_acc_temp[0]), MPI_CHAR,
-      0/*Dst*/, MPI_SDIS_MSG_ACCUM_TEMP, MPI_COMM_WORLD));
-    MPI(Send(&per_proc_acc_time[0], sizeof(per_proc_acc_time[0]), MPI_CHAR,
-      0/*Dst*/, MPI_SDIS_MSG_ACCUM_TIME, MPI_COMM_WORLD));
+    MPI(Send(&per_proc_acc[0], sizeof(per_proc_acc[0]), MPI_CHAR, 0/*Dst*/,
+      msg, MPI_COMM_WORLD));
     mutex_unlock(dev->mpi_mutex);
 
-    *acc_temp = per_proc_acc_temp[0];
-    *acc_time = per_proc_acc_time[0];
+    *acc = per_proc_acc[0];
 
   /* Master process */
   } else {
@@ -328,34 +313,20 @@ gather_accumulators
     FOR_EACH(iproc, 1, dev->mpi_nprocs) {
       MPI_Request req;
 
-      /* Asynchronously receive the temperature accumulator of `iproc' */
+      /* Asynchronously receive the accumulator of `iproc' */
       mutex_lock(dev->mpi_mutex);
-      MPI(Irecv(&per_proc_acc_temp[iproc], sizeof(per_proc_acc_temp[iproc]),
-        MPI_CHAR, iproc, MPI_SDIS_MSG_ACCUM_TEMP, MPI_COMM_WORLD, &req));
-      mutex_unlock(dev->mpi_mutex);
-      mpi_waiting_for_request(dev, &req);
-
-      /* Asynchronously receive the time accumulator of `iproc' */
-      mutex_lock(dev->mpi_mutex);
-      MPI(Irecv(&per_proc_acc_time[iproc], sizeof(per_proc_acc_time[iproc]),
-        MPI_CHAR, iproc, MPI_SDIS_MSG_ACCUM_TIME, MPI_COMM_WORLD, &req));
+      MPI(Irecv(&per_proc_acc[iproc], sizeof(per_proc_acc[iproc]), MPI_CHAR,
+        iproc, msg, MPI_COMM_WORLD, &req));
       mutex_unlock(dev->mpi_mutex);
       mpi_waiting_for_request(dev, &req);
     }
 
     /* Sum the process accumulators */
-    sum_accums(per_proc_acc_temp, (size_t)dev->mpi_nprocs, acc_temp);
-    sum_accums(per_proc_acc_time, (size_t)dev->mpi_nprocs, acc_time);
+    sum_accums(per_proc_acc, (size_t)dev->mpi_nprocs, acc);
   }
 
 exit:
-  if(res == RES_OK) {
-    time_sub(&t0, time_current(&t1), &t0);
-    time_dump(&t0, TIME_ALL, NULL, buf, sizeof(buf));
-    log_info(dev, "Accumulators gathered in %s.\n",  buf);
-  }
-  if(per_proc_acc_temp) MEM_RM(dev->allocator, per_proc_acc_temp);
-  if(per_proc_acc_time) MEM_RM(dev->allocator, per_proc_acc_time);
+  if(per_proc_acc) MEM_RM(dev->allocator, per_proc_acc);
   return res;
 error:
   goto exit;
