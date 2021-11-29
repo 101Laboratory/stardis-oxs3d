@@ -369,6 +369,21 @@ sdis_device_ref_put(struct sdis_device* dev)
   return RES_OK;
 }
 
+res_T
+sdis_device_get_mpi_rank(struct sdis_device* dev, int* rank)
+{
+#ifndef SDIS_ENABLE_MPI
+  (void)dev, (void)rank;
+  return RES_BAD_OP;
+#else
+  if(!dev || !rank) return RES_BAD_ARG;
+  if(!dev->use_mpi) return RES_BAD_OP;
+  ASSERT(dev->mpi_rank >= 0);
+  *rank = dev->mpi_rank;
+  return RES_OK;
+#endif
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/

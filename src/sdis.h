@@ -643,6 +643,11 @@ SDIS_API res_T
 sdis_device_ref_put
   (struct sdis_device* dev);
 
+SDIS_API res_T
+sdis_device_get_mpi_rank
+  (struct sdis_device* dev,
+   int* rank);
+
 /*******************************************************************************
  * A data stores in the Stardis memory space a set of user defined data. It can
  * be seen as a ref counted memory space allocated by Stardis. It is used to
