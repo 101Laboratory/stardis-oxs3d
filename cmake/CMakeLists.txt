@@ -255,6 +255,8 @@ if(NOT NO_TEST)
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
     set_target_properties(test_sdis_device PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+    set_target_properties(test_sdis_solve_probe2 PROPERTIES
+      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
   endif()
 
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)

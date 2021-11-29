@@ -18,6 +18,10 @@
 
 #include <rsys/math.h>
 
+#ifdef SDIS_ENABLE_MPI
+#include <mpi.h>
+#endif
+
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
  * convection coefficient with the surrounding fluid is null. The temperature
@@ -145,6 +149,7 @@ interface_get_temperature
 int
 main(int argc, char** argv)
 {
+  struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
@@ -170,9 +175,25 @@ main(int argc, char** argv)
   const size_t N = 10000;
   size_t nreals;
   size_t nfails;
+#ifdef SDIS_ENABLE_MPI
+  int mpi_thread_support;
+  int mpi_rank;
+#endif
+  int is_master_process = 0;
   (void)argc, (void)argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+#ifndef SDIS_ENABLE_MPI
+  OK(sdis_device_create(&dev_args, &dev));
+  is_master_process == 1;
+#else
+  CHK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &mpi_thread_support)
+    == MPI_SUCCESS);
+  CHK(mpi_thread_support >= MPI_THREAD_SERIALIZED);
+  dev_args.use_mpi = 1;
+  OK(sdis_device_create(&dev_args, &dev));
+  OK(sdis_device_get_mpi_rank(dev, &mpi_rank));
+  is_master_process = mpi_rank == 0;
+#endif
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
@@ -251,37 +272,49 @@ main(int argc, char** argv)
   solve_args.time_range[1] = INF;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-  /* Print the estimation results */
-  ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
-  printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(solve_args.position), ref, T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+    /* Print the estimation results */
+    ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
+    printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
+      SPLIT3(solve_args.position), ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
-  /* Check the results */
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, 3*T.SE));
+    /* Check the results */
+    CHK(nfails + nreals == N);
+    CHK(nfails < N/1000);
+    CHK(eq_eps(T.E, ref, 3*T.SE));
+  }
 
   /* Check green */
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_green_function(green);
-  check_estimator_eq(estimator, estimator2);
-  check_green_serialization(green, scn);
+  if(!is_master_process) {
+    CHK(green == NULL);
+  } else {
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn);
+  }
 
   /* Release data */
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
-  OK(sdis_green_function_ref_put(green));
+  if(estimator) OK(sdis_estimator_ref_put(estimator));
+  if(estimator2) OK(sdis_estimator_ref_put(estimator2));
+  if(green) OK(sdis_green_function_ref_put(green));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));
 
   CHK(mem_allocated_size() == 0);
+
+#ifdef SDIS_ENABLE_MPI
+  CHK(MPI_Finalize() == MPI_SUCCESS);
+#endif
   return 0;
 }
