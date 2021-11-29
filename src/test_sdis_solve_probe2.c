@@ -184,7 +184,7 @@ main(int argc, char** argv)
 
 #ifndef SDIS_ENABLE_MPI
   OK(sdis_device_create(&dev_args, &dev));
-  is_master_process == 1;
+  is_master_process = 1;
 #else
   CHK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &mpi_thread_support)
     == MPI_SUCCESS);
