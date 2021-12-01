@@ -20,6 +20,8 @@
   #error "Invalid inclusion. Stardis-Solver is compiled without MPI support"
 #endif
 
+#include "sdis_c.h"
+
 #include <rsys/rsys.h>
 #include <mpi.h>
 
@@ -46,6 +48,15 @@ mpi_waiting_for_request
   (struct sdis_device* dev,
    MPI_Request* req);
 
+/* Actively wait for a message from the process iproc */
+extern LOCAL_SYM void
+mpi_waiting_for_message
+  (struct sdis_device* dev,
+   const int iproc,
+   const enum mpi_sdis_message msg,
+   MPI_Status* status);
+
+/* Waiting for all processes */
 extern LOCAL_SYM void
 mpi_barrier
   (struct sdis_device* dev);

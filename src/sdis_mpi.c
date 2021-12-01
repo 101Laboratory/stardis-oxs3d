@@ -93,6 +93,34 @@ mpi_waiting_for_request(struct sdis_device* dev, MPI_Request* req)
 }
 
 void
+mpi_waiting_for_message
+  (struct sdis_device* dev,
+   const int iproc,
+   const enum mpi_sdis_message msg,
+   MPI_Status* status)
+{
+  struct timespec t;
+  ASSERT(dev && dev->use_mpi && status);
+
+  /* Setup the suspend time of the process while waiting for a message */
+  t.tv_sec = 0;
+  t.tv_nsec = 10000000; /* 10ms */
+
+  /* Wait for process synchronisation */
+  for(;;) {
+    int flag;
+
+    /* Asynchronously probe for green function data */
+    mutex_lock(dev->mpi_mutex);
+    MPI(Iprobe(iproc, msg, MPI_COMM_WORLD, &flag, status));
+    mutex_unlock(dev->mpi_mutex);
+
+    if(flag) break;
+    nanosleep(&t, NULL);
+  }
+}
+
+void
 mpi_barrier(struct sdis_device* dev)
 {
   MPI_Request req;
