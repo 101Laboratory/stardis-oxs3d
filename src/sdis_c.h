@@ -20,9 +20,10 @@
 
 /* Id of the messages sent between processes */
 enum mpi_sdis_message {
-  MPI_SDIS_MSG_PROGRESS, /* Progress status */
   MPI_SDIS_MSG_ACCUM_TEMP, /* Temperature accumulator */
   MPI_SDIS_MSG_ACCUM_TIME, /* Time accumulator */
+  MPI_SDIS_MSG_GREEN_FUNCTION, /* Serialized green function */
+  MPI_SDIS_MSG_PROGRESS, /* Progress status */
   MPI_SDIS_MSG_COUNT__
 };
 
@@ -97,11 +98,17 @@ setup_estimator
    const struct accum* acc_time,
    const size_t overall_realisations_count);
 
+/* Gather the green functions. With MPI, non master processes store in green
+ * the gathering of their per thread green functions and sent the result to the
+ * master process. The master process gathers both per thread green functions
+ * and per process ones and finally save the result in green */
 extern LOCAL_SYM res_T
-setup_green_function
-  (struct sdis_green_function* per_thread_green[],
-   const struct ssp_rng_proxy* proxy,
-   const struct accum* per_thread_acc_time);
+gather_green_functions
+  (struct sdis_scene* scn,
+   struct ssp_rng_proxy* proxy,
+   struct sdis_green_function* per_thread_green[],
+   const struct accum* acc_time,
+   struct sdis_green_function** green);
 
 /* Print the progress status. With MPI, the master process print the progress
  * of all processes stored in the progress list. Non master processes do not
