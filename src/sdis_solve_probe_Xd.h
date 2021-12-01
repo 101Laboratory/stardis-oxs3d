@@ -168,6 +168,9 @@ XD(solve_probe)
     if(res != RES_OK) goto error;
   }
 
+  /* Synchronise processes */
+  process_barrier(scn->dev);
+
   print_progress(scn->dev, progress, "Solving probe temperature: ");
 
   /* Begin time registration of the computation */
@@ -279,7 +282,7 @@ XD(solve_probe)
   if(res != RES_OK) goto error;
 
   /* Synchronise processes */
-  waiting_for_process_completion(scn->dev);
+  process_barrier(scn->dev);
 
   print_progress_update(scn->dev, progress, "Solving probe temperature: ");
   log_info(scn->dev, "\n");
@@ -338,9 +341,6 @@ exit:
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;
-
-  /* Synchronise processes */
-  waiting_for_process_completion(scn->dev);
 
   return (res_T)res;
 error:

@@ -46,9 +46,8 @@ mpi_waiting_for_request
   (struct sdis_device* dev,
    MPI_Request* req);
 
-/* Waiting for process completion */
 extern LOCAL_SYM void
-mpi_synchronise_processes
+mpi_barrier
   (struct sdis_device* dev);
 
 #endif /* SDIS_MPI_H */

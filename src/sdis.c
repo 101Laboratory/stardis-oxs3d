@@ -418,14 +418,14 @@ print_progress_update
 }
 
 void
-waiting_for_process_completion(struct sdis_device* dev)
+process_barrier(struct sdis_device* dev)
 {
 #ifndef SDIS_ENABLE_MPI
   (void)dev;
   return;
 #else
   if(dev->use_mpi) {
-    mpi_synchronise_processes(dev);
+    mpi_barrier(dev);
   }
 #endif
 }

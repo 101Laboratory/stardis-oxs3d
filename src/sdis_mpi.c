@@ -93,7 +93,7 @@ mpi_waiting_for_request(struct sdis_device* dev, MPI_Request* req)
 }
 
 void
-mpi_synchronise_processes(struct sdis_device* dev)
+mpi_barrier(struct sdis_device* dev)
 {
   MPI_Request req;
   ASSERT(dev && dev->use_mpi);

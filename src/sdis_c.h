@@ -120,10 +120,10 @@ print_progress_update
    int32_t progress[],
    const char* label); /* Text preceding the progress status */
 
-/* Waiting for the completion of concurrent processes. Without MPI this
- * function does nothing. With MPI it waits for MPI process synchronisation */
+/* Waiting for all processes. Without MPI this function does nothing. With MPI
+ * it waits for MPI process synchronisation */
 extern LOCAL_SYM void
-waiting_for_process_completion
+process_barrier
   (struct sdis_device* dev);
 
 #endif /* SDIS_C_H */
