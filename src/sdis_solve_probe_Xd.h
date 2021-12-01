@@ -85,7 +85,7 @@ XD(solve_probe)
   struct sdis_medium* medium = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_green_function* green = NULL;
-  struct sdis_green_function** greens = NULL;
+  struct sdis_green_function** per_thread_green = NULL;
 
   /* Random Number generator */
   struct ssp_rng_proxy* rng_proxy = NULL;
@@ -157,7 +157,7 @@ XD(solve_probe)
 
   /* Create the per thread green function */
   if(out_green) {
-    res = create_per_thread_green_function(scn, &greens);
+    res = create_per_thread_green_function(scn, &per_thread_green);
     if(res != RES_OK) goto error;
   }
 
@@ -207,7 +207,8 @@ XD(solve_probe)
     time = sample_time(rng, args->time_range);
 
     if(out_green) {
-      res_local = green_function_create_path(greens[ithread], &green_path);
+      res_local = green_function_create_path
+        (per_thread_green[ithread], &green_path);
       if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); goto error_it; }
       pgreen_path = &green_path;
     }
@@ -309,6 +310,7 @@ XD(solve_probe)
     time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
     log_info(scn->dev, "Accumulators gathered in %s.\n",  buf);
 
+    /* Return an estimator only on master process */
     if(is_master_process) {
       res = setup_estimator
         (estimator, rng_proxy, &acc_temp, &acc_time, args->nrealisations);
@@ -316,25 +318,22 @@ XD(solve_probe)
     }
   }
 
-  /* TODO handle for MPI */
-  if(out_green && is_master_process) {
-    struct accum acc_time;
-
-    /* Redux the per thread green function into the green of the 1st thread */
-    green = greens[0]; /* Return the green of the 1st thread */
-    greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
-    res = green_function_redux_and_clear(green, greens+1, scn->dev->nthreads-1);
+  /* Setup the green function */
+  if(out_green) {
+    res = gather_green_functions
+      (scn, rng_proxy, per_thread_green, per_thread_acc_time, &green);
     if(res != RES_OK) goto error;
 
-    /* Finalize the estimated green */
-    sum_accums(per_thread_acc_time, scn->dev->nthreads, &acc_time);
-    res = green_function_finalize(green, rng_proxy, &acc_time);
-    if(res != RES_OK) goto error;
+    /* Return a green function only on master process */
+    if(!is_master_process) {
+      SDIS(green_function_ref_put(green));
+      green = NULL;
+    }
   }
 
 exit:
   if(rngs) release_per_thread_rng(scn->dev, rngs);
-  if(greens) release_per_thread_green_function(scn, greens);
+  if(per_thread_green) release_per_thread_green_function(scn, per_thread_green);
   if(progress) free_process_progress(scn->dev, progress);
   if(per_thread_acc_temp) MEM_RM(scn->dev->allocator, per_thread_acc_temp);
   if(per_thread_acc_time) MEM_RM(scn->dev->allocator, per_thread_acc_time);
