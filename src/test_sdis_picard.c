@@ -26,35 +26,36 @@
  * conductivity of the solid material is known, as well as its thickness and
  * the source term (volumic power density).
  *
- * The purpose is to test the Picard-1 radiative transfer algorithm, that can
- * be compared with analytic results. This algorithm can use a possibly
+ * The purpose is to test the Picard radiative transfer algorithm, that can be
+ * compared with analytic results. This algorithm can use a possibly
  * non-uniform reference temperature field. When the reference temperature
- * field is uniform, results should be identical to the classical Monte-Carlo
- * algorithm (using a linearized radiative transfer scheme).
+ * field is uniform and the picard order set to 1, results should be identical
+ * to the classical Monte-Carlo algorithm (using a linearized radiative
+ * transfer scheme).
  *
- *   Y                       
+ *   Y
  *   |                          (0.1,1)
- *   o--- X      +------+----------+------+ (1.1,1)
- *               |      |##########|      |
- *               |      |##########|      |
- *          280K | E=1  |##########| E=1  | 350K
- *               |      |##########|      |
- *               |      |##########|      |
- *       (-1,-1) +------+----------+------+
+ *   o--- X             +----------+------+ (1.1,1)
+ *                      |##########|      |
+ *                      |##########|      |
+ *          280K     E=1|##########| E=1  | 350K
+ *                      |##########|      |
+ *                      |##########|      |
+ *       (-1,-1)        +----------+------+
  *                    (0,-1)
  *
  *
  *
  *    Y                          (0.1, 1, 1)
- *    |            +------+----------+------+ (1.1,1,1)
- *    o--- X      /'     /##########/'     /|
- *   /           +------+----------+------+ |
- *  Z            | '    |##########|*'    | | 350K
- *               | '    |##########|*'    | |
- *          280K | ' E=1|##########|*'E=1 | |
- *               | +....|##########|*+....|.+
- *               |/     |##########|/     |/
- *  (-1,-1,-1)   +------+----------+------+
+ *    |                   +----------+------+ (1.1,1,1)
+ *    o--- X             /##########/'     /|
+ *   /                  +----------+------+ |
+ *  Z                   |##########|*'    | | 350K
+ *                      |##########|*'    | |
+ *          280K     E=1|##########|*'E=1 | |
+ *                      |##########|*+....|.+
+ *                      |##########|/     |/
+ *  (-1,-1,-1)          +----------+------+
  *                  (0,-1,-1)
  *
  * lambda = 1.15 W/(m.K)
@@ -66,11 +67,10 @@
  * probe = 0.05 0 0 m
  * (power = 1000 W.m^-3) */
 
-enum interface_type { 
+enum interface_type {
   ADIABATIC,
   SOLID_FLUID_mX,
-  SOLID_FLUID_pX, 
-  BOUNDARY_mX,
+  SOLID_FLUID_pX,
   BOUNDARY_pX,
   INTERFACES_COUNT__
 };
@@ -84,35 +84,29 @@ struct geometry {
   struct sdis_interface** interfaces;
 };
 
-static const double vertices_2d[8/*#vertices*/*2/*#coords par vertex*/] = {
+static const double vertices_2d[6/*#vertices*/*2/*#coords par vertex*/] = {
    0.1, -1.0,
    0.0, -1.0,
    0.0,  1.0,
    0.1,  1.0,
    1.1, -1.0,
-  -1.0, -1.0,
-  -1.0,  1.0,
    1.1,  1.0
 };
 static const size_t nvertices_2d = sizeof(vertices_2d) / (sizeof(double)*2);
 
-static const size_t indices_2d[10/*#segments*/*2/*#indices per segment*/] = {
+static const size_t indices_2d[7/*#segments*/*2/*#indices per segment*/] = {
   0, 1, /* Solid -Y */
   1, 2, /* Solid -X */
   2, 3, /* Solid +Y */
   3, 0, /* Solid +X */
 
-  1, 5, /* Left fluid -Y */
-  5, 6, /* Left fluid -X */
-  6, 2, /* Left fluid +Y */
-
   4, 0, /* Right fluid -Y */
-  3, 7, /* Right fluid +Y */
-  7, 4  /* Right fluid +X */
+  3, 5, /* Right fluid +Y */
+  5, 4  /* Right fluid +X */
 };
 static const size_t nprimitives_2d = sizeof(indices_2d) / (sizeof(size_t)*2);
 
-static const double vertices_3d[16/*#vertices*/*3/*#coords per vertex*/] = {
+static const double vertices_3d[12/*#vertices*/*3/*#coords per vertex*/] = {
    0.0,-1.0,-1.0,
    0.1,-1.0,-1.0,
    0.0, 1.0,-1.0,
@@ -121,18 +115,14 @@ static const double vertices_3d[16/*#vertices*/*3/*#coords per vertex*/] = {
    0.1,-1.0, 1.0,
    0.0, 1.0, 1.0,
    0.1, 1.0, 1.0,
-  -1.0,-1.0,-1.0,
    1.1,-1.0,-1.0,
-  -1.0, 1.0,-1.0,
    1.1, 1.0,-1.0,
-  -1.0,-1.0, 1.0,
    1.1,-1.0, 1.0,
-  -1.0, 1.0, 1.0,
-   1.1, 1.0, 1.0,
+   1.1, 1.0, 1.0
 };
 static const size_t nvertices_3d = sizeof(vertices_3d) / (sizeof(double)*3);
 
-static const size_t indices_3d[32/*#triangles*/*3/*#indices per triangle*/] = {
+static const size_t indices_3d[22/*#triangles*/*3/*#indices per triangle*/] = {
   0, 2, 1, 1, 2, 3, /* Solid -Z */
   0, 4, 2, 2, 4, 6, /* Solid -X */
   4, 5, 6, 6, 5, 7, /* Solid +Z */
@@ -140,17 +130,11 @@ static const size_t indices_3d[32/*#triangles*/*3/*#indices per triangle*/] = {
   2, 6, 3, 3, 6, 7, /* Solid +Y */
   0, 1, 4, 4, 1, 5, /* Solid -Y */
 
-   8, 10,  0,  0, 10,  2, /* Left fluid -Z */
-   8, 12, 10, 10, 12, 14, /* Left fluid -X */
-  12,  4, 14, 14,  4,  6, /* Left fluid +Z */
-  10, 14,  2,  2, 14,  6, /* Left fluid +Y */
-   8,  0, 12, 12,  0,  4, /* Left fluid -Y */
-
-   1,  3,  9,  9,  3, 11, /* Right fluid -Z */
-   5, 13,  7,  7, 13, 15, /* Right fluid +Z */
-  11, 15,  9,  9, 15, 13, /* Right fluid +X */
-   3,  7, 11, 11,  7, 15, /* Right fluid +Y */
-   1,  9,  5,  5,  9, 13  /* Right fluid -Y */
+  1,  3, 8, 8,  3,  9, /* Right fluid -Z */
+  5, 10, 7, 7, 10, 11, /* Right fluid +Z */
+  9, 11, 8, 8, 11, 10, /* Right fluid +X */
+  3,  7, 9, 9,  7, 11, /* Right fluid +Y */
+  1,  8, 5, 5,  8, 10  /* Right fluid -Y */
 };
 static const size_t nprimitives_3d = sizeof(indices_3d) / (sizeof(size_t)*3);
 
@@ -425,7 +409,7 @@ test_picard
   probe_args.picard_order = picard_order;
   OK(sdis_solve_probe(scn, &probe_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &mc));
-  printf("Temperature at `%g %g %g' = %g ~ %g +/- %g\n", 
+  printf("Temperature at `%g %g %g' = %g ~ %g +/- %g\n",
     SPLIT3(probe_args.position), ref->T, mc.E, mc.SE);
   CHK(eq_eps(ref->T, mc.E, mc.SE*3));
   OK(sdis_estimator_ref_put(estimator));
@@ -495,19 +479,12 @@ create_scene_3d
   prim_interfaces[8] = prim_interfaces[9] = interfaces[ADIABATIC];
   prim_interfaces[10] = prim_interfaces[11] = interfaces[ADIABATIC];
 
-  /* Setup the per primitive interface for the left fluid */
-  prim_interfaces[12] = prim_interfaces[13] = interfaces[BOUNDARY_mX];
-  prim_interfaces[14] = prim_interfaces[15] = interfaces[BOUNDARY_mX];
-  prim_interfaces[16] = prim_interfaces[17] = interfaces[BOUNDARY_mX];
-  prim_interfaces[18] = prim_interfaces[19] = interfaces[BOUNDARY_mX];
-  prim_interfaces[20] = prim_interfaces[21] = interfaces[BOUNDARY_mX];
-
   /* Setup the per primitive interface for the right fluid */
-  prim_interfaces[22] = prim_interfaces[23] = interfaces[BOUNDARY_pX];
-  prim_interfaces[24] = prim_interfaces[25] = interfaces[BOUNDARY_pX];
-  prim_interfaces[26] = prim_interfaces[27] = interfaces[BOUNDARY_pX];
-  prim_interfaces[28] = prim_interfaces[29] = interfaces[BOUNDARY_pX];
-  prim_interfaces[30] = prim_interfaces[31] = interfaces[BOUNDARY_pX];
+  prim_interfaces[12] = prim_interfaces[13] = interfaces[BOUNDARY_pX];
+  prim_interfaces[14] = prim_interfaces[15] = interfaces[BOUNDARY_pX];
+  prim_interfaces[16] = prim_interfaces[17] = interfaces[BOUNDARY_pX];
+  prim_interfaces[18] = prim_interfaces[19] = interfaces[BOUNDARY_pX];
+  prim_interfaces[20] = prim_interfaces[21] = interfaces[BOUNDARY_pX];
 
   /* Create the scene */
   geom.positions = vertices_3d;
@@ -542,15 +519,10 @@ create_scene_2d
   prim_interfaces[2] = interfaces[ADIABATIC];
   prim_interfaces[3] = interfaces[SOLID_FLUID_pX];
 
-  /* Setup the per primitive interface of the fluid on the left of the medium */
-  prim_interfaces[4] = interfaces[BOUNDARY_mX];
-  prim_interfaces[5] = interfaces[BOUNDARY_mX];
-  prim_interfaces[6] = interfaces[BOUNDARY_mX];
-
   /* Setup the per primitive interface of the fluid on the right of the medium */
-  prim_interfaces[7] = interfaces[BOUNDARY_pX];
-  prim_interfaces[8] = interfaces[BOUNDARY_pX];
-  prim_interfaces[9] = interfaces[BOUNDARY_pX];
+  prim_interfaces[4] = interfaces[BOUNDARY_pX];
+  prim_interfaces[5] = interfaces[BOUNDARY_pX];
+  prim_interfaces[6] = interfaces[BOUNDARY_pX];
 
   /* Create the scene */
   geom.positions = vertices_2d;
@@ -582,6 +554,7 @@ main(int argc, char** argv)
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* dummy = NULL;
   struct sdis_interface* interfaces[INTERFACES_COUNT__];
+  struct sdis_ambient_radiative_temperature amb_rad_temp;
 
   struct solid solid_props;
   struct solid* psolid_props;
@@ -632,14 +605,6 @@ main(int argc, char** argv)
   interf_props.Tref = 350;
   create_interface(dev, solid, fluid, &interf_props, interfaces+SOLID_FLUID_pX);
 
-  /* Create the interface for the fluid on the left */
-  interf_props.temperature = 280;
-  interf_props.h = -1;
-  interf_props.emissivity = 1;
-  interf_props.specular_fraction = -1;
-  interf_props.Tref = 280;
-  create_interface(dev, fluid, dummy, &interf_props, interfaces+BOUNDARY_mX);
-
   /* Create the interface for the fluid on the right */
   interf_props.temperature = 350;
   interf_props.h = -1;
@@ -664,8 +629,11 @@ main(int argc, char** argv)
   ref.T2 = 322.35877635290217;
   pinterf_props[SOLID_FLUID_mX]->Tref = 300;
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
-  pinterf_props[BOUNDARY_mX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
+  amb_rad_temp.temperature = 280;
+  amb_rad_temp.reference = 300;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
@@ -677,8 +645,11 @@ main(int argc, char** argv)
   ref.T2 = 328.61602649893723;
   pinterf_props[SOLID_FLUID_mX]->Tref = ref.T1;
   pinterf_props[SOLID_FLUID_pX]->Tref = ref.T2;
-  pinterf_props[BOUNDARY_mX]->Tref = 280;
   pinterf_props[BOUNDARY_pX]->Tref = 350;
+  amb_rad_temp.temperature = 280;
+  amb_rad_temp.reference = 280;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
@@ -690,28 +661,34 @@ main(int argc, char** argv)
   ref.T2 = 328.61602649893723;
   pinterf_props[SOLID_FLUID_mX]->Tref = 300;
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
-  pinterf_props[BOUNDARY_mX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
+  amb_rad_temp.temperature = 280;
+  amb_rad_temp.reference = 300;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
   test_picard(scn_2d, 2/*Picard order*/, &ref);
   test_picard(scn_3d, 2/*Picard order*/, &ref);
   printf("\n");
 
   t_range[0] = 200;
   t_range[1] = 500;
+
   OK(sdis_scene_set_temperature_range(scn_2d, t_range));
   OK(sdis_scene_set_temperature_range(scn_3d, t_range));
 
-  /* Test picard2  */
+  /* Test picard3  */
   printf("Test Picard3 with a delta T of 300K\n");
   ref.T  = 416.4023;
   ref.T1 = 372.7557;
   ref.T2 = 460.0489;
-  pinterf_props[BOUNDARY_mX]->temperature = t_range[0];
   pinterf_props[BOUNDARY_pX]->temperature = t_range[1];
   pinterf_props[SOLID_FLUID_mX]->Tref = 350;
   pinterf_props[SOLID_FLUID_pX]->Tref = 450;
-  pinterf_props[BOUNDARY_mX]->Tref = pinterf_props[BOUNDARY_mX]->temperature;
   pinterf_props[BOUNDARY_pX]->Tref = pinterf_props[BOUNDARY_pX]->temperature;
+  amb_rad_temp.temperature = t_range[0];
+  amb_rad_temp.reference = t_range[0];
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
   test_picard(scn_2d, 3/*Picard order*/, &ref);
   test_picard(scn_3d, 3/*Picard order*/, &ref);
   printf("\n");
@@ -720,7 +697,6 @@ main(int argc, char** argv)
   t_range[1] = 350;
   OK(sdis_scene_set_temperature_range(scn_2d, t_range));
   OK(sdis_scene_set_temperature_range(scn_3d, t_range));
-  pinterf_props[BOUNDARY_mX]->temperature = t_range[0];
   pinterf_props[BOUNDARY_pX]->temperature = t_range[1];
 
   /* Add volumic power */
@@ -734,8 +710,11 @@ main(int argc, char** argv)
   ref.T2 = 330.52448403885825;
   pinterf_props[SOLID_FLUID_mX]->Tref = 300;
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
-  pinterf_props[BOUNDARY_mX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
+  amb_rad_temp.temperature = t_range[0];
+  amb_rad_temp.reference = 300;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
@@ -747,8 +726,11 @@ main(int argc, char** argv)
   ref.T2 = 334.99422024159708;
   pinterf_props[SOLID_FLUID_mX]->Tref = ref.T1;
   pinterf_props[SOLID_FLUID_pX]->Tref = ref.T2;
-  pinterf_props[BOUNDARY_mX]->Tref = 280;
   pinterf_props[BOUNDARY_pX]->Tref = 350;
+  amb_rad_temp.temperature = 280;
+  amb_rad_temp.reference = 280;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
@@ -759,7 +741,6 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interfaces[ADIABATIC]));
   OK(sdis_interface_ref_put(interfaces[SOLID_FLUID_mX]));
   OK(sdis_interface_ref_put(interfaces[SOLID_FLUID_pX]));
-  OK(sdis_interface_ref_put(interfaces[BOUNDARY_mX]));
   OK(sdis_interface_ref_put(interfaces[BOUNDARY_pX]));
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_medium_ref_put(solid));
