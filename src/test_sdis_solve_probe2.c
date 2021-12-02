@@ -18,8 +18,10 @@
 
 #include <rsys/math.h>
 
+#include <string.h>
+
 #ifdef SDIS_ENABLE_MPI
-#include <mpi.h>
+  #include <mpi.h>
 #endif
 
 /*
@@ -189,10 +191,15 @@ main(int argc, char** argv)
   CHK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &mpi_thread_support)
     == MPI_SUCCESS);
   CHK(mpi_thread_support >= MPI_THREAD_SERIALIZED);
-  dev_args.use_mpi = 1;
+  dev_args.use_mpi = argc >= 2 && !strcmp(argv[1], "mpi");
   OK(sdis_device_create(&dev_args, &dev));
-  OK(sdis_device_get_mpi_rank(dev, &mpi_rank));
-  is_master_process = mpi_rank == 0;
+  if(dev_args.use_mpi) {
+    OK(sdis_device_get_mpi_rank(dev, &mpi_rank));
+    is_master_process = mpi_rank == 0;
+  } else {
+    CHK(sdis_device_get_mpi_rank(dev, &mpi_rank) == RES_BAD_OP);
+    is_master_process = 1;
+  }
 #endif
 
   /* Create the fluid medium */

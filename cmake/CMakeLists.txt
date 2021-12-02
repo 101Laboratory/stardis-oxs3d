@@ -218,7 +218,6 @@ if(NOT NO_TEST)
   new_test(test_sdis_solid_random_walk_robustness)
   new_test(test_sdis_solve_camera)
   new_test(test_sdis_solve_probe)
-  new_test(test_sdis_solve_probe2)
   new_test(test_sdis_solve_probe3)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
@@ -231,6 +230,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_unstationary_atm)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4)
+
+  build_test(test_sdis_solve_probe2)
 
   # Additionnal tests
   build_test(test_sdis_volumic_power2)
@@ -250,13 +251,18 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
-  if(ENABLE_MPI)
+  if(NOT ENABLE_MPI)
+    add_test(test_sdis_solve_probe2 test_sdis_solve_probe2)
+  else()
     set_target_properties(test_sdis PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
     set_target_properties(test_sdis_device PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
     set_target_properties(test_sdis_solve_probe2 PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+
+    add_test(test_sdis_solve_probe2_mpi_on mpirun -n 2 test_sdis_solve_probe2 mpi)
+    add_test(test_sdis_solve_probe2_mpi_off test_sdis_solve_probe2)
   endif()
 
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)
