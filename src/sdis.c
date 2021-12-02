@@ -42,6 +42,46 @@
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+static res_T
+gather_green_functions_no_mpi
+  (struct sdis_scene* scn,
+   struct ssp_rng_proxy* rng_proxy,
+   struct sdis_green_function* per_thread_green[],
+   const struct accum* per_thread_acc_time,
+   struct sdis_green_function** out_green)
+{
+  struct sdis_green_function* green = NULL;
+  struct accum acc_time = ACCUM_NULL;
+  res_T res = RES_OK;
+  ASSERT(scn && rng_proxy && per_thread_green && per_thread_acc_time);
+  ASSERT(out_green);
+
+  /* Redux the per thread green function into the green function of the 1st
+   * thread */
+  res = green_function_redux_and_clear
+    (per_thread_green[0], per_thread_green+1, scn->dev->nthreads-1);
+  if(res != RES_OK) goto error;
+
+  /* Return the green of the 1st thread */
+  SDIS(green_function_ref_get(per_thread_green[0]));
+  green = per_thread_green[0];
+
+  res = gather_accumulators
+    (scn->dev, MPI_SDIS_MSG_ACCUM_TIME, per_thread_acc_time, &acc_time);
+  if(res != RES_OK) goto error;
+
+  /* Finalize the estimated green */
+  res = green_function_finalize(green, rng_proxy, &acc_time);
+  if(res != RES_OK) goto error;
+
+exit:
+  *out_green = green;
+  return res;
+error:
+  if(green) { SDIS(green_function_ref_put(green)); green = NULL; }
+  goto exit;
+}
+
 #ifdef SDIS_ENABLE_MPI
 static void
 rewind_progress_printing(struct sdis_device* dev)
@@ -547,36 +587,8 @@ gather_green_functions
    const struct accum* per_thread_acc_time,
    struct sdis_green_function** out_green)
 {
-  struct sdis_green_function* green = NULL;
-  struct accum acc_time = ACCUM_NULL;
-  res_T res = RES_OK;
-  ASSERT(scn && rng_proxy && per_thread_green && per_thread_acc_time);
-  ASSERT(out_green);
-
-  /* Redux the per thread green function into the green function of the 1st
-   * thread */
-  res = green_function_redux_and_clear
-    (per_thread_green[0], per_thread_green+1, scn->dev->nthreads-1);
-  if(res != RES_OK) goto error;
-
-  /* Return the green of the 1st thread */
-  SDIS(green_function_ref_get(per_thread_green[0]));
-  green = per_thread_green[0];
-
-  res = gather_accumulators
-    (scn->dev, MPI_SDIS_MSG_ACCUM_TIME, per_thread_acc_time, &acc_time);
-  if(res != RES_OK) goto error;
-
-  /* Finalize the estimated green */
-  res = green_function_finalize(green, rng_proxy, &acc_time);
-  if(res != RES_OK) goto error;
-
-exit:
-  *out_green = green;
-  return res;
-error:
-  if(green) { SDIS(green_function_ref_put(green)); green = NULL; }
-  goto exit;
+  return gather_green_functions_no_mpi
+    (scn, rng_proxy, per_thread_green, per_thread_acc_time, out_green);
 }
 #else
 res_T
@@ -594,6 +606,12 @@ gather_green_functions
   int iproc;
   res_T res = RES_OK;
   ASSERT(scn && per_thread_green && out_green);
+
+  if(!scn->dev->use_mpi) {
+    return gather_green_functions_no_mpi
+      (scn, rng_proxy, per_thread_green, per_thread_acc_time, out_green);
+    goto exit;
+  }
 
   /* Redux the per thread green function into the green function of the 1st
    * thread */
