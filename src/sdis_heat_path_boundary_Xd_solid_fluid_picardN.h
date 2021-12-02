@@ -304,10 +304,15 @@ XD(solid_fluid_boundary_picardN_path)
       if(res != RES_OK) goto error;                                            \
     } (void)0
 
-    #define COMPUTE_TEMPERATURE(Result, RWalk) {                               \
+    #define COMPUTE_TEMPERATURE(Result, RWalk, Temp) {                         \
       struct XD(temperature) T_p;                                              \
-      res = XD(sample_path)(scn, RWalk, ctx, rng, &T_p);                       \
-      if(res != RES_OK) goto error;                                            \
+      if((Temp)->done) { /* Ambient radiative temperature */                   \
+        ASSERT(SXD_HIT_NONE(&(RWalk)->hit));                                   \
+        T_p = *(Temp);                                                         \
+      } else {                                                                 \
+        res = XD(sample_path)(scn, RWalk, ctx, rng, &T_p);                     \
+        if(res != RES_OK) goto error;                                          \
+      }                                                                        \
       Result = T_p.value;                                                      \
     } (void)0
 
@@ -319,37 +324,37 @@ XD(solid_fluid_boundary_picardN_path)
     } (void)0
 
     /* Sample a 1st heat path at the end of the radiative path */
-    COMPUTE_TEMPERATURE(T0, &rwalk_s);
+    COMPUTE_TEMPERATURE(T0, &rwalk_s, &T_s);
     h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 + 3*Tmin2*T0);
     h_radi_max = BOLTZMANN_CONSTANT*(That3 + 3*That2*T0);
     CHECK_PMIN_PMAX;
 
     /* Sample a 2nd heat path at the end of the radiative path */
-    COMPUTE_TEMPERATURE(T1, &rwalk_s);
+    COMPUTE_TEMPERATURE(T1, &rwalk_s, &T_s);
     h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 + Tmin2*T0 + 2*Tmin*T0*T1);
     h_radi_max = BOLTZMANN_CONSTANT*(That3 + That2*T0 + 2*That*T0*T1);
     CHECK_PMIN_PMAX;
 
     /* Sample a 3rd heat path at the end of the radiative path */
-    COMPUTE_TEMPERATURE(T2, &rwalk_s);
+    COMPUTE_TEMPERATURE(T2, &rwalk_s, &T_s);
     h_radi_min = BOLTZMANN_CONSTANT*(Tmin3 + Tmin2*T0 + Tmin*T0*T1 + T0*T1*T2);
     h_radi_max = BOLTZMANN_CONSTANT*(That3 + That2*T0 + That*T0*T1 + T0*T1*T2);
     CHECK_PMIN_PMAX;
 
     /* Sample a 1st heat path at the current position onto the interface */
-    COMPUTE_TEMPERATURE(T3, rwalk);
+    COMPUTE_TEMPERATURE(T3, rwalk, T);
     h_radi_min = BOLTZMANN_CONSTANT*(Tmin2*T3 + Tmin*T0*T3 + T0*T1*T3 + T0*T1*T2);
     h_radi_max = BOLTZMANN_CONSTANT*(That2*T3 + That*T0*T3 + T0*T1*T3 + T0*T1*T2);
     CHECK_PMIN_PMAX;
 
     /* Sample a 2nd heat path at the current position onto the interface */
-    COMPUTE_TEMPERATURE(T4, rwalk);
+    COMPUTE_TEMPERATURE(T4, rwalk, T);
     h_radi_min = BOLTZMANN_CONSTANT*(Tmin*T3*T4 + T0*T3*T4 + T0*T1*T3 + T0*T1*T2);
     h_radi_max = BOLTZMANN_CONSTANT*(That*T3*T4 + T0*T3*T4 + T0*T1*T3 + T0*T1*T2);
     CHECK_PMIN_PMAX;
 
     /* Sample a 3rd heat path at the current position onto the interface */
-    COMPUTE_TEMPERATURE(T5, rwalk);
+    COMPUTE_TEMPERATURE(T5, rwalk, T);
     h_radi = BOLTZMANN_CONSTANT*(T3*T4*T5 + T0*T3*T4 + T0*T1*T3 + T0*T1*T2);
     p_radi = h_radi * epsilon / h_hat;
 
