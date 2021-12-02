@@ -44,7 +44,7 @@ XD(solid_boundary_with_flux_path)
   struct XD(reinjection_step) reinject_step = XD(REINJECTION_STEP_NULL);
 
   /* Reinjection arguments */
-  struct XD(solid_reinjection_args) solid_reinject_args = 
+  struct XD(solid_reinjection_args) solid_reinject_args =
     XD(SOLID_REINJECTION_ARGS_NULL);
 
   /* Data attached to the boundary */
@@ -69,7 +69,7 @@ XD(solid_boundary_with_flux_path)
    * radiative temperature is linearized, i.e. when the picard order is equal
    * to 1 */
   picard_order = get_picard_order(ctx);
-  if(picard_order > 1 && phi > 0) {
+  if(picard_order > 1 && phi != 0) {
     log_err(scn->dev,
       "%s: invalid flux '%g' W/m^2. Could not manage a flux != 0 when the "
       "picard order is not equal to 1; Picard order is currently set to %lu.\n",
