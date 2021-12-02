@@ -230,7 +230,6 @@ XD(check_handle_volumic_power_args)
       && args->dir1
       && args->hit0
       && args->hit1
-      && (args->power == SDIS_VOLUMIC_POWER_NONE || args->power >= 0)
       && args->lambda >= 0
       && args->delta_solid > 0
       && args->delta >= 0
