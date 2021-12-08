@@ -293,6 +293,12 @@ XD(solve_probe)
   time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
   log_info(scn->dev, "Probe temperature solved in %s.\n", buf);
 
+  /* Gather the RNG proxy sequence IDs and ensure that the RNG proxy state of
+   * the master process is greater than the RNG proxy state of all other
+   * processes */
+  res = gather_rng_proxy_sequence_id(scn->dev, rng_proxy);
+  if(res != RES_OK) goto error;
+
   /* Setup the estimated values */
   if(out_estimator) {
     struct accum acc_temp, acc_time;

@@ -24,6 +24,7 @@ enum mpi_sdis_message {
   MPI_SDIS_MSG_ACCUM_TIME, /* Time accumulator */
   MPI_SDIS_MSG_GREEN_FUNCTION, /* Serialized green function */
   MPI_SDIS_MSG_PROGRESS, /* Progress status */
+  MPI_SDIS_MSG_RNG_PROXY_SEQUENCE_ID, /* Index of the current RNG sequence */
   MPI_SDIS_MSG_COUNT__
 };
 
@@ -109,6 +110,16 @@ gather_green_functions
    struct sdis_green_function* per_thread_green[],
    const struct accum* acc_time,
    struct sdis_green_function** green);
+
+/* Gather the sequence IDs of the proxy RNGs. Without MPI, nothing happens.
+ * With MPI, non-master processes send the sequence ID of their proxy RNG to
+ * the master process. The master process updates its proxy RNG to ensure that
+ * its state is greater than the state of all other proxies, that is, its
+ * sequence ID is greater than the sequence IDs received. */
+extern LOCAL_SYM res_T
+gather_rng_proxy_sequence_id
+  (struct sdis_device* dev,
+   struct ssp_rng_proxy* proxy);
 
 /* Print the progress status. With MPI, the master process print the progress
  * of all processes stored in the progress list. Non master processes do not

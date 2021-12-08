@@ -557,20 +557,8 @@ setup_estimator
   estimator_setup_temperature(estimator, acc_temp->sum, acc_temp->sum2);
   estimator_setup_realisation_time(estimator, acc_time->sum, acc_time->sum2);
 
-  /* TODO correctly handle RNG state with MPI. Currently, we only store the RNG
-   * proxy state of the master process, but non-master processes can rely on
-   * much more advanced seeds. Therefore, rerun the simulation with the saved
-   * RNG state can lead to non-master processes generating random numbers that
-   * were already generated at the previous run. */
   res = estimator_save_rng_state(estimator, proxy);
   if(res != RES_OK) goto error;
-
-#ifdef SDIS_ENABLE_MPI
-  if(estimator->dev->use_mpi) {
-    log_warn(estimator->dev,
-      "The estimator RNG state is not well defined when MPI is used.\n");
-  }
-#endif
 
 exit:
   return res;
@@ -620,7 +608,7 @@ gather_green_functions
   if(res != RES_OK) goto error;
 
   /* Gather the accumulators. The master process gathers all accumulators and
-   * non master process gather their per thread accumulators only that is is
+   * non master process gather their per thread accumulators only that is
    * sent to the master process */
   res = gather_accumulators
     (scn->dev, MPI_SDIS_MSG_ACCUM_TIME, per_thread_acc_time, &acc_time);
@@ -698,6 +686,82 @@ error:
   goto exit;
 }
 
+#endif
+
+#ifndef SDIS_ENABLE_MPI
+res_T
+gather_rng_proxy_sequence_id
+  (struct sdis_device* dev,
+   struct ssp_rng_proxy* proxy)
+{
+  ASSERT(dev && proxy);
+  (void)dev, (void)proxy;
+  return RES_OK;
+}
+#else
+
+res_T
+gather_rng_proxy_sequence_id
+  (struct sdis_device* dev,
+   struct ssp_rng_proxy* proxy)
+{
+  unsigned long proc_seq_id = 0;
+  size_t seq_id = SSP_SEQUENCE_ID_NONE;
+  res_T res = RES_OK;
+  ASSERT(dev && proxy);
+
+  if(!dev->use_mpi) goto exit;
+
+  /* Retrieve the sequence id of the process */
+  SSP(rng_proxy_get_sequence_id(proxy, &seq_id));
+  CHK(seq_id <= ULONG_MAX);
+  proc_seq_id = (unsigned long)seq_id;
+
+  /* Non master process */
+  if(dev->mpi_rank != 0) {
+
+    /* Send the sequence id to the master process */
+    mutex_lock(dev->mpi_mutex);
+    MPI(Send(&proc_seq_id, 1, MPI_UNSIGNED_LONG, 0/*Dst*/,
+      MPI_SDIS_MSG_RNG_PROXY_SEQUENCE_ID, MPI_COMM_WORLD));
+    mutex_unlock(dev->mpi_mutex);
+
+  /* Master process */
+  } else {
+    size_t nseqs_to_flush = 0;
+    unsigned long max_seq_id = 0;
+    int iproc;
+
+    max_seq_id = proc_seq_id;
+
+    /* Gather per process sequence id and defined the maximum sequence id */
+    FOR_EACH(iproc, 1, dev->mpi_nprocs) {
+      MPI_Request req;
+      unsigned long tmp_seq_id;
+
+      /* Asynchronously receive the sequence id of `iproc' */
+      mutex_lock(dev->mpi_mutex);
+      MPI(Irecv(&tmp_seq_id, 1, MPI_UNSIGNED_LONG, iproc,
+        MPI_SDIS_MSG_RNG_PROXY_SEQUENCE_ID, MPI_COMM_WORLD, &req));
+      mutex_unlock(dev->mpi_mutex);
+      mpi_waiting_for_request(dev, &req);
+
+      /* Define the maximum sequence id between all processes */
+      max_seq_id = MMAX(max_seq_id, tmp_seq_id);
+    }
+
+    /* Flush the current sequence that is already consumed in addition to the
+     * sequences queried by the other processes */
+    nseqs_to_flush = 1/*Current sequence*/ + max_seq_id - proc_seq_id;
+    res = ssp_rng_proxy_flush_sequences(proxy, nseqs_to_flush);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
 #endif
 
 void
