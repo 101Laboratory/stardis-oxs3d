@@ -496,7 +496,7 @@ gather_accumulators
     goto exit;
   }
 
-  nprocs = (size_t)dev->mpi_nprocs;
+  nprocs = dev->mpi_rank == 0 ? (size_t)dev->mpi_nprocs : 1;
   per_proc_acc = MEM_CALLOC(dev->allocator, nprocs, sizeof(struct accum));
   if(!per_proc_acc) { res = RES_MEM_ERR; goto error; }
 
