@@ -301,6 +301,7 @@ sdis_device_create
 {
   struct sdis_device* dev = NULL;
   struct mem_allocator* allocator = NULL;
+  unsigned nthreads_max = 0;
   res_T res = RES_OK;
 
   if(!check_sdis_device_create_args(args) || !out_dev) {
@@ -323,9 +324,10 @@ sdis_device_create
     res = RES_MEM_ERR;
     goto error;
   }
+  nthreads_max = (unsigned)MMAX(omp_get_max_threads(), omp_get_num_procs());
   dev->allocator = allocator;
   dev->verbose = args->verbosity;
-  dev->nthreads = MMIN(args->nthreads_hint, (unsigned)omp_get_num_procs());
+  dev->nthreads = MMIN(args->nthreads_hint, nthreads_max);
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
