@@ -332,9 +332,15 @@ XD(solve_probe)
 
   /* Setup the green function */
   if(out_green) {
+    time_current(&time0);
+
     res = gather_green_functions
       (scn, rng_proxy, per_thread_green, per_thread_acc_time, &green);
     if(res != RES_OK) goto error;
+
+    time_sub(&time0, time_current(&time1), &time0);
+    time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+    log_info(scn->dev, "Green functions gathered in %s.\n", buf);
 
     /* Return a green function only on master process */
     if(!is_master_process) {
