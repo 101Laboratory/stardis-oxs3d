@@ -425,4 +425,3 @@ check_green_serialization
   OK(sdis_green_function_ref_put(green2));
 }
 
-

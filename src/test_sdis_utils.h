@@ -21,6 +21,11 @@
 #include <rsys/double33.h>
 #include <rsys/mem_allocator.h>
 #include <stdio.h>
+#include <string.h>
+
+#ifdef SDIS_ENABLE_MPI
+  #include <mpi.h>
+#endif
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
 
@@ -196,6 +201,66 @@ static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   DUMMY_INTERFACE_SIDE_SHADER__, /* Front side */
   DUMMY_INTERFACE_SIDE_SHADER__ /* Back side */
 };
+
+/*******************************************************************************
+ * Device creation
+ ******************************************************************************/
+#ifndef SDIS_ENABLE_MPI
+
+static INLINE void
+create_default_device
+  (int* argc,
+   char*** argv,
+   int* is_master_process,
+   struct sdis_device** dev)
+{
+  (void)argc, (void)argv;
+  CHK(dev && is_master_process);
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, dev));
+  *is_master_process = 1;
+}
+
+#else
+
+static INLINE void
+create_default_device
+  (int* pargc,
+   char*** pargv,
+   int* is_master_process,
+   struct sdis_device** out_dev)
+{
+  struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
+  struct sdis_device* dev = NULL;
+  int mpi_thread_support;
+  int mpi_rank;
+  CHK(pargc && pargv && is_master_process && out_dev);
+
+  CHK(MPI_Init_thread
+    (pargc, pargv, MPI_THREAD_SERIALIZED, &mpi_thread_support) == MPI_SUCCESS);
+  CHK(mpi_thread_support >= MPI_THREAD_SERIALIZED);
+
+  dev_args.use_mpi = *pargc >= 2 && !strcmp((*pargv)[1], "mpi");
+  OK(sdis_device_create(&dev_args, &dev));
+
+  if(dev_args.use_mpi) {
+    OK(sdis_device_get_mpi_rank(dev, &mpi_rank));
+    *is_master_process = mpi_rank == 0;
+  } else {
+    CHK(sdis_device_get_mpi_rank(dev, &mpi_rank) == RES_BAD_OP);
+    *is_master_process = 1;
+  }
+  *out_dev = dev;
+}
+#endif
+
+static INLINE void
+free_default_device(struct sdis_device* dev)
+{
+  OK(sdis_device_ref_put(dev));
+#ifdef SDIS_ENABLE_MPI
+  CHK(MPI_Finalize() == MPI_SUCCESS);
+#endif
+}
 
 /*******************************************************************************
  * Miscellaneous

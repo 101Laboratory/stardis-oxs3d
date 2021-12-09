@@ -20,10 +20,6 @@
 
 #include <string.h>
 
-#ifdef SDIS_ENABLE_MPI
-  #include <mpi.h>
-#endif
-
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
  * convection coefficient with the surrounding fluid is null. The temperature
@@ -151,7 +147,6 @@ interface_get_temperature
 int
 main(int argc, char** argv)
 {
-  struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
@@ -177,30 +172,10 @@ main(int argc, char** argv)
   const size_t N = 10000;
   size_t nreals;
   size_t nfails;
-#ifdef SDIS_ENABLE_MPI
-  int mpi_thread_support;
-  int mpi_rank;
-#endif
-  int is_master_process = 0;
+  int is_master_process;
   (void)argc, (void)argv;
 
-#ifndef SDIS_ENABLE_MPI
-  OK(sdis_device_create(&dev_args, &dev));
-  is_master_process = 1;
-#else
-  CHK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &mpi_thread_support)
-    == MPI_SUCCESS);
-  CHK(mpi_thread_support >= MPI_THREAD_SERIALIZED);
-  dev_args.use_mpi = argc >= 2 && !strcmp(argv[1], "mpi");
-  OK(sdis_device_create(&dev_args, &dev));
-  if(dev_args.use_mpi) {
-    OK(sdis_device_get_mpi_rank(dev, &mpi_rank));
-    is_master_process = mpi_rank == 0;
-  } else {
-    CHK(sdis_device_get_mpi_rank(dev, &mpi_rank) == RES_BAD_OP);
-    is_master_process = 1;
-  }
-#endif
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
@@ -316,12 +291,9 @@ main(int argc, char** argv)
   if(estimator2) OK(sdis_estimator_ref_put(estimator2));
   if(green) OK(sdis_green_function_ref_put(green));
   OK(sdis_scene_ref_put(scn));
-  OK(sdis_device_ref_put(dev));
+  free_default_device(dev);
 
   CHK(mem_allocated_size() == 0);
 
-#ifdef SDIS_ENABLE_MPI
-  CHK(MPI_Finalize() == MPI_SUCCESS);
-#endif
   return 0;
 }
