@@ -764,6 +764,61 @@ error:
 }
 #endif
 
+#ifndef SDIS_ENABLE_MPI
+res_T
+gather_res_T(struct sdis_device* dev, const res_T res)
+{
+  (void)dev;
+  return res;
+}
+#else
+res_T
+gather_res_T(struct sdis_device* dev, const res_T proc_res)
+{
+  int32_t status;
+  res_T res = proc_res;
+  int iproc;
+  ASSERT(dev);
+
+  if(!dev->use_mpi) return proc_res;
+
+  status = (int32_t)(proc_res);
+
+  /* Send the local res status to all other processes */
+  FOR_EACH(iproc, 0, dev->mpi_nprocs) {
+    /* Do not send the res status to yourself */
+    if(iproc == dev->mpi_rank) continue;
+
+    mutex_lock(dev->mpi_mutex);
+    MPI(Send(&status, 1, MPI_INT32_T, iproc, MPI_SDIS_MSG_RES_T,
+      MPI_COMM_WORLD));
+    mutex_unlock(dev->mpi_mutex);
+  }
+
+  /* Receive the res status of all other processes */
+  res = proc_res;
+  FOR_EACH(iproc, 0, dev->mpi_nprocs) {
+    MPI_Request req;
+
+    /* Do not receive the res status from yourself */
+    if(iproc == dev->mpi_rank) continue;
+
+    mutex_lock(dev->mpi_mutex);
+    MPI(Irecv(&status, 1, MPI_INT32_T, iproc, MPI_SDIS_MSG_RES_T,
+      MPI_COMM_WORLD, &req));
+    mutex_unlock(dev->mpi_mutex);
+    mpi_waiting_for_request(dev, &req);
+
+    if(res == RES_OK && status != RES_OK) {
+      res = (res_T)status;
+    }
+  }
+
+  return res;
+}
+
+#endif
+
 void
 print_progress
   (struct sdis_device* dev,

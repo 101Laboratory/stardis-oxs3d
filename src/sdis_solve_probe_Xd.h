@@ -89,7 +89,7 @@ XD(solve_probe)
 
   /* Random Number generator */
   struct ssp_rng_proxy* rng_proxy = NULL;
-  struct ssp_rng** rngs = NULL;
+  struct ssp_rng** per_thread_rng = NULL;
 
   /* Miscellaneous */
   struct accum* per_thread_acc_temp = NULL;
@@ -138,7 +138,8 @@ XD(solve_probe)
   allocator = scn->dev->allocator;
 
   /* Create the per thread RNGs */
-  res = create_per_thread_rng(scn->dev, args->rng_state, &rng_proxy, &rngs);
+  res = create_per_thread_rng
+    (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
   if(res != RES_OK) goto error;
 
   /* Allocate the per process progress status */
@@ -168,24 +169,26 @@ XD(solve_probe)
     if(res != RES_OK) goto error;
   }
 
-  /* Synchronise processes */
+  /* Synchronise the processes */
   process_barrier(scn->dev);
 
-  print_progress(scn->dev, progress, "Solving probe temperature: ");
+  #define PROGRESS_MSG "Solving probe temperature: "
+  print_progress(scn->dev, progress, PROGRESS_MSG);
 
   /* Begin time registration of the computation */
   time_current(&time0);
 
   /* Here we go! Launch the Monte Carlo estimation */
   nrealisations = compute_process_realisations_count(scn->dev, args->nrealisations);
-  register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
+  register_paths = out_estimator && is_master_process 
+    ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     struct probe_realisation_args realis_args = PROBE_REALISATION_ARGS_NULL;
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
-    struct ssp_rng* rng = rngs[ithread];
+    struct ssp_rng* rng = per_thread_rng[ithread];
     struct accum* acc_temp = &per_thread_acc_temp[ithread];
     struct accum* acc_time = &per_thread_acc_time[ithread];
     struct green_path_handle* pgreen_path = NULL;
@@ -271,7 +274,7 @@ XD(solve_probe)
     #pragma omp critical
     if(pcent > progress[0]) {
       progress[0] = pcent;
-      print_progress_update(scn->dev, progress, "Solving probe temperature: ");
+      print_progress_update(scn->dev, progress, PROGRESS_MSG);
     }
 
   exit_it:
@@ -280,13 +283,16 @@ XD(solve_probe)
   error_it:
     goto exit_it;
   }
-  if(res != RES_OK) goto error;
 
   /* Synchronise processes */
   process_barrier(scn->dev);
 
-  print_progress_update(scn->dev, progress, "Solving probe temperature: ");
+  res = gather_res_T(scn->dev, (res_T)res);
+  if(res != RES_OK) goto error;
+
+  print_progress_update(scn->dev, progress, PROGRESS_MSG);
   log_info(scn->dev, "\n");
+  #undef PROGRESS_MSG
 
   /* Report computation time */
   time_sub(&time0, time_current(&time1), &time0);
@@ -338,7 +344,7 @@ XD(solve_probe)
   }
 
 exit:
-  if(rngs) release_per_thread_rng(scn->dev, rngs);
+  if(per_thread_rng) release_per_thread_rng(scn->dev, per_thread_rng);
   if(per_thread_green) release_per_thread_green_function(scn, per_thread_green);
   if(progress) free_process_progress(scn->dev, progress);
   if(per_thread_acc_temp) MEM_RM(scn->dev->allocator, per_thread_acc_temp);
@@ -346,17 +352,10 @@ exit:
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;
-
   return (res_T)res;
 error:
-  if(green) {
-    SDIS(green_function_ref_put(green));
-    green = NULL;
-  }
-  if(estimator) {
-    SDIS(estimator_ref_put(estimator));
-    estimator = NULL;
-  }
+  if(estimator) { SDIS(estimator_ref_put(estimator)); estimator = NULL; }
+  if(green) { SDIS(green_function_ref_put(green)); green = NULL; }
   goto exit;
 }
 
