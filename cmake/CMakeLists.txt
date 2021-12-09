@@ -222,7 +222,6 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
-  new_test(test_sdis_solve_boundary)
   new_test(test_sdis_solve_boundary_flux)
   new_test(test_sdis_solve_medium)
   new_test(test_sdis_solve_medium_2d)
@@ -232,6 +231,7 @@ if(NOT NO_TEST)
   new_test(test_sdis_volumic_power4)
 
   build_test(test_sdis_solve_probe2)
+  build_test(test_sdis_solve_boundary)
 
   # Additionnal tests
   build_test(test_sdis_volumic_power2)
@@ -253,6 +253,7 @@ if(NOT NO_TEST)
 
   if(NOT ENABLE_MPI)
     add_test(test_sdis_solve_probe2 test_sdis_solve_probe2)
+    add_test(test_sdis_solve_boundary test_sdis_solve_boundary)
   else()
     set_target_properties(test_sdis PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
@@ -260,9 +261,14 @@ if(NOT NO_TEST)
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
     set_target_properties(test_sdis_solve_probe2 PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+    set_target_properties(test_sdis_solve_boundary PROPERTIES
+      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
 
     add_test(test_sdis_solve_probe2_mpi_on mpirun -n 2 test_sdis_solve_probe2 mpi)
     add_test(test_sdis_solve_probe2_mpi_off test_sdis_solve_probe2)
+    add_test(test_sdis_solve_boundary_mpi_on mpirun -n 2 test_sdis_solve_boundary mpi)
+    add_test(test_sdis_solve_boundary_mpi_off test_sdis_solve_boundary)
+
   endif()
 
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)

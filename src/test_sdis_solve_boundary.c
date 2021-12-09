@@ -200,9 +200,10 @@ main(int argc, char** argv)
   double ref;
   size_t prims[4];
   enum sdis_side sides[4];
+  int is_master_process = 0;
   (void)argc, (void)argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Temporary file used to dump heat paths */
   CHK((fp = tmpfile()) != NULL);
@@ -338,8 +339,10 @@ main(int argc, char** argv)
   OK(SOLVE(box_scn, &probe_args, &estimator));
   OK(sdis_scene_get_boundary_position
     (box_scn, probe_args.iprim, probe_args.uv, pos));
-  printf("Boundary temperature of the box at (%g %g %g) = ", SPLIT3(pos));
-  check_estimator(estimator, N, ref);
+  if(is_master_process) {
+    printf("Boundary temperature of the box at (%g %g %g) = ", SPLIT3(pos));
+    check_estimator(estimator, N, ref);
+  }
 
   BA(GREEN(NULL, &probe_args, &green));
   BA(GREEN(box_scn, NULL, &green));
@@ -355,21 +358,28 @@ main(int argc, char** argv)
   probe_args.side = SDIS_FRONT;
   OK(GREEN(box_scn, &probe_args, &green));
 
-  check_green_function(green);
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_estimator(estimator2, N, ref);
-  check_green_serialization(green, box_scn);
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+    CHK(green == NULL);
+  } else {
+    check_green_function(green);
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_estimator(estimator2, N, ref);
+    check_green_serialization(green, box_scn);
 
-  OK(sdis_green_function_ref_put(green));
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+  }
 
   /* Dump paths */
   probe_args.nrealisations = N_dump;
   probe_args.register_paths = SDIS_HEAT_PATH_ALL;
   OK(SOLVE(box_scn, &probe_args, &estimator));
-  dump_heat_paths(fp, estimator);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    dump_heat_paths(fp, estimator);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
@@ -386,14 +396,16 @@ main(int argc, char** argv)
   OK(SOLVE(square_scn, &probe_args, &estimator));
 
   OK(GREEN(square_scn, &probe_args, &green));
-  check_green_function(green);
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_estimator(estimator2, N, ref);
-  check_green_serialization(green, square_scn);
+  if(is_master_process) {
+    check_green_function(green);
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_estimator(estimator2, N, ref);
+    check_green_serialization(green, square_scn);
 
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
-  OK(sdis_green_function_ref_put(green));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
+  }
 
   /* The external fluid cannot have an unknown temperature */
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
@@ -406,15 +418,17 @@ main(int argc, char** argv)
 
   probe_args.iprim = 6;
   OK(SOLVE(box_scn, &probe_args, &estimator));
-  check_estimator(estimator, N, Tf);
-
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    check_estimator(estimator, N, Tf);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   probe_args.iprim = 3;
   OK(SOLVE(square_scn, &probe_args, &estimator));
-  check_estimator(estimator, N, Tf);
-
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    check_estimator(estimator, N, Tf);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   #undef F
   #undef SOLVE
@@ -471,8 +485,10 @@ main(int argc, char** argv)
 
   /* Average temperature on the right side of the box */
   OK(SOLVE(box_scn, &bound_args, &estimator));
-  printf("Average temperature of the right side of the box = ");
-  check_estimator(estimator, N, ref);
+  if(is_master_process) {
+    printf("Average temperature of the right side of the box = ");
+    check_estimator(estimator, N, ref);
+  }
 
   BA(GREEN(NULL, &bound_args, &green));
   BA(GREEN(box_scn, NULL, &green));
@@ -497,14 +513,19 @@ main(int argc, char** argv)
   sides[0] = SDIS_FRONT;
 
   OK(GREEN(box_scn, &bound_args, &green));
-  check_green_function(green);
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_estimator(estimator2, N, ref);
-  check_green_serialization(green, box_scn);
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+    CHK(green == NULL);
+  } else {
+    check_green_function(green);
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_estimator(estimator2, N, ref);
+    check_green_serialization(green, box_scn);
 
-  OK(sdis_green_function_ref_put(green));
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+  }
 
   /* Dump path */
   bound_args.nrealisations = N_dump;
@@ -517,8 +538,10 @@ main(int argc, char** argv)
   /* Dump path */
   fluid_param->temperature = Tf;
   OK(SOLVE(box_scn, &bound_args, &estimator));
-  dump_heat_paths(fp, estimator);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    dump_heat_paths(fp, estimator);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Switch in 2D */
   bound_args.nrealisations = N;
@@ -530,25 +553,31 @@ main(int argc, char** argv)
   /* Average temperature on the right side of the square */
   prims[0] = 3;
   OK(SOLVE(square_scn, &bound_args, &estimator));
-  printf("Average temperature of the right side of the square = ");
-  check_estimator(estimator, N, ref);
+  if(is_master_process) {
+    printf("Average temperature of the right side of the square = ");
+    check_estimator(estimator, N, ref);
+  }
 
   OK(GREEN(square_scn, &bound_args, &green));
-  check_green_function(green);
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_estimator(estimator2, N, ref);
-  check_green_serialization(green, square_scn);
+  if(is_master_process) {
+    check_green_function(green);
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_estimator(estimator2, N, ref);
+    check_green_serialization(green, square_scn);
 
-  OK(sdis_green_function_ref_put(green));
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+  }
 
   /* Dump path */
   bound_args.nrealisations = N_dump;
   bound_args.register_paths = SDIS_HEAT_PATH_ALL;
   OK(SOLVE(square_scn, &bound_args, &estimator));
-  dump_heat_paths(fp, estimator);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    dump_heat_paths(fp, estimator);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   bound_args.register_paths = SDIS_HEAT_PATH_NONE;
   bound_args.nrealisations = N;
@@ -563,36 +592,44 @@ main(int argc, char** argv)
 
   bound_args.nprimitives = 4;
   OK(SOLVE(box_scn, &bound_args, &estimator));
-  printf("Average temperature of the left+right sides of the box = ");
-  check_estimator(estimator, N, ref);
+  if(is_master_process) {
+    printf("Average temperature of the left+right sides of the box = ");
+    check_estimator(estimator, N, ref);
+  }
 
   OK(GREEN(box_scn, &bound_args, &green));
-  check_green_function(green);
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_estimator(estimator2, N, ref);
-  check_green_serialization(green, box_scn);
+  if(is_master_process) {
+    check_green_function(green);
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_estimator(estimator2, N, ref);
+    check_green_serialization(green, box_scn);
 
-  OK(sdis_green_function_ref_put(green));
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+  }
 
   /* Average temperature on the left+right sides of the square */
   prims[0] = 1;
   prims[1] = 3;
   bound_args.nprimitives = 2;
   OK(SOLVE(square_scn, &bound_args, &estimator));
-  printf("Average temperature of the left+right sides of the square = ");
-  check_estimator(estimator, N, ref);
+  if(is_master_process) {
+    printf("Average temperature of the left+right sides of the square = ");
+    check_estimator(estimator, N, ref);
+  }
 
   OK(GREEN(square_scn, &bound_args, &green));
-  check_green_function(green);
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_estimator(estimator2, N, ref);
-  check_green_serialization(green, square_scn);
+  if(is_master_process) {
+    check_green_function(green);
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_estimator(estimator2, N, ref);
+    check_green_serialization(green, square_scn);
 
-  OK(sdis_green_function_ref_put(green));
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_green_function_ref_put(green));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+  }
 
   /* Right-side temperature at initial time */
   bound_args.time_range[0] = 0;
@@ -602,23 +639,25 @@ main(int argc, char** argv)
   prims[1] = 7;
   bound_args.nprimitives = 2;
   OK(SOLVE(box_scn, &bound_args, &estimator));
-  check_estimator(estimator, N, Tf);
-
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    check_estimator(estimator, N, Tf);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   prims[0] = 3;
   bound_args.nprimitives = 1;
   OK(SOLVE(square_scn, &bound_args, &estimator));
-  check_estimator(estimator, N, Tf);
-
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    check_estimator(estimator, N, Tf);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   #undef SOLVE
   #undef GREEN
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
-  OK(sdis_device_ref_put(dev));
+  free_default_device(dev);
 
   CHK(fclose(fp) == 0);
 
