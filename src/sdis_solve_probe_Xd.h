@@ -102,18 +102,12 @@ XD(solve_probe)
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
+  if(!scn) { res = RES_BAD_ARG; goto error; }
+  if(!out_estimator && !out_green) { res = RES_BAD_ARG; goto error; }
   res = check_solve_probe_args(args);
   if(res != RES_OK) goto error;
-
-  if(!out_estimator && !out_green) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  res = XD(scene_check_dimensionality)(scn);
+  if(res != RES_OK) goto error;
 
   if(out_green && args->picard_order != 1) {
     log_err(scn->dev, "%s: the evaluation of the green function does not make "
@@ -123,12 +117,6 @@ XD(solve_probe)
     res = RES_BAD_ARG;
     goto error;
   }
-
-#if SDIS_XD_DIMENSION == 2
-  if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
-#else
-  if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
-#endif
 
 #ifdef SDIS_ENABLE_MPI
   is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;

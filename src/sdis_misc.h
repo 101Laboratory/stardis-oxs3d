@@ -163,4 +163,19 @@ time_rewind_3d
    struct rwalk_3d* rwalk,
    struct temperature_3d* T);
 
+/* Check the validity of the parametric coordinate onto a 2D primitive. If it
+ * is invalid, the function prints an error message and return RES_BAD_ARG. */
+extern LOCAL_SYM res_T
+check_primitive_uv_2d
+  (struct sdis_device* dev,
+   const double u[]);
+
+/* Check the validity of the parametric coordinates onto a 3D primitive. If
+ * they are invalid, the function prints an error message and return
+ * RES_BAD_ARG.  */
+extern LOCAL_SYM res_T
+check_primitive_uv_3d
+  (struct sdis_device* dev,
+   const double uv[]);
+
 #endif /* SDIS_MISC_H */

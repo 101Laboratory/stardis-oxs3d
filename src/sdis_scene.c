@@ -542,3 +542,63 @@ exit:
 error:
   goto exit;
 }
+
+res_T
+scene_check_primitive_index(const struct sdis_scene* scn, const size_t iprim)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+
+  if(iprim >= scene_get_primitives_count(scn)) {
+    log_err(scn->dev,
+      "%s: invalid primitive identifier `%lu'. "
+      "It must be in the [0 %lu] range.\n",
+      FUNC_NAME,
+      (unsigned long)iprim,
+      (unsigned long)scene_get_primitives_count(scn)-1);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+scene_check_dimensionality_2d(const struct sdis_scene* scn)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+  if(scene_is_2d(scn) == 0) {
+    log_err(scn->dev,
+      "%s: expects a 2D scene while the input scene is 3D.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+scene_check_dimensionality_3d(const struct sdis_scene* scn)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+  if(scene_is_2d(scn) != 0) {
+    log_err(scn->dev,
+      "%s: expects a 3D scene while the input scene is 2D.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+exit:
+  return res;
+error:
+  goto exit;
+}
+

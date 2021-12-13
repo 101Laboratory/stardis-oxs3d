@@ -243,7 +243,7 @@ scene_get_medium
  * time consuming.
  *
  * Note that actually, the function internally calls scene_get_medium if no
- * valid medium is found with the regular procedure.  This may be due to
+ * valid medium is found with the regular procedure. This may be due to
  * numerical issues or wrong assumptions on the current medium (its boundaries
  * are opened to infinity). */
 extern LOCAL_SYM res_T
@@ -256,6 +256,25 @@ extern LOCAL_SYM res_T
 scene_compute_hash
   (const struct sdis_scene* scn,
    hash256_T hash);
+
+/* Check that the primitive identifier is valid wrt the scene. If not, the
+ * function prints an error message and returns RES_BAD_ARG. */
+extern LOCAL_SYM res_T
+scene_check_primitive_index
+  (const struct sdis_scene* scn,
+   const size_t iprim);
+
+/* Check that the scene is 2D. If not, the function prints an error message and
+ * returns RES_BAD_ARG */
+extern LOCAL_SYM res_T
+scene_check_dimensionality_2d
+  (const struct sdis_scene* scn);
+
+/* Check that the scene is 3D. If not, the function prints an error message and
+ * returns RES_BAD_ARG */
+extern LOCAL_SYM res_T
+scene_check_dimensionality_3d
+  (const struct sdis_scene* scn);
 
 static INLINE void
 scene_get_enclosure_ids
@@ -290,7 +309,7 @@ scene_get_enclosure(struct sdis_scene* scn, const unsigned ienc)
   return enc;
 }
 
-static FINLINE int
+static INLINE int
 scene_is_2d(const struct sdis_scene* scn)
 {
   ASSERT(scn && (scn->s2d_view || scn->s3d_view));

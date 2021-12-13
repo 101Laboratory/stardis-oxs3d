@@ -146,7 +146,6 @@ XD(solve_boundary)
   struct accum* per_thread_acc_time = NULL;
   size_t nrealisations = 0;
   int64_t irealisation = 0;
-  size_t view_nprims;
   size_t i;
   int32_t* progress = NULL; /* Per process progress bar */
   int register_paths = SDIS_HEAT_PATH_NONE;
@@ -154,17 +153,28 @@ XD(solve_boundary)
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
+  if(!scn) { res = RES_BAD_ARG; goto error; }
+  if(!out_estimator && !out_green) { res = RES_BAD_ARG; goto error; }
   res = check_solve_boundary_args(args);
   if(res != RES_OK) goto error;
+  res = XD(scene_check_dimensionality)(scn);
+  if(res != RES_OK) goto error;
 
-  if(!out_estimator && !out_green) {
-    res = RES_BAD_ARG;
-    goto error;
+  /* Check the submitted primitive indices */
+  FOR_EACH(i, 0, args->nprimitives) {
+    res = scene_check_primitive_index(scn, args->primitives[i]);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Check the submitted primitive sides */
+  FOR_EACH(i, 0, args->nprimitives) {
+    if((unsigned)args->sides[i] >= SDIS_SIDE_NULL__) {
+      log_err(scn->dev,
+        "%s: invalid side for the primitive `%lu'.\n",
+        FUNC_NAME, (unsigned long)args->primitives[i]);
+      res = RES_BAD_ARG;
+      goto error;
+    }
   }
 
   if(out_green && args->picard_order != 1) {
@@ -174,32 +184,6 @@ XD(solve_boundary)
       FUNC_NAME, (unsigned long)args->picard_order);
     res = RES_BAD_ARG;
     goto error;
-  }
-
-#if SDIS_XD_DIMENSION == 2
-  if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
-#else
-  if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
-#endif
-
-  SXD(scene_view_primitives_count(scn->sXd(view), &view_nprims));
-  FOR_EACH(i, 0, args->nprimitives) {
-    if(args->primitives[i] >= view_nprims) {
-      log_err(scn->dev,
-        "%s: invalid primitive identifier `%lu'. It must be in the [0 %lu] range.\n",
-        FUNC_NAME,
-        (unsigned long)args->primitives[i],
-        (unsigned long)scene_get_primitives_count(scn)-1);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-    if((unsigned)args->sides[i] >= SDIS_SIDE_NULL__) {
-      log_err(scn->dev,
-        "%s: invalid side for the primitive `%lu'.\n",
-        FUNC_NAME, (unsigned long)args->primitives[i]);
-      res = RES_BAD_ARG;
-      goto error;
-    }
   }
 
 #ifdef SDIS_ENABLE_MPI

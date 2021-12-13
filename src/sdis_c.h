@@ -22,6 +22,10 @@
 enum mpi_sdis_message {
   MPI_SDIS_MSG_ACCUM_TEMP, /* Temperature accumulator */
   MPI_SDIS_MSG_ACCUM_TIME, /* Time accumulator */
+  MPI_SDIS_MSG_ACCUM_FLUX_CONVECTIVE, /* Convective flux accumulator */
+  MPI_SDIS_MSG_ACCUM_FLUX_IMPOSED, /* Imposed flux accumulator */
+  MPI_SDIS_MSG_ACCUM_FLUX_RADIATIVE, /* Radiative flux accumulator */
+  MPI_SDIS_MSG_ACCUM_FLUX_TOTAL, /* Total flux accumulator */
   MPI_SDIS_MSG_GREEN_FUNCTION, /* Serialized green function */
   MPI_SDIS_MSG_PROGRESS, /* Progress status */
   MPI_SDIS_MSG_RES_T, /* Result status */

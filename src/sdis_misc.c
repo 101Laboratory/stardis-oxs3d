@@ -21,3 +21,51 @@
 #define SDIS_XD_DIMENSION 3
 #include "sdis_misc_Xd.h"
 
+res_T
+check_primitive_uv_2d(struct sdis_device* dev, const double param_coord[])
+{
+  double u;
+  res_T res = RES_OK;
+  ASSERT(dev && param_coord);
+
+  u = param_coord[0];
+
+  if(u < 0 || 1 < u) {
+    log_err(dev,
+      "%s: invalid parametric coordinates u=%g; it must be in [0, 1].\n",
+      FUNC_NAME, u);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+check_primitive_uv_3d(struct sdis_device* dev, const double param_coords[])
+{
+  double u, v, w;
+  res_T res = RES_OK;
+  ASSERT(dev && param_coords);
+
+  u = param_coords[0];
+  v = param_coords[1];
+  w = CLAMP(1 - u - v, 0, 1);
+
+  if(u < 0 || 1 < u || v < 0 || 1 < v || !eq_eps(u + v + w, 1, 1.e-6)) {
+    log_err(dev,
+      "%s: invalid parametric coordinates u=%g; v=%g. "
+      "u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
+      FUNC_NAME, u, v);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
