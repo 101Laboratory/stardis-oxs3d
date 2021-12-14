@@ -1193,24 +1193,32 @@ sdis_green_path_for_each_flux_term
  * Heat path API
  ******************************************************************************/
 SDIS_API res_T
-sdis_heat_path_get_vertices_count
-  (const struct sdis_heat_path* path,
-   size_t* nvertices);
-
-SDIS_API res_T
 sdis_heat_path_get_status
   (const struct sdis_heat_path* path,
    enum sdis_heat_path_flag* status);
 
 SDIS_API res_T
-sdis_heat_path_get_vertex
+sdis_heat_path_get_line_strips_count
   (const struct sdis_heat_path* path,
-   const size_t ivertex,
+   size_t* nstrips);
+
+SDIS_API res_T
+sdis_heat_path_line_strip_get_vertices_count
+  (const struct sdis_heat_path* path,
+   const size_t istrip,
+   size_t* nvertices);
+
+SDIS_API res_T
+sdis_heat_path_line_strip_get_vertex
+  (const struct sdis_heat_path* path,
+   const size_t istrip,
+   const size_t ivert,
    struct sdis_heat_vertex* vertex);
 
 SDIS_API res_T
-sdis_heat_path_for_each_vertex
+sdis_heat_path_line_strip_for_each_vertex
   (const struct sdis_heat_path* path,
+   const size_t istrip,
    sdis_process_heat_vertex_T func,
    void* context);
 

@@ -208,10 +208,10 @@ process_heat_path(const struct sdis_heat_path* path, void* context)
 
   CHK(path && context);
 
-  BA(sdis_heat_path_get_vertices_count(NULL, &n));
-  BA(sdis_heat_path_get_vertices_count(path, NULL));
-  OK(sdis_heat_path_get_vertices_count(path, &n));
-  CHK(n != 0);
+  BA(sdis_heat_path_get_line_strips_count(NULL, &n));
+  BA(sdis_heat_path_get_line_strips_count(path, NULL));
+  OK(sdis_heat_path_get_line_strips_count(path, &n));
+  CHK(n == 1);
 
   BA(sdis_heat_path_get_status(NULL, &status));
   BA(sdis_heat_path_get_status(path, NULL));
@@ -224,20 +224,28 @@ process_heat_path(const struct sdis_heat_path* path, void* context)
     default: FATAL("Unreachable code.\n"); break;
   }
 
-  BA(sdis_heat_path_get_vertex(NULL, 0, &vert));
-  BA(sdis_heat_path_get_vertex(path, n, &vert));
-  BA(sdis_heat_path_get_vertex(path, 0, NULL));
+  BA(sdis_heat_path_line_strip_get_vertices_count(NULL, 0, &n));
+  BA(sdis_heat_path_line_strip_get_vertices_count(path, 1, &n));
+  BA(sdis_heat_path_line_strip_get_vertices_count(path, 0, NULL));
+  OK(sdis_heat_path_line_strip_get_vertices_count(path, 0, &n));
+  CHK(n != 0);
+
+  BA(sdis_heat_path_line_strip_get_vertex(NULL, 0, 0, &vert));
+  BA(sdis_heat_path_line_strip_get_vertex(path, 1, 1, &vert));
+  BA(sdis_heat_path_line_strip_get_vertex(path, 0, n, &vert));
+  BA(sdis_heat_path_line_strip_get_vertex(path, 0, 0, NULL));
 
   FOR_EACH(i, 0, n) {
-    OK(sdis_heat_path_get_vertex(path, i, &vert));
+    OK(sdis_heat_path_line_strip_get_vertex(path, 0, i, &vert));
     CHK(vert.type == SDIS_HEAT_VERTEX_CONVECTION
      || vert.type == SDIS_HEAT_VERTEX_CONDUCTION
      || vert.type == SDIS_HEAT_VERTEX_RADIATIVE);
   }
 
-  BA(sdis_heat_path_for_each_vertex(NULL, dump_vertex_pos, context));
-  BA(sdis_heat_path_for_each_vertex(path, NULL, context));
-  OK(sdis_heat_path_for_each_vertex(path, dump_vertex_pos, context));
+  BA(sdis_heat_path_line_strip_for_each_vertex(NULL, 0, dump_vertex_pos, context));
+  BA(sdis_heat_path_line_strip_for_each_vertex(path, 1, dump_vertex_pos, context));
+  BA(sdis_heat_path_line_strip_for_each_vertex(path, 0, NULL, context));
+  OK(sdis_heat_path_line_strip_for_each_vertex(path, 0, dump_vertex_pos, context));
 
   FOR_EACH(i, 0, n-1) {
     fprintf(ctx->stream, "l %lu %lu\n",
