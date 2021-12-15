@@ -17,6 +17,7 @@
 #include <rsys/math.h>
 
 enum heat_vertex_attrib {
+  HEAT_VERTEX_BRANCH_ID,
   HEAT_VERTEX_WEIGHT,
   HEAT_VERTEX_TIME,
   HEAT_VERTEX_TYPE
@@ -250,11 +251,15 @@ dump_heat_path_vertex_attribs
       struct sdis_heat_vertex vtx;
       OK(sdis_heat_path_line_strip_get_vertex(path, istrip, ivert, &vtx));
       switch(attr) {
+        case HEAT_VERTEX_BRANCH_ID:
+          fprintf(stream, "%i\n", vtx.branch_id);
+          break;
         case HEAT_VERTEX_WEIGHT:
           fprintf(stream, "%g\n", vtx.weight);
           break;
         case HEAT_VERTEX_TIME:
-          fprintf(stream, "%g\n", IS_INF(vtx.time) ? FLT_MAX : vtx.time);
+          fprintf(stream, "%g\n",
+            IS_INF(vtx.time) || vtx.time > FLT_MAX ? -1 : vtx.time);
           break;
         case HEAT_VERTEX_TYPE:
           switch(vtx.type) {
@@ -411,6 +416,14 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
   FOR_EACH(ipath, 0, npaths) {
     OK(sdis_estimator_get_path(estimator, ipath, &path));
     dump_heat_path_vertex_attribs(stream, path, HEAT_VERTEX_TIME);
+  }
+
+  /* Write the branch id of the random walk vertices */
+  fprintf(stream, "SCALARS BranchID int 1\n");
+  fprintf(stream, "LOOKUP_TABLE default\n");
+  FOR_EACH(ipath, 0, npaths) {
+    OK(sdis_estimator_get_path(estimator, ipath, &path));
+    dump_heat_path_vertex_attribs(stream, path, HEAT_VERTEX_BRANCH_ID);
   }
 
   /* Write path type */

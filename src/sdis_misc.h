@@ -127,10 +127,11 @@ register_heat_vertex
   (struct sdis_heat_path* path,
    const struct sdis_rwalk_vertex* vtx,
    const double weight,
-   const enum sdis_heat_vertex_type type)
+   const enum sdis_heat_vertex_type type,
+   const int branch_id)
 {
   struct sdis_heat_vertex heat_vtx = SDIS_HEAT_VERTEX_NULL;
-  ASSERT(vtx);
+  ASSERT(vtx && branch_id >= 0);
 
   if(!path) return RES_OK;
 
@@ -140,6 +141,7 @@ register_heat_vertex
   heat_vtx.time = vtx->time;
   heat_vtx.weight = weight;
   heat_vtx.type = type;
+  heat_vtx.branch_id = branch_id;
   return heat_path_add_vertex(path, &heat_vtx);
 }
 

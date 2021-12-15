@@ -60,8 +60,8 @@ XD(register_heat_vertex_in_fluid)
   fX(add)(pos, org, fX(mulf)(dir, dir, dst));
   dX_set_fX(vtx.P, pos);
 
-  return register_heat_vertex
-    (ctx->heat_path, &vtx, weight, SDIS_HEAT_VERTEX_CONVECTION);
+  return register_heat_vertex(ctx->heat_path, &vtx, weight,
+    SDIS_HEAT_VERTEX_CONVECTION, (int)ctx->nbranchings);
 }
 
 /*******************************************************************************
@@ -283,8 +283,8 @@ XD(convective_path)
     }
 
     /* Register the new vertex against the heat path */
-    res = register_heat_vertex
-      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONVECTION);
+    res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,
+      SDIS_HEAT_VERTEX_CONVECTION, (int)ctx->nbranchings);
     if(res != RES_OK) goto error;
 
     /* Setup the fragment of the sampled position into the enclosure. */

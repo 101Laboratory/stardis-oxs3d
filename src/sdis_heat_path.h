@@ -176,6 +176,19 @@ error:
   goto exit;
 }
 
+static INLINE void
+heat_path_increment_sub_path_branch_id
+  (struct sdis_heat_path* path,
+   const size_t ivtx_begin,
+   const size_t ivtx_end)
+{
+  size_t ivtx;
+  FOR_EACH(ivtx, ivtx_begin, ivtx_end) {
+    struct sdis_heat_vertex* vtx = heat_path_get_vertex(path, ivtx);
+    vtx->branch_id += 1;
+  }
+}
+
 /* Generate the dynamic array of heat paths */
 #define DARRAY_NAME heat_path
 #define DARRAY_DATA struct sdis_heat_path

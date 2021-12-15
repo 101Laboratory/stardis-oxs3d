@@ -259,8 +259,9 @@ struct sdis_heat_vertex {
   double time;
   double weight;
   enum sdis_heat_vertex_type type;
+  int branch_id;
 };
-#define SDIS_HEAT_VERTEX_NULL__ {{0,0,0}, 0, 0, SDIS_HEAT_VERTEX_CONDUCTION}
+#define SDIS_HEAT_VERTEX_NULL__ {{0,0,0}, 0, 0, SDIS_HEAT_VERTEX_CONDUCTION, 0}
 static const struct sdis_heat_vertex SDIS_HEAT_VERTEX_NULL =
   SDIS_HEAT_VERTEX_NULL__;
 

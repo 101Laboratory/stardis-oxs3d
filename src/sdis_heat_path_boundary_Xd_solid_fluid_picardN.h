@@ -26,42 +26,6 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
- * Non generic helper functions
- ******************************************************************************/
-#ifndef SDIS_HEAT_PATH_BOUNDARY_XD_SOLID_FLUID_PICARDN_H
-#define SDIS_HEAT_PATH_BOUNDARY_XD_SOLID_FLUID_PICARDN_H
-
-static INLINE res_T
-restart_heat_path
-  (struct sdis_heat_path* path, 
-   const struct sdis_heat_vertex* vtx)
-{
-  size_t nverts = 0;
-  size_t nbreaks = 0;
-  res_T res = RES_OK;
-
-  if(!path) goto exit;
-  ASSERT(vtx);
-
-  nbreaks = darray_size_t_size_get(&path->breaks);
-  nverts = darray_heat_vertex_size_get(&path->vertices);
-
-  res = heat_path_add_break(path);
-  if(res != RES_OK) goto error;
-  res = heat_path_add_vertex(path, vtx);
-  if(res != RES_OK) goto error;
-
-exit:
-  return res;
-error:
-  CHK(darray_size_t_resize(&path->breaks, nbreaks) == RES_OK);
-  CHK(darray_heat_vertex_resize(&path->vertices, nverts) == RES_OK);
-  goto exit;
-}
-
-#endif /* SDIS_HEAT_PATH_BOUNDARY_XD_SOLID_FLUID_PICARDN_H */
-
-/*******************************************************************************
  * Generic helper functions
  ******************************************************************************/
 static INLINE res_T
@@ -96,8 +60,9 @@ XD(sample_path)
     heat_vtx.time = rwalk.vtx.time;
     heat_vtx.weight = 0;
     heat_vtx.type = SDIS_HEAT_VERTEX_RADIATIVE;
+    heat_vtx.branch_id = (int)ctx->nbranchings + 1;
 
-    res = restart_heat_path(ctx->heat_path, &heat_vtx);
+    res = heat_path_restart(ctx->heat_path, &heat_vtx);
     if(res != RES_OK) goto error;
   }
 
@@ -248,6 +213,10 @@ XD(solid_fluid_boundary_picardN_path)
     double p_radi, p_radi_min, p_radi_max; /* Radiative probas */
     double T0, T1, T2, T3, T4, T5; /* Computed temperatures */
 
+    /* Indices of the registered vertex of the sampled radiative path */
+    size_t ihvtx_radi_begin;
+    size_t ihvtx_radi_end;
+
     r = ssp_rng_canonical(rng);
 
     /* Switch in convective path */
@@ -275,6 +244,12 @@ XD(solid_fluid_boundary_picardN_path)
       break;
     }
 
+    if(ctx->heat_path) {
+      /* Fetch the index of the first vertex of the radiative path that is
+       * going to be traced i.e. the last registered vertex */
+      ihvtx_radi_begin = heat_path_get_vertices_count(ctx->heat_path) - 1;
+    }
+
     /* Sample a radiative path */
     T_s = *T;
     rwalk_s = *rwalk;
@@ -282,6 +257,12 @@ XD(solid_fluid_boundary_picardN_path)
     rwalk_s.hit_side = fluid_side;
     res = XD(radiative_path)(scn, ctx, &rwalk_s, rng, &T_s);
     if(res != RES_OK) goto error;
+
+    if(ctx->heat_path) {
+      /* Fetch the index after the last registered vertex of the sampled
+       * radiative path */
+      ihvtx_radi_end = heat_path_get_vertices_count(ctx->heat_path);
+    }
 
     /* Fetch the last registered heat path vertex of the radiative path */
     if(ctx->heat_path) hvtx_s = *heat_path_get_last_vertex(ctx->heat_path);
@@ -295,13 +276,17 @@ XD(solid_fluid_boundary_picardN_path)
     /* Define some helper macros */
     #define SWITCH_IN_RADIATIVE {                                              \
       *rwalk = rwalk_s; *T = T_s;                                              \
-      res = restart_heat_path(ctx->heat_path, &hvtx_s);                        \
+      res = heat_path_restart(ctx->heat_path, &hvtx_s);                        \
       if(res != RES_OK) goto error;                                            \
     } (void)0
 
     #define NULL_COLLISION {                                                   \
-      res = restart_heat_path(ctx->heat_path, &hvtx);                          \
+      res = heat_path_restart(ctx->heat_path, &hvtx);                          \
       if(res != RES_OK) goto error;                                            \
+      if(ctx->heat_path) {                                                     \
+        heat_path_increment_sub_path_branch_id                                 \
+          (ctx->heat_path, ihvtx_radi_begin, ihvtx_radi_end);                  \
+      }                                                                        \
     } (void)0
 
     #define COMPUTE_TEMPERATURE(Result, RWalk, Temp) {                         \

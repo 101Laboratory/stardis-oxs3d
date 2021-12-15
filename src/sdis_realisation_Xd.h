@@ -194,7 +194,7 @@ XD(probe_realisation)
   type = args->medium->type == SDIS_SOLID
     ? SDIS_HEAT_VERTEX_CONDUCTION
     : SDIS_HEAT_VERTEX_CONVECTION;
-  res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0, type);
+  res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0, type, 0);
   if(res != RES_OK) goto error;
 
   if(t0 >= rwalk.vtx.time) {
@@ -289,7 +289,7 @@ XD(boundary_realisation)
 #endif
 
   res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0/*weight*/,
-    SDIS_HEAT_VERTEX_CONDUCTION);
+    SDIS_HEAT_VERTEX_CONDUCTION, 0/*Branch id*/);
   if(res != RES_OK) goto error;
 
   ctx.green_path = args->green_path;

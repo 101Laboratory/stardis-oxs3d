@@ -152,7 +152,7 @@ XD(solid_fluid_boundary_picard1_path)
   double delta; /* Orthogonal fitted reinjection dst at the boundary */
 
   double r;
-  enum sdis_heat_vertex_type current_vertex_type;
+  struct sdis_heat_vertex hvtx = SDIS_HEAT_VERTEX_NULL;
   enum sdis_side solid_side = SDIS_SIDE_NULL__;
   enum sdis_side fluid_side = SDIS_SIDE_NULL__;
   res_T res = RES_OK;
@@ -222,16 +222,17 @@ XD(solid_fluid_boundary_picard1_path)
   p_conv = h_conv / h_hat;
   p_cond = h_cond / h_hat;
 
-  /* Fetch the current heat vertex type. This will be used below to restart the
-   * registration of the heat path geometry after a null collision */
-  if(ctx->heat_path) {
-    current_vertex_type = heat_path_get_last_vertex(ctx->heat_path)->type;
-  }
+  /* Fetch the last registered heat path vertex */
+  if(ctx->heat_path) hvtx = *heat_path_get_last_vertex(ctx->heat_path);
 
   /* Null collision */
   for(;;) {
     double h_radi; /* Radiative coefficient */
     double p_radi; /* Radiative proba */
+
+    /* Indices of the registered vertex of the sampled radiative path */
+    size_t ihvtx_radi_begin;
+    size_t ihvtx_radi_end;
 
     r = ssp_rng_canonical(rng);
 
@@ -262,6 +263,12 @@ XD(solid_fluid_boundary_picard1_path)
 
     /* From there, we know the path is either a radiative path or a
      * null-collision */
+
+    if(ctx->heat_path) {
+      /* Fetch the index of the first vertex of the radiative path that is
+       * going to be traced i.e. the last registered vertex */
+      ihvtx_radi_begin = heat_path_get_vertices_count(ctx->heat_path) - 1;
+    }
 
     /* Sample a radiative path and get the Tref at its end. */
     T_s = *T;
@@ -297,14 +304,14 @@ XD(solid_fluid_boundary_picard1_path)
       }
 
       if(ctx->heat_path) {
-        /* Add a break into the heat path geometry and restart it from the
-         * current position. The sampled radiative path becomes a branch of the
-         * current sampled path */
-        res = heat_path_add_break(ctx->heat_path);
-        if(res != RES_OK) goto error;
+        /* Set the sampled radiative path as a branch of the current path */
+        ihvtx_radi_end = heat_path_get_vertices_count(ctx->heat_path);
+        heat_path_increment_sub_path_branch_id
+          (ctx->heat_path, ihvtx_radi_begin, ihvtx_radi_end);
 
-        res = register_heat_vertex
-          (ctx->heat_path, &rwalk->vtx, T->value, current_vertex_type);
+        /* Add a break into the heat path geometry and restart it from the
+         * position of the input random walk. */
+        res = heat_path_restart(ctx->heat_path, &hvtx);
         if(res != RES_OK) goto error;
       }
     }

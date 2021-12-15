@@ -855,7 +855,8 @@ XD(solid_reinjection)
     (args->rwalk_ctx->heat_path,
      &args->rwalk->vtx,
      args->T->value,
-     SDIS_HEAT_VERTEX_CONDUCTION);
+     SDIS_HEAT_VERTEX_CONDUCTION,
+     (int)args->rwalk_ctx->nbranchings);
   if(res != RES_OK) goto error;
 
 exit:

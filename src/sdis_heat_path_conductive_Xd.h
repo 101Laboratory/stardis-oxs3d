@@ -468,8 +468,8 @@ XD(conductive_path)
     XD(move_pos)(rwalk->vtx.P, dir0, delta);
 
     /* Register the new vertex against the heat path */
-    res = register_heat_vertex
-      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+    res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,
+      SDIS_HEAT_VERTEX_CONDUCTION, (int)ctx->nbranchings);
     if(res != RES_OK) goto error;
 
     ++istep;

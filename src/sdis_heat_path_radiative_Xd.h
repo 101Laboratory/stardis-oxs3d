@@ -42,11 +42,15 @@ XD(trace_radiative_path)
    * are assumed to be extruded to the infinity along the Z dimension. */
   float N[3] = {0, 0, 0};
   float dir[3] = {0, 0, 0};
+  int branch_id;
   res_T res = RES_OK;
 
   ASSERT(scn && ray_dir && ctx && rwalk && rng && T);
 
   f3_set(dir, ray_dir);
+
+  /* (int)ctx->nbranchings < 0 <=> Beginning of the realisation */
+  branch_id = MMAX((int)ctx->nbranchings, 0);
 
   /* Launch the radiative random walk */
   for(;;) {
@@ -86,12 +90,14 @@ XD(trace_radiative_path)
         if(ctx->heat_path) {
           const float empirical_dst = 0.1f;
           struct sdis_rwalk_vertex vtx;
+
+
           vtx = rwalk->vtx;
           vtx.P[0] += dir[0] * empirical_dst;
           vtx.P[1] += dir[1] * empirical_dst;
           vtx.P[2] += dir[2] * empirical_dst;
-          res = register_heat_vertex
-            (ctx->heat_path, &vtx, T->value, SDIS_HEAT_VERTEX_RADIATIVE);
+          res = register_heat_vertex(ctx->heat_path, &vtx, T->value,
+            SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
           if(res != RES_OK) goto error;
         }
         break;
@@ -119,8 +125,8 @@ XD(trace_radiative_path)
     XD(move_pos)(rwalk->vtx.P, dir, rwalk->hit.distance);
 
     /* Register the random walk vertex against the heat path */
-    res = register_heat_vertex
-      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_RADIATIVE);
+    res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,
+      SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
     if(res != RES_OK) goto error;
 
     /* Fetch the new interface and setup the hit fragment */

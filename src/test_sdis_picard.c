@@ -460,6 +460,26 @@ test_picard
 }
 
 static void
+register_heat_paths(struct sdis_scene* scn, const size_t picard_order, FILE* stream)
+{
+  struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_estimator* estimator = NULL;
+  CHK(scn && picard_order >= 1 && stream);
+
+
+  probe_args.nrealisations = 10;
+  probe_args.position[0] = 0.05;
+  probe_args.position[1] = 0;
+  probe_args.position[2] = 0;
+  probe_args.picard_order = picard_order;
+  probe_args.register_paths = SDIS_HEAT_PATH_ALL;
+  printf("Register %lu heat paths.\n", probe_args.nrealisations);
+  OK(sdis_solve_probe(scn, &probe_args, &estimator));
+  dump_heat_paths(stream, estimator);
+  OK(sdis_estimator_ref_put(estimator));
+}
+
+static void
 create_scene_3d
   (struct sdis_device* dev,
    struct sdis_interface* interfaces[INTERFACES_COUNT__],
@@ -545,6 +565,7 @@ create_scene_2d
 int
 main(int argc, char** argv)
 {
+  FILE* stream = NULL;
   struct mem_allocator allocator;
 
   struct sdis_device* dev = NULL;
@@ -622,6 +643,8 @@ main(int argc, char** argv)
   create_scene_2d(dev, interfaces, &scn_2d);
   create_scene_3d(dev, interfaces, &scn_3d);
 
+  CHK((stream = tmpfile()) != NULL);
+
   /* Test picard1 with a constant Tref <=> regular linearisation */
   printf("Test Picard1 with a constant Tref of 300 K\n");
   ref.T  = 314.99999999999989;
@@ -691,6 +714,8 @@ main(int argc, char** argv)
   OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
   test_picard(scn_2d, 3/*Picard order*/, &ref);
   test_picard(scn_3d, 3/*Picard order*/, &ref);
+  register_heat_paths(scn_2d, 3/*Picard order*/, stream);
+  register_heat_paths(scn_3d, 3/*Picard order*/, stream);
   printf("\n");
 
   t_range[0] = 280;
@@ -746,6 +771,7 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(dummy));
   OK(sdis_device_ref_put(dev));
+  CHK(fclose(stream) == 0);
 
   check_memory_allocator(&allocator);
   mem_shutdown_proxy_allocator(&allocator);

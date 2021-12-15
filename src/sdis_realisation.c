@@ -71,7 +71,7 @@ ray_realisation_3d
 
   /* Register the starting position against the heat path */
   res = register_heat_vertex
-    (args->heat_path, &rwalk.vtx, 0, SDIS_HEAT_VERTEX_RADIATIVE);
+    (args->heat_path, &rwalk.vtx, 0, SDIS_HEAT_VERTEX_RADIATIVE, 0);
   if(res != RES_OK) goto error;
 
   res = trace_radiative_path_3d(scn, dir, &ctx, &rwalk, args->rng, &T);
