@@ -107,9 +107,9 @@ sdis_heat_path_line_strip_get_vertices_count
   }
 
   if(istrip == nstrips-1) { /* Last strip */
-    ivert_end = darray_heat_vertex_size_get(&path->vertices) - ivert_begin;
+    ivert_end = darray_heat_vertex_size_get(&path->vertices);
   } else {
-    ivert_end = line_strip_vertex_offset(path, istrip+1) - ivert_begin;
+    ivert_end = line_strip_vertex_offset(path, istrip+1);
   }
 
   ASSERT(ivert_begin <= ivert_end);
