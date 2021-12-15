@@ -112,14 +112,28 @@ heat_path_add_vertex(struct sdis_heat_path* path, const struct sdis_heat_vertex*
   return darray_heat_vertex_push_back(&path->vertices, vtx);
 }
 
+static INLINE size_t
+heat_path_get_vertices_count(const struct sdis_heat_path* path)
+{
+  ASSERT(path);
+  return darray_heat_vertex_size_get(&path->vertices);
+}
+
+static INLINE struct sdis_heat_vertex*
+heat_path_get_vertex(struct sdis_heat_path* path, const size_t ivert)
+{
+  ASSERT(path && ivert < heat_path_get_vertices_count(path));
+  return darray_heat_vertex_data_get(&path->vertices) + ivert;
+}
+
 static INLINE struct sdis_heat_vertex*
 heat_path_get_last_vertex(struct sdis_heat_path* path)
 {
   size_t sz;
   ASSERT(path);
-  sz = darray_heat_vertex_size_get(&path->vertices);
+  sz = heat_path_get_vertices_count(path);
   ASSERT(sz);
-  return darray_heat_vertex_data_get(&path->vertices) + (sz-1);
+  return heat_path_get_vertex(path, sz-1);
 }
 
 static INLINE res_T
@@ -132,6 +146,34 @@ heat_path_add_break(struct sdis_heat_path* path)
   if(sz == 0) return RES_OK; /* Nothing to do */
   id = sz-1;
   return darray_size_t_push_back(&path->breaks, &id);
+}
+
+static INLINE res_T
+heat_path_restart
+  (struct sdis_heat_path* path,
+   const struct sdis_heat_vertex* vtx) /* Vertex to restart from */
+{
+  size_t nverts = 0;
+  size_t nbreaks = 0;
+  res_T res = RES_OK;
+
+  if(!path) goto exit;
+  ASSERT(vtx);
+
+  nbreaks = darray_size_t_size_get(&path->breaks);
+  nverts = darray_heat_vertex_size_get(&path->vertices);
+
+  res = heat_path_add_break(path);
+  if(res != RES_OK) goto error;
+  res = heat_path_add_vertex(path, vtx);
+  if(res != RES_OK) goto error;
+
+exit:
+  return res;
+error:
+  CHK(darray_size_t_resize(&path->breaks, nbreaks) == RES_OK);
+  CHK(darray_heat_vertex_resize(&path->vertices, nverts) == RES_OK);
+  goto exit;
 }
 
 /* Generate the dynamic array of heat paths */
