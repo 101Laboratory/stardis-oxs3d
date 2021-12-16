@@ -465,10 +465,14 @@ main(int argc, char** argv)
   prims[0] = 6;
   OK(SOLVE(box_scn, &bound_args, &estimator));
 
-  /* Average temperature on the right side of the box */
-  printf("Average values of the right side of the box = ");
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    /* Average temperature on the right side of the box */
+    printf("Average values of the right side of the box = ");
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Average temperature on the right side of the square */
   prims[0] = 4;
@@ -476,9 +480,11 @@ main(int argc, char** argv)
   BA(SOLVE(square_scn, &bound_args, &estimator));
   prims[0] = 3;
   OK(SOLVE(square_scn, &bound_args, &estimator));
-  printf("Average values of the right side of the square = ");
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    printf("Average values of the right side of the square = ");
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Flux computation on Dirichlet boundaries is not available yet.
    * Once available, the expected total flux is the same we expect on the right

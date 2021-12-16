@@ -395,10 +395,6 @@ XD(solve_probe_boundary_flux)
   struct time time0, time1;
   char buf[128]; /* Temporary buffer used to store formated time */
 
-  /* Device variables */
-  struct mem_allocator* allocator = NULL;
-  size_t nthreads = 0;
-
   /* Stardis variables */
   const struct sdis_interface* interf = NULL;
   const struct sdis_medium* fmd = NULL;
@@ -467,9 +463,6 @@ XD(solve_probe_boundary_flux)
   is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
 #endif
 
-  nthreads = scn->dev->nthreads;
-  allocator = scn->dev->allocator;
-
   /* Create the per thread RNGs */
   res = create_per_thread_rng
     (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
@@ -481,7 +474,7 @@ XD(solve_probe_boundary_flux)
 
   /* Create the per thread accumulators */
   #define ALLOC_ACCUMS(Dst) {                                                  \
-    Dst = MEM_CALLOC(allocator, nthreads, sizeof(*Dst));                       \
+    Dst = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*Dst));   \
     if(!Dst) { res = RES_MEM_ERR; goto error; }                                \
   } (void)0
   ALLOC_ACCUMS(per_thread_acc_tp);
