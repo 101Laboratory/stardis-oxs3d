@@ -222,7 +222,6 @@ if(NOT NO_TEST)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
-  new_test(test_sdis_solve_boundary_flux)
   new_test(test_sdis_solve_medium)
   new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_transcient)
@@ -232,6 +231,7 @@ if(NOT NO_TEST)
 
   build_test(test_sdis_solve_probe2)
   build_test(test_sdis_solve_boundary)
+  build_test(test_sdis_solve_boundary_flux)
 
   # Additionnal tests
   build_test(test_sdis_volumic_power2)
@@ -254,6 +254,7 @@ if(NOT NO_TEST)
   if(NOT ENABLE_MPI)
     add_test(test_sdis_solve_probe2 test_sdis_solve_probe2)
     add_test(test_sdis_solve_boundary test_sdis_solve_boundary)
+    add_test(test_sdis_solve_boundary_flux test_sdis_solve_boundary_flux)
   else()
     set_target_properties(test_sdis PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
@@ -263,11 +264,15 @@ if(NOT NO_TEST)
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
     set_target_properties(test_sdis_solve_boundary PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+    set_target_properties(test_sdis_solve_boundary_flux PROPERTIES
+      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
 
     add_test(test_sdis_solve_probe2_mpi_on mpirun -n 2 test_sdis_solve_probe2 mpi)
-    add_test(test_sdis_solve_probe2_mpi_off test_sdis_solve_probe2)
+    add_test(test_sdis_solve_probe2_no_mpi test_sdis_solve_probe2)
     add_test(test_sdis_solve_boundary_mpi_on mpirun -n 2 test_sdis_solve_boundary mpi)
-    add_test(test_sdis_solve_boundary_mpi_off test_sdis_solve_boundary)
+    add_test(test_sdis_solve_boundary_no_mpi test_sdis_solve_boundary)
+    add_test(test_sdis_solve_boundary_flux_mpi_on mpirun -n 2 test_sdis_solve_boundary_flux mpi)
+    add_test(test_sdis_solve_boundary_flux_no_mpi test_sdis_solve_boundary_flux)
 
   endif()
 

@@ -254,9 +254,10 @@ main(int argc, char** argv)
   double pos[3];
   double analyticT, analyticCF, analyticRF, analyticTF;
   size_t prims[2];
+  int is_master_process;
   (void)argc, (void)argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Create the fluid medium */
   OK(sdis_data_create
@@ -403,25 +404,31 @@ main(int argc, char** argv)
   probe_args.time_range[0] = INF;
   OK(SOLVE(box_scn, &probe_args, &estimator));
 
-  OK(sdis_estimator_get_type(estimator, &type));
-  CHK(type == SDIS_ESTIMATOR_FLUX);
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    OK(sdis_estimator_get_type(estimator, &type));
+    CHK(type == SDIS_ESTIMATOR_FLUX);
 
-  OK(sdis_scene_get_boundary_position
-    (box_scn, probe_args.iprim, probe_args.uv, pos));
-  printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_scene_get_boundary_position
+      (box_scn, probe_args.iprim, probe_args.uv, pos));
+    printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   probe_args.uv[0] = 0.5;
   probe_args.iprim = 4;
   BA(SOLVE(square_scn, &probe_args, &estimator));
   probe_args.iprim = 3;
   OK(SOLVE(square_scn, &probe_args, &estimator));
-  OK(sdis_scene_get_boundary_position
-    (square_scn, probe_args.iprim, probe_args.uv, pos));
-  printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    OK(sdis_scene_get_boundary_position
+      (square_scn, probe_args.iprim, probe_args.uv, pos));
+    printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   #undef F
   #undef SOLVE
@@ -487,7 +494,7 @@ main(int argc, char** argv)
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
-  OK(sdis_device_ref_put(dev));
+  free_default_device(dev);
 
   CHK(mem_allocated_size() == 0);
   return 0;
