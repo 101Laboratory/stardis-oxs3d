@@ -231,9 +231,10 @@ main(int argc, char** argv)
   size_t nfails;
   size_t ntris;
   size_t nverts;
+  int is_master_process;
   (void)argc, (void)argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   fluid_shader.temperature = fluid_get_temperature;
 
@@ -379,16 +380,20 @@ main(int argc, char** argv)
   solve_args.time_range[0] = solve_args.time_range[1] = INF;
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
 
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
-  printf("Shape0 temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu/%lu\n\n", (unsigned long)nfails, N);
-  CHK(eq_eps(T.E, Tf0, T.SE));
-  CHK(nreals + nfails == N);
-  OK(sdis_estimator_ref_put(estimator));
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+    printf("Shape0 temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu/%lu\n\n", (unsigned long)nfails, N);
+    CHK(eq_eps(T.E, Tf0, T.SE));
+    CHK(nreals + nfails == N);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   solve_args.medium = solid1;
 
@@ -399,21 +404,25 @@ main(int argc, char** argv)
   BA(sdis_solve_medium(scn, &solve_args, &estimator));
   fluid_param->temperature = Tf1;
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    OK(sdis_estimator_ref_put(estimator));
+  }
   solve_args.nrealisations = N;
   solve_args.register_paths = SDIS_HEAT_PATH_NONE;
 
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
-  printf("Shape1 temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu/%lu\n\n", (unsigned long)nfails, N);
-  CHK(eq_eps(T.E, Tf1, T.SE));
-  CHK(nreals + nfails == N);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+    printf("Shape1 temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu/%lu\n\n", (unsigned long)nfails, N);
+    CHK(eq_eps(T.E, Tf1, T.SE));
+    CHK(nreals + nfails == N);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Create a new scene with the same medium in the 2 super shapes */
   OK(sdis_scene_ref_put(scn));
@@ -429,15 +438,17 @@ main(int argc, char** argv)
   solve_args.medium = solid0;
   solve_args.nrealisations = Np;
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  ref = Tf0 * v0/v + Tf1 * v1/v;
-  printf("Shape0 + Shape1 temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, Np);
-  CHK(eq_eps(T.E, ref, T.SE*3));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    ref = Tf0 * v0/v + Tf1 * v1/v;
+    printf("Shape0 + Shape1 temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, Np);
+    CHK(eq_eps(T.E, ref, T.SE*3));
+  }
 
   /* Solve green */
   BA(sdis_solve_medium_green_function(NULL, &solve_args, &green));
@@ -456,20 +467,23 @@ main(int argc, char** argv)
   solve_args.picard_order = 1;
   OK(sdis_solve_medium_green_function(scn, &solve_args, &green));
 
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_green_function(green);
-  check_estimator_eq(estimator, estimator2);
-  check_green_serialization(green, scn);
+  if(!is_master_process) {
+    CHK(green == NULL);
+  } else {
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn);
 
-  OK(sdis_green_function_ref_put(green));
+    OK(sdis_green_function_ref_put(green));
 
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+  }
 
   /* Release */
   OK(s3dut_mesh_ref_put(msh0));
   OK(s3dut_mesh_ref_put(msh1));
-  OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(fluid0));
   OK(sdis_medium_ref_put(fluid1));
   OK(sdis_medium_ref_put(solid0));
@@ -478,6 +492,7 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(solid0_fluid1));
   OK(sdis_interface_ref_put(solid1_fluid1));
   OK(sdis_scene_ref_put(scn));
+  free_default_device(dev);
 
   CHK(mem_allocated_size() == 0);
   return 0;
