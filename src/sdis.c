@@ -542,30 +542,6 @@ error:
 }
 #endif /* SDIS_ENABLE_MPI */
 
-res_T
-setup_estimator
-  (struct sdis_estimator* estimator,
-   const struct ssp_rng_proxy* proxy,
-   const struct accum* acc_temp,
-   const struct accum* acc_time,
-   const size_t nrealisations)
-{
-  res_T res = RES_OK;
-  ASSERT(estimator && proxy && acc_temp && acc_time);
-
-  estimator_setup_realisations_count(estimator, nrealisations, acc_temp->count);
-  estimator_setup_temperature(estimator, acc_temp->sum, acc_temp->sum2);
-  estimator_setup_realisation_time(estimator, acc_time->sum, acc_time->sum2);
-
-  res = estimator_save_rng_state(estimator, proxy);
-  if(res != RES_OK) goto error;
-
-exit:
-  return res;
-error:
-  goto exit;
-}
-
 #ifndef SDIS_ENABLE_MPI
 res_T
 gather_green_functions

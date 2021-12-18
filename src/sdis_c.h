@@ -96,14 +96,6 @@ gather_accumulators
    const struct accum* per_thread_acc,
    struct accum* acc);
 
-extern LOCAL_SYM res_T
-setup_estimator
-  (struct sdis_estimator* estimator,
-   const struct ssp_rng_proxy* proxy,
-   const struct accum* acc_temp,
-   const struct accum* acc_time,
-   const size_t overall_realisations_count);
-
 /* Gather the green functions. With MPI, non master processes store in green
  * the gathering of their per thread green functions and sent the result to the
  * master process. The master process gathers both per thread green functions

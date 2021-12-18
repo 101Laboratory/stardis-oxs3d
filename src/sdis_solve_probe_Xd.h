@@ -295,16 +295,18 @@ XD(solve_probe)
 
   /* Setup the estimated values */
   if(out_estimator) {
-    struct accum acc_temp, acc_time;
+    struct accum acc_temp;
+    struct accum acc_time;
 
     time_current(&time0);
 
-    res = gather_accumulators
-      (scn->dev, MPI_SDIS_MSG_ACCUM_TEMP, per_thread_acc_temp, &acc_temp);
-    if(res != RES_OK) goto error;
-    res = gather_accumulators
-      (scn->dev, MPI_SDIS_MSG_ACCUM_TIME, per_thread_acc_time, &acc_time);
-    if(res != RES_OK) goto error;
+    #define GATHER_ACCUMS(Msg, Acc) {                                          \
+      res = gather_accumulators(scn->dev, Msg, per_thread_##Acc, &Acc);        \
+      if(res != RES_OK) goto error;                                            \
+    } (void)0
+    GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TEMP, acc_temp);
+    GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TEMP, acc_time);
+    #undef GATHER_ACCUMS
 
     time_sub(&time0, time_current(&time1), &time0);
     time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
@@ -312,8 +314,11 @@ XD(solve_probe)
 
     /* Return an estimator only on master process */
     if(is_master_process) {
-      res = setup_estimator
-        (estimator, rng_proxy, &acc_temp, &acc_time, args->nrealisations);
+      ASSERT(acc_temp.count == acc_time.count);
+      estimator_setup_realisations_count(estimator, args->nrealisations, acc_temp.count);
+      estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
+      estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+      res = estimator_save_rng_state(estimator, rng_proxy);
       if(res != RES_OK) goto error;
     }
   }
