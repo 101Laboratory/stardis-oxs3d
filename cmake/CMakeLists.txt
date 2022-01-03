@@ -199,9 +199,7 @@ if(NOT NO_TEST)
     register_test(${_name} ${_name})
   endfunction()
 
-  new_test(test_sdis)
   new_test(test_sdis_camera)
-  new_test(test_sdis_compute_power)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
   new_test(test_sdis_contact_resistance)
@@ -227,6 +225,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4)
 
+  build_test(test_sdis)
+  build_test(test_sdis_compute_power)
   build_test(test_sdis_solve_medium)
   build_test(test_sdis_solve_medium_2d)
   build_test(test_sdis_solve_boundary)
@@ -251,40 +251,31 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
+  set(_mpi_tests
+    test_sdis
+    test_sdis_compute_power
+    test_sdis_solve_medium
+    test_sdis_solve_medium_2d
+    test_sdis_solve_boundary
+    test_sdis_solve_boundary_flux
+    test_sdis_solve_probe2)
+
   if(NOT ENABLE_MPI)
-    add_test(test_sdis_solve_medium test_sdis_solve_medium)
-    add_test(test_sdis_solve_medium_2d test_sdis_solve_medium_2d)
-    add_test(test_sdis_solve_probe2 test_sdis_solve_probe2)
-    add_test(test_sdis_solve_boundary test_sdis_solve_boundary)
-    add_test(test_sdis_solve_boundary_flux test_sdis_solve_boundary_flux)
+    foreach(_test ${_mpi_tests})
+      add_test(${_test} ${_test})
+    endforeach()
   else()
     set_target_properties(test_sdis PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
     set_target_properties(test_sdis_device PROPERTIES
       COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
-    set_target_properties(test_sdis_solve_medium PROPERTIES
-      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
-    set_target_properties(test_sdis_solve_medium_2d PROPERTIES
-      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
-    set_target_properties(test_sdis_solve_probe2 PROPERTIES
-      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
-    set_target_properties(test_sdis_solve_boundary PROPERTIES
-      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
-    set_target_properties(test_sdis_solve_boundary_flux PROPERTIES
-      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
 
-    add_test(test_sdis_solve_medium_mpi_on mpirun -n 2 test_sdis_solve_medium mpi)
-    add_test(test_sdis_solve_medium_2d_mpi_on mpirun -n 2 test_sdis_solve_medium_2d mpi)
-    add_test(test_sdis_solve_probe2_mpi_on mpirun -n 2 test_sdis_solve_probe2 mpi)
-    add_test(test_sdis_solve_boundary_mpi_on mpirun -n 2 test_sdis_solve_boundary mpi)
-    add_test(test_sdis_solve_boundary_flux_mpi_on mpirun -n 2 test_sdis_solve_boundary_flux mpi)
-
-    add_test(test_sdis_solve_medium_no_mpi test_sdis_solve_medium)
-    add_test(test_sdis_solve_medium_2d_no_mpi test_sdis_solve_medium_2d)
-    add_test(test_sdis_solve_probe2_no_mpi test_sdis_solve_probe2)
-    add_test(test_sdis_solve_boundary_no_mpi test_sdis_solve_boundary)
-    add_test(test_sdis_solve_boundary_flux_no_mpi test_sdis_solve_boundary_flux)
-
+    foreach(_test ${_mpi_tests})
+      set_target_properties(${_test} PROPERTIES
+        COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+      add_test(${_test}_mpi_on mpirun -n 2 ${_test} mpi)
+      add_test(${_test}_no_mpi ${_test})
+    endforeach()
   endif()
 
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)

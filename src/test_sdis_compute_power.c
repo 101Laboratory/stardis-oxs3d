@@ -186,9 +186,10 @@ main(int argc, char** argv)
   size_t nverts = 0;
   size_t ntris = 0;
   double ref = 0;
+  int is_master_process;
   (void)argc, (void) argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Setup the interface shader */
   interf_shader.convection_coef = interface_get_convection_coef;
@@ -256,38 +257,48 @@ main(int argc, char** argv)
   args.time_range[0] = args.time_range[1] = INF;
   OK(sdis_compute_power(scn, &args, &estimator));
 
-  BA(sdis_estimator_get_power(NULL, &mpow));
-  BA(sdis_estimator_get_power(estimator, NULL));
-  OK(sdis_estimator_get_power(estimator, &mpow));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    BA(sdis_estimator_get_power(NULL, &mpow));
+    BA(sdis_estimator_get_power(estimator, NULL));
+    OK(sdis_estimator_get_power(estimator, &mpow));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-  /* Check results for solid 0 */
-  ref = 4.0/3.0 * PI * POWER0;
-  printf("Mean power of the solid0 = %g ~ %g +/- %g\n",
-    ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
-  OK(sdis_estimator_ref_put(estimator));
+    /* Check results for solid 0 */
+    ref = 4.0/3.0 * PI * POWER0;
+    printf("Mean power of the solid0 = %g ~ %g +/- %g\n",
+      ref, mpow.E, mpow.SE);
+    check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
-  /* Check results for solid 1 */
   args.medium = solid1;
   OK(sdis_compute_power(scn, &args, &estimator));
-  OK(sdis_estimator_get_power(estimator, &mpow));
-  ref = PI * 10 * POWER1;
-  printf("Mean power of the solid1 = %g ~ %g +/- %g\n",
-    ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
-  OK(sdis_estimator_ref_put(estimator));
 
-  /* Check for a not null time range */
+  if(is_master_process) {
+    /* Check results for solid 1 */
+    OK(sdis_estimator_get_power(estimator, &mpow));
+    ref = PI * 10 * POWER1;
+    printf("Mean power of the solid1 = %g ~ %g +/- %g\n",
+      ref, mpow.E, mpow.SE);
+    check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
+    OK(sdis_estimator_ref_put(estimator));
+  }
+
   args.time_range[0] = 0;
   args.time_range[1] = 10;
   OK(sdis_compute_power(scn, &args, &estimator));
-  OK(sdis_estimator_get_power(estimator, &mpow));
-  ref = PI * 10 * POWER1 / 10;
-  printf("Mean power of the solid1 in [0, 10] s = %g ~ %g +/- %g\n",
-    ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
-  OK(sdis_estimator_ref_put(estimator));
+
+  if(is_master_process) {
+    /* Check for a not null time range */
+    OK(sdis_estimator_get_power(estimator, &mpow));
+    ref = PI * 10 * POWER1 / 10;
+    printf("Mean power of the solid1 in [0, 10] s = %g ~ %g +/- %g\n",
+      ref, mpow.E, mpow.SE);
+    check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Reset the scene with only one solid medium */
   OK(sdis_scene_ref_put(scn));
@@ -303,12 +314,14 @@ main(int argc, char** argv)
   /* Check non constant volumic power */
   args.medium = solid0;
   OK(sdis_compute_power(scn, &args, &estimator));
-  OK(sdis_estimator_get_power(estimator, &mpow));
-  ref = 4.0/3.0*PI*POWER0 + PI*10*POWER1;
-  printf("Mean power of the sphere+cylinder = %g ~ %g +/- %g\n",
-    ref, mpow.E, mpow.SE);
-  check_intersection(ref, 1e-3*ref, mpow.E, 3*mpow.SE);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    OK(sdis_estimator_get_power(estimator, &mpow));
+    ref = 4.0/3.0*PI*POWER0 + PI*10*POWER1;
+    printf("Mean power of the sphere+cylinder = %g ~ %g +/- %g\n",
+      ref, mpow.E, mpow.SE);
+    check_intersection(ref, 1e-2*ref, mpow.E, 3*mpow.SE);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
 #if 0
   {
@@ -326,7 +339,6 @@ main(int argc, char** argv)
 #endif
 
   /* Clean up memory */
-  OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_medium_ref_put(solid0));
   OK(sdis_medium_ref_put(solid1));
@@ -335,6 +347,8 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   OK(s3dut_mesh_ref_put(sphere));
   OK(s3dut_mesh_ref_put(cylinder));
+
+  free_default_device(dev);
 
   CHK(mem_allocated_size() == 0);
   return 0;

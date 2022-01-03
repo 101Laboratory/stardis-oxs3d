@@ -42,6 +42,18 @@
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+static INLINE int
+check_accum_message(const enum mpi_sdis_message msg)
+{
+  return msg == MPI_SDIS_MSG_ACCUM_TEMP
+      || msg == MPI_SDIS_MSG_ACCUM_TIME
+      || msg == MPI_SDIS_MSG_ACCUM_FLUX_CONVECTIVE
+      || msg == MPI_SDIS_MSG_ACCUM_FLUX_IMPOSED
+      || msg == MPI_SDIS_MSG_ACCUM_FLUX_RADIATIVE
+      || msg == MPI_SDIS_MSG_ACCUM_FLUX_TOTAL
+      || msg == MPI_SDIS_MSG_ACCUM_MEAN_POWER;
+}
+
 static res_T
 gather_green_functions_no_mpi
   (struct sdis_scene* scn,
@@ -488,7 +500,7 @@ gather_accumulators
   struct accum* per_proc_acc = NULL;
   size_t nprocs = 0;
   res_T res = RES_OK;
-  ASSERT(dev && per_thread_acc && acc);
+  ASSERT(dev && per_thread_acc && acc && check_accum_message(msg));
 
   if(!dev->use_mpi) {
     /* Gather thread accumulators */

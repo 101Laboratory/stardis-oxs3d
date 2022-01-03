@@ -49,7 +49,7 @@ check_boundary_realisation_args(const struct boundary_realisation_args* args)
       && args->rng
       && args->uv[0] >= 0
       && args->uv[0] <= 1
-      && args->uv[1] >= 0 
+      && args->uv[1] >= 0
       && args->uv[1] <= 1
       && args->time >= 0
       && args->picard_order > 0
@@ -64,7 +64,7 @@ check_boundary_flux_realisation_args
       && args->rng
       && args->uv[0] >= 0
       && args->uv[0] <= 1
-      && args->uv[1] >= 0 
+      && args->uv[1] >= 0
       && args->uv[1] <= 1
       && args->time >= 0
       && args->picard_order > 0

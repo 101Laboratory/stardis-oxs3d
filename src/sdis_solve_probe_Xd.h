@@ -168,7 +168,7 @@ XD(solve_probe)
 
   /* Here we go! Launch the Monte Carlo estimation */
   nrealisations = compute_process_realisations_count(scn->dev, args->nrealisations);
-  register_paths = out_estimator && is_master_process 
+  register_paths = out_estimator && is_master_process
     ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
