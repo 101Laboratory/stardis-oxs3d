@@ -26,6 +26,7 @@ enum mpi_sdis_message {
   MPI_SDIS_MSG_ACCUM_FLUX_IMPOSED, /* Imposed flux accumulator */
   MPI_SDIS_MSG_ACCUM_FLUX_RADIATIVE, /* Radiative flux accumulator */
   MPI_SDIS_MSG_ACCUM_FLUX_TOTAL, /* Total flux accumulator */
+  MPI_SDIS_MSG_ACCUM_MEAN_POWER, /* Mean power accumulator */
   MPI_SDIS_MSG_GREEN_FUNCTION, /* Serialized green function */
   MPI_SDIS_MSG_PROGRESS, /* Progress status */
   MPI_SDIS_MSG_RES_T, /* Result status */
