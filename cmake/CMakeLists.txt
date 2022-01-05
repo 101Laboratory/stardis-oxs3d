@@ -217,7 +217,6 @@ if(NOT NO_TEST)
   new_test(test_sdis_picard)
   new_test(test_sdis_scene)
   new_test(test_sdis_solid_random_walk_robustness)
-  new_test(test_sdis_solve_camera)
   new_test(test_sdis_solve_probe)
   new_test(test_sdis_solve_probe3)
   new_test(test_sdis_solve_probe_2d)
@@ -230,6 +229,7 @@ if(NOT NO_TEST)
 
   build_test(test_sdis)
   build_test(test_sdis_compute_power)
+  build_test(test_sdis_solve_camera)
   build_test(test_sdis_solve_medium)
   build_test(test_sdis_solve_medium_2d)
   build_test(test_sdis_solve_boundary)
@@ -257,6 +257,7 @@ if(NOT NO_TEST)
   set(_mpi_tests
     test_sdis
     test_sdis_compute_power
+    test_sdis_solve_camera
     test_sdis_solve_medium
     test_sdis_solve_medium_2d
     test_sdis_solve_boundary

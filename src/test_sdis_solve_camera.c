@@ -569,9 +569,10 @@ main(int argc, char** argv)
   double pos[3];
   double tgt[3];
   double up[3];
+  int is_master_process;
   (void)argc, (void)argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Create the fluid0 */
   fluid_param.temperature = 350;
@@ -658,8 +659,8 @@ main(int argc, char** argv)
   solve_args.cam = cam;
   solve_args.time_range[0] = INF;
   solve_args.time_range[0] = INF;
-  solve_args.image_resolution[0] = IMG_WIDTH;
-  solve_args.image_resolution[1] = IMG_HEIGHT;
+  solve_args.image_definition[0] = IMG_WIDTH;
+  solve_args.image_definition[1] = IMG_HEIGHT;
   solve_args.spp = SPP;
 
   BA(sdis_solve_camera(NULL, &solve_args, &buf));
@@ -685,42 +686,46 @@ main(int argc, char** argv)
   /* Launch the simulation */
   OK(sdis_solve_camera(scn, &solve_args, &buf));
 
-  BA(sdis_estimator_buffer_get_realisation_count(NULL, &nreals));
-  BA(sdis_estimator_buffer_get_realisation_count(buf, NULL));
-  OK(sdis_estimator_buffer_get_realisation_count(buf, &nreals));
+  if(!is_master_process) {
+    CHK(buf == NULL);
+  } else {
+    BA(sdis_estimator_buffer_get_realisation_count(NULL, &nreals));
+    BA(sdis_estimator_buffer_get_realisation_count(buf, NULL));
+    OK(sdis_estimator_buffer_get_realisation_count(buf, &nreals));
 
-  BA(sdis_estimator_buffer_get_failure_count(NULL, &nfails));
-  BA(sdis_estimator_buffer_get_failure_count(buf, NULL));
-  OK(sdis_estimator_buffer_get_failure_count(buf, &nfails));
+    BA(sdis_estimator_buffer_get_failure_count(NULL, &nfails));
+    BA(sdis_estimator_buffer_get_failure_count(buf, NULL));
+    OK(sdis_estimator_buffer_get_failure_count(buf, &nfails));
 
-  BA(sdis_estimator_buffer_get_temperature(NULL, &T));
-  BA(sdis_estimator_buffer_get_temperature(buf, NULL));
-  OK(sdis_estimator_buffer_get_temperature(buf, &T));
+    BA(sdis_estimator_buffer_get_temperature(NULL, &T));
+    BA(sdis_estimator_buffer_get_temperature(buf, NULL));
+    OK(sdis_estimator_buffer_get_temperature(buf, &T));
 
-  BA(sdis_estimator_buffer_get_realisation_time(NULL, &time));
-  BA(sdis_estimator_buffer_get_realisation_time(buf, NULL));
-  OK(sdis_estimator_buffer_get_realisation_time(buf, &time));
+    BA(sdis_estimator_buffer_get_realisation_time(NULL, &time));
+    BA(sdis_estimator_buffer_get_realisation_time(buf, NULL));
+    OK(sdis_estimator_buffer_get_realisation_time(buf, &time));
 
-  BA(sdis_estimator_buffer_get_rng_state(NULL, &rng_state));
-  BA(sdis_estimator_buffer_get_rng_state(buf, NULL));
-  OK(sdis_estimator_buffer_get_rng_state(buf, &rng_state));
+    BA(sdis_estimator_buffer_get_rng_state(NULL, &rng_state));
+    BA(sdis_estimator_buffer_get_rng_state(buf, NULL));
+    OK(sdis_estimator_buffer_get_rng_state(buf, &rng_state));
 
-  CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
+    CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
 
-  fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
-  fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
-  fprintf(stderr, "#failures = %lu/%lu\n",
-    (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
+    fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
+    fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
+    fprintf(stderr, "#failures = %lu/%lu\n",
+      (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
 
-  BA(sdis_estimator_buffer_get_definition(NULL, definition));
-  BA(sdis_estimator_buffer_get_definition(buf, NULL));
-  OK(sdis_estimator_buffer_get_definition(buf, definition));
-  CHK(definition[0] == IMG_WIDTH);
-  CHK(definition[1] == IMG_HEIGHT);
+    BA(sdis_estimator_buffer_get_definition(NULL, definition));
+    BA(sdis_estimator_buffer_get_definition(buf, NULL));
+    OK(sdis_estimator_buffer_get_definition(buf, definition));
+    CHK(definition[0] == IMG_WIDTH);
+    CHK(definition[1] == IMG_HEIGHT);
 
-  /* Write the image */
-  dump_image(buf);
-  OK(sdis_estimator_buffer_ref_put(buf));
+    /* Write the image */
+    dump_image(buf);
+    OK(sdis_estimator_buffer_ref_put(buf));
+  }
 
   pfluid_param = sdis_data_get(sdis_medium_get_data(fluid1));
   pfluid_param->temperature = UNKOWN_TEMPERATURE;
@@ -738,7 +743,7 @@ main(int argc, char** argv)
   OK(sdis_camera_ref_put(cam));
   OK(sdis_interface_ref_put(interf0));
   OK(sdis_interface_ref_put(interf1));
-  OK(sdis_device_ref_put(dev));
+  free_default_device(dev);
   geometry_release(&geom);
 
   CHK(mem_allocated_size() == 0);
