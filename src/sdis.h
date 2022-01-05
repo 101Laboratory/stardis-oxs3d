@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -129,6 +129,31 @@ struct sdis_mc {
 };
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
+
+/* Input arguments of the sdis_device_create function */
+struct sdis_device_create_args {
+  struct logger* logger; /* NULL <=> default logger */
+  struct mem_allocator* allocator; /* NULL <=> default allocator */
+  unsigned nthreads_hint; /* Hint on the number of threads to use */
+  int verbosity; /* Verbosity level */
+
+  /* Use the Message Passing Interface to distribute work between processes.
+   * This option is taken into account only if Stardis-Solver is compiled with
+   * MPI support */
+  int use_mpi;
+};
+#define SDIS_DEVICE_CREATE_ARGS_DEFAULT__ {                                    \
+  NULL, NULL, SDIS_NTHREADS_DEFAULT, 1, 0                                      \
+}
+static const struct sdis_device_create_args SDIS_DEVICE_CREATE_ARGS_DEFAULT =
+  SDIS_DEVICE_CREATE_ARGS_DEFAULT__;
+
+/* Informations on the Stardis-Solver library */
+struct sdis_info {
+  int mpi_enabled; /* Define if Stardis-Solver was built with MPI support */
+};
+#define SDIS_INFO_NULL__ {0}
+static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
 
 /*******************************************************************************
  * Data type used to describe physical properties
@@ -570,7 +595,7 @@ struct sdis_solve_camera_args {
    * higher orders allow the estimation of the T4 radiative transfer. */
   size_t picard_order;
 
-  size_t image_resolution[2]; /* Image resolution */
+  size_t image_definition[2]; /* Image definition */
   size_t spp; /* #samples per pixel */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
 };
@@ -608,10 +633,7 @@ BEGIN_DECLS
  ******************************************************************************/
 SDIS_API res_T
 sdis_device_create
-  (struct logger* logger, /* May be NULL <=> use default logger */
-   struct mem_allocator* allocator, /* May be NULL <=> use default allocator */
-   const unsigned nthreads_hint, /* Hint on the number of threads to use */
-   const int verbose, /* Verbosity level */
+  (const struct sdis_device_create_args* args,
    struct sdis_device** dev);
 
 SDIS_API res_T
@@ -621,6 +643,11 @@ sdis_device_ref_get
 SDIS_API res_T
 sdis_device_ref_put
   (struct sdis_device* dev);
+
+SDIS_API res_T
+sdis_device_get_mpi_rank
+  (struct sdis_device* dev,
+   int* rank);
 
 /*******************************************************************************
  * A data stores in the Stardis memory space a set of user defined data. It can
@@ -1316,6 +1343,13 @@ sdis_solve_medium_green_function
   (struct sdis_scene* scn,
    const struct sdis_solve_medium_args* args,
    struct sdis_green_function** green);
+
+/*******************************************************************************
+ * Retrieve infos from the Stardis-Solver library
+ ******************************************************************************/
+SDIS_API res_T
+sdis_get_info
+  (struct sdis_info* info);
 
 END_DECLS
 

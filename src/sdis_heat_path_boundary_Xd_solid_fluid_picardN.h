@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -214,8 +214,8 @@ XD(solid_fluid_boundary_picardN_path)
     double T0, T1, T2, T3, T4, T5; /* Computed temperatures */
 
     /* Indices of the registered vertex of the sampled radiative path */
-    size_t ihvtx_radi_begin;
-    size_t ihvtx_radi_end;
+    size_t ihvtx_radi_begin = 0;
+    size_t ihvtx_radi_end = 0;
 
     r = ssp_rng_canonical(rng);
 

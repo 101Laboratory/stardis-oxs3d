@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #include <star/ssp.h>
 
 struct sdis_estimator_buffer {
-  struct sdis_estimator** estimators; /* Row major per pixe lestimators */
+  struct sdis_estimator** estimators; /* Row major per pixel estimators */
   size_t width;
   size_t height;
 

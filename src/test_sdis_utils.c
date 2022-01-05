@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -479,5 +479,4 @@ check_green_serialization
   OK(sdis_estimator_ref_put(e2));
   OK(sdis_green_function_ref_put(green2));
 }
-
 

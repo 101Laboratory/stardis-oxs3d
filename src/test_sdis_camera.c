@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,15 +23,12 @@ main(int argc, char** argv)
 {
   struct sdis_device* dev;
   struct sdis_camera* cam;
-  struct mem_allocator allocator;
   double pos[3] = {0};
   double tgt[3] = {0};
   double up[3] = {0};
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   BA(sdis_camera_create(NULL, NULL));
   BA(sdis_camera_create(dev, NULL));
@@ -85,8 +82,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   OK(sdis_camera_ref_put(cam));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,18 @@
 #include <rsys/free_list.h>
 #include <rsys/logger.h>
 #include <rsys/ref_count.h>
+#include <rsys/str.h>
+
+#ifdef SDIS_ENABLE_MPI
+  #ifndef NDEBUG
+    #define MPI(Func) ASSERT(MPI_##Func == MPI_SUCCESS)
+  #else
+    #define MPI(Func) MPI_##Func
+  #endif
+#endif
 
 /* Forward declarations */
+struct mutex;
 struct ssp_rng;
 struct ssp_rng_proxy;
 
@@ -37,6 +47,15 @@ struct sdis_device {
   struct mem_allocator* allocator;
   unsigned nthreads;
   int verbose;
+
+#ifdef SDIS_ENABLE_MPI
+  int mpi_rank; /* Rank of the process in the MPI group */
+  int mpi_nprocs; /* Overall #processes in the MPI group */
+  struct str mpi_err_str; /* String used to store the MPI error string */
+
+  struct mutex* mpi_mutex; /* Protect MPI calls from concurrent threads */
+  int use_mpi;
+#endif
 
   struct flist_name interfaces_names;
   struct flist_name media_names;

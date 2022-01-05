@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 #include "test_sdis_utils.h"
 
 #include <rsys/math.h>
+
+#include <string.h>
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
@@ -145,7 +147,6 @@ interface_get_temperature
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
@@ -171,10 +172,10 @@ main(int argc, char** argv)
   const size_t N = 10000;
   size_t nreals;
   size_t nfails;
+  int is_master_process;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
@@ -253,39 +254,46 @@ main(int argc, char** argv)
   solve_args.time_range[1] = INF;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-  /* Print the estimation results */
-  ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
-  printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(solve_args.position), ref, T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+    /* Print the estimation results */
+    ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
+    printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
+      SPLIT3(solve_args.position), ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
-  /* Check the results */
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, 3*T.SE));
+    /* Check the results */
+    CHK(nfails + nreals == N);
+    CHK(nfails < N/1000);
+    CHK(eq_eps(T.E, ref, 3*T.SE));
+  }
 
   /* Check green */
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_green_function(green);
-  check_estimator_eq(estimator, estimator2);
-  check_green_serialization(green, scn);
+  if(!is_master_process) {
+    CHK(green == NULL);
+  } else {
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn);
+  }
 
   /* Release data */
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
-  OK(sdis_green_function_ref_put(green));
+  if(estimator) OK(sdis_estimator_ref_put(estimator));
+  if(estimator2) OK(sdis_estimator_ref_put(estimator2));
+  if(green) OK(sdis_green_function_ref_put(green));
   OK(sdis_scene_ref_put(scn));
-  OK(sdis_device_ref_put(dev));
+  free_default_device(dev);
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
+
   return 0;
 }

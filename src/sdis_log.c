@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,9 +90,15 @@ log_info(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
-  va_start(vargs_list, msg);
-  log_msg(dev, LOG_OUTPUT, msg, vargs_list);
-  va_end(vargs_list);
+#ifdef SDIS_ENABLE_MPI
+  /* Log standard messages only on master process */
+  if(dev->mpi_rank == 0)
+#endif
+  {
+    va_start(vargs_list, msg);
+    log_msg(dev, LOG_OUTPUT, msg, vargs_list);
+    va_end(vargs_list);
+  }
 }
 
 void
@@ -101,9 +107,15 @@ log_err(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
-  va_start(vargs_list, msg);
-  log_msg(dev, LOG_ERROR, msg, vargs_list);
-  va_end(vargs_list);
+#ifdef SDIS_ENABLE_MPI
+  /* Log error messages only on master process */
+  if(dev->mpi_rank == 0)
+#endif
+  {
+    va_start(vargs_list, msg);
+    log_msg(dev, LOG_ERROR, msg, vargs_list);
+    va_end(vargs_list);
+  }
 }
 
 void
@@ -112,8 +124,14 @@ log_warn(const struct sdis_device* dev, const char* msg, ...)
   va_list vargs_list;
   ASSERT(dev && msg);
 
-  va_start(vargs_list, msg);
-  log_msg(dev, LOG_WARNING, msg, vargs_list);
-  va_end(vargs_list);
+#ifdef SDIS_ENABLE_MPI
+  /* Log warnings only on master process */
+  if(dev->mpi_rank == 0)
+#endif
+  {
+    va_start(vargs_list, msg);
+    log_msg(dev, LOG_WARNING, msg, vargs_list);
+    va_end(vargs_list);
+  }
 }
 

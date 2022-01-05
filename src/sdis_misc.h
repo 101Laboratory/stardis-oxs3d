@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
 
 #ifndef SDIS_MISC_H
 #define SDIS_MISC_H
+
+#include "sdis_heat_path.h"
 
 #include <rsys/float2.h>
 #include <rsys/float3.h>
@@ -162,5 +164,20 @@ time_rewind_3d
    const struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
    struct temperature_3d* T);
+
+/* Check the validity of the parametric coordinate onto a 2D primitive. If it
+ * is invalid, the function prints an error message and return RES_BAD_ARG. */
+extern LOCAL_SYM res_T
+check_primitive_uv_2d
+  (struct sdis_device* dev,
+   const double u[]);
+
+/* Check the validity of the parametric coordinates onto a 3D primitive. If
+ * they are invalid, the function prints an error message and return
+ * RES_BAD_ARG.  */
+extern LOCAL_SYM res_T
+check_primitive_uv_3d
+  (struct sdis_device* dev,
+   const double uv[]);
 
 #endif /* SDIS_MISC_H */

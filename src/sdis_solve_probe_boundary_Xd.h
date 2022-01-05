@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,9 +13,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_c.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_interface_c.h"
 #include "sdis_log.h"
+#include "sdis_green.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_realisation.h"
@@ -66,6 +69,34 @@ check_solve_probe_boundary_args
   return RES_OK;
 }
 
+static INLINE res_T
+check_solve_probe_boundary_flux_args
+  (const struct sdis_solve_probe_boundary_flux_args* args)
+{
+  if(!args) return RES_BAD_ARG;
+
+  /* Check #realisations */
+  if(!args->nrealisations || args->nrealisations > INT64_MAX) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check time range */
+  if(args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]) {
+    return RES_BAD_ARG;
+  }
+  if(args->time_range[1] > DBL_MAX
+  && args->time_range[0] != args->time_range[1]) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check picard order */
+  if(args->picard_order < 1) {
+    return RES_BAD_ARG;
+  }
+
+  return RES_OK;
+}
+
 #endif /* SDIS_SOLVE_PROBE_BOUNDARY_XD_H */
 
 /*******************************************************************************
@@ -78,33 +109,44 @@ XD(solve_probe_boundary)
    struct sdis_green_function** out_green,
    struct sdis_estimator** out_estimator)
 {
+  /* Time registration */
+  struct time time0, time1;
+  char buf[128]; /* Temporary buffer used to store formated time */
+
+  /* Device variables */
+  struct mem_allocator* allocator = NULL;
+  size_t nthreads = 0;
+
+  /* Stardis variables */
   struct sdis_estimator* estimator = NULL;
   struct sdis_green_function* green = NULL;
-  struct sdis_green_function** greens = NULL;
+  struct sdis_green_function** per_thread_green = NULL;
+
+  /* Random number generator */
   struct ssp_rng_proxy* rng_proxy = NULL;
-  struct ssp_rng** rngs = NULL;
-  struct accum* acc_temps = NULL;
-  struct accum* acc_times = NULL;
+  struct ssp_rng** per_thread_rng = NULL;
+
+  /* Miscellaneous */
+  struct accum* per_thread_acc_temp = NULL;
+  struct accum* per_thread_acc_time = NULL;
   size_t nrealisations = 0;
   int64_t irealisation = 0;
-  size_t i;
-  int progress = 0;
+  int32_t* progress = NULL; /* Per process progress bar */
   int register_paths = SDIS_HEAT_PATH_NONE;
+  int is_master_process = 1;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
+  if(!scn) { res = RES_BAD_ARG; goto error; }
+  if(!out_estimator && !out_green) { res = RES_BAD_ARG; goto error; }
   res = check_solve_probe_boundary_args(args);
   if(res != RES_OK) goto error;
-
-  if(!out_estimator && !out_green) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  res = XD(check_primitive_uv)(scn->dev, args->uv);
+  if(res != RES_OK) goto error;
+  res = XD(scene_check_dimensionality)(scn);
+  if(res != RES_OK) goto error;
+  res = scene_check_primitive_index(scn, args->iprim);
+  if(res != RES_OK) goto error;
 
   if(out_green && args->picard_order != 1) {
     log_err(scn->dev, "%s: the evaluation of the green function does not make "
@@ -115,108 +157,63 @@ XD(solve_probe_boundary)
     goto error;
   }
 
-#if SDIS_XD_DIMENSION == 2
-  if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
-#else
-  if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
+#ifdef SDIS_ENABLE_MPI
+  is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
 #endif
 
-  /* Check the primitive identifier */
-  if(args->iprim >= scene_get_primitives_count(scn)) {
-    log_err(scn->dev,
-      "%s: invalid primitive identifier `%lu'. "
-      "It must be in the [0 %lu] range.\n",
-      FUNC_NAME,
-      (unsigned long)args->iprim,
-      (unsigned long)scene_get_primitives_count(scn)-1);
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  nthreads = scn->dev->nthreads;
+  allocator = scn->dev->allocator;
 
-  /* Check parametric coordinates */
-#if SDIS_XD_DIMENSION  == 2
-  {
-    const double v = CLAMP(1.0 - args->uv[0], 0, 1);
-    if(args->uv[0] < 0 || args->uv[0] > 1 || !eq_eps(args->uv[0]+v, 1, 1.e-6)) {
-      log_err(scn->dev,
-        "%s: invalid parametric coordinates %g."
-        "u + (1-u) must be equal to 1 with u [0, 1].\n",
-        FUNC_NAME, args->uv[0]);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-  }
-#else /* SDIS_XD_DIMENSION == 3 */
-  {
-    const double w = CLAMP(1 - args->uv[0] - args->uv[1], 0, 1);
-    if(args->uv[0] < 0 || args->uv[1] < 0 || args->uv[0] > 1 || args->uv[1] > 1
-    || !eq_eps(w + args->uv[0] + args->uv[1], 1, 1.e-6)) {
-      log_err(scn->dev,
-        "%s: invalid parametric coordinates [%g, %g]. "
-        "u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
-        FUNC_NAME, args->uv[0], args->uv[1]);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-  }
-#endif
+  /* Create the per thread RNGs */
+  res = create_per_thread_rng
+    (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
+  if(res != RES_OK) goto error;
 
-  /* Create the proxy RNG */
-  if(args->rng_state) {
-    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
-      scn->dev->nthreads, &rng_proxy);
-    if(res != RES_OK) goto error;
-  } else {
-    res = ssp_rng_proxy_create(scn->dev->allocator, SSP_RNG_MT19937_64,
-      scn->dev->nthreads, &rng_proxy);
-    if(res != RES_OK) goto error;
-  }
+  /* Allocate the per process progress status */
+  res = alloc_process_progress(scn->dev, &progress);
+  if(res != RES_OK) goto error;
 
-  /* Create the per thread RNG */
-  rngs = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(struct ssp_rng*));
-  if(!rngs) { res = RES_MEM_ERR; goto error; }
-  FOR_EACH(i, 0, scn->dev->nthreads) {
-    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs+i);
-    if(res != RES_OK) goto error;
-  }
-
-  /* Create the per thread accumulator */
-  acc_temps = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_temps));
-  if(!acc_temps) { res = RES_MEM_ERR; goto error; }
-  acc_times = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(*acc_times));
-  if(!acc_times) { res = RES_MEM_ERR; goto error; }
+  /* Create the per thread accumulators */
+  per_thread_acc_temp = MEM_CALLOC(allocator, nthreads, sizeof(struct accum));
+  per_thread_acc_time = MEM_CALLOC(allocator, nthreads, sizeof(struct accum));
+  if(!per_thread_acc_temp) { res = RES_MEM_ERR; goto error; }
+  if(!per_thread_acc_time) { res = RES_MEM_ERR; goto error; }
 
   /* Create the per thread green function */
   if(out_green) {
-    greens = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*greens));
-    if(!greens) { res = RES_MEM_ERR; goto error; }
-    FOR_EACH(i, 0, scn->dev->nthreads) {
-      res = green_function_create(scn, &greens[i]);
-      if(res != RES_OK) goto error;
-    }
+    res = create_per_thread_green_function(scn, &per_thread_green);
+    if(res != RES_OK) goto error;
   }
 
-  /* Create the estimator */
-  if(out_estimator) {
+  /* Create the estimator on the master process only. No estimator is needed
+   * for non master process */
+  if(out_estimator && is_master_process) {
     res = estimator_create(scn->dev, SDIS_ESTIMATOR_TEMPERATURE, &estimator);
     if(res != RES_OK) goto error;
   }
 
+  /* Synchronise the processes */
+  process_barrier(scn->dev);
+
+  #define PROGRESS_MSG "Solving surface probe temperature: "
+  print_progress(scn->dev, progress, PROGRESS_MSG);
+
+  /* Begin time registration of the computation */
+  time_current(&time0);
+
   /* Here we go! Launch the Monte Carlo estimation */
-  nrealisations = args->nrealisations;
-  register_paths = out_estimator ? args->register_paths : SDIS_HEAT_PATH_NONE;
+  nrealisations = compute_process_realisations_count(scn->dev, args->nrealisations);
+  register_paths = out_estimator && is_master_process
+    ? args->register_paths : SDIS_HEAT_PATH_NONE;
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
     struct boundary_realisation_args realis_args = BOUNDARY_REALISATION_ARGS_NULL;
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
-    struct ssp_rng* rng = rngs[ithread];
-    struct accum* acc_temp = &acc_temps[ithread];
-    struct accum* acc_time = &acc_times[ithread];
+    struct ssp_rng* rng = per_thread_rng[ithread];
+    struct accum* acc_temp = &per_thread_acc_temp[ithread];
+    struct accum* acc_time = &per_thread_acc_time[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
     struct sdis_heat_path* pheat_path = NULL;
@@ -235,11 +232,9 @@ XD(solve_probe_boundary)
 
     time = sample_time(rng, args->time_range);
     if(out_green) {
-      res_local = green_function_create_path(greens[ithread], &green_path);
-      if(res_local != RES_OK) {
-        ATOMIC_SET(&res, res_local);
-        goto error_it;
-      }
+      res_local = green_function_create_path
+        (per_thread_green[ithread], &green_path);
+      if(res_local != RES_OK) { ATOMIC_SET(&res, res_local); goto error_it; }
       pgreen_path = &green_path;
     }
 
@@ -302,9 +297,9 @@ XD(solve_probe_boundary)
     n = (size_t)ATOMIC_INCR(&nsolved_realisations);
     pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
     #pragma omp critical
-    if(pcent > progress) {
-      progress = pcent;
-      log_info(scn->dev, "Solving probe boundary temperature: %3d%%\r", progress);
+    if(pcent > progress[0]) {
+      progress[0] = pcent;
+      print_progress_update(scn->dev, progress, PROGRESS_MSG);
     }
 
   exit_it:
@@ -313,70 +308,88 @@ XD(solve_probe_boundary)
   error_it:
     goto exit_it;
   }
+  /* Synchronise processes */
+  process_barrier(scn->dev);
+
+  res = gather_res_T(scn->dev, (res_T)res);
   if(res != RES_OK) goto error;
 
-  /* Add a new line after the progress status */
-  log_info(scn->dev, "Solving probe boundary temperature: %3d%%\n", progress);
+  print_progress_update(scn->dev, progress, PROGRESS_MSG);
+  log_info(scn->dev, "\n");
+  #undef PROGRESS_MSG
+
+  /* Report computation time */
+  time_sub(&time0, time_current(&time1), &time0);
+  time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+  log_info(scn->dev, "Surface probe temperature solved in %s.\n", buf);
+
+  /* Gather the RNG proxy sequence IDs and ensure that the RNG proxy state of
+   * the master process is greater than the RNG proxy state of all other
+   * processes */
+  res = gather_rng_proxy_sequence_id(scn->dev, rng_proxy);
+  if(res != RES_OK) goto error;
 
   /* Setup the estimated temperature and per realisation time */
   if(out_estimator) {
     struct accum acc_temp;
     struct accum acc_time;
 
-    sum_accums(acc_temps, scn->dev->nthreads, &acc_temp);
-    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
-    ASSERT(acc_temp.count == acc_time.count);
+    time_current(&time0);
 
-    estimator_setup_realisations_count(estimator, nrealisations, acc_temp.count);
-    estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
-    estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
-    res = estimator_save_rng_state(estimator, rng_proxy);
-    if(res != RES_OK) goto error;
+    #define GATHER_ACCUMS(Msg, Acc) {                                          \
+      res = gather_accumulators(scn->dev, Msg, per_thread_##Acc, &Acc);        \
+      if(res != RES_OK) goto error;                                            \
+    } (void)0
+    GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TEMP, acc_temp);
+    GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TIME, acc_time);
+    #undef GATHER_ACCUMS
+
+    time_sub(&time0, time_current(&time1), &time0);
+    time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+    log_info(scn->dev, "Accumulators gathered in %s.\n",  buf);
+
+    /* Return an estimator only on master process */
+    if(is_master_process) {
+      ASSERT(acc_temp.count == acc_time.count);
+      estimator_setup_realisations_count(estimator, args->nrealisations, acc_temp.count);
+      estimator_setup_temperature(estimator, acc_temp.sum, acc_temp.sum2);
+      estimator_setup_realisation_time(estimator, acc_time.sum, acc_time.sum2);
+      res = estimator_save_rng_state(estimator, rng_proxy);
+      if(res != RES_OK) goto error;
+    }
   }
 
   if(out_green) {
-    struct accum acc_time;
+    time_current(&time0);
 
-    /* Redux the per thread green function into the green of the 1st thread */
-    green = greens[0]; /* Return the green of the 1st thread */
-    greens[0] = NULL; /* Make invalid the 1st green for 'on exit' clean up*/
-    res = green_function_redux_and_clear(green, greens+1, scn->dev->nthreads-1);
+    res = gather_green_functions
+      (scn, rng_proxy, per_thread_green, per_thread_acc_time, &green);
     if(res != RES_OK) goto error;
 
-    /* Finalize the estimated green */
-    sum_accums(acc_times, scn->dev->nthreads, &acc_time);
-    res = green_function_finalize(green, rng_proxy, &acc_time);
-    if(res != RES_OK) goto error;
+    time_sub(&time0, time_current(&time1), &time0);
+    time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+    log_info(scn->dev, "Green functions gathered in %s.\n", buf);
+
+    /* Return a green function only on master process */
+    if(!is_master_process) {
+      SDIS(green_function_ref_put(green));
+      green = NULL;
+    }
   }
 
 exit:
-  if(rngs) {
-    FOR_EACH(i, 0, scn->dev->nthreads) {
-      if(rngs[i]) SSP(rng_ref_put(rngs[i]));
-    }
-    MEM_RM(scn->dev->allocator, rngs);
-  }
-  if(greens) {
-    FOR_EACH(i, 0, scn->dev->nthreads) {
-      if(greens[i]) SDIS(green_function_ref_put(greens[i]));
-    }
-    MEM_RM(scn->dev->allocator, greens);
-  }
-  if(acc_temps) MEM_RM(scn->dev->allocator, acc_temps);
-  if(acc_times) MEM_RM(scn->dev->allocator, acc_times);
+  if(per_thread_rng) release_per_thread_rng(scn->dev, per_thread_rng);
+  if(per_thread_green) release_per_thread_green_function(scn, per_thread_green);
+  if(progress) free_process_progress(scn->dev, progress);
+  if(per_thread_acc_temp) MEM_RM(scn->dev->allocator, per_thread_acc_temp);
+  if(per_thread_acc_time) MEM_RM(scn->dev->allocator, per_thread_acc_time);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_green) *out_green = green;
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;
 error:
-  if(green) {
-    SDIS(green_function_ref_put(green));
-    green = NULL;
-  }
-  if(estimator) {
-    SDIS(estimator_ref_put(estimator));
-    estimator = NULL;
-  }
+  if(estimator) { SDIS(estimator_ref_put(estimator)); estimator = NULL; }
+  if(green) { SDIS(green_function_ref_put(green)); green = NULL; }
   goto exit;
 }
 
@@ -386,86 +399,63 @@ XD(solve_probe_boundary_flux)
    const struct sdis_solve_probe_boundary_flux_args* args,
    struct sdis_estimator** out_estimator)
 {
+  /* Time registration */
+  struct time time0, time1;
+  char buf[128]; /* Temporary buffer used to store formated time */
+
+  /* Stardis variables */
+  const struct sdis_interface* interf = NULL;
+  const struct sdis_medium* fmd = NULL;
+  const struct sdis_medium* bmd = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  enum sdis_side solid_side = SDIS_SIDE_NULL__;
+  enum sdis_side fluid_side = SDIS_SIDE_NULL__;
+
+  /* Random number generator */
   struct ssp_rng_proxy* rng_proxy = NULL;
-  struct ssp_rng** rngs = NULL;
-  const struct sdis_interface* interf;
-  const struct sdis_medium *fmd, *bmd;
-  enum sdis_side solid_side, fluid_side;
-  struct sdis_interface_fragment frag;
-  struct accum* acc_tp = NULL; /* Per thread temperature accumulator */
-  struct accum* acc_ti = NULL; /* Per thread realisation time */
-  struct accum* acc_fl = NULL; /* Per thread flux accumulator */
-  struct accum* acc_fc = NULL; /* Per thread convective flux accumulator */
-  struct accum* acc_fr = NULL; /* Per thread radiative flux accumulator */
-  struct accum* acc_fi = NULL; /* Per thread imposed flux accumulator */
+  struct ssp_rng** per_thread_rng = NULL;
+
+  /* Per thread accumulators */
+  struct accum* per_thread_acc_tp = NULL; /* Temperature accumulator */
+  struct accum* per_thread_acc_ti = NULL; /* Realisation time */
+  struct accum* per_thread_acc_fl = NULL; /* Flux accumulator */
+  struct accum* per_thread_acc_fc = NULL; /* Convective flux accumulator */
+  struct accum* per_thread_acc_fr = NULL; /* Radiative flux accumulator */
+  struct accum* per_thread_acc_fi = NULL; /* Imposed flux accumulator */
+
+  /* Gathered accumulator */
+  struct accum acc_tp = ACCUM_NULL;
+  struct accum acc_ti = ACCUM_NULL;
+  struct accum acc_fl = ACCUM_NULL;
+  struct accum acc_fc = ACCUM_NULL;
+  struct accum acc_fr = ACCUM_NULL;
+  struct accum acc_fi = ACCUM_NULL;
+
+  /* Miscellaneous */
   size_t nrealisations = 0;
   int64_t irealisation = 0;
-  size_t i;
-  int progress = 0;
+  int32_t* progress = NULL; /* Per process progress bar */
+  int is_master_process = 1;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
 
-  if(!scn || !args || !args->nrealisations || args->nrealisations > INT64_MAX
-  || args->time_range[0] < 0 || args->time_range[1] < args->time_range[0]
-  || (args->time_range[1]>DBL_MAX && args->time_range[0] != args->time_range[1])
-  || !out_estimator) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  if(!scn) { res = RES_BAD_ARG; goto error; }
+  if(!out_estimator) { res = RES_BAD_ARG; goto error; }
+  res = check_solve_probe_boundary_flux_args(args);
+  if(res != RES_OK) goto error;
+  res = XD(check_primitive_uv)(scn->dev, args->uv);
+  if(res != RES_OK) goto error;
+  res = XD(scene_check_dimensionality)(scn);
+  if(res != RES_OK) goto error;
+  res = scene_check_primitive_index(scn, args->iprim);
+  if(res != RES_OK) goto error;
 
-#if SDIS_XD_DIMENSION == 2
-  if(scene_is_2d(scn) == 0) { res = RES_BAD_ARG; goto error; }
-#else
-  if(scene_is_2d(scn) != 0) { res = RES_BAD_ARG; goto error; }
-#endif
-
-  /* Check the primitive identifier */
-  if(args->iprim >= scene_get_primitives_count(scn)) {
-    log_err(scn->dev,
-      "%s: invalid primitive identifier `%lu'. "
-      "It must be in the [0 %lu] range.\n",
-      FUNC_NAME,
-      (unsigned long)args->iprim,
-      (unsigned long)scene_get_primitives_count(scn)-1);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-  /* Check parametric coordinates */
-  if(scene_is_2d(scn)) {
-    const double v = CLAMP(1.0 - args->uv[0], 0, 1);
-    if(args->uv[0] < 0 || args->uv[0] > 1
-    || !eq_eps(args->uv[0] + v, 1, 1.e-6)) {
-      log_err(scn->dev,
-        "%s: invalid parametric coordinates %g. "
-        "u + (1-u) must be equal to 1 with u [0, 1].\n",
-        FUNC_NAME, args->uv[0]);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-  } else {
-    const double w = CLAMP(1 - args->uv[0] - args->uv[1], 0, 1);
-    if(args->uv[0] < 0
-    || args->uv[1] < 0
-    || args->uv[0] > 1
-    || args->uv[1] > 1
-    || !eq_eps(w + args->uv[0] + args->uv[1], 1, 1.e-6)) {
-      log_err(scn->dev,
-        "%s: invalid parametric coordinates [%g, %g]. "
-        "u + v + (1-u-v) must be equal to 1 with u and v in [0, 1].\n",
-        FUNC_NAME, args->uv[0], args->uv[1]);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-  }
   /* Check medium is fluid on one side and solid on the other */
   interf = scene_get_interface(scn, (unsigned)args->iprim);
   fmd = interface_get_medium(interf, SDIS_FRONT);
   bmd = interface_get_medium(interf, SDIS_BACK);
-  if(!fmd || !bmd
-  || (  !(fmd->type == SDIS_FLUID && bmd->type == SDIS_SOLID)
-     && !(fmd->type == SDIS_SOLID && bmd->type == SDIS_FLUID))) {
+  if(!fmd || !bmd || fmd->type == bmd->type) {
     log_err(scn->dev,
       "%s: Attempt to compute a flux at a %s-%s interface.\n",
       FUNC_NAME,
@@ -477,37 +467,30 @@ XD(solve_probe_boundary_flux)
   solid_side = (fmd->type == SDIS_SOLID) ? SDIS_FRONT : SDIS_BACK;
   fluid_side = (fmd->type == SDIS_FLUID) ? SDIS_FRONT : SDIS_BACK;
 
-  /* Create the proxy RNG */
-  if(args->rng_state) {
-    res = ssp_rng_proxy_create_from_rng(scn->dev->allocator, args->rng_state,
-      scn->dev->nthreads, &rng_proxy);
-    if(res != RES_OK) goto error;
-  } else {
-    res = ssp_rng_proxy_create(scn->dev->allocator, SSP_RNG_MT19937_64,
-      scn->dev->nthreads, &rng_proxy);
-    if(res != RES_OK) goto error;
-  }
+#ifdef SDIS_ENABLE_MPI
+  is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
+#endif
 
-  /* Create the per thread RNG */
-  rngs = MEM_CALLOC
-    (scn->dev->allocator, scn->dev->nthreads, sizeof(struct ssp_rng*));
-  if(!rngs) { res = RES_MEM_ERR; goto error; }
-  FOR_EACH(i, 0, scn->dev->nthreads) {
-    res = ssp_rng_proxy_create_rng(rng_proxy, i, rngs + i);
-    if(res != RES_OK) goto error;
-  }
+  /* Create the per thread RNGs */
+  res = create_per_thread_rng
+    (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
+  if(res != RES_OK) goto error;
 
-  /* Create the per thread accumulator */
+  /* Allocate the per process progress status */
+  res = alloc_process_progress(scn->dev, &progress);
+  if(res != RES_OK) goto error;
+
+  /* Create the per thread accumulators */
   #define ALLOC_ACCUMS(Dst) {                                                  \
     Dst = MEM_CALLOC(scn->dev->allocator, scn->dev->nthreads, sizeof(*Dst));   \
     if(!Dst) { res = RES_MEM_ERR; goto error; }                                \
   } (void)0
-  ALLOC_ACCUMS(acc_tp);
-  ALLOC_ACCUMS(acc_ti);
-  ALLOC_ACCUMS(acc_fc);
-  ALLOC_ACCUMS(acc_fl);
-  ALLOC_ACCUMS(acc_fr);
-  ALLOC_ACCUMS(acc_fi);
+  ALLOC_ACCUMS(per_thread_acc_tp);
+  ALLOC_ACCUMS(per_thread_acc_ti);
+  ALLOC_ACCUMS(per_thread_acc_fc);
+  ALLOC_ACCUMS(per_thread_acc_fl);
+  ALLOC_ACCUMS(per_thread_acc_fr);
+  ALLOC_ACCUMS(per_thread_acc_fi);
   #undef ALLOC_ACCUMS
 
   /* Prebuild the interface fragment */
@@ -515,12 +498,23 @@ XD(solve_probe_boundary_flux)
     (&frag, scn, (unsigned)args->iprim, args->uv, fluid_side);
   if(res != RES_OK) goto error;
 
-  /* Create the estimator */
-  res = estimator_create(scn->dev, SDIS_ESTIMATOR_FLUX, &estimator);
-  if(res != RES_OK) goto error;
+  if(is_master_process) {
+    /* Create the estimator */
+    res = estimator_create(scn->dev, SDIS_ESTIMATOR_FLUX, &estimator);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Synchronise the processes */
+  process_barrier(scn->dev);
+
+  #define PROGRESS_MSG "Solving surface probe flux: "
+  print_progress(scn->dev, progress, PROGRESS_MSG);
+
+  /* Begin time registration of the computation */
+  time_current(&time0);
 
   /* Here we go! Launch the Monte Carlo estimation */
-  nrealisations = args->nrealisations;
+  nrealisations = compute_process_realisations_count(scn->dev, args->nrealisations);
   omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(irealisation = 0; irealisation < (int64_t)nrealisations; ++irealisation) {
@@ -528,13 +522,13 @@ XD(solve_probe_boundary_flux)
       BOUNDARY_FLUX_REALISATION_ARGS_NULL;
     struct time t0, t1;
     const int ithread = omp_get_thread_num();
-    struct ssp_rng* rng = rngs[ithread];
-    struct accum* acc_temp = &acc_tp[ithread];
-    struct accum* acc_time = &acc_ti[ithread];
-    struct accum* acc_flux = &acc_fl[ithread];
-    struct accum* acc_fcon = &acc_fc[ithread];
-    struct accum* acc_frad = &acc_fr[ithread];
-    struct accum* acc_fimp = &acc_fi[ithread];
+    struct ssp_rng* rng = per_thread_rng[ithread];
+    struct accum* acc_temp = &per_thread_acc_tp[ithread];
+    struct accum* acc_time = &per_thread_acc_ti[ithread];
+    struct accum* acc_flux = &per_thread_acc_fl[ithread];
+    struct accum* acc_fcon = &per_thread_acc_fc[ithread];
+    struct accum* acc_frad = &per_thread_acc_fr[ithread];
+    struct accum* acc_fimp = &per_thread_acc_fi[ithread];
     double time, epsilon, hc, hr, imposed_flux, imposed_temp;
     int flux_mask = 0;
     struct bound_flux_result result = BOUND_FLUX_RESULT_NULL__;
@@ -562,7 +556,8 @@ XD(solve_probe_boundary_flux)
     imposed_temp = interface_side_get_temperature(interf, &frag);
     if(imposed_temp >= 0) {
       /* Flux computation on T boundaries is not supported yet */
-      log_err(scn->dev,"%s: Attempt to compute a flux at a Dirichlet boundary "
+      log_err(scn->dev,
+        "%s: Attempt to compute a flux at a Dirichlet boundary "
         "(not available yet).\n",  FUNC_NAME);
       ATOMIC_SET(&res, RES_BAD_ARG);
       continue;
@@ -629,60 +624,83 @@ XD(solve_probe_boundary_flux)
     n = (size_t)ATOMIC_INCR(&nsolved_realisations);
     pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
     #pragma omp critical
-    if(pcent > progress) {
-      progress = pcent;
-      log_info(scn->dev, "Solving probe boundary flux: %3d%%\r", progress);
+    if(pcent > progress[0]) {
+      progress[0] = pcent;
+      print_progress_update(scn->dev, progress, PROGRESS_MSG);
     }
   }
+  /* Synchronise processes */
+  process_barrier(scn->dev);
+
+  res = gather_res_T(scn->dev, (res_T)res);
   if(res != RES_OK) goto error;
 
-  /* Add a new line after the progress status */
-  log_info(scn->dev, "Solving probe boundary flux: %3d%%\n", progress);
+  print_progress_update(scn->dev, progress, PROGRESS_MSG);
+  log_info(scn->dev, "\n");
+  #undef PROGRESS_MSG
 
-  /* Redux the per thread accumulators  */
-  sum_accums(acc_tp, scn->dev->nthreads, &acc_tp[0]);
-  sum_accums(acc_ti, scn->dev->nthreads, &acc_ti[0]);
-  sum_accums(acc_fc, scn->dev->nthreads, &acc_fc[0]);
-  sum_accums(acc_fr, scn->dev->nthreads, &acc_fr[0]);
-  sum_accums(acc_fl, scn->dev->nthreads, &acc_fl[0]);
-  sum_accums(acc_fi, scn->dev->nthreads, &acc_fi[0]);
-  ASSERT(acc_tp[0].count == acc_fl[0].count);
-  ASSERT(acc_tp[0].count == acc_ti[0].count);
-  ASSERT(acc_tp[0].count == acc_fr[0].count);
-  ASSERT(acc_tp[0].count == acc_fc[0].count);
-  ASSERT(acc_tp[0].count == acc_fi[0].count);
+  /* Report computation time */
+  time_sub(&time0, time_current(&time1), &time0);
+  time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+  log_info(scn->dev, "Surface probe flux solved in %s.\n", buf);
+
+  /* Gather the RNG proxy sequence IDs and ensure that the RNG proxy state of
+   * the master process is greater than the RNG proxy state of all other
+   * processes */
+  res = gather_rng_proxy_sequence_id(scn->dev, rng_proxy);
+  if(res != RES_OK) goto error;
+
+  time_current(&time0);
+
+  #define GATHER_ACCUMS(Msg, Acc) {                                            \
+    res = gather_accumulators(scn->dev, Msg, per_thread_##Acc, &Acc);          \
+    if(res != RES_OK) goto error;                                              \
+  } (void)0
+  GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TEMP, acc_tp);
+  GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TIME, acc_ti);
+  GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_FLUX_CONVECTIVE, acc_fc);
+  GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_FLUX_IMPOSED, acc_fi);
+  GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_FLUX_RADIATIVE, acc_fr);
+  GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_FLUX_TOTAL, acc_fl);
+  #undef GATHER_ACCUMS
+
+  time_sub(&time0, time_current(&time1), &time0);
+  time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+  log_info(scn->dev, "Accumulators gathered in %s.\n",  buf);
 
   /* Setup the estimated values */
-  estimator_setup_realisations_count(estimator, nrealisations, acc_tp[0].count);
-  estimator_setup_temperature(estimator, acc_tp[0].sum, acc_tp[0].sum2);
-  estimator_setup_realisation_time(estimator, acc_ti[0].sum, acc_ti[0].sum2);
-  estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc[0].sum, acc_fc[0].sum2);
-  estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr[0].sum, acc_fr[0].sum2);
-  estimator_setup_flux(estimator, FLUX_IMPOSED, acc_fi[0].sum, acc_fi[0].sum2);
-  estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl[0].sum, acc_fl[0].sum2);
+  if(is_master_process) {
+    ASSERT(acc_tp.count == acc_fl.count);
+    ASSERT(acc_tp.count == acc_ti.count);
+    ASSERT(acc_tp.count == acc_fr.count);
+    ASSERT(acc_tp.count == acc_fc.count);
+    ASSERT(acc_tp.count == acc_fi.count);
+    estimator_setup_realisations_count(estimator, args->nrealisations, acc_tp.count);
+    estimator_setup_temperature(estimator, acc_tp.sum, acc_tp.sum2);
+    estimator_setup_realisation_time(estimator, acc_ti.sum, acc_ti.sum2);
+    estimator_setup_flux(estimator, FLUX_CONVECTIVE, acc_fc.sum, acc_fc.sum2);
+    estimator_setup_flux(estimator, FLUX_RADIATIVE, acc_fr.sum, acc_fr.sum2);
+    estimator_setup_flux(estimator, FLUX_IMPOSED, acc_fi.sum, acc_fi.sum2);
+    estimator_setup_flux(estimator, FLUX_TOTAL, acc_fl.sum, acc_fl.sum2);
 
-  res = estimator_save_rng_state(estimator, rng_proxy);
-  if(res != RES_OK) goto error;
+    res = estimator_save_rng_state(estimator, rng_proxy);
+    if(res != RES_OK) goto error;
+  }
 
 exit:
-  if(rngs) {
-    FOR_EACH(i, 0, scn->dev->nthreads) {if(rngs[i]) SSP(rng_ref_put(rngs[i]));}
-    MEM_RM(scn->dev->allocator, rngs);
-  }
-  if(acc_tp) MEM_RM(scn->dev->allocator, acc_tp);
-  if(acc_ti) MEM_RM(scn->dev->allocator, acc_ti);
-  if(acc_fc) MEM_RM(scn->dev->allocator, acc_fc);
-  if(acc_fr) MEM_RM(scn->dev->allocator, acc_fr);
-  if(acc_fl) MEM_RM(scn->dev->allocator, acc_fl);
-  if(acc_fi) MEM_RM(scn->dev->allocator, acc_fi);
+  if(per_thread_rng) release_per_thread_rng(scn->dev, per_thread_rng);
+  if(per_thread_acc_tp) MEM_RM(scn->dev->allocator, per_thread_acc_tp);
+  if(per_thread_acc_ti) MEM_RM(scn->dev->allocator, per_thread_acc_ti);
+  if(per_thread_acc_fc) MEM_RM(scn->dev->allocator, per_thread_acc_fc);
+  if(per_thread_acc_fr) MEM_RM(scn->dev->allocator, per_thread_acc_fr);
+  if(per_thread_acc_fl) MEM_RM(scn->dev->allocator, per_thread_acc_fl);
+  if(per_thread_acc_fi) MEM_RM(scn->dev->allocator, per_thread_acc_fi);
+  if(progress) free_process_progress(scn->dev, progress);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(out_estimator) *out_estimator = estimator;
   return (res_T)res;
 error:
-  if(estimator) {
-    SDIS(estimator_ref_put(estimator));
-    estimator = NULL;
-  }
+  if(estimator) { SDIS(estimator_ref_put(estimator)); estimator = NULL; }
   goto exit;
 }
 

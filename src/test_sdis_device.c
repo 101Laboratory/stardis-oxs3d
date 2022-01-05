@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,10 @@
 
 #include <rsys/logger.h>
 
+#ifdef SDIS_ENABLE_MPI
+#include <mpi.h>
+#endif
+
 static INLINE void
 log_stream(const char* msg, void* ctx)
 {
@@ -29,14 +33,22 @@ log_stream(const char* msg, void* ctx)
 int
 main(int argc, char** argv)
 {
+  struct sdis_device_create_args args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
   struct logger logger;
   struct mem_allocator allocator;
   struct sdis_device* dev;
+#ifdef SDIS_ENABLE_MPI
+  int provided;
+#endif
   (void)argc, (void)argv;
 
-  BA(sdis_device_create(NULL, NULL, 0, 0, NULL));
-  BA(sdis_device_create(NULL, NULL, 0, 0, &dev));
-  OK(sdis_device_create(NULL, NULL, 1, 0, &dev));
+  args.nthreads_hint = 0;
+  args.verbosity = 0;
+
+  BA(sdis_device_create(&args, NULL));
+  BA(sdis_device_create(&args, &dev));
+  args.nthreads_hint = 1;
+  OK(sdis_device_create(&args, &dev));
   BA(sdis_device_ref_get(NULL));
   OK(sdis_device_ref_get(dev));
   BA(sdis_device_ref_put(NULL));
@@ -46,8 +58,11 @@ main(int argc, char** argv)
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
 
   CHK(MEM_ALLOCATED_SIZE(&allocator) == 0);
-  BA(sdis_device_create(NULL, &allocator, 1, 0, NULL));
-  OK(sdis_device_create(NULL, &allocator, 1, 0, &dev));
+
+  args.allocator = &allocator;
+  args.verbosity = 0;
+  BA(sdis_device_create(&args, NULL));
+  OK(sdis_device_create(&args, &dev));
   OK(sdis_device_ref_put(dev));
   CHK(MEM_ALLOCATED_SIZE(&allocator) == 0);
 
@@ -56,16 +71,33 @@ main(int argc, char** argv)
   logger_set_stream(&logger, LOG_ERROR, log_stream, NULL);
   logger_set_stream(&logger, LOG_WARNING, log_stream, NULL);
 
-  BA(sdis_device_create(&logger, NULL, 1, 0, NULL));
-  OK(sdis_device_create(&logger, NULL, 1, 0, &dev));
+  args.logger = &logger;
+  args.allocator = NULL;
+  BA(sdis_device_create(&args, NULL));
+  OK(sdis_device_create(&args, &dev));
   OK(sdis_device_ref_put(dev));
 
-  BA(sdis_device_create(&logger, &allocator, 1, 0, NULL));
-  OK(sdis_device_create(&logger, &allocator, 1, 0, &dev));
+  args.allocator = &allocator;
+  BA(sdis_device_create(&args, NULL));
+  OK(sdis_device_create(&args, &dev));
   OK(sdis_device_ref_put(dev));
 
-  OK(sdis_device_create(&logger, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+  args.nthreads_hint = SDIS_NTHREADS_DEFAULT;
+  OK(sdis_device_create(&args, &dev));
   OK(sdis_device_ref_put(dev));
+
+  args.use_mpi = 1;
+  args.verbosity = 1;
+
+#ifndef SDIS_ENABLE_MPI
+  OK(sdis_device_create(&args, &dev));
+  OK(sdis_device_ref_put(dev));
+#else
+  CHK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &provided) == MPI_SUCCESS);
+  OK(sdis_device_create(&args, &dev));
+  CHK(MPI_Finalize() == MPI_SUCCESS);
+  OK(sdis_device_ref_put(dev));
+#endif
 
   logger_release(&logger);
   check_memory_allocator(&allocator);

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ check_interface_shader
   && shader->convection_coef) {
     log_warn(dev,
       "%s: a solid/solid interface can't have a convection coefficient. The "
-      " shader's pointer function for this attribute should be NULL.\n",
+      "shader's pointer function for this attribute should be NULL.\n",
       caller_name);
   }
   if(shader->convection_coef_upper_bound < 0) {
@@ -67,7 +67,7 @@ check_interface_shader
   && shader->thermal_contact_resistance) {
     log_warn(dev,
       "%s: only solid/solid interface can have a thermal contact resistance. The "
-      " shader's pointer function for this attribute should be NULL.\n",
+      "shader's pointer function for this attribute should be NULL.\n",
       caller_name);
   }
 

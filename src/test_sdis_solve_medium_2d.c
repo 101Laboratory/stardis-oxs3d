@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -186,7 +186,6 @@ interface_get_specular_fraction
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
@@ -219,10 +218,10 @@ main(int argc, char** argv)
   size_t nreals;
   size_t nfails;
   size_t i;
+  int is_master_process;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   fluid_shader.temperature = fluid_get_temperature;
 
@@ -347,30 +346,36 @@ main(int argc, char** argv)
   /* Estimate the temperature of the square */
   solve_args.medium = solid0;
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  printf("Square temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu / %lu\n\n", (unsigned long)nfails, N);
-  CHK(eq_eps(T.E, Tf0, T.SE));
-  CHK(nreals + nfails == N);
-  OK(sdis_estimator_ref_put(estimator));
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    printf("Square temperature = "STR(Tf0)" ~ %g +/- %g\n", T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu / %lu\n\n", (unsigned long)nfails, N);
+    CHK(eq_eps(T.E, Tf0, T.SE));
+    CHK(nreals + nfails == N);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Estimate the temperature of the disk */
   solve_args.medium = solid1;
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  printf("Disk temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu / %lu\n\n", (unsigned long)nfails, N);
-  CHK(eq_eps(T.E, Tf1, T.SE));
-  CHK(nreals + nfails == N);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    printf("Disk temperature = "STR(Tf1)" ~ %g +/- %g\n", T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu / %lu\n\n", (unsigned long)nfails, N);
+    CHK(eq_eps(T.E, Tf1, T.SE));
+    CHK(nreals + nfails == N);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Create a new scene with the same medium for the disk and the square */
   OK(sdis_scene_ref_put(scn));
@@ -387,16 +392,18 @@ main(int argc, char** argv)
   BA(sdis_solve_medium(scn, &solve_args, &estimator));
   solve_args.medium = solid0;
   OK(sdis_solve_medium(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  ref = Tf0 * a0/a + Tf1 * a1/a;
-  printf("Square + Disk temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu / %lu\n", (unsigned long)nfails, Np);
-  CHK(eq_eps(T.E, ref, 3*T.SE));
-  CHK(nreals + nfails == Np);
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    ref = Tf0 * a0/a + Tf1 * a1/a;
+    printf("Square + Disk temperature = %g ~ %g +/- %g\n", ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu / %lu\n", (unsigned long)nfails, Np);
+    CHK(eq_eps(T.E, ref, 3*T.SE));
+    CHK(nreals + nfails == Np);
+  }
 
   /* Solve green */
   BA(sdis_solve_medium_green_function(NULL, &solve_args, &green));
@@ -404,18 +411,21 @@ main(int argc, char** argv)
   BA(sdis_solve_medium_green_function(scn, &solve_args, NULL));
   OK(sdis_solve_medium_green_function(scn, &solve_args, &green));
 
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_green_function(green);
-  check_estimator_eq(estimator, estimator2);
-  check_green_serialization(green, scn);
+  if(!is_master_process) {
+    CHK(green == NULL);
+  } else {
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn);
 
-  OK(sdis_green_function_ref_put(green));
+    OK(sdis_green_function_ref_put(green));
 
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
+    OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_estimator_ref_put(estimator2));
+  }
 
   /* Release */
-  OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(solid0));
   OK(sdis_medium_ref_put(solid1));
   OK(sdis_medium_ref_put(fluid0));
@@ -425,11 +435,11 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(solid1_fluid1));
   OK(sdis_scene_ref_put(scn));
 
+  free_default_device(dev);
+
   sa_release(positions);
   sa_release(indices);
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

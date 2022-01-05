@@ -13,29 +13,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef SDIS_XD_BEGIN_H__
-  #error "The sdis_Xd_begin.h file must be included priorly to this file."
+#include "sdis.h"
+#include "test_sdis_utils.h"
+
+int
+main(int argc, char** argv)
+{
+  struct sdis_info info = SDIS_INFO_NULL;
+  (void)argc, (void)argv;
+
+  BA(sdis_get_info(NULL));
+  OK(sdis_get_info(&info));
+#ifdef SDIS_ENABLE_MPI
+  CHK(info.mpi_enabled);
+#else
+  CHK(!info.mpi_enabled);
 #endif
+  return 0;
+}
 
-#undef SDIS_XD_DIMENSION
-#undef DIM
-
-#undef sXd
-#undef SXD_HIT_NONE
-#undef SXD_HIT_NULL
-#undef SXD_HIT_NULL__
-#undef SXD_POSITION
-#undef SXD_GEOMETRY_NORMAL
-#undef SXD_VERTEX_DATA_NULL
-#undef SXD
-#undef SXD_FLOAT2
-#undef SXD_FLOAT3
-#undef SXD_FLOATX
-#undef SXD_SAMPLE
-
-#undef dX
-#undef fX
-#undef fX_set_dX
-#undef dX_set_fX
-
-#undef SDIS_XD_BEGIN_H__
