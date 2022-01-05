@@ -31,6 +31,7 @@ enum mpi_sdis_message {
   MPI_SDIS_MSG_PROGRESS, /* Progress status */
   MPI_SDIS_MSG_RES_T, /* Result status */
   MPI_SDIS_MSG_RNG_PROXY_SEQUENCE_ID, /* Index of the current RNG sequence */
+  MPI_SDIS_MSG_TILE, /* 2D Tile of row ordered accumulators */
   MPI_SDIS_MSG_COUNT__
 };
 

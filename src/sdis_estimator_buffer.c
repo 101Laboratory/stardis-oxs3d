@@ -22,7 +22,7 @@
 #include <star/ssp.h>
 
 struct sdis_estimator_buffer {
-  struct sdis_estimator** estimators; /* Row major per pixe lestimators */
+  struct sdis_estimator** estimators; /* Row major per pixel estimators */
   size_t width;
   size_t height;
 

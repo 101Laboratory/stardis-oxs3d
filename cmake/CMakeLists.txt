@@ -85,7 +85,9 @@ set(SDIS_FILES_SRC
   sdis_misc.c
   sdis_realisation.c
   sdis_scene.c
-  sdis_solve.c)
+  sdis_solve.c
+  sdis_solve_camera.c
+  sdis_tile.c)
 
 set(SDIS_FILES_INC_API
   sdis.h)
@@ -118,6 +120,7 @@ set(SDIS_FILES_INC
   sdis_solve_medium_Xd.h
   sdis_solve_probe_Xd.h
   sdis_solve_probe_boundary_Xd.h
+  sdis_tile.h
   sdis_Xd_begin.h
   sdis_Xd_end.h)
 

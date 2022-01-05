@@ -594,7 +594,7 @@ struct sdis_solve_camera_args {
    * higher orders allow the estimation of the T4 radiative transfer. */
   size_t picard_order;
 
-  size_t image_resolution[2]; /* Image resolution */
+  size_t image_definition[2]; /* Image definition */
   size_t spp; /* #samples per pixel */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
 };

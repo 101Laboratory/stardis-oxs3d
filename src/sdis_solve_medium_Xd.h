@@ -13,8 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_c.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_interface_c.h"
+#include "sdis_log.h"
 #include "sdis_green.h"
 #include "sdis_realisation.h"
 #include "sdis_scene_c.h"
@@ -22,6 +25,8 @@
 #include <rsys/algorithm.h>
 #include <rsys/clock_time.h>
 #include <rsys/dynamic_array.h>
+
+#include <omp.h>
 
 #include "sdis_Xd_begin.h"
 
