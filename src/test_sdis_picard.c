@@ -262,7 +262,7 @@ create_solid
   shader.calorific_capacity = solid_get_calorific_capacity;
   shader.thermal_conductivity = solid_get_thermal_conductivity;
   shader.volumic_mass = solid_get_volumic_mass;
-  shader.delta_solid = solid_get_delta;
+  shader.delta = solid_get_delta;
   shader.temperature = solid_get_temperature;
   shader.volumic_power = solid_get_volumic_power;
   OK(sdis_solid_create(dev, &shader, data, solid));

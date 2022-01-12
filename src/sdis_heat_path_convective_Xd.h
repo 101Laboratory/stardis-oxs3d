@@ -24,6 +24,45 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
+ * Non generic helper functions
+ ******************************************************************************/
+#ifndef SDIS_HEAT_PATH_CONVECTIVE_XD_H
+#define SDIS_HEAT_PATH_CONVECTIVE_XD_H
+
+static res_T
+check_fluid_constant_properties
+  (struct sdis_device* dev,
+   const struct fluid_props* props_ref,
+   const struct fluid_props* props)
+{
+  res_T res = RES_OK;
+  ASSERT(dev && props_ref && props);
+
+  if(props_ref->rho != props->rho) {
+    log_err(dev,
+      "%s: invalid volumic mass. One assumes a constant volumic mass for "
+      "the whole fluid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(props_ref->cp != props->cp) {
+    log_err(dev,
+       "%s: invalid calorific capacity. One assumes a constant calorific "
+       "capacity for the whole fluid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+#endif /* SDIS_HEAT_PATH_CONVECTIVE_XD_H */
+
+/*******************************************************************************
  * Helper functions
  ******************************************************************************/
 static res_T
@@ -76,13 +115,12 @@ XD(convective_path)
    struct XD(temperature)* T)
 {
   struct sXd(attrib) attr_P, attr_N;
+  struct fluid_props props_ref = FLUID_PROPS_NULL;
   const struct sdis_interface* interf;
   const struct enclosure* enc;
   unsigned enc_ids[2];
   unsigned enc_id;
-  double rho; /* Volumic mass */
-  double hc; /* Convection coef */
-  double cp; /* Calorific capacity */
+
   double tmp;
   double r;
   int path_started_in_fluid;
@@ -112,6 +150,12 @@ XD(convective_path)
 
     goto exit;
   }
+
+  /* Retrieve the fluid properties at the current position. Use them to verify
+   * that those that are supposed to be constant by the convective random walk
+   * remain the same. */
+  res = fluid_get_properties(rwalk->mdm, &rwalk->vtx, &props_ref);
+  if(res != RES_OK) goto error;
 
   path_started_in_fluid = SXD_HIT_NONE(&rwalk->hit);
   if(path_started_in_fluid) { /* The path begins in the fluid */
@@ -171,7 +215,7 @@ XD(convective_path)
     /* Cannot be in the fluid without starting there. */
     ASSERT(path_started_in_fluid);
 
-    rwalk->vtx.time = fluid_get_t0(rwalk->mdm);
+    rwalk->vtx.time = props_ref.t0;
     tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
     if(tmp >= 0) {
       T->value += tmp;
@@ -192,29 +236,33 @@ XD(convective_path)
   for(;;) {
     struct sdis_interface_fragment frag;
     struct sXd(primitive) prim;
-    double mu, tau, t0;
+    struct fluid_props props = FLUID_PROPS_NULL;
+    double hc;
+    double mu, tau;
 
-    /* Fetch other physical properties. */
-    cp = fluid_get_calorific_capacity(rwalk->mdm, &rwalk->vtx);
-    rho = fluid_get_volumic_mass(rwalk->mdm, &rwalk->vtx);
-    t0 = fluid_get_t0(rwalk->mdm); /* Limit time */
+    /* Fetch fluid properties */
+    res = fluid_get_properties(rwalk->mdm, &rwalk->vtx, &props);
+    if(res != RES_OK) goto error;
+
+    res = check_fluid_constant_properties(scn->dev, &props_ref, &props);
+    if(res != RES_OK) goto error;
 
     /* Sample the time using the upper bound. */
-    mu = enc->hc_upper_bound / (rho * cp) * enc->S_over_V;
+    mu = enc->hc_upper_bound / (props.rho * props.cp) * enc->S_over_V;
     tau = ssp_ran_exp(rng, mu);
 
     /* Increment the elapsed time */
-    ASSERT(rwalk->vtx.time > t0);
-    rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
+    ASSERT(rwalk->vtx.time > props.t0);
+    rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - props.t0);
 
     if(rwalk->vtx.time != INF) {
-      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0); /* Time rewind */
+      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, props.t0); /* Time rewind */
 
       /* Register the new vertex against the heat path */
       res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
       if(res != RES_OK) goto error;
 
-      if(rwalk->vtx.time == t0) {
+      if(rwalk->vtx.time == props.t0) {
         /* Check the initial condition. */
         tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
         if(tmp >= 0) {
@@ -239,7 +287,7 @@ XD(convective_path)
         log_err(scn->dev,
           "%s: undefined initial condition. "
           "Time is %g but the temperature remains unknown.\n",
-          FUNC_NAME, t0);
+          FUNC_NAME, props.t0);
         res = RES_BAD_OP;
         goto error;
       }

@@ -40,7 +40,7 @@ check_solid_shader(const struct sdis_solid_shader* shader)
   return shader->calorific_capacity
       && shader->thermal_conductivity
       && shader->volumic_mass
-      && shader->delta_solid
+      && shader->delta
       && shader->temperature
       && 0 <= shader->t0 && shader->t0 < INF;
 }

@@ -184,7 +184,7 @@ struct sdis_solid_shader {
   sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
   sdis_medium_getter_T thermal_conductivity; /* In W.m^-1.K^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
-  sdis_medium_getter_T delta_solid;
+  sdis_medium_getter_T delta;
 
   /* May be NULL if there is no volumic power. One can also return
    * SDIS_VOLUMIC_POWER_NONE to define that there is no volumic power at the

@@ -98,9 +98,9 @@ main(int argc, char** argv)
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.volumic_mass = DUMMY_SOLID_SHADER.volumic_mass;
 
-  solid_shader.delta_solid = NULL;
+  solid_shader.delta = NULL;
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
-  solid_shader.delta_solid = DUMMY_SOLID_SHADER.delta_solid;
+  solid_shader.delta = DUMMY_SOLID_SHADER.delta;
 
   solid_shader.temperature = NULL;
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
@@ -135,7 +135,7 @@ main(int argc, char** argv)
   CHK(solid_shader.calorific_capacity == solid_shader2.calorific_capacity);
   CHK(solid_shader.thermal_conductivity == solid_shader2.thermal_conductivity);
   CHK(solid_shader.volumic_mass == solid_shader2.volumic_mass);
-  CHK(solid_shader.delta_solid == solid_shader2.delta_solid);
+  CHK(solid_shader.delta == solid_shader2.delta);
   CHK(solid_shader.volumic_power == solid_shader2.volumic_power);
   CHK(solid_shader.temperature == solid_shader2.temperature);
   CHK(solid_shader.t0 == solid_shader2.t0);

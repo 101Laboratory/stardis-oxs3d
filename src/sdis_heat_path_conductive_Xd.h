@@ -25,6 +25,63 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
+ * Non generic helper function
+ ******************************************************************************/
+#ifndef SDIS_HEAT_PATH_CONDUCTIVE_XD_H
+#define SDIS_HEAT_PATH_CONDUCTIVE_XD_H
+
+static res_T
+check_solid_constant_properties
+  (struct sdis_device* dev,
+   const int evaluate_green,
+   const struct solid_props* props_ref,
+   const struct solid_props* props)
+{
+  res_T res = RES_OK;
+  ASSERT(dev && props_ref && props);
+
+  if(props_ref->lambda != props->lambda) {
+    log_err(dev,
+      "%s: invalid thermal conductivity. One assumes a constant conductivity "
+      "for the whole solid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(props_ref->rho != props->rho) {
+    log_err(dev,
+      "%s: invalid volumic mass. One assumes a constant volumic mass for "
+      "the whole solid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(props_ref->cp != props->cp) {
+    log_err(dev,
+       "%s: invalid calorific capacity. One assumes a constant calorific "
+       "capacity for the whole solid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(evaluate_green && props_ref->power != props->power) {
+    log_err(dev,
+      "%s: invalid volumic power. When estimating the green function, a "
+      "constant volumic power is assumed for the whole solid.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+#endif /* SDIS_HEAT_PATH_CONDUCTIVE_XD_H */
+
+/*******************************************************************************
  * Helper functions
  ******************************************************************************/
 /* Sample the next direction to walk toward and compute the distance to travel.
@@ -340,9 +397,8 @@ XD(conductive_path)
    struct XD(temperature)* T)
 {
   double position_start[DIM];
+  struct solid_props props_ref = SOLID_PROPS_NULL;
   double green_power_term = 0;
-  double power_ref = SDIS_VOLUMIC_POWER_NONE;
-  double lambda_ref = -1;
   struct sdis_medium* mdm;
   size_t istep = 0; /* Help for debug */
   res_T res = RES_OK;
@@ -361,33 +417,39 @@ XD(conductive_path)
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
 
-  /* Fetch the lambda at the current position. Use it to check that the lambda
-   * remains constant */
-  lambda_ref = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-
-  if(ctx->green_path) {
-    /* Retrieve the power of the medium. Use it to check that it is effectively
-     * constant along the random walk */
-    power_ref = solid_get_volumic_power(mdm, &rwalk->vtx);
-  }
+  /* Retrieve the solid properties at the current position. Use them to verify
+   * that those that are supposed to be constant by the conductive random walk
+   * remain the same. Note that we take care of the same constraints on the
+   * solid reinjection since once reinjected, the position of the random walk
+   * is that at the beginning of the conductive random walkh. Thus, after a
+   * reinjection, the next line retrieves the properties of the reinjection
+   * position. By comparing them to the properties along the random walk, we
+   * thus verify that the properties are constant throughout the random walk
+   * with respect to the properties of the reinjected position. */
+  solid_get_properties(mdm, &rwalk->vtx, &props_ref);
 
   do { /* Solid random walk */
     struct XD(handle_volumic_power_args) handle_volpow_args =
        XD(HANDLE_VOLUMIC_POWER_ARGS_NULL);
     struct sXd(hit) hit0, hit1;
-    double lambda; /* Thermal conductivity */
-    double tmp;
+    struct solid_props props = SOLID_PROPS_NULL;
     double power_term = 0;
-    double power;
-    float delta, delta_solid; /* Random walk numerical parameter */
+    float delta; /* Random walk numerical parameter */
     float dir0[DIM], dir1[DIM];
     float org[DIM];
 
+    /* Fetch solid properties */
+    res = solid_get_properties(mdm, &rwalk->vtx, &props);
+    if(res != RES_OK) goto error;
+
+    res = check_solid_constant_properties
+      (scn->dev, ctx->green_path != NULL, &props_ref, &props);
+    if(res != RES_OK) goto error;
+
     /* Check the limit condition
      * REVIEW Rfo: This can be a bug if the random walk comes from a boundary */
-    tmp = solid_get_temperature(mdm, &rwalk->vtx);
-    if(tmp >= 0) {
-      T->value += tmp;
+    if(props.temperature >= 0) {
+      T->value += props.temperature;
       T->done = 1;
 
       if(ctx->green_path) {
@@ -403,32 +465,11 @@ XD(conductive_path)
       break;
     }
 
-    /* Fetch solid properties */
-    delta_solid = (float)solid_get_delta(mdm, &rwalk->vtx);
-    lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-    power = solid_get_volumic_power(mdm, &rwalk->vtx);
-
-    if(lambda != lambda_ref) {
-      log_err(scn->dev,
-        "%s: invalid thermal conductivity. One assumes a constant conductivity "
-        "for the whole solid.\n", FUNC_NAME);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-
-    if(ctx->green_path && power != power_ref) {
-      log_err(scn->dev,
-        "%s: invalid volumic power. When estimating the green function, a "
-        "constant volumic power is assumed for the whole solid.\n", FUNC_NAME);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-
     fX_set_dX(org, rwalk->vtx.P);
 
     /* Sample the direction to walk toward and compute the distance to travel */
-    res = XD(sample_next_step_robust)(scn, mdm, rng, rwalk->vtx.P, delta_solid,
-      dir0, dir1, &hit0, &hit1, &delta);
+    res = XD(sample_next_step_robust)(scn, mdm, rng, rwalk->vtx.P,
+      (float)props.delta, dir0, dir1, &hit0, &hit1, &delta);
     if(res != RES_OK) goto error;
 
     /* Add the volumic power density to the measured temperature */
@@ -436,9 +477,9 @@ XD(conductive_path)
     handle_volpow_args.dir1 = dir1;
     handle_volpow_args.hit0 = &hit0;
     handle_volpow_args.hit1 = &hit1;
-    handle_volpow_args.power = power;
-    handle_volpow_args.lambda = lambda;
-    handle_volpow_args.delta_solid = delta_solid;
+    handle_volpow_args.power = props.power;
+    handle_volpow_args.lambda = props.lambda;
+    handle_volpow_args.delta_solid = (float)props.delta;
     handle_volpow_args.delta = delta;
     handle_volpow_args.picard_order = get_picard_order(ctx);
     res = XD(handle_volumic_power)(scn, &handle_volpow_args, &power_term, T);
@@ -446,12 +487,13 @@ XD(conductive_path)
 
     /* Register the power term for the green function. Delay its registration
      * until the end of the conductive path, i.e. the path is valid */
-    if(ctx->green_path && power != SDIS_VOLUMIC_POWER_NONE) {
+    if(ctx->green_path && props.power != SDIS_VOLUMIC_POWER_NONE) {
       green_power_term += power_term;
     }
 
     /* Rewind the time */
-    res = XD(time_rewind)(rwalk->mdm, rng, delta * scn->fp_to_meter, ctx, rwalk, T);
+    res = XD(solid_time_rewind)
+      (rwalk->mdm, rng, delta * scn->fp_to_meter, ctx, rwalk, T);
     if(res != RES_OK) goto error;
     if(T->done) break; /* Limit condition was reached */
 
@@ -478,7 +520,7 @@ XD(conductive_path)
   } while(SXD_HIT_NONE(&rwalk->hit));
 
   /* Register the power term for the green function */
-  if(ctx->green_path && power_ref != SDIS_VOLUMIC_POWER_NONE) {
+  if(ctx->green_path && props_ref.power != SDIS_VOLUMIC_POWER_NONE) {
     res = green_path_add_power_term
       (ctx->green_path, rwalk->mdm, &rwalk->vtx, green_power_term);
     if(res != RES_OK) goto error;

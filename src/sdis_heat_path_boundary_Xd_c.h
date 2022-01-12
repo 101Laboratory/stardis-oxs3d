@@ -818,7 +818,7 @@ XD(solid_reinjection)
   if(res != RES_OK) goto error;
 
   /* Time rewind */
-  res = XD(time_rewind)
+  res = XD(solid_time_rewind)
     (solid, args->rng, reinject_dst_m, args->rwalk_ctx, args->rwalk, args->T);
   if(res != RES_OK) goto error;
 

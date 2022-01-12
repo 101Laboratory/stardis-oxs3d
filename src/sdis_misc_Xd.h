@@ -24,7 +24,7 @@
 #include "sdis_Xd_begin.h"
 
 res_T
-XD(time_rewind)
+XD(solid_time_rewind)
   (struct sdis_medium* mdm,
    struct ssp_rng* rng,
    const double dist_in_meter,
@@ -32,35 +32,33 @@ XD(time_rewind)
    struct XD(rwalk)* rwalk,
    struct XD(temperature)* T)
 {
+  struct solid_props props = SOLID_PROPS_NULL;
+  double tau, mu;
   double temperature;
-  double lambda, rho, cp;
-  double tau, mu, t0;
   res_T res = RES_OK;
   ASSERT(mdm && rng && ctx && rwalk && dist_in_meter > 0);
   ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
   ASSERT(T->done == 0);
 
   /* Fetch physical properties */
-  lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-  rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
-  cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
-  t0 = solid_get_t0(mdm); /* Limit time */
+  res = solid_get_properties(mdm, &rwalk->vtx, &props);
+  if(res != RES_OK) goto error;
 
   /* Sample the time to reroll */
-  mu = (2*DIM*lambda)/(rho*cp*dist_in_meter*dist_in_meter);
+  mu = (2*DIM*props.lambda)/(props.rho*props.cp*dist_in_meter*dist_in_meter);
   tau = ssp_ran_exp(rng, mu);
 
   /* Increment the elapsed time */
-  ASSERT(rwalk->vtx.time >= t0);
-  rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
+  ASSERT(rwalk->vtx.time >= props.t0);
+  rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - props.t0);
 
   if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
 
   /* Time rewind */
-  rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
+  rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, props.t0);
 
   /* The path does not reach the limit condition */
-  if(rwalk->vtx.time > t0) goto exit;
+  if(rwalk->vtx.time > props.t0) goto exit;
 
   /* Fetch initial temperature */
   temperature = solid_get_temperature(mdm, &rwalk->vtx);
