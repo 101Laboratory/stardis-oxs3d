@@ -806,11 +806,16 @@ XD(solid_reinjection)
   (struct sdis_medium* solid,
    struct XD(solid_reinjection_args)* args)
 {
+  struct solid_props props = SOLID_PROPS_NULL;
   double reinject_dst_m; /* Reinjection distance in meters */
+  double mu;
   res_T res = RES_OK;
   ASSERT(solid && XD(check_solid_reinjection_args)(args));
 
   reinject_dst_m = args->reinjection->distance * args->fp_to_meter;
+
+  res = solid_get_properties(solid, &args->rwalk->vtx, &props);
+  if(res != RES_OK) goto error;
 
   /* Manage the volumic power */
   res = XD(handle_volumic_power)
@@ -818,8 +823,10 @@ XD(solid_reinjection)
   if(res != RES_OK) goto error;
 
   /* Time rewind */
-  res = XD(solid_time_rewind)
-    (solid, args->rng, reinject_dst_m, args->rwalk_ctx, args->rwalk, args->T);
+  args->rwalk->mdm = solid; /* Medium into which the time is rewind */
+  mu = (2*DIM*props.lambda)/(props.rho*props.cp*reinject_dst_m*reinject_dst_m);
+  res = XD(time_rewind)
+    (mu, props.t0, args->rng, args->rwalk, args->rwalk_ctx, args->T);
   if(res != RES_OK) goto error;
 
   /* Test if a limit condition was reached */

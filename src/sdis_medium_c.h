@@ -104,13 +104,6 @@ static const struct solid_props SOLID_PROPS_NULL = SOLID_PROPS_NULL__;
     return RES_OK;                                                             \
   }
 
-static FINLINE unsigned
-medium_get_id(const struct sdis_medium* mdm)
-{
-  ASSERT(mdm);
-  return mdm->id.index;
-}
-
 /*******************************************************************************
  * Fluid local functions
  ******************************************************************************/
@@ -275,7 +268,7 @@ solid_get_properties
 /*******************************************************************************
  * Generic functions
  ******************************************************************************/
-static FINLINE double
+static INLINE double
 medium_get_temperature
   (const struct sdis_medium* mdm, const struct sdis_rwalk_vertex* vtx)
 {
@@ -289,7 +282,7 @@ medium_get_temperature
   return temp;
 }
 
-static FINLINE double
+static INLINE double
 medium_get_t0(const struct sdis_medium* mdm)
 {
   double t0;
@@ -301,6 +294,26 @@ medium_get_t0(const struct sdis_medium* mdm)
   }
   return t0;
 }
+
+static INLINE unsigned
+medium_get_id(const struct sdis_medium* mdm)
+{
+  ASSERT(mdm);
+  return mdm->id.index;
+}
+
+static INLINE const char*
+medium_type_to_string(const enum sdis_medium_type type)
+{
+  const char* str = "none";
+  switch(type) {
+    case SDIS_FLUID: str = "fluid"; break;
+    case SDIS_SOLID: str = "solid"; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return str;
+}
+
 #undef MDM_TYPE
 #undef MDM_TYPE_solid
 #undef MDM_TYPE_fluid

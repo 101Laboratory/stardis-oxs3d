@@ -434,7 +434,9 @@ XD(conductive_path)
     struct sXd(hit) hit0, hit1;
     struct solid_props props = SOLID_PROPS_NULL;
     double power_term = 0;
+    double mu;
     float delta; /* Random walk numerical parameter */
+    double delta_m;
     float dir0[DIM], dir1[DIM];
     float org[DIM];
 
@@ -492,8 +494,9 @@ XD(conductive_path)
     }
 
     /* Rewind the time */
-    res = XD(solid_time_rewind)
-      (rwalk->mdm, rng, delta * scn->fp_to_meter, ctx, rwalk, T);
+    delta_m = delta * scn->fp_to_meter;
+    mu = (2*DIM*props.lambda)/(props.rho*props.cp*delta_m*delta_m);
+    res = XD(time_rewind)(mu, props.t0, rng, rwalk, ctx, T);
     if(res != RES_OK) goto error;
     if(T->done) break; /* Limit condition was reached */
 

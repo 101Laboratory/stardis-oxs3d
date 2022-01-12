@@ -148,21 +148,21 @@ register_heat_vertex
 }
 
 extern LOCAL_SYM res_T
-solid_time_rewind_2d
-  (struct sdis_medium* mdm, /* Solid into which the time is rewinded */
+time_rewind_2d
+  (const double mu,
+   const double t0, /* Initial time */
    struct ssp_rng* rng,
-   const double dist_in_meter,
-   const struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
+   const struct rwalk_context* ctx,
    struct temperature_2d* T);
 
 extern LOCAL_SYM res_T
-solid_time_rewind_3d
-  (struct sdis_medium* mdm, /* Solid into which the time is rewinded */
+time_rewind_3d
+  (const double mu,
+   const double t0, /* Initial time */
    struct ssp_rng* rng,
-   const double dist_in_meter,
-   const struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
+   const struct rwalk_context* ctx,
    struct temperature_3d* T);
 
 /* Check the validity of the parametric coordinate onto a 2D primitive. If it

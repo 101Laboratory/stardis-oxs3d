@@ -172,8 +172,8 @@ XD(convective_path)
 
     if(SXD_HIT_NONE(&rwalk->hit)) {
       log_err(scn->dev,
-"%s: the position %g %g %g lies in the surrounding fluid whose temperature must \n"
-"be known.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
+        "%s: the position %g %g %g lies in the surrounding fluid whose "
+        "temperature must be known.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
       res = RES_BAD_OP;
       goto error;
     }
@@ -238,7 +238,7 @@ XD(convective_path)
     struct sXd(primitive) prim;
     struct fluid_props props = FLUID_PROPS_NULL;
     double hc;
-    double mu, tau;
+    double mu;
 
     /* Fetch fluid properties */
     res = fluid_get_properties(rwalk->mdm, &rwalk->vtx, &props);
@@ -249,49 +249,9 @@ XD(convective_path)
 
     /* Sample the time using the upper bound. */
     mu = enc->hc_upper_bound / (props.rho * props.cp) * enc->S_over_V;
-    tau = ssp_ran_exp(rng, mu);
-
-    /* Increment the elapsed time */
-    ASSERT(rwalk->vtx.time > props.t0);
-    rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - props.t0);
-
-    if(rwalk->vtx.time != INF) {
-      rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, props.t0); /* Time rewind */
-
-      /* Register the new vertex against the heat path */
-      res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
-      if(res != RES_OK) goto error;
-
-      if(rwalk->vtx.time == props.t0) {
-        /* Check the initial condition. */
-        tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
-        if(tmp >= 0) {
-          T->value += tmp;
-          T->done = 1;
-          if(ctx->heat_path) {
-            /* Update the registered vertex data */
-            struct sdis_heat_vertex* vtx;
-            vtx = heat_path_get_last_vertex(ctx->heat_path);
-            vtx->time = rwalk->vtx.time;
-            vtx->weight = T->value;
-          }
-
-          if(ctx->green_path) {
-            res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm,
-              &rwalk->vtx, rwalk->elapsed_time);
-            if(res != RES_OK) goto error;
-          }
-          goto exit;
-        }
-        /* The initial condition should have been reached. */
-        log_err(scn->dev,
-          "%s: undefined initial condition. "
-          "Time is %g but the temperature remains unknown.\n",
-          FUNC_NAME, props.t0);
-        res = RES_BAD_OP;
-        goto error;
-      }
-    }
+    res = XD(time_rewind)(mu, props.t0, rng, rwalk, ctx, T);
+    if(res != RES_OK) goto error;
+    if(T->done) break; /* Limit condition was reached */
 
     /* Uniformly sample the enclosure. */
 #if DIM == 2
