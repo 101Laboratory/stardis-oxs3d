@@ -103,89 +103,101 @@ XD(register_heat_vertex_in_fluid)
     SDIS_HEAT_VERTEX_CONVECTION, (int)ctx->nbranchings);
 }
 
-/*******************************************************************************
- * Local functions
- ******************************************************************************/
-res_T
-XD(convective_path)
+static res_T
+XD(handle_known_fluid_temperature)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
-   struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  struct sXd(attrib) attr_P, attr_N;
-  struct fluid_props props_ref = FLUID_PROPS_NULL;
+  double temperature;
+  int known_temperature;
+  res_T res = RES_OK;
+  ASSERT(scn && ctx && rwalk && T);
+  ASSERT(sdis_medium_get_type(rwalk->mdm) == SDIS_FLUID);
+
+  temperature = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
+
+  /* Check if the temperature is known */
+  known_temperature = temperature >= 0;
+  if(!known_temperature) goto exit;
+
+  T->value += temperature;
+  T->done = 1;
+
+  if(ctx->green_path) {
+    res = green_path_set_limit_vertex
+      (ctx->green_path, rwalk->mdm, &rwalk->vtx, rwalk->elapsed_time);
+    if(res != RES_OK) goto error;
+  }
+
+  res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
+  if(res != RES_OK) goto error;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+XD(handle_convective_path_startup)
+  (struct sdis_scene* scn,
+   struct XD(rwalk)* rwalk,
+   int* path_starts_in_fluid)
+{
+  const float range[2] = {FLT_MIN, FLT_MAX};
+  float dir[DIM] = {0};
+  float org[DIM] = {0};
+  res_T res = RES_OK;
+  ASSERT(scn && rwalk && path_starts_in_fluid);
+  ASSERT(sdis_medium_get_type(rwalk->mdm) == SDIS_FLUID);
+
+  *path_starts_in_fluid = SXD_HIT_NONE(&rwalk->hit);
+  if(*path_starts_in_fluid == 0) goto exit; /* Nothing to do */
+
+  dir[DIM-1] = 1;
+  fX_set_dX(org, rwalk->vtx.P);
+
+  /* Init the path hit field required to define the current enclosure and
+   * fetch the interface data */
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, NULL, &rwalk->hit));
+  if(SXD_HIT_NONE(&rwalk->hit)) {
+    log_err(scn->dev,
+      "%s: the position %g %g %g lies in the surrounding fluid whose "
+      "temperature must be known.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  rwalk->hit_side = fX(dot)(rwalk->hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+XD(fetch_fluid_enclosure)
+  (struct sdis_scene* scn,
+   struct XD(rwalk)* rwalk,
+   const struct enclosure** out_enclosure)
+{
   const struct sdis_interface* interf;
   const struct enclosure* enc;
   unsigned enc_ids[2];
   unsigned enc_id;
-
-  double tmp;
-  double r;
-  int path_started_in_fluid;
-#if SDIS_XD_DIMENSION == 2
-  float st;
-#else
-  float st[2];
-#endif
   res_T res = RES_OK;
-  (void)rng, (void)ctx;
-  ASSERT(scn && ctx && rwalk && rng && T);
-  ASSERT(rwalk->mdm->type == SDIS_FLUID);
-
-  tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
-  if(tmp >= 0) { /* T is known. */
-    T->value += tmp;
-    T->done = 1;
-
-    if(ctx->green_path) {
-      res = green_path_set_limit_vertex
-        (ctx->green_path, rwalk->mdm, &rwalk->vtx, rwalk->elapsed_time);
-      if(res != RES_OK) goto error;
-    }
-
-    res = XD(register_heat_vertex_in_fluid)(scn, ctx, rwalk, T->value);
-    if(res != RES_OK) goto error;
-
-    goto exit;
-  }
-
-  /* Retrieve the fluid properties at the current position. Use them to verify
-   * that those that are supposed to be constant by the convective random walk
-   * remain the same. */
-  res = fluid_get_properties(rwalk->mdm, &rwalk->vtx, &props_ref);
-  if(res != RES_OK) goto error;
-
-  path_started_in_fluid = SXD_HIT_NONE(&rwalk->hit);
-  if(path_started_in_fluid) { /* The path begins in the fluid */
-    const float range[2] = {FLT_MIN, FLT_MAX};
-    float dir[DIM] = {0};
-    float org[DIM];
-
-    dir[DIM-1] = 1;
-    fX_set_dX(org, rwalk->vtx.P);
-
-    /* Init the path hit field required to define the current enclosure and
-     * fetch the interface data */
-    SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, NULL, &rwalk->hit));
-
-    if(SXD_HIT_NONE(&rwalk->hit)) {
-      log_err(scn->dev,
-        "%s: the position %g %g %g lies in the surrounding fluid whose "
-        "temperature must be known.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
-      res = RES_BAD_OP;
-      goto error;
-    }
-
-    rwalk->hit_side = fX(dot)(rwalk->hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
-  }
+  ASSERT(scn && rwalk && out_enclosure);
+  ASSERT(sdis_medium_get_type(rwalk->mdm) == SDIS_FLUID);
+  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
 
   /* Fetch the current interface and its associated enclosures */
   interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
   scene_get_enclosure_ids(scn, rwalk->hit.prim.prim_id, enc_ids);
 
-  /* Define the enclosure identifier of the current medium */
+  /* Find the enclosure identifier of the current medium */
   ASSERT(interf->medium_front != interf->medium_back);
   if(rwalk->mdm == interf->medium_front) {
     enc_id = enc_ids[0];
@@ -203,33 +215,77 @@ XD(convective_path)
      * the external enclosure. In this situation unknown temperature is
      * forbidden. */
     log_err(scn->dev,
-"%s: invalid enclosure. The surrounding fluid has an unset temperature.\n",
+      "%s: invalid enclosure. The surrounding fluid has an unset temperature.\n",
       FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;
   }
 
+exit:
+  *out_enclosure = enc;
+  return res;
+error:
+  enc = NULL;
+  goto exit;
+}
+
+/*******************************************************************************
+ * Local functions
+ ******************************************************************************/
+res_T
+XD(convective_path)
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct XD(rwalk)* rwalk,
+   struct ssp_rng* rng,
+   struct XD(temperature)* T)
+{
+  struct sXd(attrib) attr_P, attr_N;
+  struct fluid_props props_ref = FLUID_PROPS_NULL;
+  const struct sdis_interface* interf;
+  const struct enclosure* enc;
+  double r;
+#if SDIS_XD_DIMENSION == 2
+  float st;
+#else
+  float st[2];
+#endif
+  int path_starts_in_fluid;
+  res_T res = RES_OK;
+  (void)rng, (void)ctx;
+  ASSERT(scn && ctx && rwalk && rng && T);
+  ASSERT(rwalk->mdm->type == SDIS_FLUID);
+
+  res = XD(handle_known_fluid_temperature)(scn, ctx, rwalk, T);
+  if(res != RES_OK) goto error;
+  if(T->done) goto exit; /* The fluid temperature is known */
+
+  /* Setup the missing random walk member variables when the convective path
+   * starts from the fluid */
+  res = XD(handle_convective_path_startup)(scn, rwalk, &path_starts_in_fluid);
+  if(res != RES_OK) goto error;
+
+  res = XD(fetch_fluid_enclosure)(scn, rwalk, &enc);
+  if(res != RES_OK) goto error;
+
+  /* Retrieve the fluid properties at the current position. Use them to verify
+   * that those that are supposed to be constant by the convective random walk
+   * remain the same. */
+  res = fluid_get_properties(rwalk->mdm, &rwalk->vtx, &props_ref);
+  if(res != RES_OK) goto error;
+
   /* The hc upper bound can be 0 if h is uniformly 0. In that case the result
    * is the initial condition. */
   if(enc->hc_upper_bound == 0) {
-    /* Cannot be in the fluid without starting there. */
-    ASSERT(path_started_in_fluid);
-
+    ASSERT(path_starts_in_fluid); /* Cannot be in the fluid without starting there. */
     rwalk->vtx.time = props_ref.t0;
-    tmp = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
-    if(tmp >= 0) {
-      T->value += tmp;
-      T->done = 1;
-      goto exit;
+    res = XD(handle_known_fluid_temperature)(scn, ctx, rwalk, T);
+    if(res != RES_OK) goto error;
+    if(!T->done) {
+      log_err(scn->dev, "%s: undefined initial condition.", FUNC_NAME);
+      res = RES_BAD_OP;
+      goto error;
     }
-
-    /* At t=t0, the initial condition should have been reached. */
-    log_err(scn->dev,
-      "%s: undefined initial condition. "
-      "Time is %g but the temperature remains unknown.\n",
-      FUNC_NAME, rwalk->vtx.time);
-    res = RES_BAD_OP;
-    goto error;
   }
 
   /* Sample time until init condition is reached or a true convection occurs. */
