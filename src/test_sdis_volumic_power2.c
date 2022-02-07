@@ -262,7 +262,6 @@ check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct solid* solid_param = NULL;
   struct fluid* fluid_param = NULL;
   struct interf* interf_param = NULL;
@@ -466,8 +465,6 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }
