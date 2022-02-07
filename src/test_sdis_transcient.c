@@ -528,7 +528,7 @@ main(int argc, char** argv)
   solid_param->rho = rho;
   solid_param->cp = cp;
   solid_param->lambda = lambda;
-  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
+  solid_param->delta = 1.0/30.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solid_param->init_temperature = Tinit;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
 
@@ -616,7 +616,7 @@ main(int argc, char** argv)
     (Tbounds, Tinit, boxsz, probe, time[0], rho, cp, lambda);
 
   /* Run simulation on regular scene */
-  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
+  solid_param->delta = 1.0/30.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solve_args.nrealisations = nrealisations;
   solve_args.position[0] = probe[0];
   solve_args.position[1] = probe[1];
@@ -636,7 +636,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
 
   /* Run simulation on split scene */
-  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0]/2.0, boxsz[1]), boxsz[2]);
+  solid_param->delta = 1.0/30.0 * MMIN(MMIN(boxsz[0]/2.0, boxsz[1]), boxsz[2]);
   OK(sdis_solve_probe(box2_scn, &solve_args, &estimator));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &temperature));
@@ -651,7 +651,7 @@ main(int argc, char** argv)
   /* Run simulation on matriochkas */
   solid_param->delta = MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solid_param->delta /= (double)nmatriochkas;
-  solid_param->delta *= 1.0/20.0;
+  solid_param->delta *= 1.0/30.0;
   OK(sdis_solve_probe(box_matriochka_scn, &solve_args, &estimator));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &temperature));
