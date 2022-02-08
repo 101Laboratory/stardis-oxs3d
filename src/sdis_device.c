@@ -344,7 +344,7 @@ sdis_device_create
   res = setup_mpi(dev, args);
   if(res != RES_OK) goto error;
 
-  log_info(dev, "Use %lu %s.\n", (unsigned long)dev->nthreads,
+  log_info(dev, "Using %lu %s.\n", (unsigned long)dev->nthreads,
     dev->nthreads == 1 ? "thread" : "threads");
 
 exit:
