@@ -281,7 +281,9 @@ XD(convective_path)
     rwalk->vtx.time = props_ref.t0;
     res = XD(handle_known_fluid_temperature)(scn, ctx, rwalk, T);
     if(res != RES_OK) goto error;
-    if(!T->done) {
+    if(T->done) {
+      goto exit; /* Stop the random walk */
+    } else {
       log_err(scn->dev, "%s: undefined initial condition.", FUNC_NAME);
       res = RES_BAD_OP;
       goto error;
