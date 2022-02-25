@@ -20,13 +20,16 @@ The hypothesis these algorithms are based upon are the following:
 - *convection*: fluid media are supposed to be isothermal, even if their
   temperature may vary with time. This hypothesis relies on the assumption of
   perfectly agitated fluids.
-- *radiation*: local radiative transfer is linearised, i.e. instead of writing
-  the spectrally integrated net flux as a difference of temperatures to the
-  power 4, it is assumed of the same form as the convective flux (as a
-  difference of temperatures, multiplied by a radiative exchange coefficient).
-  In order to be valid, this representation of radiative transfer exchanges
-  requires that the temperature at any position and time is close to a known
-  reference temperature.
+- *radiation*: local radiative transfer is solved by a iterative numerical
+  method (Picard algorithm) that requires the knowledge of a reference
+  temperature field. At the basic level (one level of recursion), and using a
+  uniform reference temperature field, this algorithm translates into the
+  hypothesis of a linearized radiative transfer. Using a higher order or
+  recursion makes possible to converge the result closer to the solution of a
+  rigorous spectrally-integrated radiative transfer (a difference of
+  temperatures to the power 4 when integrated over the whole spectrum). The
+  higher the recursion order, to better will be the convergence of the
+  algorithm.
 
 In Stardis-Solver the system to simulate is represented by a *scene* whose
 geometry defines the contour of the object only: in contrast to legacy thermal
