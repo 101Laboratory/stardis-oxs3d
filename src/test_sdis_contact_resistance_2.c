@@ -54,8 +54,8 @@
 #define TL 100.0
 #define LAMBDA2 0.2
 
-#define DELTA1 X0/25.0
-#define DELTA2 (L-X0)/25.0
+#define DELTA1 X0/30.0
+#define DELTA2 (L-X0)/30.0
 
 /*******************************************************************************
  * Media
