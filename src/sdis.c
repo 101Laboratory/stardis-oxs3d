@@ -293,6 +293,7 @@ res_T
 create_per_thread_rng
   (struct sdis_device* dev,
    struct ssp_rng* rng_state,
+   const enum ssp_rng_type rng_type,
    struct ssp_rng_proxy** out_proxy,
    struct ssp_rng** out_rngs[])
 {
@@ -312,7 +313,7 @@ create_per_thread_rng
 
   /* Create the RNG proxy */
   proxy_args.rng= rng_state;
-  proxy_args.type = SSP_RNG_MT19937_64;
+  proxy_args.type = rng_type;
   proxy_args.nbuckets = dev->nthreads;
 #ifdef SDIS_ENABLE_MPI
   if(dev->use_mpi) {

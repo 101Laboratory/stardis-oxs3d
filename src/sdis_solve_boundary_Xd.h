@@ -73,6 +73,11 @@ check_solve_boundary_args(const struct sdis_solve_boundary_args* args)
     return RES_BAD_ARG;
   }
 
+  /* Check RNG type */
+  if(!args->rng_state && args->rng_type >= SSP_RNG_TYPES_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
   return RES_OK;
 }
 
@@ -102,6 +107,11 @@ check_solve_boundary_flux_args(const struct sdis_solve_boundary_flux_args* args)
 
   /* Check picard order */
   if(args->picard_order < 1) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check RNG type */
+  if(!args->rng_state && args->rng_type >= SSP_RNG_TYPES_COUNT__) {
     return RES_BAD_ARG;
   }
 
@@ -267,7 +277,7 @@ XD(solve_boundary)
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
-    (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
+    (scn->dev, args->rng_state, args->rng_type, &rng_proxy, &per_thread_rng);
   if(res != RES_OK) goto error;
 
   /* Allocate the per process progress status */
@@ -634,7 +644,7 @@ XD(solve_boundary_flux)
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
-    (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
+    (scn->dev, args->rng_state, args->rng_type, &rng_proxy, &per_thread_rng);
   if(res != RES_OK) goto error;
 
   /* Allocate the per process progress status */

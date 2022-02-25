@@ -16,6 +16,8 @@
 #ifndef SDIS_H
 #define SDIS_H
 
+#include <star/ssp.h>
+
 #include <rsys/rsys.h>
 #include <float.h>
 
@@ -50,7 +52,6 @@ struct logger;
 struct mem_allocator;
 struct senc2d_scene;
 struct senc3d_scene;
-struct ssp_rng;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
  * ref counted. Once created the caller implicitly owns the created data, i.e.
@@ -442,6 +443,7 @@ struct sdis_solve_probe_args {
 
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_PROBE_ARGS_DEFAULT__ {                                      \
   10000, /* #realisations */                                                   \
@@ -449,7 +451,8 @@ struct sdis_solve_probe_args {
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
@@ -469,6 +472,7 @@ struct sdis_solve_probe_boundary_args {
   enum sdis_side side; /* Side of iprim on which the probe lies */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__ {                             \
   10000, /* #realisations */                                                   \
@@ -478,7 +482,8 @@ struct sdis_solve_probe_boundary_args {
   1, /* Picard order */                                                        \
   SDIS_SIDE_NULL__,                                                            \
   SDIS_HEAT_PATH_NONE,                                                         \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_probe_boundary_args
 SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
@@ -498,6 +503,7 @@ struct sdis_solve_boundary_args {
 
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__ {                                   \
   10000, /* #realisations */                                                   \
@@ -507,7 +513,8 @@ struct sdis_solve_boundary_args {
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__;
@@ -524,6 +531,7 @@ struct sdis_solve_medium_args {
 
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__ {                                     \
   10000, /* #realisations */                                                   \
@@ -531,7 +539,8 @@ struct sdis_solve_medium_args {
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
   SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__;
@@ -548,6 +557,7 @@ struct sdis_solve_probe_boundary_flux_args {
   size_t picard_order;
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
   10000, /* #realisations */                                                   \
@@ -555,7 +565,8 @@ struct sdis_solve_probe_boundary_flux_args {
   {0,0}, /* UV */                                                              \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_probe_boundary_flux_args
 SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -573,6 +584,7 @@ struct sdis_solve_boundary_flux_args {
   size_t picard_order;
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                              \
   10000, /* #realisations */                                                   \
@@ -580,7 +592,8 @@ struct sdis_solve_boundary_flux_args {
   0, /* #primitives */                                                         \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_boundary_flux_args
 SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -598,6 +611,8 @@ struct sdis_solve_camera_args {
   size_t image_definition[2]; /* Image definition */
   size_t spp; /* #samples per pixel */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
+
+  enum ssp_rng_type rng_type; /* RNG type to use */
 };
 #define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
   NULL, /* Camera */                                                           \
@@ -605,7 +620,8 @@ struct sdis_solve_camera_args {
   1, /* Picard order */                                                        \
   {512,512}, /* Image resolution */                                            \
   256, /* #realisations per pixel */                                           \
-  SDIS_HEAT_PATH_NONE                                                          \
+  SDIS_HEAT_PATH_NONE,                                                         \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
   SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
@@ -615,12 +631,14 @@ struct sdis_compute_power_args {
   struct sdis_medium* medium; /* Medium to solve */
   double time_range[2]; /* Observation time */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_COMPUTE_POWER_ARGS_DEFAULT__ {                                    \
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_compute_power_args
 SDIS_COMPUTE_POWER_ARGS_DEFAULT = SDIS_COMPUTE_POWER_ARGS_DEFAULT__;

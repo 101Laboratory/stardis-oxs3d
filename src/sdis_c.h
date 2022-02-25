@@ -16,6 +16,7 @@
 #ifndef SDIS_C_H
 #define SDIS_C_H
 
+#include <star/ssp.h>
 #include <rsys/rsys.h>
 
 /* Id of the messages sent between processes */
@@ -47,7 +48,8 @@ struct ssp_rng_proxy;
 extern LOCAL_SYM res_T
 create_per_thread_rng
   (struct sdis_device* dev,
-   struct ssp_rng* rng_state,
+   struct ssp_rng* rng_state, /* May be NULL */
+   const enum ssp_rng_type rng_type, /* RNG type when `rng_state' is NULL */
    struct ssp_rng_proxy** rng_proxy,
    struct ssp_rng** rngs[]);
 

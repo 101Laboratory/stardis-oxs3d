@@ -167,6 +167,11 @@ check_solve_medium_args(const struct sdis_solve_medium_args* args)
     return RES_BAD_ARG;
   }
 
+  /* Check the RNG type */
+  if(!args->rng_state && args->rng_type >= SSP_RNG_TYPES_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
   return RES_OK;
 }
 
@@ -189,6 +194,11 @@ check_compute_power_args(const struct sdis_compute_power_args* args)
   }
   if(args->time_range[1] > DBL_MAX
   && args->time_range[0] != args->time_range[1]) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check the RNG type */
+  if(!args->rng_state && args->rng_type >= SSP_RNG_TYPES_COUNT__) {
     return RES_BAD_ARG;
   }
 
@@ -319,7 +329,7 @@ XD(solve_medium)
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
-    (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
+    (scn->dev, args->rng_state, args->rng_type, &rng_proxy, &per_thread_rng);
   if(res != RES_OK) goto error;
 
   /* Allocate the per process progress status */
@@ -612,7 +622,7 @@ XD(compute_power)
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
-    (scn->dev, args->rng_state, &rng_proxy, &per_thread_rng);
+    (scn->dev, args->rng_state, args->rng_type, &rng_proxy, &per_thread_rng);
   if(res != RES_OK) goto error;
 
   /* Allocate the per process progress status */
