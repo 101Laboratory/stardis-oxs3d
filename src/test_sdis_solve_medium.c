@@ -18,6 +18,7 @@
 
 #include <rsys/math.h>
 #include <rsys/stretchy_array.h>
+#include <star/ssp.h>
 #include <star/s3dut.h>
 
 #include <string.h>
@@ -202,6 +203,7 @@ main(int argc, char** argv)
   struct s3dut_mesh* msh0 = NULL;
   struct s3dut_mesh* msh1 = NULL;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc T2 = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid0 = NULL;
@@ -224,6 +226,7 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_solve_medium_args solve_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
+  struct ssp_rng* rng = NULL;
   struct context ctx;
   double ref;
   double v, v0, v1;
@@ -449,6 +452,41 @@ main(int argc, char** argv)
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, Np);
     CHK(eq_eps(T.E, ref, T.SE*3));
   }
+
+  /* Check RNG type */
+  solve_args.rng_state = NULL;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(sdis_solve_medium(scn, &solve_args, &estimator2));
+  solve_args.rng_type =
+    SDIS_SOLVE_MEDIUM_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator2));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(eq_eps(T2.E, ref, 3*T2.SE));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  solve_args.rng_state = rng;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(sdis_solve_medium(scn, &solve_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(eq_eps(T2.E, ref, 3*T2.SE));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Restore args */
+  solve_args.rng_state = SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_state;
+  solve_args.rng_type = SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_type;
+
+
 
   /* Solve green */
   BA(sdis_solve_medium_green_function(NULL, &solve_args, &green));

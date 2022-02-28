@@ -256,6 +256,7 @@ if(NOT NO_TEST)
 
   target_link_libraries(test_sdis_solve_boundary StarSP)
   target_link_libraries(test_sdis_solve_probe2 StarSP)
+  target_link_libraries(test_sdis_solve_medium StarSP)
 
   set(_mpi_tests
     test_sdis
