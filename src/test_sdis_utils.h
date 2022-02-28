@@ -263,17 +263,6 @@ free_default_device(struct sdis_device* dev)
 }
 
 /*******************************************************************************
- * Synchronisation
- ******************************************************************************/
-static INLINE void
-barrier(void)
-{
-#ifdef SDIS_ENABLE_MPI
-  CHK(MPI_Barrier(MPI_COMM_WORLD) == MPI_SUCCESS);
-#endif
-}
-
-/*******************************************************************************
  * Miscellaneous
  ******************************************************************************/
 static INLINE void

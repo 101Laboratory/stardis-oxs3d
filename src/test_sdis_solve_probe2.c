@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <star/ssp.h>
 #include <rsys/math.h>
 
 #include <string.h>
@@ -170,10 +171,8 @@ main(int argc, char** argv)
   struct ssp_rng* rng = NULL;
   struct context ctx;
   struct interf* interface_param = NULL;
-  FILE* fp = NULL;
   double ref;
   const size_t N = 10000;
-  const char* filename = "rng_state.txt";
   size_t nreals;
   size_t nfails;
   int is_master_process;
@@ -278,19 +277,7 @@ main(int argc, char** argv)
     CHK(nfails + nreals == N);
     CHK(nfails < N/1000);
     CHK(eq_eps(T.E, ref, 3*T.SE));
-
-    /* Fetch the rng state */
-    OK(sdis_estimator_get_rng_state(estimator, &rng));
-    CHK(fp = fopen(filename, "w"));
-    OK(ssp_rng_write(rng, fp));
-    CHK(fclose(fp) == 0);
   }
-
-  barrier();
-  CHK(fp = fopen(filename, "r"));
-  OK(ssp_rng_create(NULL, SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_type, &rng));
-  OK(ssp_rng_read(rng, fp));
-  CHK(fclose(fp) == 0);
 
   /* Check RNG type */
   solve_args.rng_state = NULL;
@@ -307,9 +294,13 @@ main(int argc, char** argv)
     OK(sdis_estimator_ref_put(estimator2));
   }
 
+  /* Check the RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
   solve_args.rng_state = rng;
   solve_args.rng_type = SSP_RNG_TYPE_NULL;
   OK(sdis_solve_probe(scn, &solve_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
   if(is_master_process) {
     OK(sdis_estimator_get_temperature(estimator2, &T2));
     CHK(eq_eps(T2.E, ref, 3*T2.SE));
@@ -317,7 +308,9 @@ main(int argc, char** argv)
     OK(sdis_estimator_ref_put(estimator2));
   }
 
-  OK(ssp_rng_ref_put(rng));
+  /* Restore args */
+  solve_args.rng_state = SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_state;
+  solve_args.rng_type = SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_type;
 
   /* Check green */
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
