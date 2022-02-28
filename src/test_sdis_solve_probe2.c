@@ -148,6 +148,7 @@ int
 main(int argc, char** argv)
 {
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc T2 = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_data* data = NULL;
@@ -166,10 +167,13 @@ main(int argc, char** argv)
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
   struct sdis_interface* interfaces[12];
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct ssp_rng* rng = NULL;
   struct context ctx;
   struct interf* interface_param = NULL;
+  FILE* fp = NULL;
   double ref;
   const size_t N = 10000;
+  const char* filename = "rng_state.txt";
   size_t nreals;
   size_t nfails;
   int is_master_process;
@@ -254,6 +258,8 @@ main(int argc, char** argv)
   solve_args.time_range[1] = INF;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
+
+  ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
   if(!is_master_process) {
     CHK(estimator == NULL);
   } else {
@@ -263,7 +269,6 @@ main(int argc, char** argv)
     OK(sdis_estimator_get_realisation_time(estimator, &time));
 
     /* Print the estimation results */
-    ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
     printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
       SPLIT3(solve_args.position), ref, T.E, T.SE);
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
@@ -273,7 +278,46 @@ main(int argc, char** argv)
     CHK(nfails + nreals == N);
     CHK(nfails < N/1000);
     CHK(eq_eps(T.E, ref, 3*T.SE));
+
+    /* Fetch the rng state */
+    OK(sdis_estimator_get_rng_state(estimator, &rng));
+    CHK(fp = fopen(filename, "w"));
+    OK(ssp_rng_write(rng, fp));
+    CHK(fclose(fp) == 0);
   }
+
+  barrier();
+  CHK(fp = fopen(filename, "r"));
+  OK(ssp_rng_create(NULL, SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_type, &rng));
+  OK(ssp_rng_read(rng, fp));
+  CHK(fclose(fp) == 0);
+
+  /* Check RNG type */
+  solve_args.rng_state = NULL;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator2));
+  solve_args.rng_type =
+    SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator2));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(eq_eps(T2.E, ref, 3*T2.SE));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  solve_args.rng_state = rng;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator2));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(eq_eps(T2.E, ref, 3*T2.SE));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  OK(ssp_rng_ref_put(rng));
 
   /* Check green */
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
