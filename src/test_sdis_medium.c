@@ -83,7 +83,7 @@ main(int argc, char** argv)
   CHK(sdis_medium_get_type(solid) == SDIS_SOLID);
   CHK(sdis_medium_get_data(solid) == data);
 
-    OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(solid));
   OK(sdis_data_ref_put(data));
 
   solid_shader.calorific_capacity = NULL;
