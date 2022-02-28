@@ -531,7 +531,7 @@ main(int argc, char** argv)
   bound_args.rng_state = NULL;
   bound_args.rng_type = SSP_RNG_TYPE_NULL;
   BA(SOLVE(box_scn, &bound_args, &estimator2));
-  probe_args.rng_type =
+  bound_args.rng_type =
     SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
     ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
   OK(SOLVE(box_scn, &bound_args, &estimator2));
