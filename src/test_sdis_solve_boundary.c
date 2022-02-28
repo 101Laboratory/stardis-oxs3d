@@ -194,6 +194,7 @@ main(int argc, char** argv)
   struct sdis_solve_probe_boundary_args probe_args =
     SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
   struct sdis_solve_boundary_args bound_args = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
+  struct ssp_rng* rng = NULL;
   struct interf* interf_props = NULL;
   struct fluid* fluid_param;
   double pos[3];
@@ -344,6 +345,42 @@ main(int argc, char** argv)
     check_estimator(estimator, N, ref);
   }
 
+  /* Check RNG type */
+  probe_args.rng_state = NULL;
+  probe_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(SOLVE(box_scn, &probe_args, &estimator2));
+  probe_args.rng_type =
+    SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(SOLVE(box_scn, &probe_args, &estimator2));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, ref);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  probe_args.rng_state = rng;
+  probe_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(SOLVE(box_scn, &probe_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, ref);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  probe_args.rng_state = SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT.rng_state;
+  probe_args.rng_type = SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT.rng_type;
+
   BA(GREEN(NULL, &probe_args, &green));
   BA(GREEN(box_scn, NULL, &green));
   BA(GREEN(box_scn, &probe_args, NULL));
@@ -411,7 +448,7 @@ main(int argc, char** argv)
   fluid_param->temperature = UNKNOWN_TEMPERATURE;
   BA(SOLVE(square_scn, &probe_args, &estimator));
   fluid_param->temperature = Tf;
-  
+
   /* Right-side temperature at initial time */
   probe_args.time_range[0] = 0;
   probe_args.time_range[1] = 0;
@@ -489,6 +526,43 @@ main(int argc, char** argv)
     printf("Average temperature of the right side of the box = ");
     check_estimator(estimator, N, ref);
   }
+
+  /* Check RNG type */
+  bound_args.rng_state = NULL;
+  bound_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(SOLVE(box_scn, &bound_args, &estimator2));
+  probe_args.rng_type =
+    SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(SOLVE(box_scn, &bound_args, &estimator2));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, ref);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  bound_args.rng_state = rng;
+  bound_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(SOLVE(box_scn, &bound_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, ref);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Restore args */
+  bound_args.rng_state = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT.rng_state;
+  bound_args.rng_type = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT.rng_type;
 
   BA(GREEN(NULL, &bound_args, &green));
   BA(GREEN(box_scn, NULL, &green));

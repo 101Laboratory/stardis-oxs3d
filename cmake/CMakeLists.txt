@@ -254,6 +254,9 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
+  target_link_libraries(test_sdis_solve_boundary StarSP)
+  target_link_libraries(test_sdis_solve_probe2 StarSP)
+
   set(_mpi_tests
     test_sdis
     test_sdis_compute_power
