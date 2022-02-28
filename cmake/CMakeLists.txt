@@ -255,6 +255,7 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_camera Star3DUT)
 
   target_link_libraries(test_sdis_solve_boundary StarSP)
+  target_link_libraries(test_sdis_solve_boundary_flux StarSP)
   target_link_libraries(test_sdis_solve_probe2 StarSP)
   target_link_libraries(test_sdis_solve_medium StarSP)
 

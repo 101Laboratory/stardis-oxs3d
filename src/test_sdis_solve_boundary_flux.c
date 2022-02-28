@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <star/ssp.h>
 #include <rsys/math.h>
 
  /*
@@ -238,6 +239,7 @@ main(int argc, char** argv)
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
@@ -250,6 +252,7 @@ main(int argc, char** argv)
     SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT;
   struct interf* interf_props = NULL;
   struct fluid* fluid_param;
+  struct ssp_rng* rng = NULL;
   enum sdis_estimator_type type;
   double pos[3];
   double analyticT, analyticCF, analyticRF, analyticTF;
@@ -414,8 +417,46 @@ main(int argc, char** argv)
       (box_scn, probe_args.iprim, probe_args.uv, pos));
     printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
     check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-    OK(sdis_estimator_ref_put(estimator));
   }
+
+  /* Check the RNG type */
+  probe_args.rng_state = NULL;
+  probe_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(SOLVE(box_scn, &probe_args, &estimator2));
+  probe_args.rng_type =
+    SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(SOLVE(box_scn, &probe_args, &estimator2));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  probe_args.rng_state = rng;
+  probe_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(SOLVE(box_scn, &probe_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  if(estimator) OK(sdis_estimator_ref_put(estimator));
+
+  /* Restore arguments */
+  probe_args.rng_state = SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_state;
+  probe_args.rng_type = SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type;
 
   probe_args.uv[0] = 0.5;
   probe_args.iprim = 4;
@@ -471,8 +512,46 @@ main(int argc, char** argv)
     /* Average temperature on the right side of the box */
     printf("Average values of the right side of the box = ");
     check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-    OK(sdis_estimator_ref_put(estimator));
   }
+
+  /* Check the RNG type */
+  bound_args.rng_state = NULL;
+  bound_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(SOLVE(box_scn, &bound_args, &estimator2));
+  bound_args.rng_type =
+    SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(SOLVE(box_scn, &bound_args, &estimator2));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  bound_args.rng_state = rng;
+  bound_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(SOLVE(box_scn, &bound_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  if(estimator) OK(sdis_estimator_ref_put(estimator));
+
+  /* Restore arguments */
+  bound_args.rng_state = SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_state;
+  bound_args.rng_type = SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type;
 
   /* Average temperature on the right side of the square */
   prims[0] = 4;
