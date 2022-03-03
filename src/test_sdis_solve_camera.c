@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <star/ssp.h>
 #include <star/s3dut.h>
 
 #include <rsys/algorithm.h>
@@ -544,10 +545,12 @@ main(int argc, char** argv)
   struct s3dut_mesh* msh = NULL;
   struct s3dut_mesh_data msh_data;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc T2 = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_camera* cam = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_estimator_buffer* buf = NULL;
+  struct sdis_estimator_buffer* buf2 = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid0 = NULL;
   struct sdis_medium* fluid1 = NULL;
@@ -558,6 +561,7 @@ main(int argc, char** argv)
   struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
   struct sdis_ambient_radiative_temperature trad =
     SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
+  struct ssp_rng* rng = NULL;
   struct ssp_rng* rng_state = NULL;
   struct fluid fluid_param = FLUID_NULL;
   struct solid solid_param = SOLID_NULL;
@@ -726,6 +730,41 @@ main(int argc, char** argv)
     dump_image(buf);
     OK(sdis_estimator_buffer_ref_put(buf));
   }
+
+  /* Check RNG type */
+  solve_args.rng_state = NULL;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(sdis_solve_camera(scn, &solve_args, &buf2));
+  solve_args.rng_type =
+    SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(sdis_solve_camera(scn, &solve_args, &buf2));
+  if(is_master_process) {
+    OK(sdis_estimator_buffer_get_temperature(buf2, &T2));
+    CHK(T.E != T2.E);
+    CHK(T2.E + 3*T2.SE >= T.E - 3*T.SE
+     && T2.E - 3*T2.SE <= T.E + 3*T.SE);
+    OK(sdis_estimator_buffer_ref_put(buf2));
+  }
+
+  /* Check the RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  solve_args.rng_state = rng;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(sdis_solve_camera(scn, &solve_args, &buf2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    OK(sdis_estimator_buffer_get_temperature(buf2, &T2));
+    CHK(T.E != T2.E);
+    CHK(T2.E + 3*T2.SE >= T.E - 3*T.SE
+     && T2.E - 3*T2.SE <= T.E + 3*T.SE);
+    OK(sdis_estimator_buffer_ref_put(buf2));
+  }
+
+  /* Restore args */
+  solve_args.rng_state = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_state;
+  solve_args.rng_type = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_type;
 
   pfluid_param = sdis_data_get(sdis_medium_get_data(fluid1));
   pfluid_param->temperature = UNKOWN_TEMPERATURE;
