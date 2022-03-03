@@ -612,6 +612,7 @@ struct sdis_solve_camera_args {
   size_t spp; /* #samples per pixel */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
 
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use */
 };
 #define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
@@ -621,6 +622,7 @@ struct sdis_solve_camera_args {
   {512,512}, /* Image resolution */                                            \
   256, /* #realisations per pixel */                                           \
   SDIS_HEAT_PATH_NONE,                                                         \
+  NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
