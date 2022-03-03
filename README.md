@@ -20,7 +20,7 @@ The hypothesis these algorithms are based upon are the following:
 - *convection*: fluid media are supposed to be isothermal, even if their
   temperature may vary with time. This hypothesis relies on the assumption of
   perfectly agitated fluids.
-- *radiation*: local radiative transfer is solved by a iterative numerical
+- *radiation*: local radiative transfer is solved by an iterative numerical
   method (Picard algorithm) that requires the knowledge of a reference
   temperature field. At the basic level (one level of recursion), and using a
   uniform reference temperature field, this algorithm translates into the
