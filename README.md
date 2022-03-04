@@ -20,16 +20,16 @@ The hypothesis these algorithms are based upon are the following:
 - *convection*: fluid media are supposed to be isothermal, even if their
   temperature may vary with time. This hypothesis relies on the assumption of
   perfectly agitated fluids.
-- *radiation*: local radiative transfer is solved by an iterative numerical
-  method (Picard algorithm) that requires the knowledge of a reference
-  temperature field. At the basic level (one level of recursion), and using a
-  uniform reference temperature field, this algorithm translates into the
-  hypothesis of a linearized radiative transfer. Using a higher order or
-  recursion makes possible to converge the result closer to the solution of a
-  rigorous spectrally-integrated radiative transfer (a difference of
-  temperatures to the power 4 when integrated over the whole spectrum). The
-  higher the recursion order, to better will be the convergence of the
-  algorithm.
+- *radiation*: local radiative transfer is solved by an [iterative numerical
+  method](https://hal.archives-ouvertes.fr/tel-03266863/) (Picard algorithm)
+  that requires the knowledge of a reference temperature field. At the basic
+  level (one level of recursion), and using a uniform reference temperature
+  field, this algorithm translates into the hypothesis of a linearized
+  radiative transfer. Using a higher order or recursion makes possible to
+  converge the result closer to the solution of a rigorous
+  spectrally-integrated radiative transfer (a difference of temperatures to the
+  power 4 when integrated over the whole spectrum). The higher the recursion
+  order, to better will be the convergence of the algorithm.
 
 In Stardis-Solver the system to simulate is represented by a *scene* whose
 geometry defines the contour of the object only: in contrast to legacy thermal
@@ -61,7 +61,7 @@ The main features of the solver are currently:
   been reached; when internal power sources or imposed fluxes are taken into
   account, additional contributions to the weight must be continuously
   evaluated by the thermal conduction algorithm, but these contributions are
-  proportional to the local dissipated power/imposed flux.  In any case, the
+  proportional to the local dissipated power/imposed flux. In any case, the
   position and date at the end of each thermal path (and also accumulation
   coefficients) can be stored during a first complete Monte-Carlo simulation.
   This information, known as the Green function, can then be used in (very
@@ -70,7 +70,8 @@ The main features of the solver are currently:
   flux). Note that when using the Green function, only boundary and initial
   conditions (as well as internal power sources) can be modified: in
   particular, the geometry, thermal properties and exchange coefficients have
-  to remain identical.
+  to remain identical. Furthermore, the green function is only valid under the
+  assumption of linearized radiative transfer.
 - *path visualization*: Stardis-Solver can store the complete spatial and
   temporal position along a set of thermal paths, for latter visualization. In
   addition of their position and, each thermal path vertex register additional
@@ -82,7 +83,7 @@ Stardis-Solver is currently used in two frameworks. The
 tools is the reference workflow of Stardis-Solver. It proposes a complete
 toolchain from fileformats describing the scene (geometry, thermal properties,
 limit and boundary conditions) to computations and post-treatments of the
-results ([Stardis-Green](https://gitlab.com/meso-star/stardis-green.git).
+results ([Stardis-Green](https://gitlab.com/meso-star/stardis-green.git)).
 Stardis-Solver is also integrated into
 [SYRTHES](https://www.edf.fr/en/the-edf-group/world-s-largest-power-company/activities/research-and-development/scientific-communities/simulation-softwares?logiciel=10818),
 the general thermal free software developed by Electricité De France (EDF).
