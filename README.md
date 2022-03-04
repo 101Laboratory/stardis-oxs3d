@@ -20,16 +20,16 @@ The hypothesis these algorithms are based upon are the following:
 - *convection*: fluid media are supposed to be isothermal, even if their
   temperature may vary with time. This hypothesis relies on the assumption of
   perfectly agitated fluids.
-- *radiation*: local radiative transfer is solved by an iterative numerical
-  method (Picard algorithm) that requires the knowledge of a reference
-  temperature field. At the basic level (one level of recursion), and using a
-  uniform reference temperature field, this algorithm translates into the
-  hypothesis of a linearized radiative transfer. Using a higher order or
-  recursion makes possible to converge the result closer to the solution of a
-  rigorous spectrally-integrated radiative transfer (a difference of
-  temperatures to the power 4 when integrated over the whole spectrum). The
-  higher the recursion order, to better will be the convergence of the
-  algorithm.
+- *radiation*: local radiative transfer is solved by an [iterative numerical
+  method](https://hal.archives-ouvertes.fr/tel-03266863/) (Picard algorithm)
+  that requires the knowledge of a reference temperature field. At the basic
+  level (one level of recursion), and using a uniform reference temperature
+  field, this algorithm translates into the hypothesis of a linearized
+  radiative transfer. Using a higher order or recursion makes possible to
+  converge the result closer to the solution of a rigorous
+  spectrally-integrated radiative transfer (a difference of temperatures to the
+  power 4 when integrated over the whole spectrum). The higher the recursion
+  order, to better will be the convergence of the algorithm.
 
 In Stardis-Solver the system to simulate is represented by a *scene* whose
 geometry defines the contour of the object only: in contrast to legacy thermal
@@ -61,7 +61,7 @@ The main features of the solver are currently:
   been reached; when internal power sources or imposed fluxes are taken into
   account, additional contributions to the weight must be continuously
   evaluated by the thermal conduction algorithm, but these contributions are
-  proportional to the local dissipated power/imposed flux.  In any case, the
+  proportional to the local dissipated power/imposed flux. In any case, the
   position and date at the end of each thermal path (and also accumulation
   coefficients) can be stored during a first complete Monte-Carlo simulation.
   This information, known as the Green function, can then be used in (very
@@ -70,7 +70,8 @@ The main features of the solver are currently:
   flux). Note that when using the Green function, only boundary and initial
   conditions (as well as internal power sources) can be modified: in
   particular, the geometry, thermal properties and exchange coefficients have
-  to remain identical.
+  to remain identical. Furthermore, the green function is only valid under the
+  assumption of linearized radiative transfer.
 - *path visualization*: Stardis-Solver can store the complete spatial and
   temporal position along a set of thermal paths, for latter visualization. In
   addition of their position and, each thermal path vertex register additional
@@ -82,7 +83,7 @@ Stardis-Solver is currently used in two frameworks. The
 tools is the reference workflow of Stardis-Solver. It proposes a complete
 toolchain from fileformats describing the scene (geometry, thermal properties,
 limit and boundary conditions) to computations and post-treatments of the
-results ([Stardis-Green](https://gitlab.com/meso-star/stardis-green.git).
+results ([Stardis-Green](https://gitlab.com/meso-star/stardis-green.git)).
 Stardis-Solver is also integrated into
 [SYRTHES](https://www.edf.fr/en/the-edf-group/world-s-largest-power-company/activities/research-and-development/scientific-communities/simulation-softwares?logiciel=10818),
 the general thermal free software developed by Electricité De France (EDF).
@@ -104,7 +105,9 @@ It also depends on the
 [Star-Enclosures-2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
 [Star-SP](https://gitlab.com/meso-star/star-sp/) libraries as well as on the
 [OpenMP](http://www.openmp.org) 2.0 specification to parallelize its
-computations.
+computations. It may depend on [OpenMPI](https://www.open-mpi.org/) 2.0 if
+distributed memory parallelism is enabled via the `ENABLE_MPI` variable of the
+CMake file
 
 First ensure that CMake and a C compiler that implements the OpenMP 2.0
 specification are installed on your system. Then install the RCMake package as
@@ -113,6 +116,38 @@ the `cmake/CMakeLists.txt` file by appending to the `CMAKE_PREFIX_PATH`
 variable the install directories of its dependencies.
 
 ## Release notes
+
+### Version 0.13
+
+#### Non linear radiative transfer
+
+Uses a new [iterative numerical
+method](https://hal.archives-ouvertes.fr/tel-03266863/) to estimate radiative
+transfer. With a recursion level of 1, this is equivalent to a linearization of
+the radiative transfer but with a reference temperature that can vary in time
+and space. By using a higher-order recursion, one can converge towards a
+rigorous estimate that takes into account the non-linearity of the radiative
+transfer; the higher the recursion order, the better the convergence, but with
+the counterpart of an increase in calculation time.
+
+#### Distributed memory parallelism
+
+Uses message passing interface to distribute computation across multiple
+computers. Stardis-Solver now, uses a mixed parallelism: on one computer (i.e. a
+node), it uses a shared memory parallelism and relies on the message passing
+interface to parallelize calculations between several nodes.
+
+#### Type and state of the random number generator
+
+Adds the member input variable `rng_type` to the solve functions. It
+defines the type of random number generator to use when no generator is
+defined. Note that the `sdis_solve_camera` function does not have a random
+number generator as an input variable and has therefore been updated to support
+it.
+
+#### Reading the source code
+
+Refactoring and deep rewriting of the source code to simplify its reading.
 
 ### Version 0.12.3
 
@@ -377,7 +412,7 @@ First version and implementation of the Stardis-Solver API.
 
 ## License
 
-Copyright (C) 2016-2022 |Meso|Star> (<contact@meso-star.com>). Stardis-Solver
+Copyright (C) 2016-2022 |Méso|Star> (<contact@meso-star.com>). Stardis-Solver
 is free software released under the GPLv3+ license: GNU GPL version 3 or later.
 You are welcome to redistribute it under certain conditions; refer to the
 COPYING files for details.
