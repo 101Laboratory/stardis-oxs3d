@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -165,6 +165,22 @@ interface_side_get_specular_fraction
   }
   return shader->specular_fraction
     ? shader->specular_fraction(frag, interf->data) : 0;
+}
+
+static INLINE double
+interface_side_get_reference_temperature
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  const struct sdis_interface_side_shader* shader;
+  ASSERT(interf && frag);
+  switch(frag->side) {
+    case SDIS_FRONT: shader = &interf->shader.front; break;
+    case SDIS_BACK: shader = &interf->shader.back; break;
+    default: FATAL("Unreachable code\n"); break;
+  }
+  return shader->reference_temperature
+    ? shader->reference_temperature(frag, interf->data) : -1;
 }
 
 #endif /* SDIS_INTERFACE_C_H */

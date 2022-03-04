@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -203,40 +203,42 @@ sdis_scene_set_fp_to_meter
 res_T
 sdis_scene_get_ambient_radiative_temperature
   (const struct sdis_scene* scn,
-   double* trad)
+   struct sdis_ambient_radiative_temperature* trad)
 {
   if(!scn || !trad) return RES_BAD_ARG;
-  *trad = scn->ambient_radiative_temperature;
-  return RES_OK;
-}
-
-res_T
-sdis_scene_set_reference_temperature
-  (struct sdis_scene* scn,
-   const double tref)
-{
-  if(!scn || tref < 0) return RES_BAD_ARG;
-  scn->reference_temperature = tref;
-  return RES_OK;
-}
-
-res_T
-sdis_scene_get_reference_temperature
-  (const struct sdis_scene* scn,
-   double* tref)
-{
-  if(!scn || !tref) return RES_BAD_ARG;
-  *tref = scn->reference_temperature;
+  *trad = scn->trad;
   return RES_OK;
 }
 
 res_T
 sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
-   const double trad)
+   const struct sdis_ambient_radiative_temperature* trad)
 {
   if(!scn) return RES_BAD_ARG;
-  scn->ambient_radiative_temperature = trad;
+  scn->trad = *trad;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_temperature_range
+  (const struct sdis_scene* scn,
+   double t_range[2])
+{
+  if(!scn || !t_range) return RES_BAD_ARG;
+  t_range[0]  = scn->tmin;
+  t_range[1]  = scn->tmax;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_set_temperature_range
+  (struct sdis_scene* scn,
+   const double t_range[2])
+{
+  if(!scn || !t_range) return RES_BAD_ARG;
+  scn->tmin = t_range[0];
+  scn->tmax = t_range[1];
   return RES_OK;
 }
 
@@ -474,7 +476,8 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   } else {
     S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
   }
-  WRITE(&scn->reference_temperature, 1);
+  WRITE(&scn->trad.reference, 1);
+  WRITE(&scn->tmax, 1);
   WRITE(&scn->fp_to_meter, 1);
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;
@@ -539,3 +542,63 @@ exit:
 error:
   goto exit;
 }
+
+res_T
+scene_check_primitive_index(const struct sdis_scene* scn, const size_t iprim)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+
+  if(iprim >= scene_get_primitives_count(scn)) {
+    log_err(scn->dev,
+      "%s: invalid primitive identifier `%lu'. "
+      "It must be in the [0 %lu] range.\n",
+      FUNC_NAME,
+      (unsigned long)iprim,
+      (unsigned long)scene_get_primitives_count(scn)-1);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+scene_check_dimensionality_2d(const struct sdis_scene* scn)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+  if(scene_is_2d(scn) == 0) {
+    log_err(scn->dev,
+      "%s: expects a 2D scene while the input scene is 3D.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
+scene_check_dimensionality_3d(const struct sdis_scene* scn)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+  if(scene_is_2d(scn) != 0) {
+    log_err(scn->dev,
+      "%s: expects a 3D scene while the input scene is 2D.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+exit:
+  return res;
+error:
+  goto exit;
+}
+

@@ -47,7 +47,7 @@ static const double vertices[12/*#vertices*/*3/*#coords per vertex*/] = {
   1.0, 0.0, 1.0,
   1.0, 1.0, 1.0
 };
-static const size_t nvertices = sizeof(vertices) / (3*sizeof(double));
+static const size_t nvertices = sizeof(vertices) / (sizeof(double)*3);
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
@@ -67,7 +67,7 @@ static const size_t indices[22/*#triangles*/*3/*#indices per triangle*/] = {
   0, 2, 1, 1, 2, 3, 1, 3, 8, 8, 3, 9, /* Z min */
   4, 5, 6, 6, 5, 7, 5,10, 7, 7,10,11  /* Z max */
 };
-static const size_t ntriangles = sizeof(indices) / (3*sizeof(size_t));
+static const size_t ntriangles = sizeof(indices) / (sizeof(size_t)*3);
 
 /*******************************************************************************
  * Box geometry functions
@@ -463,7 +463,6 @@ temperature_analytical
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_device* dev = NULL;
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* box2_scn = NULL;
@@ -509,8 +508,7 @@ main(int argc, char** argv)
   boxsz[1] = 0.1;
   boxsz[2] = 0.2;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Create the fluid medium */
   fluid_shader = DUMMY_FLUID_SHADER;
@@ -520,7 +518,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
 
   /* Create the solid medium */
@@ -530,7 +528,7 @@ main(int argc, char** argv)
   solid_param->rho = rho;
   solid_param->cp = cp;
   solid_param->lambda = lambda;
-  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
+  solid_param->delta = 1.0/30.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solid_param->init_temperature = Tinit;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
 
@@ -618,7 +616,7 @@ main(int argc, char** argv)
     (Tbounds, Tinit, boxsz, probe, time[0], rho, cp, lambda);
 
   /* Run simulation on regular scene */
-  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
+  solid_param->delta = 1.0/30.0 * MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solve_args.nrealisations = nrealisations;
   solve_args.position[0] = probe[0];
   solve_args.position[1] = probe[1];
@@ -638,7 +636,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
 
   /* Run simulation on split scene */
-  solid_param->delta = 1.0/20.0 * MMIN(MMIN(boxsz[0]/2.0, boxsz[1]), boxsz[2]);
+  solid_param->delta = 1.0/30.0 * MMIN(MMIN(boxsz[0]/2.0, boxsz[1]), boxsz[2]);
   OK(sdis_solve_probe(box2_scn, &solve_args, &estimator));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &temperature));
@@ -653,7 +651,7 @@ main(int argc, char** argv)
   /* Run simulation on matriochkas */
   solid_param->delta = MMIN(MMIN(boxsz[0], boxsz[1]), boxsz[2]);
   solid_param->delta /= (double)nmatriochkas;
-  solid_param->delta *= 1.0/20.0;
+  solid_param->delta *= 1.0/30.0;
   OK(sdis_solve_probe(box_matriochka_scn, &solve_args, &estimator));
   OK(sdis_estimator_get_failure_count(estimator, &nfails));
   OK(sdis_estimator_get_temperature(estimator, &temperature));
@@ -680,8 +678,6 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(box2_scn));
   OK(sdis_scene_ref_put(box_matriochka_scn));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

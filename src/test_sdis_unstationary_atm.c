@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,20 @@
 #include <star/ssp.h>
 
 /*
+ * The physical configuration is the following: a slab of fluid with known
+ * thermophysical properties but unknown temperature is located between a
+ * "ground" and a slab of solid, with also a unknown temperature profile. On
+ * the other side of the solid slab, is a "atmosphere" with known temperature,
+ * and known radiative temperature.
+ *
+ * Solving the system means: finding the temperature of the ground, of the
+ * fluid, of the boundaries, and also the temperature inside the solid, at
+ * various locations (the 1D slab is discretized in order to obtain the
+ * reference)
+ *
+ * The reference for this system comes from a numerical method and is not
+ * analytic.  Thus the compliance test MC VS reference is not the usual |MC -
+ * ref| <= 3*sigma but is |MC -ref| <= (Tmax -Tmin) * 0.01.
  *
  *          3D                                      2D
  *
@@ -59,6 +73,10 @@
 #define HA 400
 #define TR 260
 
+#define TMAX (MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), MMAX(TG, TA)), TR))
+#define TMIN (MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), MMIN(TG, TA)), TR))
+#define EPS ((TMAX-TMIN)*0.01)
+
 /* hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon
  * Tref = (hr / (4 * 5.6696e-8 * epsilon)) ^ 1/3, hr = 6 */
 #define TREF 297.974852286
@@ -71,13 +89,12 @@
 
 #define X_PROBE (XH + 0.2 * XE)
 
-#define DELTA (XE/30.0)
+#define DELTA (XE/40.0)
 
-  /*******************************************************************************
-   * Box geometry
-   ******************************************************************************/
-static const double model3d_vertices[12/*#vertices*/ * 3/*#coords per vertex*/]
-= {
+/*******************************************************************************
+ * Box geometry
+ ******************************************************************************/
+static const double model3d_vertices[12/*#vertices*/*3/*#coords per vertex*/] = {
   0, 0, 0,
   XH, 0, 0,
   XHpE, 0, 0,
@@ -91,20 +108,19 @@ static const double model3d_vertices[12/*#vertices*/ * 3/*#coords per vertex*/]
   XH, XHpE, XHpE,
   XHpE, XHpE, XHpE
 };
-static const size_t model3d_nvertices = sizeof(model3d_vertices) / (3*sizeof(double));
+static const size_t model3d_nvertices = sizeof(model3d_vertices)/(sizeof(double)*3);
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
  *        ,3---,4---,5          ,3----4----5        ,4
  *      ,' | ,' | ,'/|        ,'/| \  | \  |      ,'/|
- *    9----10---11 / |      9' / |  \ |  \ |    10 / |          Y
- *    |',  |',  | / ,2      | / ,0---,1---,2    | / ,1          |
+ *    9----10---11 / |      9' / |  \ |  \ |    10 / |       Y
+ *    |',  |',  | / ,2      | / ,0---,1---,2    | / ,1       |
  *    |  ',|  ',|/,'        |/,' | ,' | ,'      |/,'         o--X
- *    6----7----8'          6----7'---8'        7              /
- *  Front, right         Back, left and       Internal        Z
+ *    6----7----8'          6----7'---8'        7           /
+ *  Front, right         Back, left and       Internal     Z
  * and Top faces          bottom faces         face */
-static const size_t model3d_indices[22/*#triangles*/ * 3/*#indices per triangle*/]
-= {
+static const size_t model3d_indices[22/*#triangles*/*3/*#indices per triangle*/] = {
   0, 3, 1, 1, 3, 4,     1, 4, 2, 2, 4, 5,    /* -Z */
   0, 6, 3, 3, 6, 9,                          /* -X */
   6, 7, 9, 9, 7, 10,    7, 8, 10, 10, 8, 11, /* +Z */
@@ -113,7 +129,7 @@ static const size_t model3d_indices[22/*#triangles*/ * 3/*#indices per triangle*
   0, 1, 7, 7, 6, 0,     1, 2, 8, 8, 7, 1,    /* -Y */
   4, 10, 7, 7, 1, 4                          /* Inside */
 };
-static const size_t model3d_ntriangles = sizeof(model3d_indices) / (3*sizeof(size_t));
+static const size_t model3d_ntriangles = sizeof(model3d_indices)/(sizeof(size_t)*3);
 
 static INLINE void
 model3d_get_indices(const size_t itri, size_t ids[3], void* context)
@@ -157,7 +173,7 @@ static const double model2d_vertices[6/*#vertices*/ * 2/*#coords per vertex*/] =
   XH, XHpE,
   XHpE, XHpE
 };
-static const size_t model2d_nvertices = sizeof(model2d_vertices) / (2*sizeof(double));
+static const size_t model2d_nvertices = sizeof(model2d_vertices)/(sizeof(double)*2);
 
 static const size_t model2d_indices[7/*#segments*/ * 2/*#indices per segment*/] = {
   0, 1, 1, 2, /* Bottom */
@@ -166,8 +182,7 @@ static const size_t model2d_indices[7/*#segments*/ * 2/*#indices per segment*/] 
   5, 0,       /* Right */
   4, 1        /* Inside */
 };
-static const size_t model2d_nsegments = sizeof(model2d_indices) / (2*sizeof(size_t));
-
+static const size_t model2d_nsegments = sizeof(model2d_indices)/(sizeof(size_t)*2);
 
 static INLINE void
 model2d_get_indices(const size_t iseg, size_t ids[2], void* context)
@@ -309,6 +324,7 @@ struct interf {
   double temperature;
   double emissivity;
   double h;
+  double Tref;
 };
 
 static double
@@ -341,9 +357,55 @@ interface_get_emissivity
   return interf->emissivity;
 }
 
+static double
+interface_get_Tref
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  const struct interf* interf;
+  CHK(frag && data);
+  interf = sdis_data_cget(data);
+  return interf->Tref;
+}
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+static void
+create_interface
+  (struct sdis_device* dev,
+   struct sdis_medium* front,
+   struct sdis_medium* back,
+   const struct interf* interf,
+   struct sdis_interface** out_interf)
+{
+  struct sdis_interface_shader shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_data* data = NULL;
+
+  CHK(interf != NULL);
+
+  shader.front.temperature = interface_get_temperature;
+  shader.back.temperature = interface_get_temperature;
+  if(sdis_medium_get_type(front) != sdis_medium_get_type(back)) {
+    shader.convection_coef = interface_get_convection_coef;
+    shader.convection_coef_upper_bound = interf->h;
+  }
+  if(sdis_medium_get_type(front) == SDIS_FLUID) {
+    shader.front.emissivity = interface_get_emissivity;
+    shader.front.reference_temperature = interface_get_Tref;
+  }
+  if(sdis_medium_get_type(back) == SDIS_FLUID) {
+    shader.back.emissivity = interface_get_emissivity;
+    shader.back.reference_temperature = interface_get_Tref;
+  }
+
+  OK(sdis_data_create(dev, sizeof(struct interf), ALIGNOF(struct interf),
+    NULL, &data));
+  *((struct interf*)sdis_data_get(data)) = *interf;
+
+  OK(sdis_interface_create(dev, front, back, &shader, data, out_interf));
+  OK(sdis_data_ref_put(data));
+}
+
 static void
 solve_tbound1
   (struct sdis_scene* scn,
@@ -359,10 +421,11 @@ solve_tbound1
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
-  double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 290.046375, 289.903935, 289.840490, 289.802690, 289.777215,
-        289.759034, 289.745710, 289.735826, 289.728448, 289.722921 };
+  const double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    290.046375, 289.903935, 289.840490, 289.802690, 289.777215, 289.759034,
+    289.745710, 289.735826, 289.728448, 289.722921
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn && rng);
@@ -413,9 +476,8 @@ solve_tbound1
     printf("Elapsed time = %s\n", dump);
     printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
 
-    CHK(nfails + nreals == N);
-    CHK(nfails <= N/1000);
-    CHK(t[isimul] == 0 || eq_eps(T.E, ref[isimul], T.SE * 4));
+    CHK(eq_eps(T.E, ref[isimul], EPS));
+    /*CHK(eq_eps(T.E, ref[isimul], T.SE*3));*/
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -436,10 +498,11 @@ solve_tbound2
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
-  double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 309.08032, 309.34626, 309.46525, 309.53625, 309.58408,
-       309.618121, 309.642928, 309.661167, 309.674614, 309.684524 };
+  const double t[] = { 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    309.08032, 309.34626, 309.46525, 309.53625, 309.58408, 309.618121,
+    309.642928, 309.661167, 309.674614, 309.684524
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn && rng);
@@ -492,7 +555,8 @@ solve_tbound2
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N/1000);
-    CHK(eq_eps(T.E, ref[isimul], T.SE * 4));
+    CHK(eq_eps(T.E, ref[isimul], EPS));
+    /*CHK(eq_eps(T.E, ref[isimul], T.SE*3));*/
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -512,10 +576,11 @@ solve_tsolid
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
-  double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 300, 300.87408, 302.25832, 303.22164, 303.89954, 304.39030,
-        304.75041, 305.01595, 305.21193, 305.35641, 305.46271 };
+  const double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    300, 300.87408, 302.25832, 303.22164, 303.89954, 304.39030, 304.75041,
+    305.01595, 305.21193, 305.35641, 305.46271
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn && rng);
@@ -558,7 +623,8 @@ solve_tsolid
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N / 1000);
-    CHK(eq_eps(T.E, ref[isimul], T.SE * 4));
+    CHK(eq_eps(T.E, ref[isimul], EPS));
+    /*CHK(eq_eps(T.E, ref[isimul], T.SE*3));*/
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -577,10 +643,12 @@ solve_tfluid
   size_t nreals;
   size_t nfails;
   enum sdis_scene_dimension dim;
-  double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
-  double ref[sizeof(t) / sizeof(*t)]
-    = { 300, 309.53905, 309.67273, 309.73241, 309.76798, 309.79194, 309.80899,
-        309.82141, 309.83055, 309.83728, 309.84224 };
+  double eps;
+  const double t[] = { 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 };
+  const double ref[sizeof(t) / sizeof(*t)] = {
+    300, 309.53905, 309.67273, 309.73241, 309.76798, 309.79194, 309.80899,
+    309.82141, 309.83055, 309.83728, 309.84224
+  };
   const int nsimuls = sizeof(t) / sizeof(*t);
   int isimul;
   ASSERT(scn);
@@ -621,7 +689,9 @@ solve_tfluid
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N / 1000);
-    CHK(eq_eps(T.E, ref[isimul], T.SE * 4));
+
+    eps = EPS;
+    CHK(eq_eps(T.E, ref[isimul], eps));
 
     OK(sdis_estimator_ref_put(estimator));
   }
@@ -633,7 +703,6 @@ solve_tfluid
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -650,23 +719,21 @@ main(int argc, char** argv)
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
-  struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface* model3d_interfaces[22 /*#triangles*/];
   struct sdis_interface* model2d_interfaces[7/*#segments*/];
-  struct interf* interf_props = NULL;
+  struct interf interf_props;
   struct solid* solid_props = NULL;
   struct fluid* fluid_props = NULL;
   struct ssp_rng* rng = NULL;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Setup the solid shader */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
 
   /* Create the solid media */
@@ -718,66 +785,34 @@ main(int argc, char** argv)
   OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid_A));
   OK(sdis_data_ref_put(data));
 
-  /* Setup the interface shader */
-  interf_shader.front.temperature = interface_get_temperature;
-  interf_shader.back.temperature = interface_get_temperature;
-  interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.convection_coef_upper_bound = 0;
-
   /* Create the adiabatic interfaces */
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = 0;
-  OK(sdis_interface_create
-    (dev, fluid, dummy_solid, &interf_shader, data, &interf_adiabatic_1));
-  OK(sdis_data_ref_put(data));
-
-  interf_shader.convection_coef = NULL;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = 0;
-  OK(sdis_interface_create
-    (dev, solid, dummy_solid, &interf_shader, data, &interf_adiabatic_2));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.h = 0;
+  interf_props.emissivity = 0;
+  interf_props.Tref = TREF;
+  create_interface(dev, fluid, dummy_solid, &interf_props, &interf_adiabatic_1);
+  create_interface(dev, solid, dummy_solid, &interf_props, &interf_adiabatic_2);
 
   /* Create the P interface */
-  interf_shader.convection_coef_upper_bound = HC;
-  interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.front.emissivity = interface_get_emissivity;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = HC;
-  interf_props->emissivity = 1;
-  OK(sdis_interface_create
-    (dev, fluid, solid, &interf_shader, data, &interf_P));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.h = HC;
+  interf_props.emissivity = 1;
+  interf_props.Tref = TREF;
+  create_interface(dev, fluid, solid, &interf_props, &interf_P);
 
   /* Create the TG interface */
-  interf_shader.convection_coef_upper_bound = HG;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = TG;
-  interf_props->h = HG;
-  interf_props->emissivity = 1;
-  OK(sdis_interface_create
-    (dev, fluid, dummy_solid, &interf_shader, data, &interf_TG));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = TG;
+  interf_props.h = HG;
+  interf_props.emissivity = 1;
+  interf_props.Tref = TG;
+  create_interface(dev, fluid, dummy_solid, &interf_props, &interf_TG);
 
   /* Create the TA interface */
-  interf_shader.convection_coef_upper_bound = HA;
-  interf_shader.front.emissivity = NULL;
-  interf_shader.back.emissivity = interface_get_emissivity;
-  OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
-  interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
-  interf_props->h = HA;
-  interf_props->emissivity = 1;
-  OK(sdis_interface_create
-    (dev, solid, fluid_A, &interf_shader, data, &interf_TA));
-  OK(sdis_data_ref_put(data));
+  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.h = HA;
+  interf_props.emissivity = 1;
+  interf_props.Tref = TREF;
+  create_interface(dev, solid, fluid_A, &interf_props, &interf_TA);
 
   /* Release the media */
   OK(sdis_medium_ref_put(solid));
@@ -802,7 +837,7 @@ main(int argc, char** argv)
   model3d_interfaces[10] = interf_TA;
   model3d_interfaces[11] = interf_TA;
   /* Top */
-  model3d_interfaces[12] = interf_adiabatic_1; 
+  model3d_interfaces[12] = interf_adiabatic_1;
   model3d_interfaces[13] = interf_adiabatic_1;
   model3d_interfaces[14] = interf_adiabatic_2;
   model3d_interfaces[15] = interf_adiabatic_2;
@@ -835,8 +870,10 @@ main(int argc, char** argv)
   scn_args.nprimitives = model3d_ntriangles;
   scn_args.nvertices = model3d_nvertices;
   scn_args.context = model3d_interfaces;
-  scn_args.trad = TR;
-  scn_args.tref = TREF;
+  scn_args.trad.temperature = TR;
+  scn_args.trad.reference = TR;
+  scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
+  scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
   /* Create the square scene */
@@ -846,8 +883,10 @@ main(int argc, char** argv)
   scn_args.nprimitives = model2d_nsegments;
   scn_args.nvertices = model2d_nvertices;
   scn_args.context = model2d_interfaces;
-  scn_args.trad = TR;
-  scn_args.tref = TREF;
+  scn_args.trad.temperature = TR;
+  scn_args.trad.reference = TR;
+  scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
+  scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 
   /* Release the interfaces */
@@ -858,7 +897,7 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_TA));
 
   /* Solve */
-  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
+  OK(ssp_rng_create(NULL, SSP_RNG_KISS, &rng));
   printf(">> Box scene\n");
   solve_tfluid(box_scn);
   solve_tbound1(box_scn, rng);
@@ -875,8 +914,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   OK(ssp_rng_ref_put(rng));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

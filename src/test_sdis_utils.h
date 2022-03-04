@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,11 @@
 #include <rsys/double33.h>
 #include <rsys/mem_allocator.h>
 #include <stdio.h>
+#include <string.h>
+
+#ifdef SDIS_ENABLE_MPI
+  #include <mpi.h>
+#endif
 
 #define BOLTZMANN_CONSTANT 5.6696e-8 /* W/m^2/K^4 */
 
@@ -41,7 +46,7 @@ static const double box_vertices[8/*#vertices*/*3/*#coords per vertex*/] = {
   0.0, 1.0, 1.0,
   1.0, 1.0, 1.0
 };
-static const size_t box_nvertices = sizeof(box_vertices) / (3*sizeof(double));
+static const size_t box_nvertices = sizeof(box_vertices) / (sizeof(double)*3);
 
 /* The following array lists the indices toward the 3D vertices of each
  * triangle.
@@ -61,7 +66,7 @@ static const size_t box_indices[12/*#triangles*/*3/*#indices per triangle*/] = {
   2, 6, 7, 7, 3, 2, /* +Y */
   0, 1, 5, 5, 4, 0  /* -Y */
 };
-static const size_t box_ntriangles = sizeof(box_indices) / (3*sizeof(size_t));
+static const size_t box_ntriangles = sizeof(box_indices) / (sizeof(size_t)*3);
 
 static INLINE void
 box_get_indices(const size_t itri, size_t ids[3], void* context)
@@ -103,7 +108,7 @@ static const double square_vertices[4/*#vertices*/*2/*#coords per vertex*/] = {
   0.0, 1.0,
   1.0, 1.0
 };
-static const size_t square_nvertices = sizeof(square_vertices)/(2*sizeof(double));
+static const size_t square_nvertices = sizeof(square_vertices)/(sizeof(double)*2);
 
 static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   0, 1, /* Bottom */
@@ -111,7 +116,7 @@ static const size_t square_indices[4/*#segments*/*2/*#indices per segment*/]= {
   2, 3, /* Top */
   3, 0 /* Right */
 };
-static const size_t square_nsegments = sizeof(square_indices)/(2*sizeof(size_t));
+static const size_t square_nsegments = sizeof(square_indices)/(sizeof(size_t)*2);
 
 static INLINE void
 square_get_indices(const size_t iseg, size_t ids[2], void* context)
@@ -165,36 +170,97 @@ dummy_interface_getter
 }
 
 static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  0
+  dummy_medium_getter, /* Calorific capacity */
+  dummy_medium_getter, /* Thermal conductivity */
+  dummy_medium_getter, /* Volumic mass */
+  dummy_medium_getter, /* Delta */
+  dummy_medium_getter, /* Volumic power */
+  dummy_medium_getter, /* Temperature */
+  0 /* Initial time */
 };
 
 static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
-  dummy_medium_getter,
-  dummy_medium_getter,
-  dummy_medium_getter,
-  0
+  dummy_medium_getter, /* Calorific capacity */
+  dummy_medium_getter, /* Volumic mass */
+  dummy_medium_getter, /* Temperature */
+  0 /* Initial time */
 };
 
 
 #define DUMMY_INTERFACE_SIDE_SHADER__ {                                        \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter,                                                      \
-  dummy_interface_getter                                                       \
+  dummy_interface_getter, /* Temperature */                                    \
+  dummy_interface_getter, /* Flux */                                           \
+  dummy_interface_getter, /* Emissivity */                                     \
+  dummy_interface_getter, /* Specular fraction */                              \
+  dummy_interface_getter  /* Reference temperature */                          \
 }
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
-  dummy_interface_getter,
-  0,
-  dummy_interface_getter,
-  DUMMY_INTERFACE_SIDE_SHADER__,
-  DUMMY_INTERFACE_SIDE_SHADER__
+  dummy_interface_getter, /* Convection coef */
+  0, /* Upper bound of the convection coef */
+  dummy_interface_getter, /* Thermal contact resistance */
+  DUMMY_INTERFACE_SIDE_SHADER__, /* Front side */
+  DUMMY_INTERFACE_SIDE_SHADER__ /* Back side */
 };
+
+/*******************************************************************************
+ * Device creation
+ ******************************************************************************/
+#ifndef SDIS_ENABLE_MPI
+
+static INLINE void
+create_default_device
+  (int* argc,
+   char*** argv,
+   int* is_master_process,
+   struct sdis_device** dev)
+{
+  (void)argc, (void)argv;
+  CHK(dev && is_master_process);
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, dev));
+  *is_master_process = 1;
+}
+
+#else
+
+static INLINE void
+create_default_device
+  (int* pargc,
+   char*** pargv,
+   int* is_master_process,
+   struct sdis_device** out_dev)
+{
+  struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
+  struct sdis_device* dev = NULL;
+  int mpi_thread_support;
+  int mpi_rank;
+  CHK(pargc && pargv && is_master_process && out_dev);
+
+  CHK(MPI_Init_thread
+    (pargc, pargv, MPI_THREAD_SERIALIZED, &mpi_thread_support) == MPI_SUCCESS);
+  CHK(mpi_thread_support >= MPI_THREAD_SERIALIZED);
+
+  dev_args.use_mpi = *pargc >= 2 && !strcmp((*pargv)[1], "mpi");
+  OK(sdis_device_create(&dev_args, &dev));
+
+  if(dev_args.use_mpi) {
+    OK(sdis_device_get_mpi_rank(dev, &mpi_rank));
+    *is_master_process = mpi_rank == 0;
+  } else {
+    CHK(sdis_device_get_mpi_rank(dev, &mpi_rank) == RES_BAD_OP);
+    *is_master_process = 1;
+  }
+  *out_dev = dev;
+}
+#endif
+
+static INLINE void
+free_default_device(struct sdis_device* dev)
+{
+  OK(sdis_device_ref_put(dev));
+#ifdef SDIS_ENABLE_MPI
+  CHK(MPI_Finalize() == MPI_SUCCESS);
+#endif
+}
 
 /*******************************************************************************
  * Miscellaneous

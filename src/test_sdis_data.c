@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,14 +36,12 @@ int
 main(int argc, char** argv)
 {
   const char* str = "Hello world!";
-  struct mem_allocator allocator;
   struct sdis_device* dev = NULL;
   struct sdis_data* data = NULL;
   struct param* param = NULL;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
   BA(sdis_data_create(NULL, 0, 0, NULL, NULL));
   BA(sdis_data_create(dev, 0, 0, NULL, NULL));
   BA(sdis_data_create(NULL, 8, 0, NULL, NULL));
@@ -87,7 +85,6 @@ main(int argc, char** argv)
   OK(sdis_data_ref_put(data));
 
   OK(sdis_device_ref_put(dev));
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

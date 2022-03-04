@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ check_solid_shader(const struct sdis_solid_shader* shader)
   return shader->calorific_capacity
       && shader->thermal_conductivity
       && shader->volumic_mass
-      && shader->delta_solid
+      && shader->delta
       && shader->temperature
       && 0 <= shader->t0 && shader->t0 < INF;
 }

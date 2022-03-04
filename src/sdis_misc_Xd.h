@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,29 +25,19 @@
 
 res_T
 XD(time_rewind)
-  (struct sdis_medium* mdm,
+  (const double mu,
+   const double t0,
    struct ssp_rng* rng,
-   const double dist_in_meter,
-   const struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
+   const struct rwalk_context* ctx,
    struct XD(temperature)* T)
 {
   double temperature;
-  double lambda, rho, cp;
-  double tau, mu, t0;
+  double tau;
   res_T res = RES_OK;
-  ASSERT(mdm && rng && ctx && rwalk && dist_in_meter > 0);
-  ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
-  ASSERT(T->done == 0);
+  ASSERT(rwalk && rng && T);
 
-  /* Fetch physical properties */
-  lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-  rho = solid_get_volumic_mass(mdm, &rwalk->vtx);
-  cp = solid_get_calorific_capacity(mdm, &rwalk->vtx);
-  t0 = solid_get_t0(mdm); /* Limit time */
-
-  /* Sample the time to reroll */
-  mu = (2*DIM*lambda)/(rho*cp*dist_in_meter*dist_in_meter);
+  /* Sample the time using the upper bound. */
   tau = ssp_ran_exp(rng, mu);
 
   /* Increment the elapsed time */
@@ -57,16 +47,18 @@ XD(time_rewind)
   if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
 
   /* Time rewind */
-  rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0);
+  rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0); /* Time rewind */
 
   /* The path does not reach the limit condition */
   if(rwalk->vtx.time > t0) goto exit;
 
-  /* Fetch initial temperature */
-  temperature = solid_get_temperature(mdm, &rwalk->vtx);
+  /* Fetch the initial temperature */
+  temperature = medium_get_temperature(rwalk->mdm, &rwalk->vtx);
   if(temperature < 0) {
-    log_err(mdm->dev, "%s: the path reaches the limit condition but the "
-      "temperature remains unknown.\n", FUNC_NAME);
+    log_err(rwalk->mdm->dev, "the path reaches the limit condition but the "
+      "%s temperature remains unknown -- position=%g, %g, %g\n",
+      medium_type_to_string(sdis_medium_get_type(rwalk->mdm)),
+      SPLIT3(rwalk->vtx.P));
     res = RES_BAD_ARG;
     goto error;
   }
@@ -84,8 +76,8 @@ XD(time_rewind)
   }
 
   if(ctx->green_path) {
-    res = green_path_set_limit_vertex(ctx->green_path, mdm, &rwalk->vtx,
-      rwalk->elapsed_time);
+    res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm,
+      &rwalk->vtx, rwalk->elapsed_time);
     if(res != RES_OK) goto error;
   }
 

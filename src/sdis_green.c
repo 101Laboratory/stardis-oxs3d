@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -387,6 +387,8 @@ green_function_solve_path
    const size_t ipath,
    double* weight)
 {
+  struct sdis_ambient_radiative_temperature trad = 
+    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   const struct power_term* power_terms = NULL;
   const struct flux_term* flux_terms = NULL;
   const struct green_path* path = NULL;
@@ -443,7 +445,8 @@ green_function_solve_path
       break;
     case SDIS_GREEN_PATH_END_RADIATIVE:
       SDIS(green_function_get_scene(green, &scn));
-      SDIS(scene_get_ambient_radiative_temperature(scn, &end_temperature));
+      SDIS(scene_get_ambient_radiative_temperature(scn, &trad));
+      end_temperature = trad.temperature;
       if(end_temperature <  0) { /* Cannot be negative if used */
         res = RES_BAD_ARG;
         goto error;
@@ -1545,6 +1548,15 @@ green_path_set_limit_radiative
   ASSERT(handle->path->end_type == SDIS_GREEN_PATH_END_TYPES_COUNT__);
   handle->path->elapsed_time = elapsed_time;
   handle->path->end_type = SDIS_GREEN_PATH_END_RADIATIVE;
+  return RES_OK;
+}
+
+res_T
+green_path_reset_limit(struct green_path_handle* handle)
+{
+  ASSERT(handle);
+  handle->path->elapsed_time = -INF;
+  handle->path->end_type = SDIS_GREEN_PATH_END_TYPES_COUNT__;
   return RES_OK;
 }
 

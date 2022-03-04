@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -258,9 +258,12 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   double duplicated_vertices[] = { 0, 0, 0, 0 };
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_ambient_radiative_temperature trad =
+    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   double lower[2], upper[2];
+  double t_range[2];
   double u0, u1, u2, pos[2], pos1[2];
-  double dst, fp, t;
+  double dst, fp;
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
@@ -353,29 +356,38 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 
   BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
   BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
-  BA(sdis_scene_get_ambient_radiative_temperature(NULL, &t));
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &t));
-  CHK(t == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad);
+  BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
+  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
+  CHK(trad.temperature == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature);
+  CHK(trad.reference == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference);
 
-  t = 100;
-  BA(sdis_scene_set_ambient_radiative_temperature(NULL, t));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, t));
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &t));
-  CHK(t == 100);
+  trad.temperature = 100;
+  trad.reference = 110;
+  BA(sdis_scene_set_ambient_radiative_temperature(NULL, &trad));
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
+  trad = SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
+  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
+  CHK(trad.temperature == 100);
+  CHK(trad.reference == 110);
 
-  BA(sdis_scene_get_reference_temperature(NULL, NULL));
-  BA(sdis_scene_get_reference_temperature(scn, NULL));
-  BA(sdis_scene_get_reference_temperature(NULL, &t));
-  OK(sdis_scene_get_reference_temperature(scn, &t));
-  CHK(t == SDIS_SCENE_CREATE_ARGS_DEFAULT.tref);
+  BA(sdis_scene_get_temperature_range(NULL, NULL));
+  BA(sdis_scene_get_temperature_range(scn, NULL));
+  BA(sdis_scene_get_temperature_range(NULL, t_range));
+  OK(sdis_scene_get_temperature_range(scn, t_range));
+  CHK(t_range[0] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]);
+  CHK(t_range[1] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[1]);
 
-  t = -1;
-  BA(sdis_scene_set_reference_temperature(NULL, t));
-  BA(sdis_scene_set_reference_temperature(scn, t));
-  t = 100;
-  OK(sdis_scene_set_reference_temperature(scn, t));
-  OK(sdis_scene_get_reference_temperature(scn, &t));
-  CHK(t == 100);
+  t_range[0] = 1;
+  t_range[1] = 100;
+
+  BA(sdis_scene_set_temperature_range(NULL, t_range));
+  BA(sdis_scene_set_temperature_range(scn, NULL));
+  OK(sdis_scene_set_temperature_range(scn, t_range));
+  t_range[0] = -1;
+  t_range[1] = -1;
+  OK(sdis_scene_get_temperature_range(scn, t_range));
+  CHK(t_range[0] == 1);
+  CHK(t_range[1] == 100);
 
   BA(sdis_scene_get_boundary_position(NULL, 1, &u0, pos));
   BA(sdis_scene_get_boundary_position(scn, 4, &u0, pos));
@@ -456,7 +468,6 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_device* dev = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
@@ -468,8 +479,7 @@ main(int argc, char** argv)
 
   interface_shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
@@ -485,8 +495,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   OK(sdis_interface_ref_put(interf));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -163,7 +163,6 @@ interface_get_temperature
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
@@ -194,8 +193,7 @@ main(int argc, char** argv)
   size_t i;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
@@ -205,7 +203,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = temperature_unknown;
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
@@ -331,8 +329,6 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

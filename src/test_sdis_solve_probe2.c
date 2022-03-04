@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,10 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <star/ssp.h>
 #include <rsys/math.h>
+
+#include <string.h>
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
@@ -145,8 +148,8 @@ interface_get_temperature
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc T2 = SDIS_MC_NULL;
   struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_device* dev = NULL;
   struct sdis_data* data = NULL;
@@ -165,16 +168,17 @@ main(int argc, char** argv)
   struct sdis_interface_shader interface_shader = DUMMY_INTERFACE_SHADER;
   struct sdis_interface* interfaces[12];
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct ssp_rng* rng = NULL;
   struct context ctx;
   struct interf* interface_param = NULL;
   double ref;
   const size_t N = 10000;
   size_t nreals;
   size_t nfails;
+  int is_master_process;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
@@ -184,7 +188,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = temperature_unknown;
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
@@ -253,39 +257,80 @@ main(int argc, char** argv)
   solve_args.time_range[1] = INF;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-  /* Print the estimation results */
   ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;
-  printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(solve_args.position), ref, T.E, T.SE);
-  printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
-  printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+    OK(sdis_estimator_get_failure_count(estimator, &nfails));
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-  /* Check the results */
-  CHK(nfails + nreals == N);
-  CHK(nfails < N/1000);
-  CHK(eq_eps(T.E, ref, 3*T.SE));
+    /* Print the estimation results */
+    printf("Temperature at (%g, %g, %g) = %g ~ %g +/- %g\n",
+      SPLIT3(solve_args.position), ref, T.E, T.SE);
+    printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
+    printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
+
+    /* Check the results */
+    CHK(nfails + nreals == N);
+    CHK(nfails < N/1000);
+    CHK(eq_eps(T.E, ref, 3*T.SE));
+  }
+
+  /* Check RNG type */
+  solve_args.rng_state = NULL;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator2));
+  solve_args.rng_type =
+    SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator2));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(eq_eps(T2.E, ref, 3*T2.SE));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check the RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  solve_args.rng_state = rng;
+  solve_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(sdis_solve_probe(scn, &solve_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(eq_eps(T2.E, ref, 3*T2.SE));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Restore args */
+  solve_args.rng_state = SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_state;
+  solve_args.rng_type = SDIS_SOLVE_PROBE_ARGS_DEFAULT.rng_type;
 
   /* Check green */
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
-  OK(sdis_green_function_solve(green, &estimator2));
-  check_green_function(green);
-  check_estimator_eq(estimator, estimator2);
-  check_green_serialization(green, scn);
+  if(!is_master_process) {
+    CHK(green == NULL);
+  } else {
+    OK(sdis_green_function_solve(green, &estimator2));
+    check_green_function(green);
+    check_estimator_eq(estimator, estimator2);
+    check_green_serialization(green, scn);
+  }
 
   /* Release data */
-  OK(sdis_estimator_ref_put(estimator));
-  OK(sdis_estimator_ref_put(estimator2));
-  OK(sdis_green_function_ref_put(green));
+  if(estimator) OK(sdis_estimator_ref_put(estimator));
+  if(estimator2) OK(sdis_estimator_ref_put(estimator2));
+  if(green) OK(sdis_green_function_ref_put(green));
   OK(sdis_scene_ref_put(scn));
-  OK(sdis_device_ref_put(dev));
+  free_default_device(dev);
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
+
   return 0;
 }

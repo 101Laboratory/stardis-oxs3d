@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 #include <rsys/math.h>
 
 enum heat_vertex_attrib {
+  HEAT_VERTEX_BRANCH_ID,
   HEAT_VERTEX_WEIGHT,
   HEAT_VERTEX_TIME,
   HEAT_VERTEX_TYPE
@@ -125,6 +126,7 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   BA(sdis_green_path_get_limit_point(NULL, &pt));
   BA(sdis_green_path_get_limit_point(path, NULL));
   if(end_type == SDIS_GREEN_PATH_END_RADIATIVE) {
+    struct sdis_ambient_radiative_temperature trad;
     struct sdis_green_function* green;
     struct sdis_scene* scn;
     BO(sdis_green_path_get_limit_point(path, &pt));
@@ -140,8 +142,9 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
 
     BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
     BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
-    BA(sdis_scene_get_ambient_radiative_temperature(NULL, &temp));
-    OK(sdis_scene_get_ambient_radiative_temperature(scn, &temp));
+    BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
+    OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
+    temp = trad.temperature;
   } else {
     OK(sdis_green_path_get_limit_point(path, &pt));
     switch(pt.type) {
@@ -176,31 +179,54 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   return RES_OK;
 }
 
-static void
-dump_heat_path_position(FILE* stream, const struct sdis_heat_path* path)
+static size_t
+heat_path_get_vertices_count(const struct sdis_heat_path* path)
 {
-  size_t nverts;
-  size_t ivert;
+  size_t istrip = 0;
+  size_t nstrips = 0;
+  size_t nvertices = 0;
+  CHK(path);
+
+  OK(sdis_heat_path_get_line_strips_count(path, &nstrips));
+  FOR_EACH(istrip, 0, nstrips) {
+    size_t n;
+    OK(sdis_heat_path_line_strip_get_vertices_count(path, istrip, &n));
+    nvertices += n;
+  }
+  return nvertices;
+}
+
+static void
+dump_heat_path_positions(FILE* stream, const struct sdis_heat_path* path)
+{
+  size_t istrip, nstrips;
+  size_t ivert, nverts;
 
   CHK(stream && path);
 
-  OK(sdis_heat_path_get_vertices_count(path, &nverts));
-  FOR_EACH(ivert, 0, nverts) {
-    struct sdis_heat_vertex vtx;
-    OK(sdis_heat_path_get_vertex(path, ivert, &vtx));
-    fprintf(stream, "%g %g %g\n", SPLIT3(vtx.P));
+  OK(sdis_heat_path_get_line_strips_count(path, &nstrips));
+  FOR_EACH(istrip, 0, nstrips) {
+    OK(sdis_heat_path_line_strip_get_vertices_count(path, istrip, &nverts));
+    FOR_EACH(ivert, 0, nverts) {
+      struct sdis_heat_vertex vtx;
+      OK(sdis_heat_path_line_strip_get_vertex(path, istrip, ivert, &vtx));
+      fprintf(stream, "%g %g %g\n", SPLIT3(vtx.P));
+    }
   }
 }
 
 static void
-dump_heat_path_segments
-  (FILE* stream, const struct sdis_heat_path* path, const size_t offset)
+dump_heat_path_line_strip
+  (FILE* stream,
+   const struct sdis_heat_path* path,
+   const size_t istrip,
+   const size_t offset)
 {
-  size_t nverts, ivert;
+  size_t ivert, nverts;
 
   CHK(stream);
 
-  OK(sdis_heat_path_get_vertices_count(path, &nverts));
+  OK(sdis_heat_path_line_strip_get_vertices_count(path, istrip, &nverts));
   fprintf(stream, "%lu", (unsigned long)nverts);
   FOR_EACH(ivert, 0, nverts) {
     fprintf(stream, " %lu", (unsigned long)(ivert + offset));
@@ -214,29 +240,37 @@ dump_heat_path_vertex_attribs
    const struct sdis_heat_path* path,
    const enum heat_vertex_attrib attr)
 {
-  size_t nverts, ivert;
+  size_t ivert, nverts;
+  size_t istrip, nstrips;
   CHK(stream && path);
 
-  OK(sdis_heat_path_get_vertices_count(path, &nverts));
-  FOR_EACH(ivert, 0, nverts) {
-    struct sdis_heat_vertex vtx;
-    OK(sdis_heat_path_get_vertex(path, ivert, &vtx));
-    switch(attr) {
-      case HEAT_VERTEX_WEIGHT:
-        fprintf(stream, "%g\n", vtx.weight);
-        break;
-      case HEAT_VERTEX_TIME:
-        fprintf(stream, "%g\n", IS_INF(vtx.time) ? FLT_MAX : vtx.time);
-        break;
-      case HEAT_VERTEX_TYPE:
-        switch(vtx.type) {
-          case SDIS_HEAT_VERTEX_CONDUCTION: fprintf(stream, "0.0\n"); break;
-          case SDIS_HEAT_VERTEX_CONVECTION: fprintf(stream, "0.5\n"); break;
-          case SDIS_HEAT_VERTEX_RADIATIVE:  fprintf(stream, "1.0\n"); break;
-          default: FATAL("Unreachable code.\n"); break;
-        }
-        break;
-      default: FATAL("Unreachable code.\n"); break;
+  OK(sdis_heat_path_get_line_strips_count(path, &nstrips));
+  FOR_EACH(istrip, 0, nstrips) {
+    OK(sdis_heat_path_line_strip_get_vertices_count(path, istrip, &nverts));
+    FOR_EACH(ivert, 0, nverts) {
+      struct sdis_heat_vertex vtx;
+      OK(sdis_heat_path_line_strip_get_vertex(path, istrip, ivert, &vtx));
+      switch(attr) {
+        case HEAT_VERTEX_BRANCH_ID:
+          fprintf(stream, "%i\n", vtx.branch_id);
+          break;
+        case HEAT_VERTEX_WEIGHT:
+          fprintf(stream, "%g\n", vtx.weight);
+          break;
+        case HEAT_VERTEX_TIME:
+          fprintf(stream, "%g\n",
+            IS_INF(vtx.time) || vtx.time > FLT_MAX ? -1 : vtx.time);
+          break;
+        case HEAT_VERTEX_TYPE:
+          switch(vtx.type) {
+            case SDIS_HEAT_VERTEX_CONDUCTION: fprintf(stream, "0.0\n"); break;
+            case SDIS_HEAT_VERTEX_CONVECTION: fprintf(stream, "0.5\n"); break;
+            case SDIS_HEAT_VERTEX_RADIATIVE:  fprintf(stream, "1.0\n"); break;
+            default: FATAL("Unreachable code.\n"); break;
+          }
+          break;
+        default: FATAL("Unreachable code.\n"); break;
+      }
     }
   }
 }
@@ -304,9 +338,9 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
   const struct sdis_heat_path* path;
   size_t ipath;
   size_t npaths;
+  size_t nstrips_overall;
   size_t nvertices;
   size_t offset;
-  size_t n;
   CHK(stream && estimator);
 
   OK(sdis_estimator_get_paths_count(estimator, &npaths));
@@ -318,30 +352,40 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
   fprintf(stream, "ASCII\n");
   fprintf(stream, "DATASET POLYDATA\n");
 
-  /* Compute the overall number of vertices */
+  /* Compute the overall number of vertices and the overall number of strips */
   nvertices = 0;
+  nstrips_overall = 0;
   FOR_EACH(ipath, 0, npaths) {
+    size_t n;
     OK(sdis_estimator_get_path(estimator, ipath, &path));
-    OK(sdis_heat_path_get_vertices_count(path, &n));
-    nvertices += n;
+    nvertices += heat_path_get_vertices_count(path);
+    OK(sdis_heat_path_get_line_strips_count(path, &n));
+    nstrips_overall += n;
   }
 
   /* Write path positions */
   fprintf(stream, "POINTS %lu double\n", (unsigned long)nvertices);
   FOR_EACH(ipath, 0, npaths) {
     OK(sdis_estimator_get_path(estimator, ipath, &path));
-    dump_heat_path_position(stream, path);
+    dump_heat_path_positions(stream, path);
   }
 
   /* Write the segment of the paths */
   fprintf(stream, "LINES %lu %lu\n",
-    (unsigned long)npaths, (unsigned long)(npaths + nvertices));
+    (unsigned long)(nstrips_overall),
+    (unsigned long)(nstrips_overall + nvertices));
   offset = 0;
   FOR_EACH(ipath, 0, npaths) {
+    size_t path_istrip;
+    size_t path_nstrips;
     OK(sdis_estimator_get_path(estimator, ipath, &path));
-    dump_heat_path_segments(stream, path, offset);
-    OK(sdis_heat_path_get_vertices_count(path, &n));
-    offset += n;
+    OK(sdis_heat_path_get_line_strips_count(path, &path_nstrips));
+    FOR_EACH(path_istrip, 0, path_nstrips) {
+      size_t n;
+      dump_heat_path_line_strip(stream, path, path_istrip, offset);
+      OK(sdis_heat_path_line_strip_get_vertices_count(path, path_istrip, &n));
+      offset += n;
+    }
   }
 
   fprintf(stream, "POINT_DATA %lu\n", (unsigned long)nvertices);
@@ -374,18 +418,31 @@ dump_heat_paths(FILE* stream, const struct sdis_estimator* estimator)
     dump_heat_path_vertex_attribs(stream, path, HEAT_VERTEX_TIME);
   }
 
+  /* Write the branch id of the random walk vertices */
+  fprintf(stream, "SCALARS BranchID int 1\n");
+  fprintf(stream, "LOOKUP_TABLE default\n");
+  FOR_EACH(ipath, 0, npaths) {
+    OK(sdis_estimator_get_path(estimator, ipath, &path));
+    dump_heat_path_vertex_attribs(stream, path, HEAT_VERTEX_BRANCH_ID);
+  }
+
   /* Write path type */
-  fprintf(stream, "CELL_DATA %lu\n", (unsigned long)npaths);
+  fprintf(stream, "CELL_DATA %lu\n", (unsigned long)nstrips_overall);
   fprintf(stream, "SCALARS Path_Type float 1\n");
   fprintf(stream, "LOOKUP_TABLE path_type\n");
   FOR_EACH(ipath, 0, npaths) {
+    size_t path_istrip;
+    size_t path_nstrips;
     enum sdis_heat_path_flag status = SDIS_HEAT_PATH_NONE;
     OK(sdis_estimator_get_path(estimator, ipath, &path));
     OK(sdis_heat_path_get_status(path, &status));
-    switch(status) {
-      case SDIS_HEAT_PATH_SUCCESS: fprintf(stream, "0.0\n"); break;
-      case SDIS_HEAT_PATH_FAILURE: fprintf(stream, "1.0\n"); break;
-      default: FATAL("Unreachable code.\n"); break;
+    OK(sdis_heat_path_get_line_strips_count(path, &path_nstrips));
+    FOR_EACH(path_istrip, 0, path_nstrips) {
+      switch(status) {
+        case SDIS_HEAT_PATH_SUCCESS: fprintf(stream, "0.0\n"); break;
+        case SDIS_HEAT_PATH_FAILURE: fprintf(stream, "1.0\n"); break;
+        default: FATAL("Unreachable code.\n"); break;
+      }
     }
   }
   fprintf(stream, "LOOKUP_TABLE path_type 2\n");
@@ -422,5 +479,4 @@ check_green_serialization
   OK(sdis_estimator_ref_put(e2));
   OK(sdis_green_function_ref_put(green2));
 }
-
 

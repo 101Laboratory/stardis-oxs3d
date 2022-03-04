@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -153,6 +153,7 @@ solve
   ASSERT(scn && rng && interf);
 
   OK(sdis_scene_get_dimension(scn, &dim));
+
   FOR_EACH(isimul, 0, nsimuls) {
     int steady = (isimul % 2) == 0;
 
@@ -335,6 +336,15 @@ solve
 
     printf("\n\n");
   }
+
+  /* Picard N is not supported with a flux != 0 */
+  solve_args.position[0] = 0.1;
+  solve_args.position[1] = 0.1;
+  solve_args.position[2] = dim == SDIS_SCENE_2D ? 0 : 0.1;
+  solve_args.time_range[0] = INF;
+  solve_args.time_range[1] = INF;
+  solve_args.picard_order = 2;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
 }
 
 /*******************************************************************************
@@ -343,7 +353,6 @@ solve
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -363,8 +372,7 @@ main(int argc, char** argv)
   struct ssp_rng* rng = NULL;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Create the dummy fluid medium */
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
@@ -373,7 +381,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
@@ -449,7 +457,7 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_phi));
 
   /* Solve */
-  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
+  OK(ssp_rng_create(NULL, SSP_RNG_KISS, &rng));
   printf(">> Box scene\n");
   solve(box_scn, rng, interf_props);
   printf(">> Square Scene\n");
@@ -460,8 +468,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   OK(ssp_rng_ref_put(rng));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

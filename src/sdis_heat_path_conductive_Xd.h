@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,63 @@
 #include <star/ssp.h>
 
 #include "sdis_Xd_begin.h"
+
+/*******************************************************************************
+ * Non generic helper function
+ ******************************************************************************/
+#ifndef SDIS_HEAT_PATH_CONDUCTIVE_XD_H
+#define SDIS_HEAT_PATH_CONDUCTIVE_XD_H
+
+static res_T
+check_solid_constant_properties
+  (struct sdis_device* dev,
+   const int evaluate_green,
+   const struct solid_props* props_ref,
+   const struct solid_props* props)
+{
+  res_T res = RES_OK;
+  ASSERT(dev && props_ref && props);
+
+  if(props_ref->lambda != props->lambda) {
+    log_err(dev,
+      "%s: invalid thermal conductivity. One assumes a constant conductivity "
+      "for the whole solid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(props_ref->rho != props->rho) {
+    log_err(dev,
+      "%s: invalid volumic mass. One assumes a constant volumic mass for "
+      "the whole solid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(props_ref->cp != props->cp) {
+    log_err(dev,
+       "%s: invalid calorific capacity. One assumes a constant calorific "
+       "capacity for the whole solid.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(evaluate_green && props_ref->power != props->power) {
+    log_err(dev,
+      "%s: invalid volumic power. When estimating the green function, a "
+      "constant volumic power is assumed for the whole solid.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+#endif /* SDIS_HEAT_PATH_CONDUCTIVE_XD_H */
 
 /*******************************************************************************
  * Helper functions
@@ -193,20 +250,155 @@ error:
   goto exit;
 }
 
+
+/*******************************************************************************
+ * Handle the volumic power at a given diffusive step
+ ******************************************************************************/
+struct XD(handle_volumic_power_args) {
+  /* Forward/backward direction of the sampled diffusive step */
+  const float* dir0;
+  const float* dir1;
+
+  /* Forward/backward intersections along the sampled diffusive step */
+  const struct sXd(hit)* hit0;
+  const struct sXd(hit)* hit1;
+
+  /* Physical properties */
+  double power; /* Volumic power */
+  double lambda; /* Conductivity  */
+
+  float delta_solid; /* Challenged length of a diffusive step */
+  float delta; /* Current length of the current diffusive step */
+
+  size_t picard_order;
+};
+static const struct XD(handle_volumic_power_args)
+XD(HANDLE_VOLUMIC_POWER_ARGS_NULL) = {
+  NULL, NULL, NULL, NULL, -1, -1, -1, -1, 0
+};
+
+static INLINE int
+XD(check_handle_volumic_power_args)
+  (const struct XD(handle_volumic_power_args)* args)
+{
+  ASSERT(args);
+  return args
+      && args->dir0
+      && args->dir1
+      && args->hit0
+      && args->hit1
+      && args->lambda >= 0
+      && args->delta_solid > 0
+      && args->delta >= 0
+      && args->delta_solid >= 0
+      && args->picard_order > 0;
+}
+
+static res_T
+XD(handle_volumic_power)
+  (const struct sdis_scene* scn,
+   const struct XD(handle_volumic_power_args)* args,
+   double* out_power_term,
+   struct XD(temperature)* T)
+{
+  double power_term = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && out_power_term && T && XD(check_handle_volumic_power_args)(args));
+
+  /* No volumic power. Do nothing */
+  if(args->power == SDIS_VOLUMIC_POWER_NONE) goto exit;
+
+  /* Check that picardN is not enabled when a volumic power is set since in
+   * this situation the upper bound of the Monte-Carlo weight required by
+   * picardN cannot be known */
+  if(args->picard_order > 1) {
+    log_err(scn->dev,
+     "%s: invalid not null volumic power '%g' kg/m^3. Could not manage a "
+     "volumic power when the picard order is not equal to 1; Picard order is "
+     "currently set to %lu.\n",
+     FUNC_NAME, args->power, (unsigned long)args->picard_order);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* No forward/backward intersection along the sampled direction */
+  if(SXD_HIT_NONE(args->hit0) && SXD_HIT_NONE(args->hit1)) {
+    const double delta_in_meter = args->delta * scn->fp_to_meter;
+    power_term = delta_in_meter * delta_in_meter / (2.0 * DIM * args->lambda);
+    T->value += args->power * power_term;
+
+  /* An intersection along this diffusive step is find. Use it to statically
+   * correct the power term currently registered */
+  } else {
+    const double delta_s_adjusted = args->delta_solid * RAY_RANGE_MAX_SCALE;
+    const double delta_s_in_meter = args->delta_solid * scn->fp_to_meter;
+    double h;
+    double h_in_meter;
+    double cos_U_N;
+    float N[DIM];
+
+    if(args->delta == args->hit0->distance) {
+      fX(normalize)(N, args->hit0->normal);
+      cos_U_N = fX(dot)(args->dir0, N);
+
+    } else {
+      ASSERT(args->delta == args->hit1->distance);
+      fX(normalize)(N, args->hit1->normal);
+      cos_U_N = fX(dot)(args->dir1, N);
+    }
+
+    h = args->delta * fabs(cos_U_N);
+    h_in_meter = h * scn->fp_to_meter;
+
+    /* The regular power term */
+    power_term = h_in_meter * h_in_meter / (2.0*args->lambda);
+
+    /* Add the power corrective term. Be careful to use the adjusted
+     * delta_solid to correctly handle the RAY_RANGE_MAX_SCALE factor in the
+     * computation of the limit angle. But keep going with the unmodified
+     * delta_solid in the corrective term since it was the one that was
+     * "wrongly" used in the previous step and that must be corrected. */
+    if(h == delta_s_adjusted) {
+      power_term +=
+        -(delta_s_in_meter * delta_s_in_meter) / (2.0*DIM*args->lambda);
+
+    } else if(h < delta_s_adjusted) {
+      const double sin_a = h / delta_s_adjusted;
+#if DIM==2
+      /* tmp = sin(2a) / (PI - 2*a) */
+      const double tmp = sin_a * sqrt(1 - sin_a*sin_a) / acos(sin_a);
+      power_term +=
+        -(delta_s_in_meter * delta_s_in_meter) / (4.0*args->lambda) * tmp;
+#else
+      const double tmp = (sin_a*sin_a*sin_a - sin_a) / (1-sin_a);
+      power_term +=
+         (delta_s_in_meter * delta_s_in_meter) / (6.0*args->lambda) * tmp;
+#endif
+    }
+    T->value += args->power * power_term;
+  }
+
+exit:
+  *out_power_term = power_term;
+  return res;
+error:
+  goto exit;
+}
+
 /*******************************************************************************
  * Local function
  ******************************************************************************/
 res_T
 XD(conductive_path)
   (struct sdis_scene* scn,
-   const struct rwalk_context* ctx,
+   struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
   double position_start[DIM];
-  double green_power_factor = 0;
-  double power_ref = SDIS_VOLUMIC_POWER_NONE;
+  struct solid_props props_ref = SOLID_PROPS_NULL;
+  double green_power_term = 0;
   struct sdis_medium* mdm;
   size_t istep = 0; /* Help for debug */
   res_T res = RES_OK;
@@ -217,7 +409,7 @@ XD(conductive_path)
   /* Check the random walk consistency */
   res = scene_get_medium_in_closed_boundaries(scn, rwalk->vtx.P, &mdm);
   if(res != RES_OK || mdm != rwalk->mdm) {
-    log_warn(scn->dev, "%s: invalid solid random walk. "
+    log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -225,27 +417,41 @@ XD(conductive_path)
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
 
-  if(ctx->green_path) {
-    /* Retrieve the power of the medium. Use it to check that it is effectively
-     * constant along the random walk */
-    power_ref = solid_get_volumic_power(mdm, &rwalk->vtx);
-  }
+  /* Retrieve the solid properties at the current position. Use them to verify
+   * that those that are supposed to be constant by the conductive random walk
+   * remain the same. Note that we take care of the same constraints on the
+   * solid reinjection since once reinjected, the position of the random walk
+   * is that at the beginning of the conductive random walkh. Thus, after a
+   * reinjection, the next line retrieves the properties of the reinjection
+   * position. By comparing them to the properties along the random walk, we
+   * thus verify that the properties are constant throughout the random walk
+   * with respect to the properties of the reinjected position. */
+  solid_get_properties(mdm, &rwalk->vtx, &props_ref);
 
   do { /* Solid random walk */
+    struct XD(handle_volumic_power_args) handle_volpow_args =
+       XD(HANDLE_VOLUMIC_POWER_ARGS_NULL);
     struct sXd(hit) hit0, hit1;
-    double lambda; /* Thermal conductivity */
-    double tmp;
-    double power_factor = 0;
-    double power;
-    float delta, delta_solid; /* Random walk numerical parameter */
+    struct solid_props props = SOLID_PROPS_NULL;
+    double power_term = 0;
+    double mu;
+    float delta; /* Random walk numerical parameter */
+    double delta_m;
     float dir0[DIM], dir1[DIM];
     float org[DIM];
 
+    /* Fetch solid properties */
+    res = solid_get_properties(mdm, &rwalk->vtx, &props);
+    if(res != RES_OK) goto error;
+
+    res = check_solid_constant_properties
+      (scn->dev, ctx->green_path != NULL, &props_ref, &props);
+    if(res != RES_OK) goto error;
+
     /* Check the limit condition
      * REVIEW Rfo: This can be a bug if the random walk comes from a boundary */
-    tmp = solid_get_temperature(mdm, &rwalk->vtx);
-    if(tmp >= 0) {
-      T->value += tmp;
+    if(props.temperature >= 0) {
+      T->value += props.temperature;
       T->done = 1;
 
       if(ctx->green_path) {
@@ -261,88 +467,36 @@ XD(conductive_path)
       break;
     }
 
-    /* Fetch solid properties */
-    delta_solid = (float)solid_get_delta(mdm, &rwalk->vtx);
-    lambda = solid_get_thermal_conductivity(mdm, &rwalk->vtx);
-    power = solid_get_volumic_power(mdm, &rwalk->vtx);
-
-    if(ctx->green_path && power_ref != power) {
-      log_err(scn->dev,
-        "%s: invalid non constant volumic power term. Expecting a constant "
-        "volumic power in time and space on green function estimation.\n",
-        FUNC_NAME);
-      res = RES_BAD_ARG;
-      goto error;
-    }
-
     fX_set_dX(org, rwalk->vtx.P);
 
     /* Sample the direction to walk toward and compute the distance to travel */
-    res = XD(sample_next_step_robust)(scn, mdm, rng, rwalk->vtx.P, delta_solid,
-      dir0, dir1, &hit0, &hit1, &delta);
+    res = XD(sample_next_step_robust)(scn, mdm, rng, rwalk->vtx.P,
+      (float)props.delta, dir0, dir1, &hit0, &hit1, &delta);
     if(res != RES_OK) goto error;
 
     /* Add the volumic power density to the measured temperature */
-    if(power != SDIS_VOLUMIC_POWER_NONE) {
-      if((S3D_HIT_NONE(&hit0) && S3D_HIT_NONE(&hit1))) { /* Hit nothing */
-        const double delta_in_meter = delta * scn->fp_to_meter;
-        power_factor = delta_in_meter * delta_in_meter / (2.0 * DIM * lambda);
-        T->value += power * power_factor;
-      } else {
-        const double delta_s_adjusted = delta_solid * RAY_RANGE_MAX_SCALE;
-        const double delta_s_in_meter = delta_solid * scn->fp_to_meter;
-        double h;
-        double h_in_meter;
-        double cos_U_N;
-        float N[DIM];
-
-        if(delta == hit0.distance) {
-          fX(normalize)(N, hit0.normal);
-          cos_U_N = fX(dot)(dir0, N);
-        } else {
-          ASSERT(delta == hit1.distance);
-          fX(normalize)(N, hit1.normal);
-          cos_U_N = fX(dot)(dir1, N);
-        }
-
-        h = delta * fabs(cos_U_N);
-        h_in_meter = h * scn->fp_to_meter;
-
-        /* The regular power term at wall */
-        tmp = h_in_meter * h_in_meter / (2.0 * lambda);
-
-        /* Add the power corrective term. Be careful to use the adjusted
-         * delta_solid to correctly handle the RAY_RANGE_MAX_SCALE factor in
-         * the computation of the limit angle. But keep going with the
-         * unmodified delta_solid in the corrective term since it was the one
-         * that was "wrongly" used in the previous step and that must be
-         * corrected. */
-        if(h == delta_s_adjusted) {
-          tmp += -(delta_s_in_meter * delta_s_in_meter)/(2.0*DIM*lambda);
-        } else if(h < delta_s_adjusted) {
-          const double sin_a = h / delta_s_adjusted;
-#if DIM==2
-          /* tmp1 = sin(2a) / (PI - 2*a) */
-          const double tmp1 = sin_a * sqrt(1 - sin_a*sin_a)/acos(sin_a);
-          tmp += -(delta_s_in_meter * delta_s_in_meter)/(4.0*lambda) * tmp1;
-#else
-          const double tmp1 = (sin_a*sin_a*sin_a - sin_a)/ (1-sin_a);
-          tmp += (delta_s_in_meter * delta_s_in_meter)/(6.0*lambda) * tmp1;
-#endif
-        }
-        power_factor = tmp;
-        T->value += power * power_factor;
-      }
-    }
+    handle_volpow_args.dir0 = dir0;
+    handle_volpow_args.dir1 = dir1;
+    handle_volpow_args.hit0 = &hit0;
+    handle_volpow_args.hit1 = &hit1;
+    handle_volpow_args.power = props.power;
+    handle_volpow_args.lambda = props.lambda;
+    handle_volpow_args.delta_solid = (float)props.delta;
+    handle_volpow_args.delta = delta;
+    handle_volpow_args.picard_order = get_picard_order(ctx);
+    res = XD(handle_volumic_power)(scn, &handle_volpow_args, &power_term, T);
+    if(res != RES_OK) goto error;
 
     /* Register the power term for the green function. Delay its registration
      * until the end of the conductive path, i.e. the path is valid */
-    if(ctx->green_path && power != SDIS_VOLUMIC_POWER_NONE) {
-      green_power_factor += power_factor;
+    if(ctx->green_path && props.power != SDIS_VOLUMIC_POWER_NONE) {
+      green_power_term += power_term;
     }
 
     /* Rewind the time */
-    res = XD(time_rewind)(rwalk->mdm, rng, delta * scn->fp_to_meter, ctx, rwalk, T);
+    delta_m = delta * scn->fp_to_meter;
+    mu = (2*DIM*props.lambda)/(props.rho*props.cp*delta_m*delta_m);
+    res = XD(time_rewind)(mu, props.t0, rng, rwalk, ctx, T);
     if(res != RES_OK) goto error;
     if(T->done) break; /* Limit condition was reached */
 
@@ -359,8 +513,8 @@ XD(conductive_path)
     XD(move_pos)(rwalk->vtx.P, dir0, delta);
 
     /* Register the new vertex against the heat path */
-    res = register_heat_vertex
-      (ctx->heat_path, &rwalk->vtx, T->value, SDIS_HEAT_VERTEX_CONDUCTION);
+    res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,
+      SDIS_HEAT_VERTEX_CONDUCTION, (int)ctx->nbranchings);
     if(res != RES_OK) goto error;
 
     ++istep;
@@ -369,9 +523,9 @@ XD(conductive_path)
   } while(SXD_HIT_NONE(&rwalk->hit));
 
   /* Register the power term for the green function */
-  if(ctx->green_path && power_ref != SDIS_VOLUMIC_POWER_NONE) {
+  if(ctx->green_path && props_ref.power != SDIS_VOLUMIC_POWER_NONE) {
     res = green_path_add_power_term
-      (ctx->green_path, rwalk->mdm, &rwalk->vtx, green_power_factor);
+      (ctx->green_path, rwalk->mdm, &rwalk->vtx, green_power_term);
     if(res != RES_OK) goto error;
   }
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -141,6 +141,7 @@ struct interf {
   double hc;
   double epsilon;
   double specular_fraction;
+  double reference_temperature;
 };
 
 static double
@@ -165,6 +166,14 @@ interface_get_specular_fraction
 {
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
+}
+
+static double
+interface_get_reference_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interf*)sdis_data_cget(data))->reference_temperature;
 }
 
 /*******************************************************************************
@@ -199,10 +208,10 @@ process_heat_path(const struct sdis_heat_path* path, void* context)
 
   CHK(path && context);
 
-  BA(sdis_heat_path_get_vertices_count(NULL, &n));
-  BA(sdis_heat_path_get_vertices_count(path, NULL));
-  OK(sdis_heat_path_get_vertices_count(path, &n));
-  CHK(n != 0);
+  BA(sdis_heat_path_get_line_strips_count(NULL, &n));
+  BA(sdis_heat_path_get_line_strips_count(path, NULL));
+  OK(sdis_heat_path_get_line_strips_count(path, &n));
+  CHK(n == 1);
 
   BA(sdis_heat_path_get_status(NULL, &status));
   BA(sdis_heat_path_get_status(path, NULL));
@@ -215,20 +224,28 @@ process_heat_path(const struct sdis_heat_path* path, void* context)
     default: FATAL("Unreachable code.\n"); break;
   }
 
-  BA(sdis_heat_path_get_vertex(NULL, 0, &vert));
-  BA(sdis_heat_path_get_vertex(path, n, &vert));
-  BA(sdis_heat_path_get_vertex(path, 0, NULL));
+  BA(sdis_heat_path_line_strip_get_vertices_count(NULL, 0, &n));
+  BA(sdis_heat_path_line_strip_get_vertices_count(path, 1, &n));
+  BA(sdis_heat_path_line_strip_get_vertices_count(path, 0, NULL));
+  OK(sdis_heat_path_line_strip_get_vertices_count(path, 0, &n));
+  CHK(n != 0);
+
+  BA(sdis_heat_path_line_strip_get_vertex(NULL, 0, 0, &vert));
+  BA(sdis_heat_path_line_strip_get_vertex(path, 1, 1, &vert));
+  BA(sdis_heat_path_line_strip_get_vertex(path, 0, n, &vert));
+  BA(sdis_heat_path_line_strip_get_vertex(path, 0, 0, NULL));
 
   FOR_EACH(i, 0, n) {
-    OK(sdis_heat_path_get_vertex(path, i, &vert));
+    OK(sdis_heat_path_line_strip_get_vertex(path, 0, i, &vert));
     CHK(vert.type == SDIS_HEAT_VERTEX_CONVECTION
      || vert.type == SDIS_HEAT_VERTEX_CONDUCTION
      || vert.type == SDIS_HEAT_VERTEX_RADIATIVE);
   }
 
-  BA(sdis_heat_path_for_each_vertex(NULL, dump_vertex_pos, context));
-  BA(sdis_heat_path_for_each_vertex(path, NULL, context));
-  OK(sdis_heat_path_for_each_vertex(path, dump_vertex_pos, context));
+  BA(sdis_heat_path_line_strip_for_each_vertex(NULL, 0, dump_vertex_pos, context));
+  BA(sdis_heat_path_line_strip_for_each_vertex(path, 1, dump_vertex_pos, context));
+  BA(sdis_heat_path_line_strip_for_each_vertex(path, 0, NULL, context));
+  OK(sdis_heat_path_line_strip_for_each_vertex(path, 0, dump_vertex_pos, context));
 
   FOR_EACH(i, 0, n-1) {
     fprintf(ctx->stream, "l %lu %lu\n",
@@ -262,11 +279,14 @@ main(int argc, char** argv)
   struct sdis_estimator* estimator3 = NULL;
   struct sdis_green_function* green = NULL;
   const struct sdis_heat_path* path = NULL;
+  struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_ambient_radiative_temperature trad =
+    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   struct dump_path_context dump_ctx = DUMP_PATH_CONTEXT_NULL;
   struct context ctx;
   struct fluid* fluid_param;
@@ -275,6 +295,7 @@ main(int argc, char** argv)
   struct ssp_rng* rng_state = NULL;
   enum sdis_estimator_type type;
   FILE* stream = NULL;
+  double t_range[2];
   double ref;
   const size_t N = 1000;
   const size_t N_dump = 10;
@@ -284,7 +305,8 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+  dev_args.allocator = &allocator;
+  OK(sdis_device_create(&dev_args, &dev));
 
   /* Create the fluid medium */
   OK(sdis_data_create
@@ -307,7 +329,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
@@ -324,6 +346,7 @@ main(int argc, char** argv)
   interface_shader.back.temperature = NULL;
   interface_shader.back.emissivity = interface_get_emissivity;
   interface_shader.back.specular_fraction = interface_get_specular_fraction;
+  interface_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, data, &interf));
   OK(sdis_data_ref_put(data));
@@ -367,6 +390,9 @@ main(int argc, char** argv)
   solve_args.time_range[1] = 0;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
   solve_args.time_range[0] = solve_args.time_range[1] = INF;
+  solve_args.picard_order = 0;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+  solve_args.picard_order = 1;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
 
   BA(sdis_estimator_get_type(estimator, NULL));
@@ -538,10 +564,14 @@ main(int argc, char** argv)
 
   /* Green and ambient radiative temperature */
   solve_args.nrealisations = N;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, 300));
-  OK(sdis_scene_set_reference_temperature(scn, 300));
+  trad.temperature = trad.reference = 300;
+  t_range[0] = 300;
+  t_range[1] = 300;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
+  OK(sdis_scene_set_temperature_range(scn, t_range));
 
   interface_param->epsilon = 1;
+  interface_param->reference_temperature = 300;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
@@ -554,7 +584,11 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator2));
 
   /* Check same green used at different ambient radiative temperature */
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, 600));
+  trad.temperature = 600;
+  t_range[0] = 300;
+  t_range[1] = 600;
+  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
+  OK(sdis_scene_set_temperature_range(scn, t_range));
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_green_function_solve(green, &estimator2));

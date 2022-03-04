@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
 
 #ifndef SDIS_MISC_H
 #define SDIS_MISC_H
+
+#include "sdis_heat_path.h"
 
 #include <rsys/float2.h>
 #include <rsys/float3.h>
@@ -127,10 +129,11 @@ register_heat_vertex
   (struct sdis_heat_path* path,
    const struct sdis_rwalk_vertex* vtx,
    const double weight,
-   const enum sdis_heat_vertex_type type)
+   const enum sdis_heat_vertex_type type,
+   const int branch_id)
 {
   struct sdis_heat_vertex heat_vtx = SDIS_HEAT_VERTEX_NULL;
-  ASSERT(vtx);
+  ASSERT(vtx && branch_id >= 0);
 
   if(!path) return RES_OK;
 
@@ -140,25 +143,41 @@ register_heat_vertex
   heat_vtx.time = vtx->time;
   heat_vtx.weight = weight;
   heat_vtx.type = type;
+  heat_vtx.branch_id = branch_id;
   return heat_path_add_vertex(path, &heat_vtx);
 }
 
 extern LOCAL_SYM res_T
 time_rewind_2d
-  (struct sdis_medium* mdm, /* Medium into which the time is rewinded */
+  (const double mu,
+   const double t0, /* Initial time */
    struct ssp_rng* rng,
-   const double dist_in_meter,
-   const struct rwalk_context* ctx,
    struct rwalk_2d* rwalk,
+   const struct rwalk_context* ctx,
    struct temperature_2d* T);
 
 extern LOCAL_SYM res_T
 time_rewind_3d
-  (struct sdis_medium* mdm, /* Medium into which the time is rewinded */
+  (const double mu,
+   const double t0, /* Initial time */
    struct ssp_rng* rng,
-   const double dist_in_meter,
-   const struct rwalk_context* ctx,
    struct rwalk_3d* rwalk,
+   const struct rwalk_context* ctx,
    struct temperature_3d* T);
+
+/* Check the validity of the parametric coordinate onto a 2D primitive. If it
+ * is invalid, the function prints an error message and return RES_BAD_ARG. */
+extern LOCAL_SYM res_T
+check_primitive_uv_2d
+  (struct sdis_device* dev,
+   const double u[]);
+
+/* Check the validity of the parametric coordinates onto a 3D primitive. If
+ * they are invalid, the function prints an error message and return
+ * RES_BAD_ARG.  */
+extern LOCAL_SYM res_T
+check_primitive_uv_3d
+  (struct sdis_device* dev,
+   const double uv[]);
 
 #endif /* SDIS_MISC_H */

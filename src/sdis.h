@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
 
 #ifndef SDIS_H
 #define SDIS_H
+
+#include <star/ssp.h>
 
 #include <rsys/rsys.h>
 #include <float.h>
@@ -50,7 +52,6 @@ struct logger;
 struct mem_allocator;
 struct senc2d_scene;
 struct senc3d_scene;
-struct ssp_rng;
 
 /* Forward declaration of the Stardis opaque data types. These data types are
  * ref counted. Once created the caller implicitly owns the created data, i.e.
@@ -130,6 +131,31 @@ struct sdis_mc {
 #define SDIS_MC_NULL__ {0, 0, 0}
 static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
 
+/* Input arguments of the sdis_device_create function */
+struct sdis_device_create_args {
+  struct logger* logger; /* NULL <=> default logger */
+  struct mem_allocator* allocator; /* NULL <=> default allocator */
+  unsigned nthreads_hint; /* Hint on the number of threads to use */
+  int verbosity; /* Verbosity level */
+
+  /* Use the Message Passing Interface to distribute work between processes.
+   * This option is taken into account only if Stardis-Solver is compiled with
+   * MPI support */
+  int use_mpi;
+};
+#define SDIS_DEVICE_CREATE_ARGS_DEFAULT__ {                                    \
+  NULL, NULL, SDIS_NTHREADS_DEFAULT, 1, 0                                      \
+}
+static const struct sdis_device_create_args SDIS_DEVICE_CREATE_ARGS_DEFAULT =
+  SDIS_DEVICE_CREATE_ARGS_DEFAULT__;
+
+/* Informations on the Stardis-Solver library */
+struct sdis_info {
+  int mpi_enabled; /* Define if Stardis-Solver was built with MPI support */
+};
+#define SDIS_INFO_NULL__ {0}
+static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
+
 /*******************************************************************************
  * Data type used to describe physical properties
  ******************************************************************************/
@@ -159,7 +185,7 @@ struct sdis_solid_shader {
   sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
   sdis_medium_getter_T thermal_conductivity; /* In W.m^-1.K^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
-  sdis_medium_getter_T delta_solid;
+  sdis_medium_getter_T delta;
 
   /* May be NULL if there is no volumic power. One can also return
    * SDIS_VOLUMIC_POWER_NONE to define that there is no volumic power at the
@@ -207,8 +233,11 @@ struct sdis_interface_side_shader {
    * interface or if the emissivity is 0 onto the whole interface. */
   sdis_interface_getter_T emissivity; /* Overall emissivity. */
   sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
+
+  /* Reference temperature used in Picard 1 */
+  sdis_interface_getter_T reference_temperature;
 };
-#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL }
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL }
 static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
   SDIS_INTERFACE_SIDE_SHADER_NULL__;
 
@@ -256,8 +285,9 @@ struct sdis_heat_vertex {
   double time;
   double weight;
   enum sdis_heat_vertex_type type;
+  int branch_id;
 };
-#define SDIS_HEAT_VERTEX_NULL__ {{0,0,0}, 0, 0, SDIS_HEAT_VERTEX_CONDUCTION}
+#define SDIS_HEAT_VERTEX_NULL__ {{0,0,0}, 0, 0, SDIS_HEAT_VERTEX_CONDUCTION, 0}
 static const struct sdis_heat_vertex SDIS_HEAT_VERTEX_NULL =
   SDIS_HEAT_VERTEX_NULL__;
 
@@ -357,20 +387,31 @@ typedef void
    double pos[], /* Output list of vertex coordinates */
    void* ctx);
 
+struct sdis_ambient_radiative_temperature {
+  double temperature; /* In Kelvin */
+  double reference; /* Used to linearise the radiative transfer */
+};
+#define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {-1, -1}
+static const struct sdis_ambient_radiative_temperature
+SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL = 
+  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__;
+
 struct sdis_scene_create_args {
   /* Functors to retrieve the geometric description */
   sdis_get_primitive_indices_T get_indices;
   sdis_get_primitive_interface_T get_interface;
   sdis_get_vertex_position_T get_position;
 
- /* Pointer toward client side sent as the last argument of the callbacks */
+  /* Pointer toward client side sent as the last argument of the callbacks */
   void* context;
 
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
-  double trad; /* Ambiant radiative temperature */
-  double tref; /* Temperature used to linearize the radiative temperature */
+  struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
+
+  /* Min/max temperature used to linearise the radiative temperature */
+  double t_range[2];
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -381,8 +422,8 @@ struct sdis_scene_create_args {
   0, /* #primitives */                                                         \
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
-  -1.0, /* Ambient radiative temperature */                                    \
-  -1.0 /* Reference temperature */                                             \
+  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
+  {0.0, -1.0} /* Temperature range */                                          \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;
@@ -394,15 +435,24 @@ struct sdis_solve_probe_args {
   size_t nrealisations; /* #realisations */
   double position[3]; /* Probe position */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_PROBE_ARGS_DEFAULT__ {                                      \
   10000, /* #realisations */                                                   \
   {0,0,0}, /* Position  */                                                     \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
@@ -413,18 +463,27 @@ struct sdis_solve_probe_boundary_args {
   size_t iprim; /* Identifier of the primitive on which the probe lies */
   double uv[2]; /* Parametric coordinates of the probe onto the primitve */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   enum sdis_side side; /* Side of iprim on which the probe lies */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__ {                             \
   10000, /* #realisations */                                                   \
   0, /* Primitive identifier */                                                \
   {0,0}, /* UV */                                                              \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_SIDE_NULL__,                                                            \
   SDIS_HEAT_PATH_NONE,                                                         \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_probe_boundary_args
 SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
@@ -436,8 +495,15 @@ struct sdis_solve_boundary_args {
   const enum sdis_side* sides; /* Per primitive side to consider */
   size_t nprimitives; /* #primitives */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__ {                                   \
   10000, /* #realisations */                                                   \
@@ -445,8 +511,10 @@ struct sdis_solve_boundary_args {
   NULL, /* Per primitive side */                                               \
   0, /* #primitives */                                                         \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__;
@@ -455,15 +523,24 @@ struct sdis_solve_medium_args {
   size_t nrealisations; /* #realisations */
   struct sdis_medium* medium; /* Medium to solve */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__ {                                     \
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
   SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__;
@@ -473,14 +550,23 @@ struct sdis_solve_probe_boundary_flux_args {
   size_t iprim; /* Identifier of the primitive on which the probe lies */
   double uv[2]; /* Parametric coordinates of the probe onto the primitve */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
   10000, /* #realisations */                                                   \
   0, /* Primitive identifier */                                                \
   {0,0}, /* UV */                                                              \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  NULL /* RNG state */                                                         \
+  1, /* Picard order */                                                        \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_probe_boundary_flux_args
 SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -491,14 +577,23 @@ struct sdis_solve_boundary_flux_args {
   const size_t* primitives; /* List of boundary primitives to handle */
   size_t nprimitives; /* #primitives */
   double time_range[2]; /* Observation time */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                              \
   10000, /* #realisations */                                                   \
   NULL, /* List or primitive ids */                                            \
   0, /* #primitives */                                                         \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  NULL /* RNG state */                                                         \
+  1, /* Picard order */                                                        \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_boundary_flux_args
 SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -507,16 +602,28 @@ SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
 struct sdis_solve_camera_args {
   struct sdis_camera* cam; /* Point of view */
   double time_range[2]; /* Observation time */
-  size_t image_resolution[2]; /* Image resolution */
+
+  /* Set the Picard recursion order to estimate the radiative temperature. An
+   * order of one means that the radiative temperature is linearized, while
+   * higher orders allow the estimation of the T4 radiative transfer. */
+  size_t picard_order;
+
+  size_t image_definition[2]; /* Image definition */
   size_t spp; /* #samples per pixel */
   int register_paths; /* Combination of enum sdis_heat_path_flag */
+
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use */
 };
 #define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
   NULL, /* Camera */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  1, /* Picard order */                                                        \
   {512,512}, /* Image resolution */                                            \
   256, /* #realisations per pixel */                                           \
-  SDIS_HEAT_PATH_NONE                                                          \
+  SDIS_HEAT_PATH_NONE,                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
   SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
@@ -526,12 +633,14 @@ struct sdis_compute_power_args {
   struct sdis_medium* medium; /* Medium to solve */
   double time_range[2]; /* Observation time */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
 #define SDIS_COMPUTE_POWER_ARGS_DEFAULT__ {                                    \
   10000, /* #realisations */                                                   \
   NULL, /* Medium */                                                           \
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
-  NULL /* RNG state */                                                         \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
 }
 static const struct sdis_compute_power_args
 SDIS_COMPUTE_POWER_ARGS_DEFAULT = SDIS_COMPUTE_POWER_ARGS_DEFAULT__;
@@ -544,10 +653,7 @@ BEGIN_DECLS
  ******************************************************************************/
 SDIS_API res_T
 sdis_device_create
-  (struct logger* logger, /* May be NULL <=> use default logger */
-   struct mem_allocator* allocator, /* May be NULL <=> use default allocator */
-   const unsigned nthreads_hint, /* Hint on the number of threads to use */
-   const int verbose, /* Verbosity level */
+  (const struct sdis_device_create_args* args,
    struct sdis_device** dev);
 
 SDIS_API res_T
@@ -557,6 +663,11 @@ sdis_device_ref_get
 SDIS_API res_T
 sdis_device_ref_put
   (struct sdis_device* dev);
+
+SDIS_API res_T
+sdis_device_get_mpi_rank
+  (struct sdis_device* dev,
+   int* rank);
 
 /*******************************************************************************
  * A data stores in the Stardis memory space a set of user defined data. It can
@@ -826,27 +937,27 @@ sdis_scene_set_fp_to_meter
 SDIS_API res_T
 sdis_scene_get_ambient_radiative_temperature
   (const struct sdis_scene* scn,
-   double* trad);
+   struct sdis_ambient_radiative_temperature* trad);
 
 /* Set scene's ambient radiative temperature. If set negative, any sample
  * ending in ambient radiative temperature will fail */
 SDIS_API res_T
 sdis_scene_set_ambient_radiative_temperature
   (struct sdis_scene* scn,
-   const double trad);
+   const struct sdis_ambient_radiative_temperature* trad);
 
-/* Get scene's reference temperature */
+/* Get scene's minimum/maximum temperature */
 SDIS_API res_T
-sdis_scene_get_reference_temperature
+sdis_scene_get_temperature_range
   (const struct sdis_scene* scn,
-   double* tref);
+   double t_range[2]);
 
-/* Set scene's reference temperature. If set to 0, there is no radiative
- * transfert in the whole system */
+/* Set scene's minimum/maximum temperature. Must be correctly defined if there
+ * is any radiative transfer in the scene */
 SDIS_API res_T
-sdis_scene_set_reference_temperature
+sdis_scene_set_temperature_range
   (struct sdis_scene* scn,
-   const double tref);
+   const double t_range[2]);
 
 /* Search the point onto the scene geometry that is the closest of `pos'. The
  * `radius' parameter controls the maximum search distance around `pos'. The
@@ -1130,24 +1241,32 @@ sdis_green_path_for_each_flux_term
  * Heat path API
  ******************************************************************************/
 SDIS_API res_T
-sdis_heat_path_get_vertices_count
-  (const struct sdis_heat_path* path,
-   size_t* nvertices);
-
-SDIS_API res_T
 sdis_heat_path_get_status
   (const struct sdis_heat_path* path,
    enum sdis_heat_path_flag* status);
 
 SDIS_API res_T
-sdis_heat_path_get_vertex
+sdis_heat_path_get_line_strips_count
   (const struct sdis_heat_path* path,
-   const size_t ivertex,
+   size_t* nstrips);
+
+SDIS_API res_T
+sdis_heat_path_line_strip_get_vertices_count
+  (const struct sdis_heat_path* path,
+   const size_t istrip,
+   size_t* nvertices);
+
+SDIS_API res_T
+sdis_heat_path_line_strip_get_vertex
+  (const struct sdis_heat_path* path,
+   const size_t istrip,
+   const size_t ivert,
    struct sdis_heat_vertex* vertex);
 
 SDIS_API res_T
-sdis_heat_path_for_each_vertex
+sdis_heat_path_line_strip_for_each_vertex
   (const struct sdis_heat_path* path,
+   const size_t istrip,
    sdis_process_heat_vertex_T func,
    void* context);
 
@@ -1244,6 +1363,13 @@ sdis_solve_medium_green_function
   (struct sdis_scene* scn,
    const struct sdis_solve_medium_args* args,
    struct sdis_green_function** green);
+
+/*******************************************************************************
+ * Retrieve infos from the Stardis-Solver library
+ ******************************************************************************/
+SDIS_API res_T
+sdis_get_info
+  (struct sdis_info* info);
 
 END_DECLS
 

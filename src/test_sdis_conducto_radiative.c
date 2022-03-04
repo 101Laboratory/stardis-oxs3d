@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ static const double vertices[16/*#vertices*/*3/*#coords per vertex*/] = {
   -1.5, 1.0, 1.0,
    1.5, 1.0, 1.0,
 };
-static const size_t nvertices = sizeof(vertices) / (3*sizeof(double));
+static const size_t nvertices = sizeof(vertices) / (sizeof(double)*3);
 
 static const size_t indices[32/*#triangles*/*3/*#indices per triangle*/] = {
   0, 2, 1, 1, 2, 3, /* Solid back face */
@@ -91,7 +91,7 @@ static const size_t indices[32/*#triangles*/*3/*#indices per triangle*/] = {
   3, 7, 11, 11, 7, 15, /* Right fluid top face */
   1, 9, 5, 5, 9, 13 /* Right fluid bottom face */
 };
-static const size_t ntriangles = sizeof(indices) / (3*sizeof(size_t));
+static const size_t ntriangles = sizeof(indices) / (sizeof(size_t)*3);
 
 static void
 get_indices(const size_t itri, size_t ids[3], void* ctx)
@@ -193,6 +193,7 @@ struct interfac {
   double convection_coef;
   double emissivity;
   double specular_fraction;
+  double Tref;
 };
 
 static double
@@ -227,6 +228,14 @@ interface_get_specular_fraction
   return ((const struct interfac*)sdis_data_cget(data))->specular_fraction;
 }
 
+static double
+interface_get_Tref
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  CHK(data != NULL && frag != NULL);
+  return ((const struct interfac*)sdis_data_cget(data))->Tref;
+}
+
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
@@ -251,10 +260,12 @@ create_interface
   if(sdis_medium_get_type(front) == SDIS_FLUID) {
     shader.front.emissivity = interface_get_emissivity;
     shader.front.specular_fraction = interface_get_specular_fraction;
+    shader.front.reference_temperature = interface_get_Tref;
   }
   if(sdis_medium_get_type(back) == SDIS_FLUID) {
     shader.back.emissivity = interface_get_emissivity;
     shader.back.specular_fraction = interface_get_specular_fraction;
+    shader.back.reference_temperature = interface_get_Tref;
   }
   shader.convection_coef_upper_bound = MMAX(0, interf->convection_coef);
 
@@ -264,6 +275,54 @@ create_interface
 
   OK(sdis_interface_create(dev, front, back, &shader, data, out_interf));
   OK(sdis_data_ref_put(data));
+}
+
+/*******************************************************************************
+ * Test that the evaluation of the green function failed with a picard order
+ * greater than 1, i.e. when one want to handle the non-linearties of the
+ * system.
+ ******************************************************************************/
+static void
+test_invalidity_picardN_green
+  (struct sdis_scene* scn,
+   struct sdis_medium* solid)
+{
+  struct sdis_solve_probe_args probe = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_solve_boundary_args bound = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
+  struct sdis_solve_medium_args mdm = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
+  struct sdis_solve_probe_boundary_args probe_bound =
+    SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
+
+  struct sdis_green_function* green = NULL;
+  CHK(scn);
+
+  CHK(probe.picard_order == 1);
+  CHK(probe_bound.picard_order == 1);
+  CHK(bound.picard_order == 1);
+  CHK(mdm.picard_order == 1);
+
+  probe.position[0] = 0;
+  probe.position[1] = 0;
+  probe.position[2] = 0;
+  probe.picard_order = 2;
+  BA(sdis_solve_probe_green_function(scn, &probe, &green));
+
+  probe_bound.iprim = 2; /* Solid left */
+  probe_bound.uv[0] = 0.3;
+  probe_bound.uv[1] = 0.3;
+  probe_bound.side = SDIS_FRONT;
+  probe_bound.picard_order = 2;
+  BA(sdis_solve_probe_boundary_green_function(scn, &probe_bound, &green));
+
+  bound.primitives = &probe_bound.iprim;
+  bound.sides = &probe_bound.side;
+  bound.nprimitives = 1;
+  bound.picard_order = 2;
+  BA(sdis_solve_boundary_green_function(scn, &bound, &green));
+
+  mdm.medium = solid;
+  mdm.picard_order = 2;
+  BA(sdis_solve_medium_green_function(scn, &mdm, &green));
 }
 
 /*******************************************************************************
@@ -283,6 +342,7 @@ main(int argc, char** argv)
   struct sdis_interface* interfaces[5] = {NULL};
   struct sdis_interface* prim_interfaces[32/*#triangles*/];
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_scene* scn = NULL;
@@ -295,12 +355,14 @@ main(int argc, char** argv)
   const double T0 = 300; /* Fixed temperature on the left side of the system */
   const double T1 = 310; /* Fixed temperature on the right side of the system */
   const double thickness = 2.0; /* Thickness of the solid along X */
+  double t_range[2];
   double Ts0, Ts1, hr, tmp;
   struct interfac* p_intface;
   (void)argc, (void)argv;
 
   OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  dev_args.allocator = &allocator;
+  OK(sdis_device_create(&dev_args, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = temperature_unknown;
@@ -315,7 +377,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
@@ -327,7 +389,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = temperature_unknown;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid2));
   OK(sdis_data_ref_put(data));
@@ -337,6 +399,7 @@ main(int argc, char** argv)
   interf.convection_coef = -1;
   interf.emissivity = -1;
   interf.specular_fraction = -1;
+  interf.Tref = Tref;
   create_interface(dev, solid, solid2, &interf, interfaces+0);
 
   /* Create the interface that emits radiative heat from the solid */
@@ -344,6 +407,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = emissivity;
   interf.specular_fraction = 1;
+  interf.Tref = Tref;
   create_interface(dev, solid, fluid, &interf, interfaces+1);
 
   /* Create the interface that forces the radiative heat to bounce */
@@ -351,6 +415,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 0;
   interf.specular_fraction = 1;
+  interf.Tref = Tref;
   create_interface(dev, fluid, solid2, &interf, interfaces+2);
 
   /* Create the interface with a limit condition of T0 Kelvin */
@@ -358,6 +423,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 1;
   interf.specular_fraction = 1;
+  interf.Tref = T0;
   create_interface(dev, fluid, solid2, &interf, interfaces+3);
 
   /* Create the interface with a limit condition of T1 Kelvin */
@@ -365,6 +431,7 @@ main(int argc, char** argv)
   interf.convection_coef = 0;
   interf.emissivity = 1;
   interf.specular_fraction = 1;
+  interf.Tref = T1;
   create_interface(dev, fluid, solid2, &interf, interfaces+4);
 
   /* Setup the per primitive interface of the solid medium */
@@ -398,7 +465,8 @@ main(int argc, char** argv)
   scn_args.get_position = get_position;
   scn_args.nprimitives = ntriangles;
   scn_args.nvertices = nvertices;
-  scn_args.tref = Tref;
+  scn_args.t_range[0] = MMIN(T0, T1);
+  scn_args.t_range[1] = MMAX(T0, T1);
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, &scn));
 
@@ -476,6 +544,9 @@ main(int argc, char** argv)
 
     /* Check same green used at a different temperature */
     p_intface->temperature = T1b = T1 + ((double)isimul + 1) * 10;
+    t_range[0] = MMIN(T0, T1b);
+    t_range[1] = MMAX(T0, T1b);
+    OK(sdis_scene_set_temperature_range(scn, t_range));
 
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
     OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -521,6 +592,8 @@ main(int argc, char** argv)
 
     printf("\n\n");
   }
+
+  test_invalidity_picardN_green(scn, solid);
 
   /* Release memory */
   OK(sdis_scene_ref_put(scn));

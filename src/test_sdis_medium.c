@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -32,8 +31,7 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader2 = SDIS_SOLID_SHADER_NULL;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 0, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   BA(sdis_fluid_create(NULL, NULL, NULL, NULL));
   BA(sdis_fluid_create(dev, NULL, NULL, NULL));
@@ -85,7 +83,7 @@ main(int argc, char** argv)
   CHK(sdis_medium_get_type(solid) == SDIS_SOLID);
   CHK(sdis_medium_get_data(solid) == data);
 
-    OK(sdis_medium_ref_put(solid));
+  OK(sdis_medium_ref_put(solid));
   OK(sdis_data_ref_put(data));
 
   solid_shader.calorific_capacity = NULL;
@@ -100,9 +98,9 @@ main(int argc, char** argv)
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.volumic_mass = DUMMY_SOLID_SHADER.volumic_mass;
 
-  solid_shader.delta_solid = NULL;
+  solid_shader.delta = NULL;
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
-  solid_shader.delta_solid = DUMMY_SOLID_SHADER.delta_solid;
+  solid_shader.delta = DUMMY_SOLID_SHADER.delta;
 
   solid_shader.temperature = NULL;
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
@@ -137,7 +135,7 @@ main(int argc, char** argv)
   CHK(solid_shader.calorific_capacity == solid_shader2.calorific_capacity);
   CHK(solid_shader.thermal_conductivity == solid_shader2.thermal_conductivity);
   CHK(solid_shader.volumic_mass == solid_shader2.volumic_mass);
-  CHK(solid_shader.delta_solid == solid_shader2.delta_solid);
+  CHK(solid_shader.delta == solid_shader2.delta);
   CHK(solid_shader.volumic_power == solid_shader2.volumic_power);
   CHK(solid_shader.temperature == solid_shader2.temperature);
   CHK(solid_shader.t0 == solid_shader2.t0);
@@ -146,8 +144,6 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_device_ref_put(dev));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
 
   return 0;

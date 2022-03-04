@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,7 +99,7 @@ static const double vertices[8/*#vertices*/*2/*#coords per vertex*/] = {
   0.1, 0.6,
   0.1, 0.4
 };
-static const size_t nvertices = sizeof(vertices)/(2*sizeof(double));
+static const size_t nvertices = sizeof(vertices)/(sizeof(double)*2);
 
 static const size_t indices[8/*#segments*/*2/*#indices per segment*/]= {
   0, 1, /* Rectangle left */
@@ -111,7 +111,7 @@ static const size_t indices[8/*#segments*/*2/*#indices per segment*/]= {
   6, 7, /* Square right */
   7, 4  /* Square bottom */
 };
-static const size_t nsegments = sizeof(indices)/(2*sizeof(size_t));
+static const size_t nsegments = sizeof(indices)/(sizeof(size_t)*2);
 
 /*******************************************************************************
  * Geometry
@@ -284,7 +284,6 @@ check(struct sdis_scene* scn, const struct reference refs[], const size_t nrefs)
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct solid* solid_param = NULL;
   struct fluid* fluid_param = NULL;
   struct interf* interf_param = NULL;
@@ -334,8 +333,7 @@ main(int argc, char** argv)
   };
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Setup the fluid shader */
   fluid_shader.temperature = fluid_get_temperature;
@@ -362,7 +360,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
   solid_shader.volumic_power = solid_get_volumic_power;
 
@@ -501,8 +499,6 @@ main(int argc, char** argv)
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

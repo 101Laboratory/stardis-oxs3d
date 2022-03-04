@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,6 +85,10 @@ extern LOCAL_SYM res_T
 green_path_set_limit_radiative
   (struct green_path_handle* handle,
    const double elapsed_time);
+
+extern LOCAL_SYM res_T
+green_path_reset_limit
+  (struct green_path_handle* handle);
 
 extern LOCAL_SYM res_T
 green_path_add_power_term

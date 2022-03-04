@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,17 +25,52 @@ struct sdis_heat_path;
 struct rwalk_context {
   struct green_path_handle* green_path;
   struct sdis_heat_path* heat_path;
-  double Tarad; /* Ambient radiative temperature */
-  double Tref3; /* Reference temperature ^ 3 */
+
+  double Tmin; /* Lower bound temperature */
+  double Tmin2; /* Tmin^2 */
+  double Tmin3; /* Tmin^3 */
+
+  double That; /* Upper bound temperature */
+  double That2; /* That^2 */
+  double That3; /* That^3 */
+
+  /* Maximum branchings i.e. the maximum number of times
+   * XD(compute_temperature) can be called. It controls the number of
+   * ramifications of the heat path and currently is correlated to the Picard
+   * order used to estimate the radiative temperature. max_branchings ==
+   * picard_order-1 */
+  size_t max_branchings;
+
+  /* Number of heat path branchings */
+  size_t nbranchings;
 };
-#define RWALK_CONTEXT_NULL__ {NULL, NULL, 0, 0}
+#define RWALK_CONTEXT_NULL__ {                                                 \
+  NULL, /* Green path */                                                       \
+  NULL, /* Heat path */                                                        \
+  0, /* Tmin */                                                                \
+  0, /* Tmin^2 */                                                              \
+  0, /* Tmin^3 */                                                              \
+  0, /* That */                                                                \
+  0, /* That^2 */                                                              \
+  0, /* That^3 */                                                              \
+  0, /* Max #branchings */                                                     \
+  SIZE_MAX, /* #branchings */                                                  \
+}
 static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
+
+static INLINE size_t
+get_picard_order(const struct rwalk_context* ctx)
+{
+  ASSERT(ctx);
+  return ctx->max_branchings + 1;
+}
 
 #endif /* SDIS_XD_BEGIN_H */
 
 #ifdef SDIS_XD_BEGIN_H__
   #error "This header is already included without its associated sdis_Xd_end.h file."
 #endif
+
 #define SDIS_XD_BEGIN_H__
 
 /* Check prerequisite */
@@ -105,7 +140,7 @@ static const struct XD(rwalk) XD(RWALK_NULL) = {
 struct XD(temperature) {
   res_T (*func)/* Next function to invoke in order to compute the temperature */
     (struct sdis_scene* scn,
-     const struct rwalk_context* ctx,
+     struct rwalk_context* ctx,
      struct XD(rwalk)* rwalk,
      struct ssp_rng* rng,
      struct XD(temperature)* temp);

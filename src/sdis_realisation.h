@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,93 +35,138 @@ enum flux_flag {
 };
 
 /*******************************************************************************
- * Realisation at a given position and time IN a medium
+ * Helper function used to compute a temperature
  ******************************************************************************/
 extern LOCAL_SYM res_T
-probe_realisation_2d
-  (const size_t irealisation, /* For debug */
-   struct sdis_scene* scn,
+compute_temperature_2d
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk_2d* rwalk,
    struct ssp_rng* rng,
-   struct sdis_medium* medium,
-   const double position[2],
-   const double time,
-   struct green_path_handle* green_path, /* May be NULL */
-   struct sdis_heat_path* heat_path, /* May be NULL */
+   struct temperature_2d* T);
+
+extern LOCAL_SYM res_T
+compute_temperature_3d
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk_3d* rwalk,
+   struct ssp_rng* rng,
+   struct temperature_3d* T);
+
+/*******************************************************************************
+ * Realisation at a given position and time IN a medium
+ ******************************************************************************/
+struct probe_realisation_args {
+  struct ssp_rng* rng;
+  struct sdis_medium* medium; /* Medium into which the realisation starts */
+  double position[3]; /* Probe position */
+  double time; /* Observation time */
+  size_t picard_order; /* Picard order to estimate radiative temperature */
+  struct green_path_handle* green_path; /* May be NULL */
+  struct sdis_heat_path* heat_path; /* May be NULL */
+  size_t irealisation; /* Id of the realisation (for debug) */
+};
+#define PROBE_REALISATION_ARGS_NULL__ {                                        \
+  NULL, NULL, {0,0,0}, -1, 0, NULL, NULL, 0                                    \
+}
+static const struct probe_realisation_args PROBE_REALISATION_ARGS_NULL =
+  PROBE_REALISATION_ARGS_NULL__;
+
+extern LOCAL_SYM res_T
+probe_realisation_2d
+  (struct sdis_scene* scn,
+   struct probe_realisation_args* args,
    double* weight);
 
 extern LOCAL_SYM res_T
 probe_realisation_3d
-  (const size_t irealisation, /* For debug */
-   struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   struct sdis_medium* medium,
-   const double position[3],
-   const double time,
-   struct green_path_handle* green_path, /* May be NULL */
-   struct sdis_heat_path* heat_path, /* May be NULL */
+  (struct sdis_scene* scn,
+   struct probe_realisation_args* args,
    double* weight);
 
 /*******************************************************************************
  * Realisation at a given position and time ON a given side of a boundary
  ******************************************************************************/
+struct boundary_realisation_args {
+  struct ssp_rng* rng;
+  size_t iprim; /* Index of the geometruc primitive */
+  double uv[2]; /* Parametric coordinate into the geometric primitive */
+  double time; /* Observation time */
+  size_t picard_order; /* Picard order to estimate radiative temperature */
+  enum sdis_side side; /* Side of the geometric primitive */
+  struct green_path_handle* green_path; /* May be NULL */
+  struct sdis_heat_path* heat_path; /* May be NULL */
+};
+#define BOUNDARY_REALISATION_ARGS_NULL__ {                                     \
+  NULL, SIZE_MAX, {0,0}, -1, 0, SDIS_SIDE_NULL__, NULL, NULL                   \
+}
+static const struct boundary_realisation_args BOUNDARY_REALISATION_ARGS_NULL =
+  BOUNDARY_REALISATION_ARGS_NULL__;
+
 extern LOCAL_SYM res_T
 boundary_realisation_2d
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   const size_t iprim,
-   const double u[1],
-   const double time,
-   const enum sdis_side side,
-   struct green_path_handle* green_path, /* May be NULL */
-   struct sdis_heat_path* heat_path, /* May be NULL */
+   struct boundary_realisation_args* args,
    double* weight);
 
 extern LOCAL_SYM res_T
 boundary_realisation_3d
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   const size_t iprim,
-   const double uv[2],
-   const double time,
-   const enum sdis_side side,
-   struct green_path_handle* green_path, /* May be NULL */
-   struct sdis_heat_path* heat_path, /* May be NULL */
+   struct boundary_realisation_args* args,
    double* weight);
+
+/*******************************************************************************
+ * Realisation at a given position and time ON a given side of a boundary
+ ******************************************************************************/
+struct boundary_flux_realisation_args {
+  struct ssp_rng* rng;
+  size_t iprim; /* Index of the geometruc primitive */
+  double uv[2]; /* Parametric coordinate into the geometric primitive */
+  double time; /* Observation time */
+  size_t picard_order; /* Picard order to estimate radiative temperature */
+  enum sdis_side solid_side; /* Side of the geometric primitive */
+  int flux_mask; /* Combination of enum flux_flag */
+};
+#define BOUNDARY_FLUX_REALISATION_ARGS_NULL__ {                                \
+  NULL, SIZE_MAX, {0,0}, -1, 0, SDIS_SIDE_NULL__, 0                            \
+}
+static const struct boundary_flux_realisation_args
+BOUNDARY_FLUX_REALISATION_ARGS_NULL = BOUNDARY_FLUX_REALISATION_ARGS_NULL__;
 
 extern LOCAL_SYM res_T
 boundary_flux_realisation_2d
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   const size_t iprim,
-   const double uv[1],
-   const double time,
-   const enum sdis_side solid_side,
-   const int flux_mask, /* Combination of enum flux_flag */
+   struct boundary_flux_realisation_args* args,
    struct bound_flux_result* result);
 
 extern LOCAL_SYM res_T
 boundary_flux_realisation_3d
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   const size_t iprim,
-   const double uv[2],
-   const double time,
-   const enum sdis_side solid_side,
-   const int flux_mask, /* Combination of enum flux_flag */
+   struct boundary_flux_realisation_args* args,
    struct bound_flux_result* result);
 
 /*******************************************************************************
  * Realisation along a given ray at a given time. Available only in 3D.
  ******************************************************************************/
+struct ray_realisation_args {
+  struct ssp_rng* rng;
+  struct sdis_medium* medium; /* Medium into which the realisation starts */
+  double position[3]; /* Ray position */
+  double direction[3]; /* Ray direction */
+  double time; /* Observation time */
+  size_t picard_order; /* Picard order to estimate radiative temperature */
+  struct sdis_heat_path* heat_path; /* May be NULL */
+};
+#define RAY_REALISATION_ARGS_NULL__ {                                          \
+  NULL, NULL, {0,0,0}, {0,0,0}, -1, 0, NULL                                    \
+}
+static const struct ray_realisation_args RAY_REALISATION_ARGS_NULL =
+  RAY_REALISATION_ARGS_NULL__;
+
 extern LOCAL_SYM res_T
 ray_realisation_3d
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   struct sdis_medium* medium,
-   const double position[3],
-   const double direction[3],
-   const double time,
-   struct sdis_heat_path* heat_path, /* May be NULL */
+   struct ray_realisation_args* args,
    double* weight);
 
 #endif /* SDIS_REALISATION_H */

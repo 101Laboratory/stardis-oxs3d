@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -259,7 +259,6 @@ solid_get_volumetric_power
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct s3dut_super_formula f0 = S3DUT_SUPER_FORMULA_NULL;
   struct s3dut_super_formula f1 = S3DUT_SUPER_FORMULA_NULL;
   struct s3dut_mesh* msh = NULL;
@@ -284,8 +283,7 @@ main(int argc, char** argv)
   double spread;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;
@@ -295,7 +293,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
   solid_shader.volumic_power = solid_get_volumetric_power;
 
@@ -325,7 +323,7 @@ main(int argc, char** argv)
   /* Create the solid super shape */
   f0.A = 1; f0.B = 1; f0.M = 20; f0.N0 = 1; f0.N1 = 1; f0.N2 = 5;
   f1.A = 1; f1.B = 1; f1.M = 7; f1.N0 = 1; f1.N1 = 2; f1.N2 = 5;
-  OK(s3dut_create_super_shape(&allocator, &f0, &f1, 1, 128, 64, &msh));
+  OK(s3dut_create_super_shape(NULL, &f0, &f1, 1, 128, 64, &msh));
   OK(s3dut_mesh_get_data(msh, &ctx.msh));
 
   compute_aabb(ctx.msh.positions, ctx.msh.nvertices, lower, upper);
@@ -395,8 +393,6 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf));
   OK(sdis_scene_ref_put(scn));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

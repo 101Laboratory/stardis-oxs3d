@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,8 +54,8 @@
 #define TL 100.0
 #define LAMBDA2 0.2
 
-#define DELTA1 X0/25.0
-#define DELTA2 (L-X0)/25.0
+#define DELTA1 X0/30.0
+#define DELTA2 (L-X0)/30.0
 
 /*******************************************************************************
  * Media
@@ -345,7 +345,6 @@ solve
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -369,8 +368,7 @@ main(int argc, char** argv)
   struct ssp_rng* rng = NULL;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   fluid_shader.temperature = fluid_get_temperature;
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
@@ -379,7 +377,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
 
   /* Create the solid medium #1 */
@@ -519,7 +517,7 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_R));
 
   /* Solve */
-  OK(ssp_rng_create(&allocator, SSP_RNG_KISS, &rng));
+  OK(ssp_rng_create(NULL, SSP_RNG_KISS, &rng));
   printf(">> Box scene\n");
   solve_probe(box_scn, interf_props, rng);
   solve(box_scn, interf_props, rng);
@@ -532,8 +530,6 @@ main(int argc, char** argv)
   OK(sdis_device_ref_put(dev));
   OK(ssp_rng_ref_put(rng));
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

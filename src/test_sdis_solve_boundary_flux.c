@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <star/ssp.h>
 #include <rsys/math.h>
 
  /*
@@ -142,6 +143,7 @@ struct interf {
   double temperature;
   double emissivity;
   double hc;
+  double reference_temperature;
 };
 
 static double
@@ -169,6 +171,15 @@ interface_get_convection_coef
   const struct interf* interf = sdis_data_cget(data);
   CHK(frag && data);
   return interf->hc;
+}
+
+static double
+interface_get_reference_temperature
+  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+{
+  const struct interf* interf = sdis_data_cget(data);
+  CHK(frag && data);
+  return interf->reference_temperature;
 }
 
 /*******************************************************************************
@@ -218,7 +229,6 @@ check_estimator
 int
 main(int argc, char** argv)
 {
-  struct mem_allocator allocator;
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
   struct sdis_medium* fluid = NULL;
@@ -229,6 +239,7 @@ main(int argc, char** argv)
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_estimator* estimator = NULL;
+  struct sdis_estimator* estimator2 = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
@@ -241,14 +252,15 @@ main(int argc, char** argv)
     SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT;
   struct interf* interf_props = NULL;
   struct fluid* fluid_param;
+  struct ssp_rng* rng = NULL;
   enum sdis_estimator_type type;
   double pos[3];
   double analyticT, analyticCF, analyticRF, analyticTF;
   size_t prims[2];
+  int is_master_process;
   (void)argc, (void)argv;
 
-  OK(mem_init_proxy_allocator(&allocator, &mem_default_allocator));
-  OK(sdis_device_create(NULL, &allocator, SDIS_NTHREADS_DEFAULT, 1, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Create the fluid medium */
   OK(sdis_data_create
@@ -263,7 +275,7 @@ main(int argc, char** argv)
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta_solid = solid_get_delta;
+  solid_shader.delta = solid_get_delta;
   solid_shader.temperature = solid_get_temperature;
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
 
@@ -289,7 +301,9 @@ main(int argc, char** argv)
   interf_props->hc = H;
   interf_props->temperature = Tb;
   interf_props->emissivity = EPSILON;
+  interf_props->reference_temperature = Tb;
   interf_shader.back.emissivity = interface_get_emissivity;
+  interf_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_Tb));
   interf_shader.back.emissivity = NULL;
@@ -301,7 +315,9 @@ main(int argc, char** argv)
   interf_props->hc = H;
   interf_props->temperature = UNKNOWN_TEMPERATURE;
   interf_props->emissivity = EPSILON;
+  interf_props->reference_temperature = Tref;
   interf_shader.back.emissivity = interface_get_emissivity;
+  interf_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_H));
   interf_shader.back.emissivity = NULL;
@@ -331,8 +347,10 @@ main(int argc, char** argv)
   scn_args.get_position = box_get_position;
   scn_args.nprimitives = box_ntriangles;
   scn_args.nvertices = box_nvertices;
-  scn_args.trad = Trad;
-  scn_args.tref = Tref;
+  scn_args.trad.temperature = Trad;
+  scn_args.trad.reference = Trad;
+  scn_args.t_range[0] = MMIN(MMIN(Tf, Trad), Tb);
+  scn_args.t_range[1] = MMAX(MMAX(Tf, Trad), Tb);
   scn_args.context = box_interfaces;
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
 
@@ -342,8 +360,10 @@ main(int argc, char** argv)
   scn_args.get_position = square_get_position;
   scn_args.nprimitives = square_nsegments;
   scn_args.nvertices = square_nvertices;
-  scn_args.trad = Trad;
-  scn_args.tref = Tref;
+  scn_args.trad.temperature = Trad;
+  scn_args.trad.reference = Trad;
+  scn_args.t_range[0] = MMIN(MMIN(Tf, Trad), Tb);
+  scn_args.t_range[1] = MMAX(MMAX(Tf, Trad), Tb);
   scn_args.context = square_interfaces;
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
 
@@ -387,25 +407,69 @@ main(int argc, char** argv)
   probe_args.time_range[0] = INF;
   OK(SOLVE(box_scn, &probe_args, &estimator));
 
-  OK(sdis_estimator_get_type(estimator, &type));
-  CHK(type == SDIS_ESTIMATOR_FLUX);
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    OK(sdis_estimator_get_type(estimator, &type));
+    CHK(type == SDIS_ESTIMATOR_FLUX);
 
-  OK(sdis_scene_get_boundary_position
-    (box_scn, probe_args.iprim, probe_args.uv, pos));
-  printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+    OK(sdis_scene_get_boundary_position
+      (box_scn, probe_args.iprim, probe_args.uv, pos));
+    printf("Boundary values of the box at (%g %g %g) = ", SPLIT3(pos));
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+  }
+
+  /* Check the RNG type */
+  probe_args.rng_state = NULL;
+  probe_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(SOLVE(box_scn, &probe_args, &estimator2));
+  probe_args.rng_type =
+    SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(SOLVE(box_scn, &probe_args, &estimator2));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  probe_args.rng_state = rng;
+  probe_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(SOLVE(box_scn, &probe_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  if(estimator) OK(sdis_estimator_ref_put(estimator));
+
+  /* Restore arguments */
+  probe_args.rng_state = SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_state;
+  probe_args.rng_type = SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type;
 
   probe_args.uv[0] = 0.5;
   probe_args.iprim = 4;
   BA(SOLVE(square_scn, &probe_args, &estimator));
   probe_args.iprim = 3;
   OK(SOLVE(square_scn, &probe_args, &estimator));
-  OK(sdis_scene_get_boundary_position
-    (square_scn, probe_args.iprim, probe_args.uv, pos));
-  printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    OK(sdis_scene_get_boundary_position
+      (square_scn, probe_args.iprim, probe_args.uv, pos));
+    printf("Boundary values of the square at (%g %g) = ", SPLIT2(pos));
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   #undef F
   #undef SOLVE
@@ -442,10 +506,52 @@ main(int argc, char** argv)
   prims[0] = 6;
   OK(SOLVE(box_scn, &bound_args, &estimator));
 
-  /* Average temperature on the right side of the box */
-  printf("Average values of the right side of the box = ");
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+  if(!is_master_process) {
+    CHK(estimator == NULL);
+  } else {
+    /* Average temperature on the right side of the box */
+    printf("Average values of the right side of the box = ");
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+  }
+
+  /* Check the RNG type */
+  bound_args.rng_state = NULL;
+  bound_args.rng_type = SSP_RNG_TYPE_NULL;
+  BA(SOLVE(box_scn, &bound_args, &estimator2));
+  bound_args.rng_type =
+    SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(SOLVE(box_scn, &bound_args, &estimator2));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  /* Check RNG state */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  bound_args.rng_state = rng;
+  bound_args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(SOLVE(box_scn, &bound_args, &estimator2));
+  OK(ssp_rng_ref_put(rng));
+  if(is_master_process) {
+    struct sdis_mc T, T2;
+    check_estimator(estimator2, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_get_temperature(estimator, &T));
+    OK(sdis_estimator_get_temperature(estimator2, &T2));
+    CHK(T2.E != T.E);
+    OK(sdis_estimator_ref_put(estimator2));
+  }
+
+  if(estimator) OK(sdis_estimator_ref_put(estimator));
+
+  /* Restore arguments */
+  bound_args.rng_state = SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_state;
+  bound_args.rng_type = SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT.rng_type;
 
   /* Average temperature on the right side of the square */
   prims[0] = 4;
@@ -453,9 +559,11 @@ main(int argc, char** argv)
   BA(SOLVE(square_scn, &bound_args, &estimator));
   prims[0] = 3;
   OK(SOLVE(square_scn, &bound_args, &estimator));
-  printf("Average values of the right side of the square = ");
-  check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
-  OK(sdis_estimator_ref_put(estimator));
+  if(is_master_process) {
+    printf("Average values of the right side of the square = ");
+    check_estimator(estimator, N, analyticT, analyticCF, analyticRF, analyticTF);
+    OK(sdis_estimator_ref_put(estimator));
+  }
 
   /* Flux computation on Dirichlet boundaries is not available yet.
    * Once available, the expected total flux is the same we expect on the right
@@ -471,10 +579,8 @@ main(int argc, char** argv)
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
-  OK(sdis_device_ref_put(dev));
+  free_default_device(dev);
 
-  check_memory_allocator(&allocator);
-  mem_shutdown_proxy_allocator(&allocator);
   CHK(mem_allocated_size() == 0);
   return 0;
 }

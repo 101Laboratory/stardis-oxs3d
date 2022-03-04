@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+# Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,6 +21,9 @@ include(CMakeDependentOption)
 
 set(SDIS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/../src)
 option(NO_TEST "Do not build tests" OFF)
+option(ENABLE_MPI
+  "Enable the support of distributed parallelism \
+using the Message Passing Interface specification." ON)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS
   "Perform basic and advanced tests" OFF "NOT NO_TEST" OFF)
@@ -31,7 +34,7 @@ CMAKE_DEPENDENT_OPTION(ALL_TESTS
 find_package(RCMake 0.4 REQUIRED)
 find_package(Star2D 0.5 REQUIRED)
 find_package(Star3D 0.8 REQUIRED)
-find_package(StarSP 0.12 REQUIRED)
+find_package(StarSP 0.13 REQUIRED)
 find_package(StarEnc2D 0.5 REQUIRED)
 find_package(StarEnc3D 0.5 REQUIRED)
 find_package(RSys 0.12 REQUIRED)
@@ -49,6 +52,12 @@ include_directories(
   ${StarEnc3D_INCLUDE_DIR}
   ${RSys_INCLUDE_DIR})
 
+if(ENABLE_MPI)
+  find_package(MPI 2 REQUIRED)
+  set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
+  include_directories(${MPI_INCLUDE_PATH})
+endif()
+
 rcmake_append_runtime_dirs(_runtime_dirs
   RSys Star2D Star3D StarSP StarEnc2D StarEnc3D)
 
@@ -56,11 +65,12 @@ rcmake_append_runtime_dirs(_runtime_dirs
 # Configure and define targets
 ###############################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 12)
-set(VERSION_PATCH 3)
+set(VERSION_MINOR 13)
+set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
+  sdis.c
   sdis_camera.c
   sdis_data.c
   sdis_device.c
@@ -68,24 +78,32 @@ set(SDIS_FILES_SRC
   sdis_estimator_buffer.c
   sdis_green.c
   sdis_heat_path.c
+  sdis_heat_path_boundary.c
   sdis_interface.c
   sdis_log.c
   sdis_medium.c
   sdis_misc.c
   sdis_realisation.c
   sdis_scene.c
-  sdis_solve.c)
+  sdis_solve.c
+  sdis_solve_camera.c
+  sdis_tile.c)
 
 set(SDIS_FILES_INC_API
   sdis.h)
 
 set(SDIS_FILES_INC
+  sdis_c.h
   sdis_camera.h
   sdis_device_c.h
   sdis_estimator_c.h
   sdis_green.h
   sdis_heat_path.h
+  sdis_heat_path_boundary_c.h
   sdis_heat_path_boundary_Xd.h
+  sdis_heat_path_boundary_Xd_fixed_flux.h
+  sdis_heat_path_boundary_Xd_solid_fluid_picard1.h
+  sdis_heat_path_boundary_Xd_solid_solid.h
   sdis_heat_path_conductive_Xd.h
   sdis_heat_path_convective_Xd.h
   sdis_heat_path_radiative_Xd.h
@@ -102,8 +120,14 @@ set(SDIS_FILES_INC
   sdis_solve_medium_Xd.h
   sdis_solve_probe_Xd.h
   sdis_solve_probe_boundary_Xd.h
+  sdis_tile.h
   sdis_Xd_begin.h
   sdis_Xd_end.h)
+
+if(ENABLE_MPI)
+  set(SDIS_FILES_SRC ${SDIS_FILES_SRC} sdis_mpi.c)
+  set(SDIS_FILES_INC ${SDIS_FILES_INC} sdis_mpi.h)
+endif()
 
 set(SDIS_FILES_DOC COPYING README.md)
 
@@ -147,6 +171,10 @@ if(CMAKE_COMPILER_IS_GNUCC)
   set_target_properties(sdis PROPERTIES LINK_FLAGS "${OpenMP_C_FLAGS}")
 endif()
 
+if(ENABLE_MPI)
+  set_target_properties(sdis PROPERTIES COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+endif()
+
 rcmake_setup_devel(sdis Stardis ${VERSION} sdis_version.h)
 
 ###############################################################################
@@ -175,7 +203,6 @@ if(NOT NO_TEST)
   endfunction()
 
   new_test(test_sdis_camera)
-  new_test(test_sdis_compute_power)
   new_test(test_sdis_conducto_radiative)
   new_test(test_sdis_conducto_radiative_2d)
   new_test(test_sdis_contact_resistance)
@@ -187,23 +214,27 @@ if(NOT NO_TEST)
   new_test(test_sdis_flux)
   new_test(test_sdis_interface)
   new_test(test_sdis_medium)
+  new_test(test_sdis_picard)
   new_test(test_sdis_scene)
   new_test(test_sdis_solid_random_walk_robustness)
-  new_test(test_sdis_solve_camera)
   new_test(test_sdis_solve_probe)
-  new_test(test_sdis_solve_probe2)
   new_test(test_sdis_solve_probe3)
   new_test(test_sdis_solve_probe_2d)
   new_test(test_sdis_solve_probe2_2d)
   new_test(test_sdis_solve_probe3_2d)
-  new_test(test_sdis_solve_boundary)
-  new_test(test_sdis_solve_boundary_flux)
-  new_test(test_sdis_solve_medium)
-  new_test(test_sdis_solve_medium_2d)
   new_test(test_sdis_transcient)
   new_test(test_sdis_unstationary_atm)
   new_test(test_sdis_volumic_power)
   new_test(test_sdis_volumic_power4)
+
+  build_test(test_sdis)
+  build_test(test_sdis_compute_power)
+  build_test(test_sdis_solve_camera)
+  build_test(test_sdis_solve_medium)
+  build_test(test_sdis_solve_medium_2d)
+  build_test(test_sdis_solve_boundary)
+  build_test(test_sdis_solve_boundary_flux)
+  build_test(test_sdis_solve_probe2)
 
   # Additionnal tests
   build_test(test_sdis_volumic_power2)
@@ -222,7 +253,40 @@ if(NOT NO_TEST)
   target_link_libraries(test_sdis_solve_probe3 Star3DUT)
   target_link_libraries(test_sdis_solve_probe3_2d ${MATH_LIB})
   target_link_libraries(test_sdis_solve_camera Star3DUT)
-  
+
+  target_link_libraries(test_sdis_solve_boundary StarSP)
+  target_link_libraries(test_sdis_solve_boundary_flux StarSP)
+  target_link_libraries(test_sdis_solve_probe2 StarSP)
+  target_link_libraries(test_sdis_solve_medium StarSP)
+
+  set(_mpi_tests
+    test_sdis
+    test_sdis_compute_power
+    test_sdis_solve_camera
+    test_sdis_solve_medium
+    test_sdis_solve_medium_2d
+    test_sdis_solve_boundary
+    test_sdis_solve_boundary_flux
+    test_sdis_solve_probe2)
+
+  if(NOT ENABLE_MPI)
+    foreach(_test ${_mpi_tests})
+      add_test(${_test} ${_test})
+    endforeach()
+  else()
+    set_target_properties(test_sdis PROPERTIES
+      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+    set_target_properties(test_sdis_device PROPERTIES
+      COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+
+    foreach(_test ${_mpi_tests})
+      set_target_properties(${_test} PROPERTIES
+        COMPILE_DEFINITIONS "SDIS_ENABLE_MPI")
+      add_test(${_test}_mpi_on mpirun -n 2 ${_test} mpi)
+      add_test(${_test}_no_mpi ${_test})
+    endforeach()
+  endif()
+
   rcmake_copy_runtime_libraries(test_sdis_solid_random_walk_robustness)
 
 endif()
@@ -236,4 +300,3 @@ install(TARGETS sdis
   RUNTIME DESTINATION bin)
 install(FILES ${SDIS_FILES_INC_API} DESTINATION include/)
 install(FILES ${SDIS_FILES_DOC} DESTINATION share/doc/stardis-solver)
-

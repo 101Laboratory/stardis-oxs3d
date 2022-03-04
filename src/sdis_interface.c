@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2021 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ check_interface_shader
   && shader->convection_coef) {
     log_warn(dev,
       "%s: a solid/solid interface can't have a convection coefficient. The "
-      " shader's pointer function for this attribute should be NULL.\n",
+      "shader's pointer function for this attribute should be NULL.\n",
       caller_name);
   }
   if(shader->convection_coef_upper_bound < 0) {
@@ -67,18 +67,20 @@ check_interface_shader
   && shader->thermal_contact_resistance) {
     log_warn(dev,
       "%s: only solid/solid interface can have a thermal contact resistance. The "
-      " shader's pointer function for this attribute should be NULL.\n",
+      "shader's pointer function for this attribute should be NULL.\n",
       caller_name);
   }
 
   FOR_EACH(i, 0, 2) {
     switch(type[i]) {
       case SDIS_SOLID:
-        if(shaders[i]->emissivity || shaders[i]->specular_fraction) {
+        if(shaders[i]->emissivity 
+        || shaders[i]->specular_fraction
+        || shaders[i]->reference_temperature) {
           log_warn(dev,
-            "%s: the interface side toward a solid can neither have the "
-            "emissivity nor the specular_fraction properties. The shader's "
-            " pointer functions for these attributes should be NULL.\n",
+            "%s: the interface side toward a solid cannot have an emissivity, "
+            "a specular_fraction or a reference temperature. The shader's "
+            "pointer functions for these attributes should be NULL.\n",
             caller_name);
         }
         break;
