@@ -117,6 +117,38 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.13
+
+#### Non linear radiative transfer
+
+Uses a new [iterative numerical
+method](https://hal.archives-ouvertes.fr/tel-03266863/) to estimate radiative
+transfer. With a recursion level of 1, this is equivalent to a linearization of
+the radiative transfer but with a reference temperature that can vary in time
+and space. By using a higher-order recursion, one can converge towards a
+rigorous estimate that takes into account the non-linearity of the radiative
+transfer; the higher the recursion order, the better the convergence, but with
+the counterpart of an increase in calculation time.
+
+#### Distributed memory parallelism
+
+Uses message passing interface to distribute computation across multiple
+computers. Stardis-Solver now, uses a mixed parallelism: on one computer (i.e. a
+node), it uses a shared memory parallelism and relies on the message passing
+interface to parallelize calculations between several nodes.
+
+#### Type and state of the random number generator
+
+Adds the member input variable `rng_type` to the solve functions. It
+defines the type of random number generator to use when no generator is
+defined. Note that the `sdis_solve_camera` function does not have a random
+number generator as an input variable and has therefore been updated to support
+it.
+
+#### Reading the source code
+
+Refactoring and deep rewriting of the source code to simplify its reading.
+
 ### Version 0.12.3
 
 Fix green paths ending in a fluid (transcient computation): The path's end was
@@ -380,7 +412,7 @@ First version and implementation of the Stardis-Solver API.
 
 ## License
 
-Copyright (C) 2016-2022 |Meso|Star> (<contact@meso-star.com>). Stardis-Solver
+Copyright (C) 2016-2022 |Méso|Star> (<contact@meso-star.com>). Stardis-Solver
 is free software released under the GPLv3+ license: GNU GPL version 3 or later.
 You are welcome to redistribute it under certain conditions; refer to the
 COPYING files for details.
