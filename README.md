@@ -105,7 +105,9 @@ It also depends on the
 [Star-Enclosures-2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
 [Star-SP](https://gitlab.com/meso-star/star-sp/) libraries as well as on the
 [OpenMP](http://www.openmp.org) 2.0 specification to parallelize its
-computations.
+computations. It may depend on [OpenMPI](https://www.open-mpi.org/) 2.0 if
+distributed memory parallelism is enabled via the `ENABLE_MPI` variable of the
+CMake file
 
 First ensure that CMake and a C compiler that implements the OpenMP 2.0
 specification are installed on your system. Then install the RCMake package as
