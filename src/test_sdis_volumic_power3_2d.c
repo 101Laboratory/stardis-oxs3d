@@ -264,13 +264,16 @@ main(int argc, char** argv)
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   double Tref;
-  double time_range[2] = { INF, INF };
+  double time_range[2];
   double pos[2];
   size_t nfails;
   size_t nreals;
   (void)argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+
+  time_range[0] = INF;
+  time_range[1] = INF;
 
   /* Create the fluid medium */
   fluid_shader.temperature = fluid_get_temperature;

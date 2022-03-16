@@ -271,8 +271,8 @@ write_tile
   uint16_t x, y;
   ASSERT(buf && spp && tile);
 
-  tile_org[0] = tile->data.x * TILE_SIZE;
-  tile_org[1] = tile->data.y * TILE_SIZE;
+  tile_org[0] = (size_t)(tile->data.x * TILE_SIZE);
+  tile_org[1] = (size_t)(tile->data.y * TILE_SIZE);
 
   FOR_EACH(y, 0, TILE_SIZE) {
     const size_t pix_y = tile_org[1] + y;
