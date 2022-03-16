@@ -117,6 +117,11 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.13.1
+
+Fixed compilation errors and compilation warnings displayed on some versions of
+GCC.
+
 ### Version 0.13
 
 #### Non linear radiative transfer
