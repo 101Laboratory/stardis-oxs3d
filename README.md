@@ -29,7 +29,7 @@ The hypothesis these algorithms are based upon are the following:
   converge the result closer to the solution of a rigorous
   spectrally-integrated radiative transfer (a difference of temperatures to the
   power 4 when integrated over the whole spectrum). The higher the recursion
-  order, to better will be the convergence of the algorithm.
+  order, the better will be the convergence of the algorithm.
 
 In Stardis-Solver the system to simulate is represented by a *scene* whose
 geometry defines the contour of the object only: in contrast to legacy thermal
