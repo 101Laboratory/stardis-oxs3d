@@ -73,6 +73,7 @@ check_interface_shader
 
   FOR_EACH(i, 0, 2) {
     switch(type[i]) {
+      case SDIS_FLUID: /* No constraint */ break;
       case SDIS_SOLID:
         if(shaders[i]->emissivity 
         || shaders[i]->specular_fraction
@@ -81,14 +82,6 @@ check_interface_shader
             "%s: the interface side toward a solid cannot have an emissivity, "
             "a specular_fraction or a reference temperature. The shader's "
             "pointer functions for these attributes should be NULL.\n",
-            caller_name);
-        }
-        break;
-      case SDIS_FLUID:
-        if(shaders[i]->flux) {
-          log_warn(dev,
-            "%s: the interface side toward a fluid can't have a flux property. "
-            "The shader's pointer function for this attribute should be NULL.\n",
             caller_name);
         }
         break;

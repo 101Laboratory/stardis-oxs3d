@@ -176,7 +176,7 @@ fluid_get_properties
 /*******************************************************************************
  * Solid local functions
  ******************************************************************************/
-DEFINE_MDM_CHK_PROP_FUNC(solid, calorific_capacity,0, INF, 0, 1)
+DEFINE_MDM_CHK_PROP_FUNC(solid, calorific_capacity, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, thermal_conductivity, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, volumic_mass, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, delta, 0, INF, 0, 1)

@@ -872,4 +872,48 @@ error:
   goto exit;
 }
 
+res_T
+XD(handle_net_flux)
+  (const struct sdis_scene* scn,
+   const struct handle_net_flux_args* args,
+   struct XD(temperature)* T)
+{
+  double flux_term;
+  double phi;
+  res_T res = RES_OK;
+  CHK(scn && T);
+  CHK(args->interf && args->frag);
+  CHK(args->h_cond >= 0);
+  CHK(args->h_conv >= 0);
+  CHK(args->h_radi >= 0);
+  CHK(args->h_cond + args->h_conv + args->h_radi > 0);
+
+  phi = interface_side_get_flux(args->interf, args->frag);
+  if(phi == SDIS_FLUX_NONE) goto exit; /* No flux. Do nothig */
+
+  if(args->picard_order > 1 && phi != 0) {
+    log_err(scn->dev,
+      "%s: invalid flux '%g' W/m^2. Could not manage a flux != 0 when the "
+      "picard order is not equal to 1; Picard order is currently set to %lu.\n",
+      FUNC_NAME, phi, (unsigned long)args->picard_order);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  flux_term = 1.0 / (args->h_cond + args->h_conv + args->h_radi);
+  T->value += phi * flux_term;
+
+  /* Register the net flux term */
+  if(args->green_path) {
+    res = green_path_add_flux_term
+      (args->green_path, args->interf, args->frag, flux_term);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 #include "sdis_Xd_end.h"
