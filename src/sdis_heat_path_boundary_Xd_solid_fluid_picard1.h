@@ -51,7 +51,7 @@ XD(check_Tref)
   }
   if(Tref > scn->tmax) {
     log_err(scn->dev,
-      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK'"
+      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK' "
       "at the position `"STR_VECX"' is greater than this temperature.\n",
       func_name, scn->tmax, Tref, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
