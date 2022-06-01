@@ -279,7 +279,7 @@ enum sdis_heat_path_flag {
   SDIS_HEAT_PATH_NONE = 0
 };
 
-/* Vertex of heat path v*/
+/* Vertex of heat path */
 struct sdis_heat_vertex {
   double P[3];
   double time;
