@@ -51,7 +51,7 @@ XD(check_Tref)
   }
   if(Tref > scn->tmax) {
     log_err(scn->dev,
-      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK'"
+      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK' "
       "at the position `"STR_VECX"' is greater than this temperature.\n",
       func_name, scn->tmax, Tref, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
@@ -119,6 +119,9 @@ XD(solid_fluid_boundary_picard1_path)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
+  /* Input argument used to handle the net flux */
+  struct handle_net_flux_args handle_net_flux_args = HANDLE_NET_FLUX_ARGS_NULL;
+
   /* Input/output arguments of the function used to sample a reinjection */
   struct XD(sample_reinjection_step_args) samp_reinject_step_args =
     XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
@@ -150,6 +153,7 @@ XD(solid_fluid_boundary_picard1_path)
   double lambda; /* Solid conductivity */
   double delta_boundary; /* Orthogonal reinjection dst at the boundary */
   double delta; /* Orthogonal fitted reinjection dst at the boundary */
+  double delta_m; /* delta in meter */
 
   double r;
   struct sdis_heat_vertex hvtx = SDIS_HEAT_VERTEX_NULL;
@@ -209,10 +213,11 @@ XD(solid_fluid_boundary_picard1_path)
 
   /* Define the orthogonal dst from the reinjection pos to the interface */
   delta = reinject_step.distance / sqrt(DIM);
+  delta_m = delta * scn->fp_to_meter;
 
   /* Compute the convective, conductive and the upper bound radiative coef */
   h_conv = interface_get_convection_coef(interf, frag);
-  h_cond = lambda / (delta * scn->fp_to_meter);
+  h_cond = lambda / delta_m;
   h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * ctx->That3 * epsilon;
 
   /* Compute a global upper bound coefficient */
@@ -221,6 +226,17 @@ XD(solid_fluid_boundary_picard1_path)
   /* Compute the probas to switch in solid, fluid or radiative random walk */
   p_conv = h_conv / h_hat;
   p_cond = h_cond / h_hat;
+
+  /* Handle the net flux  if any */
+  handle_net_flux_args.interf = interf;
+  handle_net_flux_args.frag = frag;
+  handle_net_flux_args.green_path = ctx->green_path;
+  handle_net_flux_args.picard_order = get_picard_order(ctx);
+  handle_net_flux_args.h_cond = h_cond;
+  handle_net_flux_args.h_conv = h_conv;
+  handle_net_flux_args.h_radi = h_radi_hat;
+  res = XD(handle_net_flux)(scn, &handle_net_flux_args, T);
+  if(res != RES_OK) goto error;
 
   /* Fetch the last registered heat path vertex */
   if(ctx->heat_path) hvtx = *heat_path_get_last_vertex(ctx->heat_path);

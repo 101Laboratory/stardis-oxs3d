@@ -279,7 +279,7 @@ enum sdis_heat_path_flag {
   SDIS_HEAT_PATH_NONE = 0
 };
 
-/* Vertex of heat path v*/
+/* Vertex of heat path */
 struct sdis_heat_vertex {
   double P[3];
   double time;
@@ -407,7 +407,7 @@ struct sdis_scene_create_args {
 
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
   size_t nvertices; /* #vertices */
-  double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
+  double fp_to_meter; /* Scale factor used to convert a float in meter */
   struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
 
   /* Min/max temperature used to linearise the radiative temperature */

@@ -39,7 +39,6 @@ XD(boundary_path)
   struct sdis_interface* interf = NULL;
   struct sdis_medium* mdm_front = NULL;
   struct sdis_medium* mdm_back = NULL;
-  struct sdis_medium* mdm = NULL;
   double tmp;
   res_T res = RES_OK;
   ASSERT(scn && ctx && rwalk && rng && T);
@@ -68,20 +67,6 @@ XD(boundary_path)
       heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
     }
     goto exit;
-  }
-
-  /* Check if the boundary flux is known. Note that currently, only solid media
-   * can have a flux as limit condition */
-  mdm = interface_get_medium(interf, frag.side);
-  if(sdis_medium_get_type(mdm) == SDIS_SOLID) {
-    const double phi = interface_side_get_flux(interf, &frag);
-    if(phi != SDIS_FLUX_NONE) {
-      res = XD(solid_boundary_with_flux_path)
-        (scn, ctx, &frag, phi, rwalk, rng, T);
-      if(res != RES_OK) goto error;
-
-      goto exit;
-    }
   }
 
   mdm_front = interface_get_medium(interf, SDIS_FRONT);
