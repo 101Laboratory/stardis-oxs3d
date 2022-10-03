@@ -163,12 +163,6 @@ sdis_estimator_get_power
     return RES_BAD_ARG;
   SETUP_MC(power, &estimator->power.power);
   power->E *= estimator->power.spread;
-
-  if(estimator->power.time_range[0]
-  != estimator->power.time_range[1]) {
-    power->E /= /* From Joule to Watt */
-      (estimator->power.time_range[1]-estimator->power.time_range[0]);
-  }
   return RES_OK;
 }
 

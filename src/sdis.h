@@ -1315,9 +1315,7 @@ sdis_solve_medium
    const struct sdis_solve_medium_args* args,
    struct sdis_estimator** estimator);
 
-/* P = SUM(volumic_power(x)) / Nrealisations * Volume
- * power (in Watt) = time_range[0] == time_range[1]
- *  ? P : P / (time_range[1] - time_range[0]) */
+/* power (in Watt)  = SUM(volumic_power(x)) / Nrealisations * Volume */
 SDIS_API res_T
 sdis_compute_power
   (struct sdis_scene* scn,

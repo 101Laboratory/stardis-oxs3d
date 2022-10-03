@@ -267,7 +267,7 @@ main(int argc, char** argv)
 
     /* Check results for solid 0 */
     ref = 4.0/3.0 * PI * POWER0;
-    printf("Mean power of the solid0 = %g ~ %g +/- %g\n",
+    printf("Mean power of the solid0 = %g W ~ %g W +/- %g\n",
       ref, mpow.E, mpow.SE);
     check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
     OK(sdis_estimator_ref_put(estimator));
@@ -280,7 +280,7 @@ main(int argc, char** argv)
     /* Check results for solid 1 */
     OK(sdis_estimator_get_power(estimator, &mpow));
     ref = PI * 10 * POWER1;
-    printf("Mean power of the solid1 = %g ~ %g +/- %g\n",
+    printf("Mean power of the solid1 = %g W ~ %g W +/- %g\n",
       ref, mpow.E, mpow.SE);
     check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
     OK(sdis_estimator_ref_put(estimator));
@@ -293,8 +293,8 @@ main(int argc, char** argv)
   if(is_master_process) {
     /* Check for a not null time range */
     OK(sdis_estimator_get_power(estimator, &mpow));
-    ref = PI * 10 * POWER1 / 10;
-    printf("Mean power of the solid1 in [0, 10] s = %g ~ %g +/- %g\n",
+    ref = PI * 10 * POWER1;
+    printf("Mean power of the solid1 in [0, 10] s = %g W ~ %g W +/- %g\n",
       ref, mpow.E, mpow.SE);
     check_intersection(ref, 1.e-3*ref, mpow.E, 3*mpow.SE);
     OK(sdis_estimator_ref_put(estimator));
@@ -317,7 +317,7 @@ main(int argc, char** argv)
   if(is_master_process) {
     OK(sdis_estimator_get_power(estimator, &mpow));
     ref = 4.0/3.0*PI*POWER0 + PI*10*POWER1;
-    printf("Mean power of the sphere+cylinder = %g ~ %g +/- %g\n",
+    printf("Mean power of the sphere+cylinder = %g W ~ %g W +/- %g\n",
       ref, mpow.E, mpow.SE);
     check_intersection(ref, 1e-2*ref, mpow.E, 3*mpow.SE);
     OK(sdis_estimator_ref_put(estimator));
