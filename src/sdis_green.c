@@ -1349,6 +1349,9 @@ green_function_create
   green->npaths_valid = SIZE_MAX;
   green->npaths_invalid = SIZE_MAX;
 
+  /* TODO replace the tmpfile. tmpfile can only be called a limited number of
+   * times while one could create a huge amount of green functions at the same
+   * time (e.g. for image rendering) */
   green->rng_state = tmpfile();
   if(!green->rng_state) {
     res = RES_IO_ERR;
