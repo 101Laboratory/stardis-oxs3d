@@ -421,7 +421,7 @@ XD(conductive_path)
    * that those that are supposed to be constant by the conductive random walk
    * remain the same. Note that we take care of the same constraints on the
    * solid reinjection since once reinjected, the position of the random walk
-   * is that at the beginning of the conductive random walkh. Thus, after a
+   * is that at the beginning of the conductive random walk. Thus, after a
    * reinjection, the next line retrieves the properties of the reinjection
    * position. By comparing them to the properties along the random walk, we
    * thus verify that the properties are constant throughout the random walk
