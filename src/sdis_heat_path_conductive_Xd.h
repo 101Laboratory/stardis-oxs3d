@@ -335,7 +335,7 @@ XD(handle_volumic_power)
     double h;
     double h_in_meter;
     double cos_U_N;
-    float N[DIM];
+    float N[DIM] = {0};
 
     if(args->delta == args->hit0->distance) {
       fX(normalize)(N, args->hit0->normal);

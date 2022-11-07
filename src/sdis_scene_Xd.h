@@ -1065,7 +1065,8 @@ XD(scene_get_medium)
     struct sXd(primitive) prim;
     size_t iprim2;
     const float range[2] = {FLT_MIN, FLT_MAX};
-    float N[DIM], dir[DIM], cos_N_dir;
+    float N[DIM] = {0};
+    float dir[DIM], cos_N_dir;
     size_t istep = 0;
 
     /* 1 primitive over 2, take a primitive from the end of the primitive list.
@@ -1188,7 +1189,7 @@ XD(scene_get_medium_in_closed_boundaries)
   fX_set_dX(P, pos);
   FOR_EACH(idir, 0, 2*DIM) {
     struct sXd(hit) hit;
-    float N[DIM];
+    float N[DIM] = {0};
     const float range[2] = {FLT_MIN, FLT_MAX};
     float cos_N_dir;
 
