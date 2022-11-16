@@ -268,15 +268,21 @@ write_tile
 {
   res_T res = RES_OK;
   size_t tile_org[2];
+  size_t buf_sz[2];
+  size_t tile_sz[2];
   uint16_t x, y;
   ASSERT(buf && spp && tile);
 
+  SDIS(estimator_buffer_get_definition(buf, buf_sz));
+
   tile_org[0] = (size_t)(tile->data.x * TILE_SIZE);
   tile_org[1] = (size_t)(tile->data.y * TILE_SIZE);
+  tile_sz[0] = MMIN(TILE_SIZE, buf_sz[0] - tile_org[0]);
+  tile_sz[1] = MMIN(TILE_SIZE, buf_sz[1] - tile_org[1]);
 
-  FOR_EACH(y, 0, TILE_SIZE) {
+  FOR_EACH(y, 0, tile_sz[1]) {
     const size_t pix_y = tile_org[1] + y;
-    FOR_EACH(x, 0, TILE_SIZE) {
+    FOR_EACH(x, 0, tile_sz[0]) {
       const size_t pix_x = tile_org[0] + x;
       struct sdis_estimator* estimator = NULL;
       struct pixel* pixel = NULL;
