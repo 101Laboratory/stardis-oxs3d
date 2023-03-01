@@ -149,6 +149,13 @@ print_progress_update
    int32_t progress[],
    const char* label); /* Text preceding the progress status */
 
+/* Print progress completion, i.e. rewind the printing and print 100% */
+extern LOCAL_SYM void
+print_progress_completion
+  (struct sdis_device* dev,
+   int32_t progress[],
+   const char* label); /* Text preceding the progress status */
+
 /* Waiting for all processes. Without MPI this function does nothing. With MPI
  * it waits for MPI process synchronisation */
 extern LOCAL_SYM void

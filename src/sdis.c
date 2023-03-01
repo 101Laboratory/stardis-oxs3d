@@ -99,7 +99,12 @@ static void
 rewind_progress_printing(struct sdis_device* dev)
 {
   size_t i;
-  if(!dev->use_mpi || dev->mpi_nprocs == 1) return;
+
+  if(!dev->use_mpi
+  || dev->no_escape_sequence
+  || dev->mpi_nprocs == 1)
+    return;
+
   FOR_EACH(i, 0, dev->mpi_nprocs-1) {
     log_info(dev, "\033[1A\r"); /* Move up */
   }
@@ -816,17 +821,19 @@ print_progress
 {
   ASSERT(dev && label);
 #ifndef SDIS_ENABLE_MPI
-  log_info(dev, "%s%3d%%\r", label, progress[0]);
+  log_info(dev, "%s%3d%%%c", label, progress[0],
+    dev->no_escape_sequence ? '\n' : '\r');
 #else
   if(!dev->use_mpi) {
-    log_info(dev, "%s%3d%%\r", label, progress[0]);
+    log_info(dev, "%s%3d%%%c", label, progress[0],
+      dev->no_escape_sequence ? '\n' : '\r');
   } else {
     int i;
     if(dev->mpi_rank != 0) return;
     mpi_fetch_progress(dev, progress);
     FOR_EACH(i, 0, dev->mpi_nprocs) {
-      log_info(dev, "Process %d -- %s%3d%%%c",
-        i, label, progress[i], i == dev->mpi_nprocs - 1 ? '\r' : '\n');
+      log_info(dev, "Process %d -- %s%3d%%%c", i, label, progress[i],
+        i == dev->mpi_nprocs - 1 && !dev->no_escape_sequence ? '\r' : '\n');
     }
   }
 #endif
@@ -851,6 +858,35 @@ print_progress_update
       mpi_fetch_progress(dev, progress);
       rewind_progress_printing(dev);
       print_progress(dev, progress, label);
+    }
+  }
+#endif
+}
+
+void
+print_progress_completion
+  (struct sdis_device* dev,
+   int32_t progress[],
+   const char* label)
+{
+  ASSERT(dev);
+  (void)dev, (void)progress, (void)label;
+
+  /* Only print at 100% completion when MPI is enabled, because when last
+   * printed non-master processes might still be running. When MPI is disabled,
+   * 100% completion is printed during calculation */
+#ifdef  SDIS_ENABLE_MPI
+  if(dev->use_mpi && dev->mpi_rank == 0 && dev->mpi_nprocs > 1) {
+    mpi_fetch_progress(dev, progress);
+    rewind_progress_printing(dev);
+    print_progress(dev, progress, label);
+
+    /* When escape sequences are allowed, the last newline character of the
+     * progress message is replaced with a carriage return. After the
+     * calculation is complete, we therefore print an additional newline
+     * character after this carriage return. */
+    if(!dev->no_escape_sequence) {
+      log_info(dev, "\n");
     }
   }
 #endif

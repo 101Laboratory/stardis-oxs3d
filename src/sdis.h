@@ -137,6 +137,7 @@ struct sdis_device_create_args {
   struct mem_allocator* allocator; /* NULL <=> default allocator */
   unsigned nthreads_hint; /* Hint on the number of threads to use */
   int verbosity; /* Verbosity level */
+  int no_escape_sequence; /* Rm escape sequences from log messages */
 
   /* Use the Message Passing Interface to distribute work between processes.
    * This option is taken into account only if Stardis-Solver is compiled with
@@ -144,7 +145,7 @@ struct sdis_device_create_args {
   int use_mpi;
 };
 #define SDIS_DEVICE_CREATE_ARGS_DEFAULT__ {                                    \
-  NULL, NULL, SDIS_NTHREADS_DEFAULT, 1, 0                                      \
+  NULL, NULL, SDIS_NTHREADS_DEFAULT, 1, 0, 0                                   \
 }
 static const struct sdis_device_create_args SDIS_DEVICE_CREATE_ARGS_DEFAULT =
   SDIS_DEVICE_CREATE_ARGS_DEFAULT__;

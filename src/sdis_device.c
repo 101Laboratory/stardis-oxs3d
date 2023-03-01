@@ -326,6 +326,7 @@ sdis_device_create
   }
   nthreads_max = (unsigned)MMAX(omp_get_max_threads(), omp_get_num_procs());
   dev->allocator = allocator;
+  dev->no_escape_sequence = args->no_escape_sequence;
   dev->verbose = args->verbosity;
   dev->nthreads = MMIN(args->nthreads_hint, nthreads_max);
   ref_init(&dev->ref);

@@ -46,6 +46,7 @@ struct sdis_device {
   struct logger logger__; /* Default logger */
   struct mem_allocator* allocator;
   unsigned nthreads;
+  int no_escape_sequence;
   int verbose;
 
 #ifdef SDIS_ENABLE_MPI
