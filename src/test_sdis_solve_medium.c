@@ -228,7 +228,7 @@ main(int argc, char** argv)
   struct sdis_solve_medium_args solve_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
   struct ssp_rng* rng = NULL;
   struct context ctx;
-  double ref;
+  double ref = 0;
   double v, v0, v1;
   size_t nreals;
   size_t nfails;
