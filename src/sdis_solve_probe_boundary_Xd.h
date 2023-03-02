@@ -142,6 +142,7 @@ XD(solve_probe_boundary)
   size_t nrealisations = 0;
   int64_t irealisation = 0;
   int32_t* progress = NULL; /* Per process progress bar */
+  int pcent_progress = 1; /* Percentage requiring progress update */
   int register_paths = SDIS_HEAT_PATH_NONE;
   int is_master_process = 1;
   ATOMIC nsolved_realisations = 0;
@@ -173,6 +174,11 @@ XD(solve_probe_boundary)
 
   nthreads = scn->dev->nthreads;
   allocator = scn->dev->allocator;
+
+  /* Update the progress bar every percent if escape sequences are allowed in
+   * log messages or only every 10 percent when only plain text is allowed.
+   * This reduces the number of lines of plain text printed */
+  pcent_progress = scn->dev->no_escape_sequence ? 10 : 1;
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
@@ -307,7 +313,7 @@ XD(solve_probe_boundary)
     n = (size_t)ATOMIC_INCR(&nsolved_realisations);
     pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
     #pragma omp critical
-    if(pcent > progress[0]) {
+    if(pcent/pcent_progress > progress[0]/pcent_progress) {
       progress[0] = pcent;
       print_progress_update(scn->dev, progress, PROGRESS_MSG);
     }
@@ -324,8 +330,7 @@ XD(solve_probe_boundary)
   res = gather_res_T(scn->dev, (res_T)res);
   if(res != RES_OK) goto error;
 
-  print_progress_update(scn->dev, progress, PROGRESS_MSG);
-  log_info(scn->dev, "\n");
+  print_progress_completion(scn->dev, progress, PROGRESS_MSG);
   #undef PROGRESS_MSG
 
   /* Report computation time */
@@ -446,6 +451,7 @@ XD(solve_probe_boundary_flux)
   size_t nrealisations = 0;
   int64_t irealisation = 0;
   int32_t* progress = NULL; /* Per process progress bar */
+  int pcent_progress = 1; /* Percentage requiring progress update */
   int is_master_process = 1;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
@@ -480,6 +486,11 @@ XD(solve_probe_boundary_flux)
 #ifdef SDIS_ENABLE_MPI
   is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
 #endif
+
+  /* Update the progress bar every percent if escape sequences are allowed in
+   * log messages or only every 10 percent when only plain text is allowed.
+   * This reduces the number of lines of plain text printed */
+  pcent_progress = scn->dev->no_escape_sequence ? 10 : 1;
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
@@ -634,7 +645,7 @@ XD(solve_probe_boundary_flux)
     n = (size_t)ATOMIC_INCR(&nsolved_realisations);
     pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
     #pragma omp critical
-    if(pcent > progress[0]) {
+    if(pcent/pcent_progress > progress[0]/pcent_progress) {
       progress[0] = pcent;
       print_progress_update(scn->dev, progress, PROGRESS_MSG);
     }
@@ -645,8 +656,7 @@ XD(solve_probe_boundary_flux)
   res = gather_res_T(scn->dev, (res_T)res);
   if(res != RES_OK) goto error;
 
-  print_progress_update(scn->dev, progress, PROGRESS_MSG);
-  log_info(scn->dev, "\n");
+  print_progress_completion(scn->dev, progress, PROGRESS_MSG);
   #undef PROGRESS_MSG
 
   /* Report computation time */
