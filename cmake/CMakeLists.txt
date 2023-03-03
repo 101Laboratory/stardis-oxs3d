@@ -37,7 +37,7 @@ find_package(Star3D 0.8 REQUIRED)
 find_package(StarSP 0.13 REQUIRED)
 find_package(StarEnc2D 0.5 REQUIRED)
 find_package(StarEnc3D 0.5 REQUIRED)
-find_package(RSys 0.12 REQUIRED)
+find_package(RSys 0.13 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})

@@ -13,10 +13,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#define _POSIX_C_SOURCE 200809L /* mmap support */
-#define _DEFAULT_SOURCE 1 /* MAP_POPULATE support */
-#define _BSD_SOURCE 1 /* MAP_POPULATE for glibc < 2.19 */
-
 #include "sdis_scene_Xd.h"
 
 /* Generate the Generic functions of the scene */
@@ -31,9 +27,6 @@
 
 #include <float.h>
 #include <limits.h>
-#ifdef COMPILER_GCC
-#include <sys/mman.h>
-#endif
 
 /*******************************************************************************
  * Helper function
@@ -453,32 +446,24 @@ scene_get_medium_in_closed_boundaries
 res_T
 scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
 {
-  void* data = NULL;
-  FILE* stream = NULL;
+  struct sha256_ctx sha256_ctx;
   size_t iprim, nprims;
-  size_t len;
   res_T res = RES_OK;
   ASSERT(scn && hash);
 
-  stream = tmpfile();
-  if(!stream) {
-    res = RES_IO_ERR;
-    goto error;
-  }
+  sha256_ctx_init(&sha256_ctx);
 
-  #define WRITE(Var, Nb)                                                       \
-  if(fwrite((Var), sizeof(*(Var)), Nb, stream) != (Nb)) {                      \
-    res = RES_IO_ERR;                                                          \
-    goto error;                                                                \
-  } (void)0
   if(scene_is_2d(scn)) {
     S2D(scene_view_primitives_count(scn->s2d_view, &nprims));
   } else {
     S3D(scene_view_primitives_count(scn->s3d_view, &nprims));
   }
-  WRITE(&scn->trad.reference, 1);
-  WRITE(&scn->tmax, 1);
-  WRITE(&scn->fp_to_meter, 1);
+  #define SHA256_UPD(Var, Nb) \
+    sha256_ctx_update(&sha256_ctx, (const char*)(Var), sizeof(*Var)*(Nb))
+
+  SHA256_UPD(&scn->trad.reference, 1);
+  SHA256_UPD(&scn->tmax, 1);
+  SHA256_UPD(&scn->fp_to_meter, 1);
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;
     size_t ivert;
@@ -489,7 +474,7 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
       FOR_EACH(ivert, 0, 2) {
         struct s2d_attrib attr;
         S2D(segment_get_vertex_attrib(&prim, ivert, S2D_POSITION, &attr));
-        WRITE(attr.value, 2);
+        SHA256_UPD(attr.value, 2);
       }
     } else {
       struct s3d_primitive prim;
@@ -497,50 +482,20 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
       FOR_EACH(ivert, 0, 3) {
         struct s3d_attrib attr;
         S3D(triangle_get_vertex_attrib(&prim, ivert, S3D_POSITION, &attr));
-        WRITE(attr.value, 3);
+        SHA256_UPD(attr.value, 3);
       }
     }
 
     interf = scene_get_interface(scn, (unsigned)iprim);
-    WRITE(&interf->medium_front->type, 1);
-    WRITE(&interf->medium_front->id, 1);
-    WRITE(&interf->medium_back->type, 1);
-    WRITE(&interf->medium_back->id, 1);
+    SHA256_UPD(&interf->medium_front->type, 1);
+    SHA256_UPD(&interf->medium_front->id, 1);
+    SHA256_UPD(&interf->medium_back->type, 1);
+    SHA256_UPD(&interf->medium_back->id, 1);
   }
-  #undef WRITE
+  #undef SHA256_UPD
+  sha256_ctx_finalize(&sha256_ctx, hash);
 
-  len = (size_t)ftell(stream);
-  rewind(stream);
-#ifdef COMPILER_GCC
-  data = mmap(NULL, len, PROT_READ, MAP_PRIVATE|MAP_POPULATE, fileno(stream), 0);
-  if(data == MAP_FAILED) {
-    res = RES_IO_ERR;
-    goto error;
-  }
-#else
-  data = MEM_ALLOC_ALIGNED(scn->dev->allocator, len, 16);
-  if(!data) {
-    res = RES_MEM_ERR;
-    goto error;
-  }
-  if(fread(data, len, 1, stream) != 1) {
-    res = RES_IO_ERR;
-    goto error;
-  }
-#endif
-
-  hash_sha256(data, len, hash);
-
-exit:
-#ifdef COMPILER_GCC
-  if(data) munmap(data, len);
-#else
-  if(data) MEM_RM(scn->dev->allocator, data);
-#endif
-  if(stream) fclose(stream);
   return res;
-error:
-  goto exit;
 }
 
 res_T
