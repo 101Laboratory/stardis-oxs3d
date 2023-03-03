@@ -374,10 +374,7 @@ solve
 }
 
 static void
-check_null_power_term_with_green
-  (struct sdis_scene* scn,
-   struct ssp_rng* rng,
-   struct solid* solid)
+check_null_power_term_with_green(struct sdis_scene* scn, struct solid* solid)
 {
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
@@ -385,7 +382,7 @@ check_null_power_term_with_green
   struct sdis_green_function* green = NULL;
   double x = 0;
   double ref = 0;
-  ASSERT(scn && rng && solid);
+  ASSERT(scn && solid);
 
   solve_args.position[0] = 0.5;
   solve_args.position[1] = 0.5;
@@ -530,7 +527,7 @@ main(int argc, char** argv)
   solve(square_scn, rng, solid_props);
 
   /* Check green registration with a null power term */
-  check_null_power_term_with_green(box_scn, rng, solid_props);
+  check_null_power_term_with_green(box_scn, solid_props);
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
