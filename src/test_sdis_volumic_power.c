@@ -373,6 +373,44 @@ solve
   }
 }
 
+static void
+check_null_power_term_with_green
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   struct solid* solid)
+{
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_estimator* estimator = NULL;
+  struct sdis_green_function* green = NULL;
+  double x = 0;
+  double ref = 0;
+  ASSERT(scn && rng && solid);
+
+  solve_args.position[0] = 0.5;
+  solve_args.position[1] = 0.5;
+  solve_args.position[2] = 0;
+  solve_args.nrealisations = N;
+  solve_args.time_range[0] =
+  solve_args.time_range[1] = INF;
+
+  solid->vpower = 0;
+  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+
+  solid->vpower = P0;
+  OK(sdis_green_function_solve(green, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+
+  x = solve_args.position[0] - 0.5;
+  ref = solid->vpower / (2*LAMBDA) * (1.0/4.0 - x *x) + T0;
+  printf("Green steady temperature at (%g, %g, %g) with Power=%g = %g ~ %g +/- %g\n",
+    SPLIT3(solve_args.position), solid->vpower, ref, T.E, T.SE);
+  CHK(eq_eps(ref, T.E, 3*T.SE));
+
+  OK(sdis_estimator_ref_put(estimator));
+  OK(sdis_green_function_ref_put(green));
+}
+
 /*******************************************************************************
  * Test
  ******************************************************************************/
@@ -485,11 +523,14 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_T0));
 
   /* Solve */
-  OK(ssp_rng_create(NULL, SSP_RNG_KISS, &rng));
+  OK(ssp_rng_create(NULL, SSP_RNG_MT19937_64, &rng));
   printf(">> Box scene\n");
   solve(box_scn, rng, solid_props);
   printf(">> Square scene\n");
   solve(square_scn, rng, solid_props);
+
+  /* Check green registration with a null power term */
+  check_null_power_term_with_green(box_scn, rng, solid_props);
 
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
