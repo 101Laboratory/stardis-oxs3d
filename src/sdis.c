@@ -192,6 +192,9 @@ gather_green_functions_from_non_master_process
   (struct sdis_scene* scn,
    struct sdis_green_function* greens[])
 {
+  struct sdis_green_function_create_from_stream_args green_args =
+    SDIS_GREEN_FUNCTION_CREATE_FROM_STREAM_ARGS_DEFAULT;
+
   void* data = NULL; /* Pointer to gathered serialized green function data */
   FILE* stream = NULL; /* Temp file that stores the serialized green function */
   int iproc;
@@ -254,7 +257,9 @@ gather_green_functions_from_non_master_process
      * iterate over the indices of non master processes in [1, #procs],
      * the index the green function to deserialized is iproc - 1 */
     rewind(stream);
-    res = sdis_green_function_create_from_stream(scn, stream, &greens[iproc-1]);
+    green_args.scene = scn;
+    green_args.stream = stream;
+    res = sdis_green_function_create_from_stream(&green_args, &greens[iproc-1]);
     if(res != RES_OK) {
       log_err(scn->dev,
         "Error deserializing the green function sent by the process %d -- %s.\n",
@@ -364,6 +369,7 @@ release_per_thread_rng(struct sdis_device* dev, struct ssp_rng* rngs[])
 res_T
 create_per_thread_green_function
   (struct sdis_scene* scn,
+   const hash256_T signature,
    struct sdis_green_function** out_greens[])
 {
   struct sdis_green_function** greens = NULL;
@@ -380,7 +386,7 @@ create_per_thread_green_function
   }
 
   FOR_EACH(i, 0, scn->dev->nthreads) {
-    res = green_function_create(scn, &greens[i]);
+    res = green_function_create(scn, signature, &greens[i]);
     if(res != RES_OK) goto error;
   }
 

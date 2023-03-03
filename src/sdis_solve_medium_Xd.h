@@ -355,7 +355,8 @@ XD(solve_medium)
   if(res != RES_OK) goto error;
 
   if(out_green) {
-    res = create_per_thread_green_function(scn, &per_thread_green);
+    res = create_per_thread_green_function
+      (scn, args->signature, &per_thread_green);
     if(res != RES_OK) goto error;
   }
 

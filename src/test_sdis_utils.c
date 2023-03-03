@@ -455,6 +455,8 @@ check_green_serialization
   (struct sdis_green_function* green,
    struct sdis_scene* scn)
 {
+  struct sdis_green_function_create_from_stream_args args =
+    SDIS_GREEN_FUNCTION_CREATE_FROM_STREAM_ARGS_DEFAULT;
   FILE* stream = NULL;
   struct sdis_estimator *e1 = NULL;
   struct sdis_estimator *e2 = NULL;
@@ -467,7 +469,9 @@ check_green_serialization
   OK(sdis_green_function_write(green, stream));
 
   rewind(stream);
-  OK(sdis_green_function_create_from_stream(scn, stream, &green2));
+  args.scene = scn;
+  args.stream = stream;
+  OK(sdis_green_function_create_from_stream(&args, &green2));
   CHK(!fclose(stream));
   check_green_function(green2);
 

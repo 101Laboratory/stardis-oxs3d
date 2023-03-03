@@ -17,6 +17,7 @@
 #define SDIS_C_H
 
 #include <star/ssp.h>
+#include <rsys/hash.h>
 #include <rsys/rsys.h>
 
 /* Id of the messages sent between processes */
@@ -61,6 +62,7 @@ release_per_thread_rng
 extern LOCAL_SYM res_T
 create_per_thread_green_function
   (struct sdis_scene* scene,
+   const hash256_T signature,
    struct sdis_green_function** greens[]);
 
 extern LOCAL_SYM void
