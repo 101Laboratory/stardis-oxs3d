@@ -611,10 +611,13 @@ XD(solve_probe_boundary_flux)
       continue;
     } else if(res_simul == RES_OK) { /* Update accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+      /* Convective flux from solid to fluid */
       const double w_conv = hc * (result.Tboundary - result.Tfluid);
+      /* Radiative flux from solid to ambient */
       const double w_rad = (result.Tradiative < 0) ?
         0 : hr * (result.Tboundary - result.Tradiative);
-      const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
+      /* Imposed flux that goes _out_ of the solid */
+      const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? -imposed_flux : 0;
       const double w_total = w_conv + w_rad + w_imp;
       /* Temperature */
       acc_temp->sum += result.Tboundary;

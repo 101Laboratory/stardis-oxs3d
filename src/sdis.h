@@ -578,7 +578,7 @@ static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
 struct sdis_solve_probe_boundary_flux_args {
   size_t nrealisations; /* #realisations */
   size_t iprim; /* Identifier of the primitive on which the probe lies */
-  double uv[2]; /* Parametric coordinates of the probe onto the primitve */
+  double uv[2]; /* Parametric coordinates of the probe onto the primitive */
   double time_range[2]; /* Observation time */
 
   /* Set the Picard recursion order to estimate the radiative temperature. An
@@ -1128,22 +1128,22 @@ sdis_estimator_get_realisation_time
 SDIS_API res_T
 sdis_estimator_get_convective_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_radiative_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_imposed_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_power

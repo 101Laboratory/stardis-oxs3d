@@ -889,7 +889,7 @@ XD(handle_net_flux)
   CHK(args->h_cond + args->h_conv + args->h_radi > 0);
 
   phi = interface_side_get_flux(args->interf, args->frag);
-  if(phi == SDIS_FLUX_NONE) goto exit; /* No flux. Do nothig */
+  if(phi == SDIS_FLUX_NONE) goto exit; /* No flux. Do nothing */
 
   if(args->picard_order > 1 && phi != 0) {
     log_err(scn->dev,
