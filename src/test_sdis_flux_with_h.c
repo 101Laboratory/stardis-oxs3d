@@ -259,7 +259,7 @@ main(int argc, char** argv)
   printf("Imposed flux (left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
   OK(sdis_estimator_get_total_flux(estimator, &mc));
   printf("Total flux (left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
-  CHK(eq_eps(PHI2, mc.E, 3*mc.SE));
+  CHK(eq_eps(-PHI2, mc.E, 3*mc.SE));
   OK(sdis_estimator_ref_put(estimator));
 
   probe_flux_args.nrealisations = N;
@@ -272,7 +272,7 @@ main(int argc, char** argv)
   printf("Imposed flux (probe on left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
   OK(sdis_estimator_get_total_flux(estimator, &mc));
   printf("Total flux (probe on left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
-  CHK(eq_eps(PHI2, mc.E, 3*mc.SE));
+  CHK(eq_eps(-PHI2, mc.E, 3*mc.SE));
   OK(sdis_estimator_ref_put(estimator));
 
   probe_args.nrealisations = N;

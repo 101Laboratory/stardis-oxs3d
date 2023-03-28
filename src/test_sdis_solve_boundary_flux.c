@@ -32,8 +32,8 @@
   *         with Hrad = 4 * BOLTZMANN_CONSTANT * Tref^3 * epsilon
   *    T(-X) = Tb
   *
-  *    CF = H * (T - Tf)
-  *    RF = Hrad * (T - Trad)
+  *    CF = H * (Tf - T)
+  *    RF = Hrad * (Trad - T)
   *    TF = CF + RF
   *
   * with Tf the temperature of the surrounding fluid, lambda the conductivity of
@@ -373,8 +373,8 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_H));
 
   analyticT = (H*Tf + Hrad*Trad + LAMBDA * Tb) / (H + Hrad + LAMBDA);
-  analyticCF = H * (analyticT - Tf);
-  analyticRF = Hrad * (analyticT - Trad);
+  analyticCF = H * (Tf - analyticT);
+  analyticRF = Hrad * (Trad - analyticT);
   analyticTF = analyticCF + analyticRF;
 
   #define SOLVE sdis_solve_probe_boundary_flux

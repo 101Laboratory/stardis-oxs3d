@@ -1342,12 +1342,18 @@ sdis_solve_boundary
    const struct sdis_solve_boundary_args* args,
    struct sdis_estimator** estimator);
 
+/* Calculate the flux density in W/m² _entering_ the solid through the given
+ * boundary position, i.e. the flux density is positive or negative if the
+ * solid gains or loses energy, respectively. */
 SDIS_API res_T
 sdis_solve_probe_boundary_flux
   (struct sdis_scene* scn,
    const struct sdis_solve_probe_boundary_flux_args* args,
    struct sdis_estimator** estimator);
 
+/* Calculate the average flux density in W/m² _entering_ the solid through the
+ * given boundary surfaces, i.e. the flux density is positive or negative if
+ * the solid gains or loses energy, respectively. */
 SDIS_API res_T
 sdis_solve_boundary_flux
   (struct sdis_scene* scn,
