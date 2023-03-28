@@ -16,7 +16,40 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
-/* TODO draw the configuration */
+/*
+ * The configuration is a rectangle whose the conductivity is lambda and its
+ * temperature is unknown. Its top and bottom boundaries rectangle are
+ * adiabatics while its left and right ones have a fixed fluxes of phi1 and
+ * phi2 respectively. The left boundary has also a convective exchange with the
+ * surrounding fluid whose temperature is Text. At stationnary, the
+ * temperature at a given position into the solid rectangle is:
+ *
+ *    T(x) = phi2/lambda*x + (Text + (phi1 + phi2)/h)
+ *
+ * with h the convective coefficient on the left boundary
+ *
+ *
+ *      Text   ///// (0.2,0.5)
+ *            +---------+
+ *            |         |
+ *   h _\     |-->   <--|
+ *    / /   phi1->   <-phi2
+ *    \__/    |-->   <--|
+ *            |         |
+ *            +---------+
+ *          (0,0) ///////
+ */
+
+#define LAMBDA 25.0
+#define RHO 7500.0
+#define CP 500.0
+#define DELTA 0.01
+#define Text 373.15
+#define PHI1 1000.0
+#define PHI2 5000.0
+#define H 10
+
+#define N 10000 /* #realisations */
 
 /*******************************************************************************
  * Geometry
@@ -38,7 +71,7 @@ solid_get_calorific_capacity
    struct sdis_data* data)
 {
   (void)data, (void)vtx;
-  return 500;
+  return CP;
 }
 
 static double
@@ -47,7 +80,7 @@ solid_get_thermal_conductivity
    struct sdis_data* data)
 {
   (void)data, (void)vtx;
-  return 25;
+  return LAMBDA;
 }
 
 static double
@@ -56,7 +89,7 @@ solid_get_volumic_mass
    struct sdis_data* data)
 {
   (void)data, (void)vtx;
-  return 7500;
+  return RHO;
 }
 
 static double
@@ -65,7 +98,16 @@ solid_get_delta
    struct sdis_data* data)
 {
   (void)data, (void)vtx;
-  return 0.01;
+  return DELTA;
+}
+
+static double
+solid_get_temperature
+  (const struct sdis_rwalk_vertex* vtx,
+   struct sdis_data* data)
+{
+  (void)data, (void)vtx;
+  return -1;
 }
 
 static double
@@ -74,13 +116,13 @@ fluid_get_temperature
    struct sdis_data* data)
 {
   (void)data, (void)vtx;
-  return 373.15;
+  return Text;
 }
 
 static struct sdis_medium*
 create_solid(struct sdis_device* dev)
 {
-  struct sdis_solid_shader shader = DUMMY_SOLID_SHADER;
+  struct sdis_solid_shader shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_medium* solid = NULL;
 
   /* Create the solid_medium */
@@ -88,6 +130,7 @@ create_solid(struct sdis_device* dev)
   shader.thermal_conductivity = solid_get_thermal_conductivity;
   shader.volumic_mass = solid_get_volumic_mass;
   shader.delta = solid_get_delta;
+  shader.temperature = solid_get_temperature;
   OK(sdis_solid_create(dev, &shader, NULL, &solid));
   return solid;
 }
@@ -165,6 +208,7 @@ int
 main(int argc, char** argv)
 {
   struct sdis_device* dev = NULL;
+  struct sdis_estimator* estimator = NULL;
   struct sdis_interface* interf_left = NULL;
   struct sdis_interface* interf_right = NULL;
   struct sdis_interface* interf_adiab = NULL;
@@ -172,7 +216,15 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_mc mc = SDIS_MC_NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_solve_boundary_flux_args flux_args =
+    SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT;
+  struct sdis_solve_probe_boundary_flux_args probe_flux_args =
+    SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT;
+  double Tref = 0;
+  size_t prim = 0;
   (void)argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
@@ -180,8 +232,8 @@ main(int argc, char** argv)
   solid = create_solid(dev);
   fluid = create_fluid(dev);
 
-  interf_left = interface_create(dev, solid, fluid, 10, 1000);
-  interf_right = interface_create(dev, solid, fluid, 0, 5000);
+  interf_left = interface_create(dev, solid, fluid, H, PHI1);
+  interf_right = interface_create(dev, solid, fluid, 0, PHI2);
   interf_adiab = interface_create(dev, solid, fluid, 0, SDIS_FLUX_NONE);
   interfaces[0] = interf_adiab; /* Bottom */
   interfaces[1] = interf_left;
@@ -195,6 +247,45 @@ main(int argc, char** argv)
   scn_args.nvertices = square_nvertices;
   scn_args.context = interfaces;
   OK(sdis_scene_2d_create(dev, &scn_args, &scn));
+
+  prim = 1; /* Left */
+  flux_args.nrealisations = N;
+  flux_args.nprimitives = 1;
+  flux_args.primitives = &prim;
+  OK(sdis_solve_boundary_flux(scn, &flux_args, &estimator));
+  OK(sdis_estimator_get_convective_flux(estimator, &mc));
+  printf("Convective flux (left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
+  OK(sdis_estimator_get_imposed_flux(estimator, &mc));
+  printf("Imposed flux (left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
+  OK(sdis_estimator_get_total_flux(estimator, &mc));
+  printf("Total flux (left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
+  CHK(eq_eps(PHI2, mc.E, 3*mc.SE));
+  OK(sdis_estimator_ref_put(estimator));
+
+  probe_flux_args.nrealisations = N;
+  probe_flux_args.iprim = 1; /* Left */
+  probe_flux_args.uv[0] = 0.5;
+  OK(sdis_solve_probe_boundary_flux(scn, &probe_flux_args, &estimator));
+  OK(sdis_estimator_get_convective_flux(estimator, &mc));
+  printf("Convective flux (probe on left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
+  OK(sdis_estimator_get_imposed_flux(estimator, &mc));
+  printf("Imposed flux (probe on left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
+  OK(sdis_estimator_get_total_flux(estimator, &mc));
+  printf("Total flux (probe on left side) ~ %g W/m² +/- %g\n", mc.E, mc.SE);
+  CHK(eq_eps(PHI2, mc.E, 3*mc.SE));
+  OK(sdis_estimator_ref_put(estimator));
+
+  probe_args.nrealisations = N;
+  probe_args.position[0] = 0.2;
+  probe_args.position[1] = 0.25;
+  OK(sdis_solve_probe(scn, &probe_args, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &mc));
+  OK(sdis_estimator_ref_put(estimator));
+
+  Tref = PHI2/LAMBDA*probe_args.position[0]  + (Text + (PHI1 + PHI2)/H);
+  printf("Temperature at %g = %g ~ %g +/- %g\n",
+    probe_args.position[0], Tref, mc.E, mc.SE);
+  CHK(eq_eps(mc.E, Tref, 3*mc.SE));
 
   OK(sdis_device_ref_put(dev));
   OK(sdis_interface_ref_put(interf_left));
