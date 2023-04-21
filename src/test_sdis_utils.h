@@ -285,6 +285,7 @@ dump_mesh
       (unsigned long)(ids[i*3+1] + 1),
       (unsigned long)(ids[i*3+2] + 1));
   }
+  fflush(stream);
 }
 
 static INLINE void
@@ -306,6 +307,7 @@ dump_segments
       (unsigned long)(ids[i*2+0] + 1),
       (unsigned long)(ids[i*2+1] + 1));
   }
+  fflush(stream);
 }
 
 static INLINE void
