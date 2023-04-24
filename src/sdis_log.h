@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +18,15 @@
 
 #include <rsys/rsys.h>
 
-#ifdef OS_UNIX
-  /* On UNIX assume a VT100-like terminal emulator */
-  #define MSG_INFO_PREFIX "stardis-solver (\x1b[1m\x1b[32minfo\x1b[0m): "
-  #define MSG_ERROR_PREFIX "stardis-solver (\x1b[1m\x1b[31merror\x1b[0m): "
-  #define MSG_WARNING_PREFIX "stardis-solver (\x1b[1m\x1b[33mwarning\x1b[0m): "
-#else
-  #define MSG_INFO_PREFIX "stardis-solver (info): "
-  #define MSG_ERROR_PREFIX "stardis-solver (error): "
-  #define MSG_WARNING_PREFIX "stardis-solver (warning): "
-#endif
+/* By default assume messages are printed in a VT100-like terminal emulator */
+#define MSG_INFO_PREFIX "stardis-solver (\x1b[1m\x1b[32minfo\x1b[0m): "
+#define MSG_ERROR_PREFIX "stardis-solver (\x1b[1m\x1b[31merror\x1b[0m): "
+#define MSG_WARNING_PREFIX "stardis-solver (\x1b[1m\x1b[33mwarning\x1b[0m): "
+
+/* Plain text message prefixes */
+#define MSG_INFO_PREFIX_PLAIN_TEXT "stardis-solver (info): "
+#define MSG_ERROR_PREFIX_PLAIN_TEXT "stardis-solver (error): "
+#define MSG_WARNING_PREFIX_PLAIN_TEXT "stardis-solver (warning): "
 
 extern LOCAL_SYM res_T
 setup_log_default

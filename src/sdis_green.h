@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,13 @@
 #ifndef SDIS_GREEN_H
 #define SDIS_GREEN_H
 
+#include <rsys/hash.h>
 #include <rsys/rsys.h>
 
 /* Current version the green function data structure. One should increment it
  * and perform a version management onto serialized data when the gren function
  * data structure is updated. */
-static const int SDIS_GREEN_FUNCTION_VERSION = 1;
+static const int SDIS_GREEN_FUNCTION_VERSION = 2;
 
 /* Forward declaration */
 struct accum;
@@ -40,6 +41,7 @@ static const struct green_path_handle GREEN_PATH_HANDLE_NULL =
 extern LOCAL_SYM res_T
 green_function_create
   (struct sdis_scene* scn,
+   const hash256_T signature,
    struct sdis_green_function** green);
 
 /* Merge `src' into `dst' an clear `src' */

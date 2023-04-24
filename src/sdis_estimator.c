@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -163,12 +163,6 @@ sdis_estimator_get_power
     return RES_BAD_ARG;
   SETUP_MC(power, &estimator->power.power);
   power->E *= estimator->power.spread;
-
-  if(estimator->power.time_range[0]
-  != estimator->power.time_range[1]) {
-    power->E /= /* From Joule to Watt */
-      (estimator->power.time_range[1]-estimator->power.time_range[0]);
-  }
   return RES_OK;
 }
 

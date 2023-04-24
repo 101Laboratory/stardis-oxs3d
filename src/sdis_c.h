@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 #define SDIS_C_H
 
 #include <star/ssp.h>
+#include <rsys/hash.h>
 #include <rsys/rsys.h>
 
 /* Id of the messages sent between processes */
@@ -61,6 +62,7 @@ release_per_thread_rng
 extern LOCAL_SYM res_T
 create_per_thread_green_function
   (struct sdis_scene* scene,
+   const hash256_T signature,
    struct sdis_green_function** greens[]);
 
 extern LOCAL_SYM void
@@ -145,6 +147,13 @@ print_progress
  * new status */
 extern LOCAL_SYM void
 print_progress_update
+  (struct sdis_device* dev,
+   int32_t progress[],
+   const char* label); /* Text preceding the progress status */
+
+/* Print progress completion, i.e. rewind the printing and print 100% */
+extern LOCAL_SYM void
+print_progress_completion
   (struct sdis_device* dev,
    int32_t progress[],
    const char* label); /* Text preceding the progress status */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,41 @@
 #include <star/ssp.h>
 
 #include "sdis_Xd_begin.h"
+
+/*******************************************************************************
+ * Non generic helper functions
+ ******************************************************************************/
+#ifndef SDIS_HEAT_PATH_BOUNDARY_XD_SOLID_FLUID_PICARD_N_H
+#define SDIS_HEAT_PATH_BOUNDARY_XD_SOLID_FLUID_PICARD_N_H
+
+static INLINE res_T
+check_net_flux
+  (struct sdis_scene* scn,
+   const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag,
+   const size_t picard_order)
+{
+  double phi;
+  res_T res = RES_OK;
+  ASSERT(scn && interf && frag && picard_order > 1);
+
+  phi = interface_side_get_flux(interf, frag);
+  if(phi != SDIS_FLUX_NONE && phi != 0) {
+    log_err(scn->dev,
+      "%s: invalid flux '%g' W/m^2. Could not manage a flux != 0 when the "
+      "picard order is not equal to 1; Picard order is currently set to %lu.\n",
+      FUNC_NAME, phi, (unsigned long)picard_order);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+#endif /* SDIS_HEAT_PATH_BOUNDARY_XD_SOLID_FLUID_PICARD_N_H */
 
 /*******************************************************************************
  * Generic helper functions
@@ -139,6 +174,7 @@ XD(solid_fluid_boundary_picardN_path)
   ASSERT(scn && rwalk && rng && T && ctx);
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
 
+
   /* Fetch the Min/max temperature */
   Tmin  = ctx->Tmin;
   Tmin2 = ctx->Tmin2;
@@ -158,6 +194,11 @@ XD(solid_fluid_boundary_picardN_path)
     SWAP(enum sdis_side, solid_side, fluid_side);
     ASSERT(fluid->type == SDIS_FLUID);
   }
+
+  /* Check that no net flux is set for this interface since the provided
+   * picardN algorithm does not handle it */
+  res = check_net_flux(scn, interf, frag, get_picard_order(ctx));
+  if(res != RES_OK) goto error;
 
   /* Setup a fragment for the fluid side */
   frag_fluid = *frag;

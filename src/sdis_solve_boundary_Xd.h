@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
 *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -195,6 +195,7 @@ XD(solve_boundary)
   int64_t irealisation = 0;
   size_t i;
   int32_t* progress = NULL; /* Per process progress bar */
+  int pcent_progress = 1; /* Percentage requiring progress update */
   int register_paths = SDIS_HEAT_PATH_NONE;
   int is_master_process = 1;
   ATOMIC nsolved_realisations = 0;
@@ -236,6 +237,11 @@ XD(solve_boundary)
 #ifdef SDIS_ENABLE_MPI
   is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
 #endif
+
+  /* Update the progress bar every percent if escape sequences are allowed in
+   * log messages or only every 10 percent when only plain text is allowed.
+   * This reduces the number of lines of plain text printed */
+  pcent_progress = scn->dev->no_escape_sequence ? 10 : 1;
 
   /* Create the Star-XD shape of the boundary */
 #if SDIS_XD_DIMENSION == 2
@@ -292,7 +298,8 @@ XD(solve_boundary)
 
   /* Create the per thread green function */
   if(out_green) {
-    res = create_per_thread_green_function(scn, &per_thread_green);
+    res = create_per_thread_green_function
+      (scn, args->signature, &per_thread_green);
     if(res != RES_OK) goto error;
   }
 
@@ -443,7 +450,7 @@ XD(solve_boundary)
     n = (size_t)ATOMIC_INCR(&nsolved_realisations);
     pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
     #pragma omp critical
-    if(pcent > progress[0]) {
+    if(pcent/pcent_progress > progress[0]/pcent_progress) {
       progress[0] = pcent;
       print_progress_update(scn->dev, progress, PROGRESS_MSG);
     }
@@ -459,8 +466,7 @@ XD(solve_boundary)
   res = gather_res_T(scn->dev, (res_T)res);
   if(res != RES_OK) goto error;
 
-  print_progress_update(scn->dev, progress, PROGRESS_MSG);
-  log_info(scn->dev, "\n");
+  print_progress_completion(scn->dev, progress, PROGRESS_MSG);
   #undef PROGRESS_MSG
 
   /* Report computation time */
@@ -587,6 +593,7 @@ XD(solve_boundary_flux)
   int64_t irealisation;
   size_t i;
   int32_t* progress = NULL; /* Per process progress bar */
+  int pcent_progress = 1; /* Percentage requiring progress update */
   int is_master_process = 1;
   ATOMIC nsolved_realisations = 0;
   ATOMIC res = RES_OK;
@@ -641,6 +648,11 @@ XD(solve_boundary_flux)
 #ifdef SDIS_ENABLE_MPI
   is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
 #endif
+
+  /* Update the progress bar every percent if escape sequences are allowed in
+   * log messages or only every 10 percent when only plain text is allowed.
+   * This reduces the number of lines of plain text printed */
+  pcent_progress = scn->dev->no_escape_sequence ? 10 : 1;
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
@@ -805,9 +817,12 @@ XD(solve_boundary_flux)
       continue;
     } else if(res_simul == RES_OK) { /* Update accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
-      const double w_conv = hc * (result.Tboundary - result.Tfluid);
+      /* Convective flux from fluid to solid */
+      const double w_conv = hc * (result.Tfluid - result.Tboundary);
+      /* Radiative flux from ambient to solid */
       const double w_rad = (result.Tradiative < 0) ?
-        0 : hr * (result.Tboundary - result.Tradiative);
+        0 : hr * (result.Tradiative - result.Tboundary);
+      /* Imposed flux that goes _into_ the solid */
       const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
       const double w_total = w_conv + w_rad + w_imp;
       /* Temperature */
@@ -840,7 +855,7 @@ XD(solve_boundary_flux)
     n = (size_t)ATOMIC_INCR(&nsolved_realisations);
     pcent = (int)((double)n * 100.0 / (double)nrealisations + 0.5/*round*/);
     #pragma omp critical
-    if(pcent > progress[0]) {
+    if(pcent/pcent_progress > progress[0]/pcent_progress) {
       progress[0] = pcent;
       print_progress_update(scn->dev, progress, PROGRESS_MSG);
     }
@@ -851,8 +866,7 @@ XD(solve_boundary_flux)
   res = gather_res_T(scn->dev, (res_T)res);
   if(res != RES_OK) goto error;
 
-  print_progress_update(scn->dev, progress, PROGRESS_MSG);
-  log_info(scn->dev, "\n");
+  print_progress_completion(scn->dev, progress, PROGRESS_MSG);
   #undef PROGRESS_MSG
 
   /* Report computation time */

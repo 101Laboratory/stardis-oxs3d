@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -285,6 +285,7 @@ dump_mesh
       (unsigned long)(ids[i*3+1] + 1),
       (unsigned long)(ids[i*3+2] + 1));
   }
+  fflush(stream);
 }
 
 static INLINE void
@@ -306,6 +307,7 @@ dump_segments
       (unsigned long)(ids[i*2+0] + 1),
       (unsigned long)(ids[i*2+1] + 1));
   }
+  fflush(stream);
 }
 
 static INLINE void

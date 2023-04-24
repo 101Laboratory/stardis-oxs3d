@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,22 +41,35 @@ log_msg
 static void
 print_info(const char* msg, void* ctx)
 {
-  (void)ctx;
-  fprintf(stderr, MSG_INFO_PREFIX"%s", msg);
+  struct sdis_device* dev = ctx;
+
+  if(dev->no_escape_sequence) {
+    fprintf(stderr, MSG_INFO_PREFIX_PLAIN_TEXT"%s", msg);
+  } else {
+    fprintf(stderr, MSG_INFO_PREFIX"%s", msg);
+  }
 }
 
 static void
 print_err(const char* msg, void* ctx)
 {
-  (void)ctx;
-  fprintf(stderr, MSG_ERROR_PREFIX"%s", msg);
+  struct sdis_device* dev = ctx;
+  if(dev->no_escape_sequence) {
+    fprintf(stderr, MSG_ERROR_PREFIX_PLAIN_TEXT"%s", msg);
+  } else {
+    fprintf(stderr, MSG_ERROR_PREFIX"%s", msg);
+  }
 }
 
 static void
 print_warn(const char* msg, void* ctx)
 {
-  (void)ctx;
-  fprintf(stderr, MSG_WARNING_PREFIX"%s", msg);
+  struct sdis_device* dev = ctx;
+  if(dev->no_escape_sequence) {
+    fprintf(stderr, MSG_WARNING_PREFIX_PLAIN_TEXT"%s", msg);
+  } else {
+    fprintf(stderr, MSG_WARNING_PREFIX"%s", msg);
+  }
 }
 
 /*******************************************************************************
@@ -73,9 +86,9 @@ setup_log_default(struct sdis_device* dev)
     if(dev->verbose) print_err("Could not setup the logger.\n", NULL);
     goto error;
   }
-  logger_set_stream(&dev->logger__, LOG_OUTPUT, print_info, NULL);
-  logger_set_stream(&dev->logger__, LOG_ERROR, print_err, NULL);
-  logger_set_stream(&dev->logger__, LOG_WARNING, print_warn, NULL);
+  logger_set_stream(&dev->logger__, LOG_OUTPUT, print_info, dev);
+  logger_set_stream(&dev->logger__, LOG_ERROR, print_err, dev);
+  logger_set_stream(&dev->logger__, LOG_WARNING, print_warn, dev);
   dev->logger = &dev->logger__;
 
 exit:

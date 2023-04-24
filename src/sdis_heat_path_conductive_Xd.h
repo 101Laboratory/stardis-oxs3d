@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -335,7 +335,7 @@ XD(handle_volumic_power)
     double h;
     double h_in_meter;
     double cos_U_N;
-    float N[DIM];
+    float N[DIM] = {0};
 
     if(args->delta == args->hit0->distance) {
       fX(normalize)(N, args->hit0->normal);
@@ -421,7 +421,7 @@ XD(conductive_path)
    * that those that are supposed to be constant by the conductive random walk
    * remain the same. Note that we take care of the same constraints on the
    * solid reinjection since once reinjected, the position of the random walk
-   * is that at the beginning of the conductive random walkh. Thus, after a
+   * is that at the beginning of the conductive random walk. Thus, after a
    * reinjection, the next line retrieves the properties of the reinjection
    * position. By comparing them to the properties along the random walk, we
    * thus verify that the properties are constant throughout the random walk

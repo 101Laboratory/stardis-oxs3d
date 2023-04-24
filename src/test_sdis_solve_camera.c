@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,9 +29,9 @@
 #include <string.h>
 
 #define UNKOWN_TEMPERATURE -1
-#define IMG_WIDTH 640
-#define IMG_HEIGHT 480
-#define SPP 4 /* #Samples per pixel, i.e. #realisations per pixel */
+#define IMG_WIDTH 157
+#define IMG_HEIGHT 53
+#define SPP 30 /* #Samples per pixel, i.e. #realisations per pixel */
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
@@ -741,7 +741,7 @@ main(int argc, char** argv)
   OK(sdis_solve_camera(scn, &solve_args, &buf2));
   if(is_master_process) {
     OK(sdis_estimator_buffer_get_temperature(buf2, &T2));
-    CHK(T.E != T2.E);
+    CHK(T.E != T2.E || (T2.SE == 0 && T.SE ==0));
     CHK(T2.E + 3*T2.SE >= T.E - 3*T.SE
      && T2.E - 3*T2.SE <= T.E + 3*T.SE);
     OK(sdis_estimator_buffer_ref_put(buf2));
@@ -756,7 +756,7 @@ main(int argc, char** argv)
   OK(ssp_rng_ref_put(rng));
   if(is_master_process) {
     OK(sdis_estimator_buffer_get_temperature(buf2, &T2));
-    CHK(T.E != T2.E);
+    CHK(T.E != T2.E || (T2.SE == 0 && T.SE == 0));
     CHK(T2.E + 3*T2.SE >= T.E - 3*T.SE
      && T2.E - 3*T2.SE <= T.E + 3*T.SE);
     OK(sdis_estimator_buffer_ref_put(buf2));

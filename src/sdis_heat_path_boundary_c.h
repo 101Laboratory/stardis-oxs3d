@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ SAMPLE_REINJECTION_STEP_ARGS_NULL_3d = SAMPLE_REINJECTION_STEP_ARGS_NULL___3d;
 
 #define REINJECTION_STEP_NULL___2d {S2D_HIT_NULL__, {0,0}, 0}
 #define REINJECTION_STEP_NULL___3d {S3D_HIT_NULL__, {0,0,0}, 0}
-static const struct reinjection_step_2d 
+static const struct reinjection_step_2d
 REINJECTION_STEP_NULL_2d = REINJECTION_STEP_NULL___2d;
 static const struct reinjection_step_3d
 REINJECTION_STEP_NULL_3d = REINJECTION_STEP_NULL___3d;
@@ -138,6 +138,35 @@ extern LOCAL_SYM res_T
 solid_reinjection_3d
   (struct sdis_medium* solid,
    struct solid_reinjection_args_3d* args);
+
+/*******************************************************************************
+ * Handle net flux
+ ******************************************************************************/
+struct handle_net_flux_args {
+  struct sdis_interface* interf;
+  const struct sdis_interface_fragment* frag;
+  struct green_path_handle* green_path;
+
+  size_t picard_order;
+  double h_cond; /* Convective coefficient, i.e. lambda/delta */
+  double h_conv; /* Condutive coefficient */
+  double h_radi; /* Radiative coefficient */
+};
+#define HANDLE_NET_FLUX_ARGS_NULL__ {NULL,NULL,NULL,0,0,0,0}
+static const struct handle_net_flux_args HANDLE_NET_FLUX_ARGS_NULL =
+  HANDLE_NET_FLUX_ARGS_NULL__;
+
+extern LOCAL_SYM res_T
+handle_net_flux_2d
+  (const struct sdis_scene* scn,
+   const struct handle_net_flux_args* args,
+   struct temperature_2d* T);
+
+extern LOCAL_SYM res_T
+handle_net_flux_3d
+  (const struct sdis_scene* scn,
+   const struct handle_net_flux_args* args,
+   struct temperature_3d* T);
 
 /*******************************************************************************
  * Boundary sub-paths

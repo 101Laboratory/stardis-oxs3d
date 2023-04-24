@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -326,6 +326,7 @@ sdis_device_create
   }
   nthreads_max = (unsigned)MMAX(omp_get_max_threads(), omp_get_num_procs());
   dev->allocator = allocator;
+  dev->no_escape_sequence = args->no_escape_sequence;
   dev->verbose = args->verbosity;
   dev->nthreads = MMIN(args->nthreads_hint, nthreads_max);
   ref_init(&dev->ref);

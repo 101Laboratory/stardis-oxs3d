@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+# Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ find_package(Star3D 0.8 REQUIRED)
 find_package(StarSP 0.13 REQUIRED)
 find_package(StarEnc2D 0.5 REQUIRED)
 find_package(StarEnc3D 0.5 REQUIRED)
-find_package(RSys 0.12 REQUIRED)
+find_package(RSys 0.13 REQUIRED)
 find_package(OpenMP 2.0 REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${RCMAKE_SOURCE_DIR})
@@ -65,8 +65,8 @@ rcmake_append_runtime_dirs(_runtime_dirs
 # Configure and define targets
 ###############################################################################
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 13)
-set(VERSION_PATCH 1)
+set(VERSION_MINOR 14)
+set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 set(SDIS_FILES_SRC
@@ -212,6 +212,8 @@ if(NOT NO_TEST)
   new_test(test_sdis_data)
   new_test(test_sdis_device)
   new_test(test_sdis_flux)
+  new_test(test_sdis_flux2)
+  new_test(test_sdis_flux_with_h)
   new_test(test_sdis_interface)
   new_test(test_sdis_medium)
   new_test(test_sdis_picard)

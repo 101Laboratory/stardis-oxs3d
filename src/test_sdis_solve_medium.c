@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -228,7 +228,7 @@ main(int argc, char** argv)
   struct sdis_solve_medium_args solve_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
   struct ssp_rng* rng = NULL;
   struct context ctx;
-  double ref;
+  double ref = 0;
   double v, v0, v1;
   size_t nreals;
   size_t nfails;

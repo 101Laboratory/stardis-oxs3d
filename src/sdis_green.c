@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -300,6 +300,7 @@ struct sdis_green_function {
 
   size_t npaths_valid;
   size_t npaths_invalid;
+  hash256_T signature;
 
   struct accum realisation_time; /* Time per realisation */
 
@@ -313,6 +314,15 @@ struct sdis_green_function {
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+static INLINE res_T
+check_sdis_green_function_create_from_stream_args
+  (const struct sdis_green_function_create_from_stream_args* args)
+{
+  if(!args || !args->scene || !args->stream)
+    return RES_BAD_ARG;
+  return RES_OK;
+}
+
 static res_T
 ensure_medium_registration
   (struct sdis_green_function* green,
@@ -892,7 +902,9 @@ sdis_green_function_write(struct sdis_green_function* green, FILE* stream)
 
   res = scene_compute_hash(green->scn, hash);
   if(res != RES_OK) goto error;
+
   WRITE(hash, sizeof(hash256_T));
+  WRITE(green->signature, sizeof(hash256_T));
 
   res = write_media(green, stream);
   if(res != RES_OK) goto error;
@@ -925,8 +937,7 @@ error:
 
 res_T
 sdis_green_function_create_from_stream
-  (struct sdis_scene* scn,
-   FILE* stream,
+  (struct sdis_green_function_create_from_stream_args* args,
    struct sdis_green_function** out_green)
 {
   hash256_T hash0, hash1;
@@ -935,19 +946,18 @@ sdis_green_function_create_from_stream
   int version = 0;
   res_T res = RES_OK;
 
-  if(!scn || !stream || !out_green) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  if(!out_green) { res = RES_BAD_ARG; goto error; }
+  res = check_sdis_green_function_create_from_stream_args(args);
+  if(res != RES_OK) goto error;
 
-  res = green_function_create(scn, &green);
+  res = green_function_create(args->scene, args->signature, &green);
   if(res != RES_OK) goto error;
 
   #define READ(Var, Nb) {                                                      \
-    if(fread((Var), sizeof(*(Var)), (Nb), stream) != (Nb)) {                   \
-      if(feof(stream)) {                                                       \
+    if(fread((Var), sizeof(*(Var)), (Nb), args->stream) != (Nb)) {             \
+      if(feof(args->stream)) {                                                 \
         res = RES_BAD_ARG;                                                     \
-      } else if(ferror(stream)) {                                              \
+      } else if(ferror(args->stream)) {                                        \
         res = RES_IO_ERR;                                                      \
       } else {                                                                 \
         res = RES_UNKNOWN_ERR;                                                 \
@@ -978,11 +988,20 @@ sdis_green_function_create_from_stream
     goto error;
   }
 
-  res = read_media(green, stream);
+  READ(hash1, sizeof(hash256_T));
+  if(!hash256_eq(hash1, green->signature)) {
+    log_err(green->scn->dev,
+      "%s: the input signature does not match the saved signature\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  res = read_media(green, args->stream);
   if(res != RES_OK) goto error;
-  res = read_interfaces(green, stream);
+  res = read_interfaces(green, args->stream);
   if(res != RES_OK) goto error;
-  res = read_paths_list(green, stream);
+  res = read_paths_list(green, args->stream);
   if(res != RES_OK) goto error;
 
   READ(&green->npaths_valid, 1);
@@ -994,7 +1013,7 @@ sdis_green_function_create_from_stream
   /* Create a temporary RNG used to deserialise the RNG state */
   res = ssp_rng_create(green->scn->dev->allocator, green->rng_type, &rng);
   if(res != RES_OK) goto error;
-  res = ssp_rng_read(rng, stream);
+  res = ssp_rng_read(rng, args->stream);
   if(res != RES_OK) goto error;
   res = ssp_rng_write(rng, green->rng_state);
   if(res != RES_OK) goto error;
@@ -1039,6 +1058,15 @@ sdis_green_function_get_invalid_paths_count
   if(!green || !nfails) return RES_BAD_ARG;
   ASSERT(green->npaths_invalid != SIZE_MAX);
   *nfails = green->npaths_invalid;
+  return RES_OK;
+}
+
+res_T
+sdis_green_function_get_signature
+  (const struct sdis_green_function* green, hash256_T signature)
+{
+  if(!green || !signature) return RES_BAD_ARG;
+  memcpy(signature, green->signature, sizeof(hash256_T));
   return RES_OK;
 }
 
@@ -1329,7 +1357,9 @@ error:
  ******************************************************************************/
 res_T
 green_function_create
-  (struct sdis_scene* scn, struct sdis_green_function** out_green)
+  (struct sdis_scene* scn,
+   const hash256_T signature,
+   struct sdis_green_function** out_green)
 {
   struct sdis_green_function* green = NULL;
   res_T res = RES_OK;
@@ -1348,7 +1378,11 @@ green_function_create
   darray_green_path_init(scn->dev->allocator, &green->paths);
   green->npaths_valid = SIZE_MAX;
   green->npaths_invalid = SIZE_MAX;
+  memcpy(green->signature, signature, sizeof(hash256_T));
 
+  /* TODO replace the tmpfile. tmpfile can only be called a limited number of
+   * times while one could create a huge amount of green functions at the same
+   * time (e.g. for image rendering) */
   green->rng_state = tmpfile();
   if(!green->rng_state) {
     res = RES_IO_ERR;

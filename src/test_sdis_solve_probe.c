@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #include <star/ssp.h>
 #include <rsys/math.h>
+
+#include <string.h>
 
 /*
  * The scene is composed of a solid cube with unknown temperature. The
@@ -280,6 +282,8 @@ main(int argc, char** argv)
   struct sdis_green_function* green = NULL;
   const struct sdis_heat_path* path = NULL;
   struct sdis_device_create_args dev_args = SDIS_DEVICE_CREATE_ARGS_DEFAULT;
+  struct sdis_green_function_create_from_stream_args green_args =
+    SDIS_GREEN_FUNCTION_CREATE_FROM_STREAM_ARGS_DEFAULT;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
@@ -498,7 +502,7 @@ main(int argc, char** argv)
   OK(sdis_green_function_solve(green, &estimator2));
   check_green_function(green);
   check_estimator_eq(estimator, estimator2);
-  
+
   stream = tmpfile();
   CHK(stream);
   BA(sdis_green_function_write(NULL, stream));
@@ -512,22 +516,46 @@ main(int argc, char** argv)
   OK(sdis_green_function_ref_put(green));
 
   rewind(stream);
-  BA(sdis_green_function_create_from_stream(NULL, stream, &green));
-  BA(sdis_green_function_create_from_stream(scn, NULL, &green));
-  BA(sdis_green_function_create_from_stream(scn, stream, NULL));
-  OK(sdis_green_function_create_from_stream(scn, stream, &green));
+  green_args.scene = NULL;
+  green_args.stream = stream;
+  BA(sdis_green_function_create_from_stream(&green_args, &green));
+  green_args.scene = scn;
+  green_args.stream = NULL;
+  BA(sdis_green_function_create_from_stream(&green_args, &green));
+  green_args.scene = scn;
+  green_args.stream = stream;
+  BA(sdis_green_function_create_from_stream(&green_args, NULL));
+  OK(sdis_green_function_create_from_stream(&green_args, &green));
   CHK(!fclose(stream));
 
   OK(sdis_green_function_solve(green, &estimator3));
-
   check_green_function(green);
   check_estimator_eq_strict(estimator2, estimator3);
-
   OK(sdis_green_function_ref_put(green));
+  OK(sdis_estimator_ref_put(estimator3));
+
+  CHK(stream = tmpfile());
+  hash_sha256("Hello, world!", strlen("Hello, world!"), solve_args.signature);
+  OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
+  OK(sdis_green_function_write(green, stream));
+  OK(sdis_green_function_ref_put(green));
+
+  green_args.scene = scn;
+  green_args.stream = stream;
+  rewind(stream);
+  BA(sdis_green_function_create_from_stream(&green_args, &green));
+  memcpy(green_args.signature, solve_args.signature, sizeof(hash256_T));
+  rewind(stream);
+  OK(sdis_green_function_create_from_stream(&green_args, &green));
+  CHK(!fclose(stream));
+
+  OK(sdis_green_function_solve(green, &estimator3));
+  check_estimator_eq_strict(estimator2, estimator3);
+  OK(sdis_green_function_ref_put(green));
+  OK(sdis_estimator_ref_put(estimator3));
 
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
-  OK(sdis_estimator_ref_put(estimator3));
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   BA(sdis_estimator_get_paths_count(NULL, &n));

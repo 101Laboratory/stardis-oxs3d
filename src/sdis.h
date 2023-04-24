@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 #include <star/ssp.h>
 
+#include <rsys/hash.h>
 #include <rsys/rsys.h>
 #include <float.h>
 
@@ -43,7 +44,7 @@
  * as CPU cores */
 #define SDIS_NTHREADS_DEFAULT (~0u)
 
-#define SDIS_VOLUMIC_POWER_NONE 0 /* <=> No volumic power */
+#define SDIS_VOLUMIC_POWER_NONE DBL_MAX /* <=> No volumic power */
 #define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
 #define SDIS_PRIMITIVE_NONE SIZE_MAX /* Invalid primitive */
 
@@ -137,6 +138,7 @@ struct sdis_device_create_args {
   struct mem_allocator* allocator; /* NULL <=> default allocator */
   unsigned nthreads_hint; /* Hint on the number of threads to use */
   int verbosity; /* Verbosity level */
+  int no_escape_sequence; /* Rm escape sequences from log messages */
 
   /* Use the Message Passing Interface to distribute work between processes.
    * This option is taken into account only if Stardis-Solver is compiled with
@@ -144,7 +146,7 @@ struct sdis_device_create_args {
   int use_mpi;
 };
 #define SDIS_DEVICE_CREATE_ARGS_DEFAULT__ {                                    \
-  NULL, NULL, SDIS_NTHREADS_DEFAULT, 1, 0                                      \
+  NULL, NULL, SDIS_NTHREADS_DEFAULT, 1, 0, 0                                   \
 }
 static const struct sdis_device_create_args SDIS_DEVICE_CREATE_ARGS_DEFAULT =
   SDIS_DEVICE_CREATE_ARGS_DEFAULT__;
@@ -279,7 +281,7 @@ enum sdis_heat_path_flag {
   SDIS_HEAT_PATH_NONE = 0
 };
 
-/* Vertex of heat path v*/
+/* Vertex of heat path */
 struct sdis_heat_vertex {
   double P[3];
   double time;
@@ -393,7 +395,7 @@ struct sdis_ambient_radiative_temperature {
 };
 #define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {-1, -1}
 static const struct sdis_ambient_radiative_temperature
-SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL = 
+SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL =
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__;
 
 struct sdis_scene_create_args {
@@ -407,7 +409,7 @@ struct sdis_scene_create_args {
 
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
   size_t nvertices; /* #vertices */
-  double fp_to_meter; /* Scale factor used to convert 1.0 in 1 meter */
+  double fp_to_meter; /* Scale factor used to convert a float in meter */
   struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
 
   /* Min/max temperature used to linearise the radiative temperature */
@@ -444,6 +446,12 @@ struct sdis_solve_probe_args {
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  /* Signature of the estimated green function. The signature is ignored in an
+   * ordinary probe estimation. The signature of the green function can be
+   * queried to verify that it is the expected one with respect to the caller's
+   * constraints that the green function cannot otherwise ensure */
+  hash256_T signature;
 };
 #define SDIS_SOLVE_PROBE_ARGS_DEFAULT__ {                                      \
   10000, /* #realisations */                                                   \
@@ -452,7 +460,8 @@ struct sdis_solve_probe_args {
   1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
@@ -473,6 +482,12 @@ struct sdis_solve_probe_boundary_args {
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  /* Signature of the estimated green function. The signature is ignored in an
+   * ordinary probe estimation. The signature of the green function can be
+   * queried to verify that it is the expected one with respect to the caller's
+   * constraints that the green function cannot otherwise ensure */
+  hash256_T signature;
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__ {                             \
   10000, /* #realisations */                                                   \
@@ -483,7 +498,8 @@ struct sdis_solve_probe_boundary_args {
   SDIS_SIDE_NULL__,                                                            \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_probe_boundary_args
 SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
@@ -504,6 +520,12 @@ struct sdis_solve_boundary_args {
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  /* Signature of the estimated green function. The signature is ignored in an
+   * ordinary probe estimation. The signature of the green function can be
+   * queried to verify that it is the expected one with respect to the caller's
+   * constraints that the green function cannot otherwise ensure */
+  hash256_T signature;
 };
 #define SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__ {                                   \
   10000, /* #realisations */                                                   \
@@ -514,7 +536,8 @@ struct sdis_solve_boundary_args {
   1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT__;
@@ -532,6 +555,12 @@ struct sdis_solve_medium_args {
   int register_paths; /* Combination of enum sdis_heat_path_flag */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  /* Signature of the estimated green function. The signature is ignored in an
+   * ordinary probe estimation. The signature of the green function can be
+   * queried to verify that it is the expected one with respect to the caller's
+   * constraints that the green function cannot otherwise ensure */
+  hash256_T signature;
 };
 #define SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__ {                                     \
   10000, /* #realisations */                                                   \
@@ -540,7 +569,8 @@ struct sdis_solve_medium_args {
   1, /* Picard order */                                                        \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
   SDIS_SOLVE_MEDIUM_ARGS_DEFAULT__;
@@ -548,7 +578,7 @@ static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
 struct sdis_solve_probe_boundary_flux_args {
   size_t nrealisations; /* #realisations */
   size_t iprim; /* Identifier of the primitive on which the probe lies */
-  double uv[2]; /* Parametric coordinates of the probe onto the primitve */
+  double uv[2]; /* Parametric coordinates of the probe onto the primitive */
   double time_range[2]; /* Observation time */
 
   /* Set the Picard recursion order to estimate the radiative temperature. An
@@ -644,6 +674,23 @@ struct sdis_compute_power_args {
 }
 static const struct sdis_compute_power_args
 SDIS_COMPUTE_POWER_ARGS_DEFAULT = SDIS_COMPUTE_POWER_ARGS_DEFAULT__;
+
+struct sdis_green_function_create_from_stream_args {
+  struct sdis_scene* scene; /* Scene from which the green was evaluated */
+  FILE* stream; /* Stream from which the green function is deserialized */
+
+  /* This signature is compared to the one serialized with the green function.
+   * An error is returned if they differ */
+  hash256_T signature;
+};
+#define SDIS_GREEN_FUNCTION_CREATE_FROM_STREAM_ARGS_DEFAULT__ {                \
+  NULL, /* Scene */                                                            \
+  NULL, /* Stream */                                                           \
+  {0} /* Signature */                                                          \
+}
+static const struct sdis_green_function_create_from_stream_args
+SDIS_GREEN_FUNCTION_CREATE_FROM_STREAM_ARGS_DEFAULT =
+  SDIS_GREEN_FUNCTION_CREATE_FROM_STREAM_ARGS_DEFAULT__;
 
 BEGIN_DECLS
 
@@ -1081,22 +1128,22 @@ sdis_estimator_get_realisation_time
 SDIS_API res_T
 sdis_estimator_get_convective_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_radiative_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_imposed_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_total_flux
   (const struct sdis_estimator* estimator,
-   struct sdis_mc* flux);
+   struct sdis_mc* flux); /* In W/m² */
 
 SDIS_API res_T
 sdis_estimator_get_power
@@ -1151,8 +1198,7 @@ sdis_green_function_write
 
 SDIS_API res_T
 sdis_green_function_create_from_stream
-  (struct sdis_scene* scn, /* Scene from which the green was evaluated */
-   FILE* stream, /* Stream into which the green was serialized */
+  (struct sdis_green_function_create_from_stream_args* args,
    struct sdis_green_function** green);
 
 /* Retrieve the scene used to compute the green function */
@@ -1174,6 +1220,11 @@ SDIS_API res_T
 sdis_green_function_get_invalid_paths_count
   (const struct sdis_green_function* green,
    size_t* nfails);
+
+SDIS_API res_T
+sdis_green_function_get_signature
+  (const struct sdis_green_function* green,
+   hash256_T signature);
 
 /* Iterate over all valid green function paths */
 SDIS_API res_T
@@ -1291,12 +1342,18 @@ sdis_solve_boundary
    const struct sdis_solve_boundary_args* args,
    struct sdis_estimator** estimator);
 
+/* Calculate the flux density in W/m² _entering_ the solid through the given
+ * boundary position, i.e. the flux density is positive or negative if the
+ * solid gains or loses energy, respectively. */
 SDIS_API res_T
 sdis_solve_probe_boundary_flux
   (struct sdis_scene* scn,
    const struct sdis_solve_probe_boundary_flux_args* args,
    struct sdis_estimator** estimator);
 
+/* Calculate the average flux density in W/m² _entering_ the solid through the
+ * given boundary surfaces, i.e. the flux density is positive or negative if
+ * the solid gains or loses energy, respectively. */
 SDIS_API res_T
 sdis_solve_boundary_flux
   (struct sdis_scene* scn,
@@ -1315,9 +1372,7 @@ sdis_solve_medium
    const struct sdis_solve_medium_args* args,
    struct sdis_estimator** estimator);
 
-/* P = SUM(volumic_power(x)) / Nrealisations * Volume
- * power (in Watt) = time_range[0] == time_range[1]
- *  ? P : P / (time_range[1] - time_range[0]) */
+/* power (in Watt)  = SUM(volumic_power(x)) / Nrealisations * Volume */
 SDIS_API res_T
 sdis_compute_power
   (struct sdis_scene* scn,

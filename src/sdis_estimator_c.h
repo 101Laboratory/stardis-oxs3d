@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2022 |Meso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,7 +88,7 @@ estimator_setup_realisations_count
    const size_t nrealisations,
    const size_t nsuccesses)
 {
-  ASSERT(estimator && nrealisations && nsuccesses && nsuccesses<=nrealisations);
+  ASSERT(estimator && nrealisations && nsuccesses<=nrealisations);
   estimator->nrealisations = nsuccesses;
   estimator->nfailures = nrealisations - nsuccesses;
 }
@@ -99,7 +99,7 @@ estimator_setup_temperature
    const double sum,
    const double sum2)
 {
-  ASSERT(estim && estim->nrealisations);
+  ASSERT(estim);
   estim->temperature.sum = sum;
   estim->temperature.sum2 = sum2;
   estim->temperature.count = estim->nrealisations;
@@ -113,7 +113,7 @@ estimator_setup_power
    const double spread,
    const double time_range[2])
 {
-  ASSERT(estim && estim->nrealisations && time_range);
+  ASSERT(estim && time_range);
   estim->power.power.sum = sum;
   estim->power.power.sum2 = sum2;
   estim->power.power.count = estim->nrealisations;
@@ -128,7 +128,7 @@ estimator_setup_realisation_time
    const double sum,
    const double sum2)
 {
-  ASSERT(estim && estim->nrealisations);
+  ASSERT(estim);
   estim->realisation_time.sum = sum;
   estim->realisation_time.sum2 = sum2;
   estim->realisation_time.count = estim->nrealisations;
@@ -141,7 +141,7 @@ estimator_setup_flux
    const double sum,
    const double sum2)
 {
-  ASSERT(estim && (unsigned)name < FLUX_NAMES_COUNT__ && estim->nrealisations);
+  ASSERT(estim && (unsigned)name < FLUX_NAMES_COUNT__);
   estim->fluxes[name].sum = sum;
   estim->fluxes[name].sum2 = sum2;
   estim->fluxes[name].count = estim->nrealisations;
