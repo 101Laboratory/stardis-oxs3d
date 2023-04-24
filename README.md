@@ -117,6 +117,28 @@ variable the install directories of its dependencies.
 
 ## Release notes
 
+### Version 0.14
+
+- The net flux imposed can be combined with other boundary/connection
+  conditions, i.e. a net flux can be set in addition to convective
+  exchange and radiative transfer.
+- Added support for plain text log messages. Until now, log messages were
+  intended to be read by a VT100-like terminal and could therefore contain
+  escape sequences that required post-processing to store them in plain text
+  log files.
+- Added support for user-defined signature on the green function. It allows to
+  check that, when reloaded, a green function is the one expected by the user
+  according to its own constraints that the green function cannot check itself
+  such as, for example, that the same deltas are used in conductive random
+  walks.
+- Changes the value of the constant `SDIS_VOLUMIC_POWER_NONE`. Its previous
+  value of zero caused problems during the evaluation of the propagator: a
+  media with a power density of zero was not registered in the list of media
+  with a volumic power. A volumic power that was not zero was therefore not
+  taken into account during the re-evaluation of the propagator. The constant
+  is now set to `DBL_MAX`, which means that the medium has no power density,
+  while a value of 0 is now treated as any valid power density term.
+
 ### Version 0.13.1
 
 Fixed compilation errors and compilation warnings displayed on some versions of
@@ -138,17 +160,16 @@ the counterpart of an increase in calculation time.
 #### Distributed memory parallelism
 
 Uses message passing interface to distribute computation across multiple
-computers. Stardis-Solver now, uses a mixed parallelism: on one computer (i.e. a
-node), it uses a shared memory parallelism and relies on the message passing
+computers. Stardis-Solver now, uses a mixed parallelism: on one computer (i.e.
+a node), it uses a shared memory parallelism and relies on the message passing
 interface to parallelize calculations between several nodes.
 
 #### Type and state of the random number generator
 
-Adds the member input variable `rng_type` to the solve functions. It
-defines the type of random number generator to use when no generator is
-defined. Note that the `sdis_solve_camera` function does not have a random
-number generator as an input variable and has therefore been updated to support
-it.
+Adds the member input variable `rng_type` to the solve functions. It defines
+the type of random number generator to use when no generator is defined. Note
+that the `sdis_solve_camera` function does not have a random number generator
+as an input variable and has therefore been updated to support it.
 
 #### Reading the source code
 
@@ -417,7 +438,7 @@ First version and implementation of the Stardis-Solver API.
 
 ## License
 
-Copyright (C) 2016-2022 |Méso|Star> (<contact@meso-star.com>). Stardis-Solver
+Copyright (C) 2016-2023 |Méso|Star> (<contact@meso-star.com>). Stardis-Solver
 is free software released under the GPLv3+ license: GNU GPL version 3 or later.
 You are welcome to redistribute it under certain conditions; refer to the
 COPYING files for details.
