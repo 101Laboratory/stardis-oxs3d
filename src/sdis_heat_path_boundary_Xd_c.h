@@ -415,10 +415,10 @@ XD(find_reinjection_ray)
 
   if(dst0 == -1 && dst1 == -1) { /* No valid reinjection */
 #if DIM == 2
-    log_warn(scn->dev, "%s: no valid reinjection direction at {%g, %g}.\n",
+    log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g}.\n",
       FUNC_NAME, SPLIT2(ray->org));
 #else
-   log_warn(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
+   log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(ray->org));
 #endif
     res = RES_BAD_OP_IRRECOVERABLE;
