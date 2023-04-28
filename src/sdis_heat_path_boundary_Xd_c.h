@@ -407,7 +407,8 @@ XD(find_reinjection_ray)
      * function but this may be not the case due to a "threshold effect". In
      * both situations, try to slightly move away from the primitive boundaries
      * and retry to find a valid reinjection. */
-    if(dst0 == -1 && dst1 == -1) {
+    if(dst0 == -1 && dst1 == -1
+    && iattempt < MAX_ATTEMPTS - 1) { /* Is there still a trial to be done? */
       XD(move_away_primitive_boundaries)(args->rwalk, args->distance, ray->org);
       ray->position_was_moved = 1;
     }
