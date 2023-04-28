@@ -643,7 +643,7 @@ XD(sample_reinjection_step_solid_fluid)
 
   /* Could not find a valid reinjecton step */
   if(iattempt >= MAX_ATTEMPTS) {
-    log_warn(scn->dev,
+    log_err(scn->dev,
       "%s: could not find a valid reinjection step at `%g %g %g'.\n",
       FUNC_NAME, SPLIT3(args->rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
