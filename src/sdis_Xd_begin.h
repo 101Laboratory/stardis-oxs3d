@@ -43,6 +43,9 @@ struct rwalk_context {
 
   /* Number of heat path branchings */
   size_t nbranchings;
+
+  /* Id of the realisation (for debug) */
+  size_t irealisation;
 };
 #define RWALK_CONTEXT_NULL__ {                                                 \
   NULL, /* Green path */                                                       \
@@ -55,6 +58,7 @@ struct rwalk_context {
   0, /* That^3 */                                                              \
   0, /* Max #branchings */                                                     \
   SIZE_MAX, /* #branchings */                                                  \
+  SIZE_MAX /* realisation id */                                                \
 }
 static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
 

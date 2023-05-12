@@ -419,7 +419,7 @@ XD(find_reinjection_ray)
     log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g}.\n",
       FUNC_NAME, SPLIT2(ray->org));
 #else
-   log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
+    log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
       FUNC_NAME, SPLIT3(ray->org));
 #endif
     res = RES_BAD_OP_IRRECOVERABLE;

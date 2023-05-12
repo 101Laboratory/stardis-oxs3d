@@ -404,6 +404,7 @@ XD(solve_boundary)
     realis_args.side = side;
     realis_args.green_path = pgreen_path;
     realis_args.heat_path = pheat_path;
+    realis_args.irealisation = (size_t)irealisation;
     realis_args.uv[0] = uv[0];
 #if SDIS_XD_DIMENSION == 3
     realis_args.uv[1] = uv[1];
@@ -803,6 +804,7 @@ XD(solve_boundary_flux)
     realis_args.picard_order = args->picard_order;
     realis_args.solid_side = solid_side;
     realis_args.flux_mask = flux_mask;
+    realis_args.irealisation = (size_t)irealisation;
     realis_args.uv[0] = uv[0];
 #if SDIS_XD_DIMENSION == 3
     realis_args.uv[1] = uv[1];

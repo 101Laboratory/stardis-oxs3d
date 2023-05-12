@@ -102,7 +102,7 @@ XD(sample_path)
   }
 
   /* Sample the path */
-  res = XD(compute_temperature)(scn, ctx, &rwalk, rng, T);
+  res = XD(sample_coupled_path)(scn, ctx, &rwalk, rng, T);
   if(res != RES_OK) goto error;
 
   /* Check the returned temperature */

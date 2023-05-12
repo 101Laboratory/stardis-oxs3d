@@ -66,6 +66,7 @@ ray_realisation_3d
   ctx.That2 = ctx.That * ctx.That;
   ctx.That3 = ctx.That * ctx.That2;
   ctx.max_branchings = args->picard_order - 1;
+  ctx.irealisation = args->irealisation;
   
   f3_set_d3(dir, args->direction);
 
@@ -78,7 +79,7 @@ ray_realisation_3d
   if(res != RES_OK) goto error;
 
   if(!T.done) {
-    res = compute_temperature_3d(scn, &ctx, &rwalk, args->rng, &T);
+    res = sample_coupled_path_3d(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) goto error;
   }
 

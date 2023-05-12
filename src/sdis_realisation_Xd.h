@@ -76,7 +76,7 @@ check_boundary_flux_realisation_args
  * Local functions
  ******************************************************************************/
 res_T
-XD(compute_temperature)
+XD(sample_coupled_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -123,7 +123,13 @@ XD(compute_temperature)
       res = T->func(scn, ctx, rwalk, rng, T);
       if(res == RES_BAD_OP) { *rwalk = rwalk_bkp; *T = T_bkp; }
     } while(res == RES_BAD_OP && ++nfails < MAX_FAILS);
-    if(res != RES_OK) goto error;
+    if(res != RES_OK) {
+      log_err(scn->dev, "%s: reject path (realisation: %lu; branch: %lu)\n",
+        FUNC_NAME,
+        (unsigned long)ctx->irealisation,
+        (unsigned long)ctx->nbranchings);
+      goto error;
+    }
 
     /* Update the type of the first vertex of the random walks that begin on a
      * boundary. Indeed, one knows the "right" type of the first vertex only
@@ -227,8 +233,9 @@ XD(probe_realisation)
   ctx.That2 = ctx.That * ctx.That;
   ctx.That3 = ctx.That * ctx.That2;
   ctx.max_branchings = args->picard_order - 1;
+  ctx.irealisation = args->irealisation;
 
-  res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
+  res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
 
   ASSERT(T.value >= 0);
@@ -301,8 +308,9 @@ XD(boundary_realisation)
   ctx.That2 = ctx.That * ctx.That;
   ctx.That3 = ctx.That * ctx.That2;
   ctx.max_branchings = args->picard_order - 1;
+  ctx.irealisation = args->irealisation;
 
-  res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
+  res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
 
   *weight = T.value;
@@ -387,6 +395,7 @@ XD(boundary_flux_realisation)
     ctx.That2 = That2;                                                         \
     ctx.That3 = That3;                                                         \
     ctx.max_branchings = args->picard_order - 1;                               \
+    ctx.irealisation = args->irealisation;                                     \
     dX(set)(rwalk.vtx.P, P);                                                   \
     fX(set)(rwalk.hit.normal, N);                                              \
     T = XD(TEMPERATURE_NULL);                                                  \
@@ -395,7 +404,7 @@ XD(boundary_flux_realisation)
   /* Compute boundary temperature */
   RESET_WALK(args->solid_side, NULL);
   T.func = XD(boundary_path);
-  res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
+  res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) return res;
   result->Tboundary = T.value;
 
@@ -407,7 +416,7 @@ XD(boundary_flux_realisation)
   if(compute_radiative) {
     RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(radiative_path);
-    res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
+    res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) return res;
     ASSERT(T.value >= 0);
     result->Tradiative = T.value;
@@ -417,7 +426,7 @@ XD(boundary_flux_realisation)
   if(compute_convective) {
     RESET_WALK(fluid_side, fluid_mdm);
     T.func = XD(convective_path);
-    res = XD(compute_temperature)(scn, &ctx, &rwalk, args->rng, &T);
+    res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) return res;
     result->Tfluid = T.value;
   }

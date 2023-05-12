@@ -134,6 +134,7 @@ solve_pixel
     realis_args.time = time;
     realis_args.picard_order = picard_order;
     realis_args.heat_path = pheat_path;
+    realis_args.irealisation = (size_t)irealisation;
     d3_set(realis_args.position, ray_pos);
     d3_set(realis_args.direction, ray_dir);
     res_simul = ray_realisation_3d(scn, &realis_args, &w);
