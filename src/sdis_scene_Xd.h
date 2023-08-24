@@ -741,7 +741,7 @@ error:
 /* Build the Star-XD scene view of a specific enclosure and map their local
  * primitive id to their primitive id in the whole scene */
 static res_T
-XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* enc)
+XD(register_enclosure)(struct sdis_scene* scn, struct sencXd(enclosure)* enc)
 {
   struct sXd(device)* sXd_dev = NULL;
   struct sXd(scene)* sXd_scn = NULL;
@@ -775,7 +775,19 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   enc_data = htable_enclosure_find(&scn->enclosures, &header.enclosure_id);
   ASSERT(enc_data != NULL);
 
-    /* Setup the vertex data */
+  /* Setup the medium id of the enclosure */
+  if(header.enclosed_media_count > 1) {
+    enc_data->medium_id = ENCLOSURE_MULTI_MEDIA;
+  } else {
+    SENCXD(enclosure_get_medium(enc, 0, &enc_data->medium_id));
+  }
+
+  /* Do not configure the enclosure geometry for enclosures that are infinite
+   * or composed of several media, i.e. that define boundary conditions */
+  if(header.is_infinite || header.enclosed_media_count > 1)
+    goto exit;
+
+  /* Setup the vertex data */
   vdata.usage = SXD_POSITION;
   vdata.type = SXD_FLOATX;
   vdata.get = XD(enclosure_position);
@@ -808,7 +820,7 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
   ASSERT(enc_data->S_over_V >= 0);
   #undef CALL
 
-    /* Set enclosure hc upper bound regardless of its media being a fluid */
+  /* Set enclosure hc upper bound regardless of its media being a fluid */
   p_ub = htable_d_find(&scn->tmp_hc_ub, &header.enclosure_id);
   ASSERT(p_ub);
   enc_data->hc_upper_bound = *p_ub;
@@ -821,9 +833,6 @@ XD(setup_enclosure_geometry)(struct sdis_scene* scn, struct sencXd(enclosure)* e
     SENCXD(enclosure_get_primitive_id
       (enc, iprim, darray_uint_data_get(&enc_data->local2global)+iprim, &side));
   }
-
-  /* Setup the medium id of the enclosure */
-  SENCXD(enclosure_get_medium(enc, 0, &enc_data->medium_id));
 
 exit:
   enclosure_release(&enc_dummy);
@@ -861,11 +870,9 @@ XD(setup_enclosures)(struct sdis_scene* scn, struct sencXd(scene)* senc_scn)
     if(header.enclosed_media_count != 1 && !header.is_infinite)
       inner_multi++;
 
-    /* Silently discard infinite enclosures */
-    if(!header.is_infinite) {
-      res = XD(setup_enclosure_geometry)(scn, enc);
-      if(res != RES_OK) goto error;
-    }
+    res = XD(register_enclosure)(scn, enc);
+    if(res != RES_OK) goto error;
+
     SENCXD(enclosure_ref_put(enc));
     enc = NULL;
   }
@@ -1028,7 +1035,7 @@ error:
  ******************************************************************************/
 static INLINE res_T
 XD(scene_get_medium)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double pos[DIM],
    struct get_medium_info* info, /* May be NULL */
    struct sdis_medium** out_medium)
@@ -1104,10 +1111,30 @@ XD(scene_get_medium)
 
     /* Not too close and not roughly orthognonal */
     if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
+      const struct enclosure* enclosure = NULL;
+      unsigned enc_ids[2];
       const struct sdis_interface* interf;
+
       interf = scene_get_interface(scn, hit.prim.prim_id);
-      medium = interface_get_medium
-        (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
+      scene_get_enclosure_ids(scn, hit.prim.prim_id, enc_ids);
+
+      if(cos_N_dir < 0) {
+        medium = interface_get_medium(interf, SDIS_FRONT);
+        enclosure = scene_get_enclosure(scn, enc_ids[0]);
+      } else {
+        medium = interface_get_medium(interf, SDIS_BACK);
+        enclosure = scene_get_enclosure(scn, enc_ids[1]);
+      }
+
+      if(enclosure->medium_id == ENCLOSURE_MULTI_MEDIA) {
+        log_err
+          (scn->dev,
+           "%s: invalid medium request at {%g, %g, %g}. "
+           "The position is located in an enclosure comprising several media.\n",
+           FUNC_NAME, P[0], P[1], DIM == 3 ? P[3] : 0);
+        res = RES_BAD_ARG;
+        goto error;
+      }
 
       /* Register the get_medium_info */
       if(info) {
@@ -1163,7 +1190,7 @@ error:
 
 static INLINE res_T
 XD(scene_get_medium_in_closed_boundaries)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double pos[DIM],
    struct sdis_medium** out_medium)
 {

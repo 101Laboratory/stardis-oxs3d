@@ -302,7 +302,7 @@ XD(move_away_primitive_boundaries)
 
 static res_T
 XD(find_reinjection_ray)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct XD(find_reinjection_ray_args)* args,
    struct XD(reinjection_ray)* ray)
 {
@@ -498,7 +498,7 @@ error:
 
 static res_T
 XD(find_reinjection_ray_and_check_validity)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct XD(find_reinjection_ray_args)* args,
    struct XD(reinjection_ray)* ray)
 {
@@ -591,7 +591,7 @@ error:
  ******************************************************************************/
 res_T
 XD(sample_reinjection_step_solid_fluid)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct XD(sample_reinjection_step_args)* args,
    struct XD(reinjection_step)* step)
 {
@@ -673,7 +673,7 @@ error:
 
 res_T
 XD(sample_reinjection_step_solid_solid)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct XD(sample_reinjection_step_args)* args_frt,
    const struct XD(sample_reinjection_step_args)* args_bck,
    struct XD(reinjection_step)* step_frt,

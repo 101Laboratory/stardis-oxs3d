@@ -210,23 +210,10 @@ XD(fetch_fluid_enclosure)
 
   /* Fetch the enclosure data */
   enc = scene_get_enclosure(scn, enc_id);
-  if(!enc) {
-    /* The possibility for a fluid enclosure to be unregistred is that it is
-     * the external enclosure. In this situation unknown temperature is
-     * forbidden. */
-    log_err(scn->dev,
-      "%s: invalid enclosure. The surrounding fluid has an unset temperature.\n",
-      FUNC_NAME);
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  ASSERT(enc != NULL && enc->medium_id != ENCLOSURE_MULTI_MEDIA);
 
-exit:
   *out_enclosure = enc;
   return res;
-error:
-  enc = NULL;
-  goto exit;
 }
 
 /*******************************************************************************

@@ -75,19 +75,19 @@ REINJECTION_STEP_NULL_3d = REINJECTION_STEP_NULL___3d;
 
 extern LOCAL_SYM res_T
 sample_reinjection_step_solid_fluid_2d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct sample_reinjection_step_args_2d* args,
    struct reinjection_step_2d* step);
 
 extern LOCAL_SYM res_T
 sample_reinjection_step_solid_fluid_3d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct sample_reinjection_step_args_3d* args,
    struct reinjection_step_3d *step);
 
 extern LOCAL_SYM res_T
 sample_reinjection_step_solid_solid_2d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct sample_reinjection_step_args_2d* args_front,
    const struct sample_reinjection_step_args_2d* args_back,
    struct reinjection_step_2d* step_front,
@@ -95,7 +95,7 @@ sample_reinjection_step_solid_solid_2d
 
 extern LOCAL_SYM res_T
 sample_reinjection_step_solid_solid_3d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const struct sample_reinjection_step_args_3d* args_front,
    const struct sample_reinjection_step_args_3d* args_back,
    struct reinjection_step_3d* step_front,

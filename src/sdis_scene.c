@@ -422,7 +422,7 @@ scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 
 res_T
 scene_get_medium
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double pos[],
    struct get_medium_info* info,
    struct sdis_medium** out_medium)
@@ -434,7 +434,7 @@ scene_get_medium
 
 res_T
 scene_get_medium_in_closed_boundaries
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double pos[],
    struct sdis_medium** out_medium)
 {

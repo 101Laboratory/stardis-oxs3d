@@ -76,6 +76,8 @@ medium_init(struct mem_allocator* allocator, struct sdis_medium** medium)
   *medium = NULL;
 }
 
+#define ENCLOSURE_MULTI_MEDIA UINT_MAX
+
 struct enclosure {
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
@@ -100,7 +102,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->S_over_V = 0;
   enc->V = 0;
   enc->hc_upper_bound = 0;
-  enc->medium_id = UINT_MAX;
+  enc->medium_id = ENCLOSURE_MULTI_MEDIA;
 }
 
 static INLINE void
@@ -231,7 +233,7 @@ scene_get_interface
 
 extern LOCAL_SYM res_T
 scene_get_medium
-  (const struct sdis_scene* scene,
+  (struct sdis_scene* scene,
    const double position[],
    struct get_medium_info* info, /* May be NULL */
    struct sdis_medium** medium);
@@ -248,7 +250,7 @@ scene_get_medium
  * are opened to infinity). */
 extern LOCAL_SYM res_T
 scene_get_medium_in_closed_boundaries
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double position[],
    struct sdis_medium** medium);
 
