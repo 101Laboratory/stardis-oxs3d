@@ -110,6 +110,7 @@ get_picard_order(const struct rwalk_context* ctx)
 #define SXD_FLOAT3 CONCAT(CONCAT(S, DIM), D_FLOAT3)
 #define SXD_FLOATX CONCAT(CONCAT(CONCAT(S,DIM), D_FLOAT), DIM)
 #define SXD_SAMPLE CONCAT(CONCAT(S, DIM), D_SAMPLE)
+#define SXD_PRIMITIVE_EQ CONCAT(CONCAT(S, DIM), D_PRIMITIVE_EQ)
 
 /* Vector macros generic to SDIS_XD_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)

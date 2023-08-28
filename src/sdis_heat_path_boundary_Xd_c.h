@@ -604,6 +604,10 @@ XD(sample_reinjection_step_solid_fluid)
    * is only one possible direction */
   const int MAX_ATTEMPTS = DIM == 2 ? 1 : 10;
 
+  /* Enclosure */
+  const struct enclosure* solid_enclosure = NULL;
+  unsigned enc_ids[2];
+
   /* Miscellaneous variables */
   float dir0[DIM]; /* Sampled direction */
   float dir1[DIM]; /* Sampled direction reflected */
@@ -613,6 +617,26 @@ XD(sample_reinjection_step_solid_fluid)
   /* Pre-conditions */
   ASSERT(scn && args && step);
   ASSERT(XD(check_sample_reinjection_step_args)(args));
+
+  /* Initialise the reinjection step */
+  *step = XD(REINJECTION_STEP_NULL);
+
+  /* Check whether the solid enclosure is part of the system, or whether it is
+   * only there to describe boundary conditions. In the latter case, the
+   * enclosure has no geometrical existence and it is sufficient to return a
+   * valid reinjection step which will be used to select the next step. Note
+   * that if the trajectory passes through the solid enclosure, it will stop,
+   * i.e.  the temperature of the solid should be fixed. If it doesn't, it's an
+   * error */
+  scene_get_enclosure_ids(scn, args->rwalk->hit.prim.prim_id, enc_ids);
+  solid_enclosure = scene_get_enclosure(scn, enc_ids[args->side]);
+  if(solid_enclosure->medium_id == ENCLOSURE_MULTI_MEDIA) {
+    step->hit = SXD_HIT_NULL;
+    fX(normalize)(step->direction, args->rwalk->hit.normal);
+    if(args->side == SDIS_BACK) fX(minus)(step->direction, step->direction);
+    step->distance = (float)args->distance;
+    goto exit; /* That's all folks! */
+  }
 
   iattempt = 0;
   do {
@@ -698,6 +722,13 @@ XD(sample_reinjection_step_solid_solid)
    * is only one possible direction */
   const int MAX_ATTEMPTS = DIM == 2 ? 1 : 10;
 
+  /* Enclosure */
+  const struct enclosure* enclosure_bck = NULL;
+  const struct enclosure* enclosure_frt = NULL;
+  int multiple_media_bck = 0;
+  int multiple_media_frt = 0;
+  unsigned enc_ids[2];
+
   float dir_frt_samp[DIM]; /* Sampled direction */
   float dir_frt_refl[DIM]; /* Sampled direction reflected */
   float dir_bck_samp[DIM]; /* Negated sampled direction */
@@ -711,11 +742,43 @@ XD(sample_reinjection_step_solid_solid)
   ASSERT(XD(check_sample_reinjection_step_args)(args_bck));
   ASSERT(args_frt->side == SDIS_FRONT);
   ASSERT(args_bck->side == SDIS_BACK);
+  ASSERT(SXD_PRIMITIVE_EQ(&args_frt->rwalk->hit.prim, &args_bck->rwalk->hit.prim));
 
   rng = args_frt->rng;
   rwalk = args_frt->rwalk;
   ASSERT(args_bck->rng == rng);
   ASSERT(args_bck->rwalk == rwalk);
+
+  /* Initialise the reinjection steps */
+  *step_frt = XD(REINJECTION_STEP_NULL);
+  *step_bck = XD(REINJECTION_STEP_NULL);
+
+  /* Check whether the solid enclosure is part of the system, or whether it is
+   * only there to describe boundary conditions. In the latter case, the
+   * enclosure has no geometrical existence and it is sufficient to return a
+   * valid reinjection step which will be used to select the next step. Note
+   * that if the trajectory passes through the solid enclosure, it will stop,
+   * i.e.  the temperature of the solid should be fixed. If it doesn't, it's an
+   * error */
+  scene_get_enclosure_ids(scn, args_frt->rwalk->hit.prim.prim_id, enc_ids);
+  enclosure_frt = scene_get_enclosure(scn, enc_ids[SDIS_FRONT]);
+  enclosure_bck = scene_get_enclosure(scn, enc_ids[SDIS_BACK]);
+  if(enclosure_frt->medium_id == ENCLOSURE_MULTI_MEDIA) {
+    step_frt->hit = SXD_HIT_NULL;
+    fX(normalize)(step_frt->direction, args_frt->rwalk->hit.normal);
+    step_frt->distance = (float)args_frt->distance;
+    multiple_media_frt = 1;
+  }
+  if(enclosure_bck->medium_id == ENCLOSURE_MULTI_MEDIA) {
+    step_bck->hit = SXD_HIT_NULL;
+    fX(normalize)(step_bck->direction, args_bck->rwalk->hit.normal);
+    fX(minus)(step_bck->direction, step_bck->direction);
+    step_bck->distance = (float)args_bck->distance;
+    multiple_media_bck = 1;
+  }
+
+  if(multiple_media_frt && multiple_media_bck)
+    goto exit; /* That's all folks! */
 
   dX(set)(rwalk_pos_backup, rwalk->vtx.P);
   iattempt = 0;
@@ -730,40 +793,17 @@ XD(sample_reinjection_step_solid_solid)
     fX(minus)(dir_bck_samp, dir_frt_samp);
     fX(minus)(dir_bck_refl, dir_frt_refl);
 
-    /* Find the reinjection ray for the front side */
-    find_reinject_ray_frt_args.solid = args_frt->solid;
-    find_reinject_ray_frt_args.rwalk = args_frt->rwalk;
-    find_reinject_ray_frt_args.distance = args_frt->distance;
-    find_reinject_ray_frt_args.can_move = 1;
-    fX(set)(find_reinject_ray_frt_args.dir0, dir_frt_samp);
-    fX(set)(find_reinject_ray_frt_args.dir1, dir_frt_refl);
-    res = XD(find_reinjection_ray_and_check_validity)
-      (scn, &find_reinject_ray_frt_args, &ray_frt);
-    if(res == RES_BAD_OP) continue;
-    if(res != RES_OK) goto error;
+    /* Reject the sampling of the re-injection step if it has already been
+     * defined, i.e. if the enclosure is a limit condition */
+    if(!multiple_media_frt) {
 
-    /* Update the random walk position if necessary */
-    if(ray_frt.position_was_moved) dX(set)(rwalk->vtx.P, ray_frt.org);
-
-    /* Select the reinjection direction and distance for the back side */
-    find_reinject_ray_bck_args.solid = args_bck->solid;
-    find_reinject_ray_bck_args.rwalk = args_bck->rwalk;
-    find_reinject_ray_bck_args.distance = args_bck->distance;
-    find_reinject_ray_bck_args.can_move = 1;
-    fX(set)(find_reinject_ray_bck_args.dir0, dir_bck_samp);
-    fX(set)(find_reinject_ray_bck_args.dir1, dir_bck_refl);
-    res = XD(find_reinjection_ray_and_check_validity)
-      (scn, &find_reinject_ray_bck_args, &ray_bck);
-    if(res == RES_BAD_OP) continue;
-    if(res != RES_OK) goto error;
-
-    /* Update the random walk position if necessary */
-    if(ray_bck.position_was_moved) dX(set)(rwalk->vtx.P, ray_bck.org);
-
-    /* If random walk was moved to find a valid rinjection ray on back side,
-     * one has to find a valid reinjection ob front side from the new pos */
-    if(ray_bck.position_was_moved) {
-      find_reinject_ray_frt_args.can_move = 0;
+      /* Find the reinjection ray for the front side */
+      find_reinject_ray_frt_args.solid = args_frt->solid;
+      find_reinject_ray_frt_args.rwalk = args_frt->rwalk;
+      find_reinject_ray_frt_args.distance = args_frt->distance;
+      find_reinject_ray_frt_args.can_move = 1;
+      fX(set)(find_reinject_ray_frt_args.dir0, dir_frt_samp);
+      fX(set)(find_reinject_ray_frt_args.dir1, dir_frt_refl);
       res = XD(find_reinjection_ray_and_check_validity)
         (scn, &find_reinject_ray_frt_args, &ray_frt);
       if(res == RES_BAD_OP) continue;
@@ -771,6 +811,39 @@ XD(sample_reinjection_step_solid_solid)
 
       /* Update the random walk position if necessary */
       if(ray_frt.position_was_moved) dX(set)(rwalk->vtx.P, ray_frt.org);
+    }
+
+    /* Reject the sampling of the re-injection step if it has already been
+     * defined, i.e. if the enclosure is a limit condition */
+    if(!multiple_media_bck) {
+
+      /* Select the reinjection direction and distance for the back side */
+      find_reinject_ray_bck_args.solid = args_bck->solid;
+      find_reinject_ray_bck_args.rwalk = args_bck->rwalk;
+      find_reinject_ray_bck_args.distance = args_bck->distance;
+      find_reinject_ray_bck_args.can_move = 1;
+      fX(set)(find_reinject_ray_bck_args.dir0, dir_bck_samp);
+      fX(set)(find_reinject_ray_bck_args.dir1, dir_bck_refl);
+      res = XD(find_reinjection_ray_and_check_validity)
+        (scn, &find_reinject_ray_bck_args, &ray_bck);
+      if(res == RES_BAD_OP) continue;
+      if(res != RES_OK) goto error;
+
+      /* Update the random walk position if necessary */
+      if(ray_bck.position_was_moved) dX(set)(rwalk->vtx.P, ray_bck.org);
+
+      /* If random walk was moved to find a valid rinjection ray on back side,
+       * one has to find a valid reinjection on front side from the new pos */
+      if(ray_bck.position_was_moved && !multiple_media_frt) {
+        find_reinject_ray_frt_args.can_move = 0;
+        res = XD(find_reinjection_ray_and_check_validity)
+          (scn, &find_reinject_ray_frt_args, &ray_frt);
+        if(res == RES_BAD_OP) continue;
+        if(res != RES_OK) goto error;
+
+        /* Update the random walk position if necessary */
+        if(ray_frt.position_was_moved) dX(set)(rwalk->vtx.P, ray_frt.org);
+      }
     }
   } while(res != RES_OK && ++iattempt < MAX_ATTEMPTS);
 
@@ -785,16 +858,18 @@ XD(sample_reinjection_step_solid_solid)
   }
 
   /* Setup the front and back reinjection steps */
-  step_frt->hit = ray_frt.hit;
-  step_bck->hit = ray_bck.hit;
-  step_frt->distance = ray_frt.dst;
-  step_bck->distance = ray_bck.dst;
-  fX(set)(step_frt->direction, ray_frt.dir);
-  fX(set)(step_bck->direction, ray_bck.dir);
-
-  /* Post-conditions */
-  ASSERT(XD(check_reinjection_step)(step_frt));
-  ASSERT(XD(check_reinjection_step)(step_bck));
+  if(!multiple_media_frt) {
+    step_frt->hit = ray_frt.hit;
+    step_frt->distance = ray_frt.dst;
+    fX(set)(step_frt->direction, ray_frt.dir);
+    ASSERT(XD(check_reinjection_step)(step_frt)); /* Post-condition */
+  }
+  if(!multiple_media_bck) {
+    step_bck->hit = ray_bck.hit;
+    step_bck->distance = ray_bck.dst;
+    fX(set)(step_bck->direction, ray_bck.dir);
+    ASSERT(XD(check_reinjection_step)(step_bck)); /* Post-condition */
+  }
 
 exit:
   return res;

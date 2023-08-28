@@ -210,10 +210,24 @@ XD(fetch_fluid_enclosure)
 
   /* Fetch the enclosure data */
   enc = scene_get_enclosure(scn, enc_id);
-  ASSERT(enc != NULL && enc->medium_id != ENCLOSURE_MULTI_MEDIA);
+  ASSERT(enc != NULL);
+  if(enc->medium_id == ENCLOSURE_MULTI_MEDIA) {
+    /* The enclosures with multiple media are used to describe limit
+     * conditions and therefore they cannot be fetched */
+    log_err(scn->dev,
+      "%s: enclosure with multiple media at {%g, %g, %g}. "
+      "Path should be reached a limit condition before.\n",
+      FUNC_NAME, rwalk->vtx.P[0], rwalk->vtx.P[1], DIM==3 ? rwalk->vtx.P[2]:0);
+      res = RES_BAD_ARG;
+    goto error;
+  }
 
+exit:
   *out_enclosure = enc;
   return res;
+error:
+  enc = NULL;
+  goto exit;
 }
 
 /*******************************************************************************
