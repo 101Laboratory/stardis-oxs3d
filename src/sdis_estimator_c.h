@@ -26,7 +26,6 @@
 struct ssp_rng;
 struct sdis_device;
 struct sdis_estimator;
-enum sdis_estimator_type;
 
 enum flux_name {
   FLUX_CONVECTIVE,
@@ -39,7 +38,7 @@ enum flux_name {
 struct sdis_estimator {
   struct accum temperature;
   struct accum realisation_time;
-  struct accum fluxes[FLUX_NAMES_COUNT__]; 
+  struct accum fluxes[FLUX_NAMES_COUNT__];
 
   struct {
     struct accum power;
