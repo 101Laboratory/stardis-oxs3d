@@ -1131,7 +1131,7 @@ XD(scene_get_medium)
           (scn->dev,
            "%s: invalid medium request at {%g, %g, %g}. "
            "The position is located in an enclosure comprising several media.\n",
-           FUNC_NAME, P[0], P[1], DIM == 3 ? P[3] : 0);
+           FUNC_NAME, P[0], P[1], DIM == 3 ? P[2] : 0);
         res = RES_BAD_ARG;
         goto error;
       }
