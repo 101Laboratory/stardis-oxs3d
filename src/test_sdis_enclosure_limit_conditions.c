@@ -221,7 +221,7 @@ solve_probe(struct sdis_scene* scn)
   args.position[1] = 0.5;
   args.position[2] = 0;
   args.nrealisations = NREALISATIONS;
-  CHK(sdis_solve_probe(scn, &args, &estimator) == RES_BAD_ARG);
+  CHK(sdis_solve_probe(scn, &args, &estimator) == RES_BAD_OP);
 
   args.position[0] = 2;
   args.position[1] = 0.5;

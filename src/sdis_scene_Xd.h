@@ -1127,12 +1127,12 @@ XD(scene_get_medium)
       }
 
       if(enclosure->medium_id == ENCLOSURE_MULTI_MEDIA) {
-        log_err
+        log_warn
           (scn->dev,
            "%s: invalid medium request at {%g, %g, %g}. "
            "The position is located in an enclosure comprising several media.\n",
            FUNC_NAME, P[0], P[1], DIM == 3 ? P[2] : 0);
-        res = RES_BAD_ARG;
+        res = RES_BAD_OP;
         goto error;
       }
 
@@ -1148,43 +1148,23 @@ XD(scene_get_medium)
   }
 
   if(iprim >= nprims) {
+    log_warn(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
+      FUNC_NAME, P[0], P[1], DIM == 3 ? P[2] : 0);
     res = RES_BAD_OP;
     goto error;
   }
 
-#if DIM == 2
-  if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
-    log_warn(scn->dev,
-      "%s: performance issue. Up to %lu primitives were tested to define the "
-      "current medium at {%g, %g}.\n",
-      FUNC_NAME, (unsigned long)iprim, SPLIT2(P));
-  }
-#else
   if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
     log_warn(scn->dev,
       "%s: performance issue. Up to %lu primitives were tested to define the "
       "current medium at {%g, %g, %g}.\n",
-      FUNC_NAME, (unsigned long)iprim, SPLIT3(P));
+      FUNC_NAME, (unsigned long)iprim, P[0], P[1], DIM == 3 ? P[2] : 0);
   }
-#endif
 
 exit:
   *out_medium = medium;
   return res;
 error:
-  {
-    /* RES_BAD_OP means that this is a recoverable issue. In such case, print a
-     * warning rather than an error. */
-    void (*log_func)(const struct sdis_device*, const char*, ...) =
-      (res == RES_BAD_OP ? log_warn : log_err);
-#if DIM == 2
-    log_func(scn->dev, "%s: could not retrieve the medium at {%g, %g}.\n",
-      FUNC_NAME, SPLIT2(pos));
-#else
-    log_func(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
-      FUNC_NAME, SPLIT3(pos));
-#endif
-  }
   goto exit;
 }
 
