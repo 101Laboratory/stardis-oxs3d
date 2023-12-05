@@ -148,7 +148,7 @@ all: build_library build_tests
 
 clean: clean_test
 	rm -f $(OBJ) $(TEST_OBJ) $(LIBNAME)
-	rm -f .config .config_test .test libsdis.o sdis.pc sdis.pc
+	rm -f .config .config_test .test libsdis.o sdis.pc sdis-local.pc
 
 distclean: clean
 	rm -f $(DEP) $(TEST_DEP)
