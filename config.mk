@@ -8,7 +8,8 @@ BUILD_TYPE = RELEASE
 #BUILD_TYPE = DEBUG
 
 # Defines whether distributed parallelism  is supported. Any value other
-# than MPI disables its supports.
+# than MPI disables its supports. So, simply comment the macro to
+# deactivate it.
 DISTRIB_PARALLELISM = MPI
 
 # MPI pkg-config file
