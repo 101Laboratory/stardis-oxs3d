@@ -293,8 +293,8 @@ main(int argc, char** argv)
   OK(sdis_data_ref_put(data));
 
   /* Setup the square geometry */
-  sa_add(positions, square_nvertices*2);
-  sa_add(indices, square_nsegments*2);
+  (void)sa_add(positions, square_nvertices*2);
+  (void)sa_add(indices, square_nsegments*2);
   memcpy(positions, square_vertices, square_nvertices*sizeof(double[2]));
   memcpy(indices, square_indices, square_nsegments*sizeof(size_t[2]));
 

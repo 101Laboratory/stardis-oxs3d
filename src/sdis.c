@@ -105,7 +105,7 @@ rewind_progress_printing(struct sdis_device* dev)
   || dev->mpi_nprocs == 1)
     return;
 
-  FOR_EACH(i, 0, dev->mpi_nprocs-1) {
+  FOR_EACH(i, 0, (size_t)(dev->mpi_nprocs-1)) {
     log_info(dev, "\033[1A\r"); /* Move up */
   }
 }
