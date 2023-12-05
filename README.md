@@ -88,32 +88,23 @@ Stardis-Solver is also integrated into
 [SYRTHES](https://www.edf.fr/en/the-edf-group/world-s-largest-power-company/activities/research-and-development/scientific-communities/simulation-softwares?logiciel=10818),
 the general thermal free software developed by Electricité De France (EDF).
 
-## How to build
+## Requirements
 
-Stardis-Solver is compatible GNU/Linux as well as Microsoft Windows 7 and
-later, both in 64-bits. It was successfully built with the [GNU Compiler
-Collection](https://gcc.gnu.org) (versions 4.9.2 and later) as well as with
-Microsoft Visual Studio 2015.
+- C compiler with OpenMP support
+- POSIX make
+- pkg-config
+- [RSys](https://gitlab.com/vaplv/rsys)
+- [Star 2D](https://gitlab.com/meso-star/star-2d)
+- [Star 3D](https://gitlab.com/meso-star/star-3d)
+- [Star Enclosures 2D](https://gitlab.com/meso-star/star-enclosures-2D)
+- [Star Enclosures 3D](https://gitlab.com/meso-star/star-enclosures-3D)
+- [Star SamPling](https://gitlab.com/meso-star/star-sp)
 
-It relies on the [CMake](http://www.cmake.org) and the
-[RCMake](https://gitlab.com/vaplv/rcmake/) package to build.
-It also depends on the
-[RSys](https://gitlab.com/vaplv/rsys/),
-[Star-2D](https://gitlab.com/meso-star/star-2d/),
-[Star-3D](https://gitlab.com/meso-star/star-3d/),
-[Star-Enclosures-3D](https://gitlab.com/meso-star/star-enclosures-3d/),
-[Star-Enclosures-2D](https://gitlab.com/meso-star/star-enclosures-2d/) and
-[Star-SP](https://gitlab.com/meso-star/star-sp/) libraries as well as on the
-[OpenMP](http://www.openmp.org) 2.0 specification to parallelize its
-computations. It may depend on [OpenMPI](https://www.open-mpi.org/) 2.0 if
-distributed memory parallelism is enabled via the `ENABLE_MPI` variable of the
-CMake file
+## Installation
 
-First ensure that CMake and a C compiler that implements the OpenMP 2.0
-specification are installed on your system. Then install the RCMake package as
-well as all the aforementioned prerequisites. Finally generate the project from
-the `cmake/CMakeLists.txt` file by appending to the `CMAKE_PREFIX_PATH`
-variable the install directories of its dependencies.
+Edit config.mk as needed, then run:
+
+    make clean install
 
 ## Release notes
 
@@ -438,8 +429,9 @@ First version and implementation of the Stardis-Solver API.
 
 ## License
 
-Copyright (C) 2016-2023 |Méso|Star> (<contact@meso-star.com>). Stardis-Solver
-is free software released under the GPLv3+ license: GNU GPL version 3 or later.
-You are welcome to redistribute it under certain conditions; refer to the
-COPYING files for details.
+Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+
+Stardis-Solver is free software released under the GPLv3+ license: GNU
+GPL version 3 or later.  You are welcome to redistribute it under
+certain conditions; refer to the COPYING files for details.
 
