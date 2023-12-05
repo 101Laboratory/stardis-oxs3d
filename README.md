@@ -102,6 +102,7 @@ the general thermal free software developed by Electricité De France
 - C compiler with OpenMP support
 - POSIX make
 - pkg-config
+- Message Passing Interface (optional)
 - [RSys](https://gitlab.com/vaplv/rsys)
 - [Star 2D](https://gitlab.com/meso-star/star-2d)
 - [Star 3D](https://gitlab.com/meso-star/star-3d)
