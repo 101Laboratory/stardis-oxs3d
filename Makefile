@@ -199,7 +199,8 @@ TEST_SRC_MPI =\
  src/test_sdis_solve_medium_2d.c\
  src/test_sdis_solve_boundary.c\
  src/test_sdis_solve_boundary_flux.c\
- src/test_sdis_solve_probe2.c
+ src/test_sdis_solve_probe2.c\
+ src/test_sdis_solve_probe_list.c
 TEST_OBJ =\
  $(TEST_SRC:.c=.o)\
  $(TEST_SRC_MPI:.c=.o)\
@@ -381,7 +382,7 @@ test_sdis_scene \
 	$(CC) $(TEST_CFLAGS) $(SENC2D_CFLAGS) $(SENC3D_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(SENC2D_LIBS) $(SENC3D_LIBS)
 
 ################################################################################
-# Tests that checks MPI
+# Tests with (optional) MPI support
 ################################################################################
 src/test_sdis.d \
 src/test_sdis_device.d \
@@ -402,7 +403,7 @@ test_sdis_solve_medium_2d \
 	$(CC) $(TEST_CFLAGS_MPI) -o $@ src/$@.o $(TEST_LIBS_MPI)
 
 ################################################################################
-# Tests based and Star-3DUT that checks MPI
+# Tests based on Star-3DUT with (optional) MPI support
 ################################################################################
 src/test_sdis_compute_power.d \
 src/test_sdis_solve_camera.d \
@@ -423,7 +424,7 @@ test_sdis_solve_medium \
 	$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S3DUT_LIBS)
 
 ################################################################################
-# Tests based on Star-SP that checks MPI
+# Tests based on Star-SP with (optional) MPI support
 ################################################################################
 src/test_sdis_solve_boundary.d \
 src/test_sdis_solve_boundary_flux.d \
