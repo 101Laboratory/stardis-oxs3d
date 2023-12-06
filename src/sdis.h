@@ -1330,6 +1330,19 @@ sdis_solve_probe
    const struct sdis_solve_probe_args* args,
    struct sdis_estimator** estimator);
 
+/* Calculate temperature for a list of probe points. Unlike its
+ * single-probe counterpart, this function parallelizes the list of
+ * probes, rather than calculating a single probe. Calling this function
+ * is therefore more advantageous in terms of load distribution when the
+ * number of probe points to be evaluated is large compared to the cost
+ * of calculating a single probe point. */
+SDIS_API res_T
+sdis_solve_probe_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_args args[],
+   const size_t nprobes,
+   struct sdis_estimator_buffer** buf);
+
 SDIS_API res_T
 sdis_solve_probe_boundary
   (struct sdis_scene* scn,

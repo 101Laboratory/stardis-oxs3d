@@ -495,7 +495,7 @@ sdis_solve_camera
   char buffer[128]; /* Temporary buffer used to store formated time */
 
   /* Stardis variables */
-  struct sdis_estimator_buffer* buf= NULL;
+  struct sdis_estimator_buffer* buf = NULL;
   struct sdis_medium* medium = NULL;
 
   /* Random number generators */

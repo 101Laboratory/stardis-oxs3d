@@ -369,5 +369,89 @@ error:
   goto exit;
 }
 
+static res_T
+XD(solve_probe_list)
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_args args[],
+   const size_t nprobes,
+   struct sdis_estimator_buffer** out_buf)
+{
+  /* Time registration */
+  struct time time0, time1;
+
+  /* Device variables */
+  struct mem_allocator* allocator = NULL;
+  size_t nthreads = 0;
+
+  /* Stardis variables */
+  struct sdis_estimator_buffer* buf = NULL;
+
+  /* Probe variables */
+  size_t per_process_probes[2];
+  size_t per_process_nprobes;
+  int64_t iprobe = 0;
+
+  /* Miscellaneous */
+  int32_t* progress = NULL; /* Per process progress bar */
+  int pcent_progress = 1; /* Percentage requiring progress update */
+  int is_master_process = 0;
+  res_T res = RES_OK;
+
+  /* Check input arguments */
+  if(!scn || !args || !out_buf) { res = RES_BAD_ARG; goto error; }
+  FOR_EACH(iprobe, 0, nprobes) {
+    res = check_solve_probe_args(&args[iprobe]);
+    if(res != RES_OK) goto error;
+  }
+  res = XD(scene_check_dimensionality)(scn);
+  if(res != RES_OK) goto error;
+
+#ifdef SDIS_ENABLE_MPI
+  is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
+#endif
+
+  nthreads = scn->dev->nthreads;
+  allocator = scn->dev->allocator;
+
+  /* Update the progress bar every percent if escape sequences are allowed in
+   * log messages or only every 10 percent when only plain text is allowed.
+   * This reduces the number of lines of plain text printed */
+  pcent_progress = scn->dev->no_escape_sequence ? 10 : 1;
+
+  /* Allocate the per process progress status */
+  res = alloc_process_progress(scn->dev, &progress);
+  if(res != RES_OK) goto error;
+
+  /* Synchronise the processes */
+  process_barrier(scn->dev);
+
+  /* Begin time registration of the computation */
+  time_current(&time0);
+
+  /* Here we go! Calclation of probe list */
+  per_process_nprobes = compute_process_index_range
+    (scn->dev, nprobes, per_process_probes);
+
+  /* Create the global estimator on the master process only */
+  if(is_master_process) {
+    res = estimator_buffer_create(scn->dev, nprobes, 1, &buf);
+    if(res != RES_OK) goto error;
+  }
+
+  omp_set_num_threads((int)scn->dev->nthreads);
+  #pragma omp parallel for schedule(static)
+  for(iprobe = 0; iprobe < (int64_t)per_process_nprobes; ++iprobe) {
+    /* TODO */
+  }
+
+error:
+  if(progress) free_process_progress(scn->dev, progress);
+  if(out_buf) *out_buf = buf;
+  return res;
+exit:
+  if(buf) { SDIS(estimator_buffer_ref_put(buf)); buf = NULL; }
+  goto exit;
+}
+
 #include "sdis_Xd_end.h"
 

@@ -85,11 +85,25 @@ free_process_progress
   (struct sdis_device* dev,
    int32_t progress[]);
 
-/* Compute the number of realisations for the current process */
+/* Calculate the index range of the current process. It returns the size of the
+ * range. The overall_count is the number of calculations to parallelize between
+ * processes. For example, it may be the number of realisations of one
+ * calculation, or the total number of probe calculations. */
 extern LOCAL_SYM size_t
+compute_process_index_range
+  (const struct sdis_device* dev,
+   const size_t overall_count,
+   size_t range[2]); /* [lower, upper[ */
+
+/* Return the number of realisations for the current process */
+static INLINE size_t
 compute_process_realisations_count
   (const struct sdis_device* dev,
-   const size_t overall_realisations_count);
+   const size_t overall_realisations_count)
+{
+  size_t range[2];
+  return compute_process_index_range(dev, overall_realisations_count, range);
+}
 
 /* Gather the accumulators and sum them in acc. With MPI, non master processes
  * store in acc the gathering of their per thread accumulators that are sent to

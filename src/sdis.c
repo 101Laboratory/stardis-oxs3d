@@ -453,37 +453,44 @@ free_process_progress(struct sdis_device* dev, int32_t progress[])
 }
 
 size_t
-compute_process_realisations_count
+compute_process_index_range
   (const struct sdis_device* dev,
-   const size_t nrealisations)
+   const size_t nindices,
+   size_t range[2])
 {
 #ifndef SDIS_ENABLE_MPI
-  (void)dev, (void)nrealisations;
-  return nrealisations;
+  (void)dev;
+  range[0] = 0;
+  range[1] = nindices; /* Upper bound is _exclusive_ */
 #else
-  size_t per_process_nrealisations = 0;
-  size_t remaining_nrealisations = 0;
   ASSERT(dev);
 
-  if(!dev->use_mpi) return nrealisations;
-
-  /* Compute minimum the number of realisations on each process */
-  per_process_nrealisations = nrealisations / (size_t)dev->mpi_nprocs;
-
-  /* Define the remaining number of realisations that are not handle by one
-   * process */
-  remaining_nrealisations =
-    nrealisations
-  - per_process_nrealisations * (size_t)dev->mpi_nprocs;
-
-  /* Distribute the remaining realisations onto the processes */
-  if((size_t)dev->mpi_rank >= remaining_nrealisations) {
-    return per_process_nrealisations;
+  if(!dev->use_mpi) {
+    range[0] = 0;
+    range[1] = nindices;
   } else {
-    return per_process_nrealisations + 1;
+    size_t per_process_indices = 0;
+    size_t remaining_indices = 0;
+
+    /* Compute minimum the number of indices on each process */
+    per_process_indices = nindices / (size_t)dev->mpi_nprocs;
+
+    range[0] = per_process_indices * (size_t)dev->mpi_rank;
+    range[1] = per_process_indices; /* Upper bound is _exclusive */
+
+    /* Set the remaining number of indexes that are not managed by 1 process */
+    remaining_indices =
+      nindices - per_process_indices * (size_t)dev->mpi_nprocs;
+
+    /* Distribute the remaining indices onto the processes */
+    if((size_t)dev->mpi_rank < remaining_indices) {
+      range[1] += 1;
+    }
   }
 #endif
+  return range[1] - range[0];
 }
+
 
 #ifndef SDIS_ENABLE_MPI
 res_T
