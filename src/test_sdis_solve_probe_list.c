@@ -319,6 +319,8 @@ create_solid(struct sdis_device* sdis, struct s3d_scene_view* view)
   shader.delta = solid_get_delta;
   shader.temperature = solid_get_temperature;
   OK(sdis_solid_create(sdis, &shader, data, &solid));
+
+  OK(sdis_data_ref_put(data));
   return solid;
 }
 
@@ -433,11 +435,15 @@ main(int argc, char** argv)
   check_probe_list(scn, view);
 
   OK(s3dut_mesh_ref_put(super_shape));
+  OK(s3d_scene_view_ref_put(view));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(dummy));
   OK(sdis_interface_ref_put(interf));
   OK(sdis_scene_ref_put(scn));
 
   free_default_device(sdis);
+
+  CHK(mem_allocated_size() == 0);
+
   return 0;
 }
