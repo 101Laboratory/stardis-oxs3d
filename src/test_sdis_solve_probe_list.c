@@ -16,6 +16,8 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
+#include <rsys/float3.h>
+
 #include <star/s3d.h>
 #include <star/s3dut.h>
 
@@ -44,8 +46,8 @@ static double
 trilinear_profile(const double pos[3])
 {
   /* Range in X, Y and Z in which the trilinear profile is defined */
-  const double lower = -10;
-  const double upper = +10;
+  const double lower = -3;
+  const double upper = +3;
 
   /* Upper temperature limit in X, Y and Z [K]. Lower temperature limit is
    * implicitly 0 */
@@ -67,17 +69,10 @@ trilinear_profile(const double pos[3])
   return a*x + b*y + c*z;
 }
 
-static double
-compute_delta(struct s3d_scene_view* view)
+static INLINE float
+rand_canonic(void)
 {
-  float S = 0; /* Surface */
-  float V = 0; /* Volume */
-
-  OK(s3d_scene_view_compute_area(view, &S));
-  OK(s3d_scene_view_compute_volume(view, &V));
-  CHK(S > 0 && V > 0);
-
-  return (4.0*V/S)/20.0;
+  return (float)rand() / (float)((unsigned)RAND_MAX+1);
 }
 
 /*******************************************************************************
@@ -155,6 +150,67 @@ create_view(struct s3dut_mesh* mesh)
 
   return view;
 }
+
+static double
+view_compute_delta(struct s3d_scene_view* view)
+{
+  float S = 0; /* Surface */
+  float V = 0; /* Volume */
+
+  OK(s3d_scene_view_compute_area(view, &S));
+  OK(s3d_scene_view_compute_volume(view, &V));
+  CHK(S > 0 && V > 0);
+
+  return (4.0*V/S)/20.0;
+}
+
+static void
+view_sample_position
+  (struct s3d_scene_view* view,
+   const double delta,
+   double pos[3])
+{
+  /* Ray variables */
+  const float dir[3] = {0, 1, 0};
+  const float range[2] = {0, FLT_MAX};
+  float org[3];
+
+  /* View variables */
+  float low[3];
+  float upp[3];
+
+  OK(s3d_scene_view_get_aabb(view, low, upp));
+
+  /* Sample a position in the supershape by uniformly sampling a position within
+   * its bounding box and rejecting it if it is not in the supershape or if it
+   * is too close to its boundaries. */
+  for(;;) {
+    struct s3d_hit hit = S3D_HIT_NULL;
+    float N[3] = {0, 0, 0}; /* Normal */
+
+    pos[0] = low[0] + rand_canonic()*(upp[0] - low[0]);
+    pos[1] = low[1] + rand_canonic()*(upp[1] - low[1]);
+    pos[2] = low[2] + rand_canonic()*(upp[2] - low[2]);
+
+    org[0] = (float)pos[0];
+    org[1] = (float)pos[1];
+    org[2] = (float)pos[2];
+    OK(s3d_scene_view_trace_ray(view, org, dir, range, NULL, &hit));
+
+    if(S3D_HIT_NONE(&hit)) continue;
+
+    f3_normalize(N, hit.normal);
+    if(f3_dot(N, dir) > 0) continue;
+
+    OK(s3d_scene_view_closest_point(view, org, (float)INF, NULL, &hit));
+    CHK(!S3D_HIT_NONE(&hit));
+
+    /* Sample position is in the super shape and is not too close to its
+     * boundaries */
+    if(hit.distance > delta) break;
+  }
+}
+
 
 /*******************************************************************************
  * Scene, i.e. the system to simulate
@@ -251,11 +307,11 @@ create_solid(struct sdis_device* sdis, struct s3d_scene_view* view)
   struct sdis_solid_shader shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_data* data = NULL;
-  double* delta = NULL;
+  double* pdelta = NULL;
 
   OK(sdis_data_create(sdis, sizeof(double), ALIGNOF(double), NULL, &data));
-  delta = sdis_data_get(data);
-  *delta = compute_delta(view);
+  pdelta = sdis_data_get(data);
+  *pdelta = view_compute_delta(view);
 
   shader.calorific_capacity = solid_get_calorific_capacity;
   shader.thermal_conductivity = solid_get_thermal_conductivity;
@@ -315,26 +371,33 @@ create_interface
  * Validations
  ******************************************************************************/
 static void
-check_probe(struct sdis_scene* scn)
+check_probe_list(struct sdis_scene* scn, struct s3d_scene_view* view)
 {
+
   struct sdis_solve_probe_args args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_estimator* estimator = NULL;
+
+  const size_t nprobes = 10;
+  size_t iprobe = 0;
   double ref = 0; /* Analytical reference */
+  double delta = 0;
 
-  args.nrealisations = 100000;
-  args.position[0] = 0;
-  args.position[1] = 0;
-  args.position[2] = 0;
-  OK(sdis_solve_probe(scn, &args, &estimator));
-  OK(sdis_estimator_get_temperature(estimator, &T));
+  delta = view_compute_delta(view);
+  args.nrealisations = 10000;
 
-  ref = trilinear_profile(args.position);
-  printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(args.position), ref, T.E, T.SE);
-  CHK(eq_eps(ref, T.E, 3*T.SE));
+  FOR_EACH(iprobe, 0, nprobes) {
+    view_sample_position(view, delta, args.position);
+    OK(sdis_solve_probe(scn, &args, &estimator));
+    OK(sdis_estimator_get_temperature(estimator, &T));
 
-  OK(sdis_estimator_ref_put(estimator));
+    ref = trilinear_profile(args.position);
+    printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
+      SPLIT3(args.position), ref, T.E, T.SE);
+    CHK(eq_eps(ref, T.E, 3*T.SE));
+
+    OK(sdis_estimator_ref_put(estimator));
+  }
 }
 
 /*******************************************************************************
@@ -367,7 +430,7 @@ main(int argc, char** argv)
   interf = create_interface(sdis, solid, dummy);
   scn = create_scene(sdis, super_shape, interf);
 
-  check_probe(scn);
+  check_probe_list(scn, view);
 
   OK(s3dut_mesh_ref_put(super_shape));
   OK(sdis_medium_ref_put(solid));
