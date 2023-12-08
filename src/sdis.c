@@ -19,6 +19,7 @@
 #include "sdis_c.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_estimator_buffer_c.h"
 #include "sdis_green.h"
 #include "sdis_log.h"
 #include "sdis_misc.h"
@@ -583,6 +584,114 @@ error:
   goto exit;
 }
 #endif /* SDIS_ENABLE_MPI */
+
+#ifndef SDIS_ENABLE_MPI
+res_T
+gather_accumulators_list
+  (struct sdis_device* dev,
+   const enum mpi_sdis_message msg,
+   const size_t nprobes, /* Total number of probes */
+   const size_t process_probes[2], /* Ids of the probes managed by the process */
+   struct accum* per_probe_acc) /* List of per probe accumulators */
+{
+  (void)dev, (void)msg, (void) nprobes;
+  (void)process_probes, (void)per_probe_acc;
+  return RES_OK;
+}
+#else
+res_T
+gather_accumulators_list
+  (struct sdis_device* dev,
+   const enum mpi_sdis_message msg,
+   const size_t nprobes, /* Total number of probes */
+   const size_t process_probes[2], /* Range of probes managed by the process */
+   struct accum* per_probe_acc) /* List of per probe accumulators */
+{
+  struct accum_list {
+    size_t size;
+    /* Simulate a C99 flexible array */
+    ALIGN(16) struct accum accums[1/*Dummy element*/];
+  }* accum_list = NULL;
+  size_t max_per_process_nprobes = 0; /* Maximum #probes per process */
+  size_t process_nprobes = 0; /* Number of process probes */
+  size_t msg_sz = 0; /* Size in bytes of the message to send */
+  res_T res = RES_OK;
+
+  /* Check pre-conditions */
+  ASSERT(dev);
+  ASSERT(process_nprobes == 0 || (process_probes && per_probe_acc));
+
+  /* Defines the maximum number of probes managed by a process. In fact, it's
+   * the number of probes divided by the number of processes, plus one to manage
+   * the remainder of the entire division: the remaining probes are distributed
+   * between the processes */
+  max_per_process_nprobes = nprobes/(size_t)dev->mpi_nprocs + 1;
+
+  /* Number of probes */
+  process_nprobes = process_probes[1] - process_probes[0];
+
+  /* Allocate the array into which the data to be collected is copied */
+  msg_sz =
+    sizeof(struct accum_list)
+  + sizeof(struct accum)*max_per_process_nprobes
+  - 1/*Dummy element */;
+  if(msg_sz > INT_MAX) {
+    log_err(dev, "%s: invalid MPI message size %lu.\n",
+      FUNC_NAME, (unsigned long)msg_sz);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  accum_list = MEM_CALLOC(dev->allocator, 1, msg_sz);
+  if(!accum_list) {
+    log_err(dev,
+      "%s: unable to allocate the temporary list of accumulators.\n",
+      FUNC_NAME);
+    res = RES_MEM_ERR;
+    goto error;
+  }
+
+  /* Non master process */
+  if(dev->mpi_rank != 0) {
+
+    /* Setup the message to be sent */
+    accum_list->size = process_nprobes;
+    memcpy(accum_list->accums, per_probe_acc,
+      sizeof(struct accum)*process_nprobes);
+
+    mutex_lock(dev->mpi_mutex);
+    MPI(Send(accum_list, (int)msg_sz, MPI_CHAR, 0/*Dst*/, msg, MPI_COMM_WORLD));
+    mutex_unlock(dev->mpi_mutex);
+
+  /* Master process */
+  } else {
+    size_t gathered_nprobes = process_nprobes;
+    int iproc;
+
+    FOR_EACH(iproc, 1, dev->mpi_nprocs) {
+      MPI_Request req;
+
+      /* Asynchronously receive the accumulator of `iproc' */
+      mutex_lock(dev->mpi_mutex);
+      MPI(Irecv
+        (accum_list, (int)msg_sz, MPI_CHAR, iproc, msg, MPI_COMM_WORLD, &req));
+      mutex_unlock(dev->mpi_mutex);
+
+      mpi_waiting_for_request(dev, &req);
+
+      memcpy(per_probe_acc+gathered_nprobes, accum_list->accums,
+        sizeof(struct accum)*accum_list->size);
+
+      gathered_nprobes += accum_list->size;
+    }
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+#endif
 
 #ifndef SDIS_ENABLE_MPI
 res_T

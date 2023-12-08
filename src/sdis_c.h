@@ -116,6 +116,21 @@ gather_accumulators
    const struct accum* per_thread_acc,
    struct accum* acc);
 
+/* Collect accumulators evaluated over multiple processes, with each accumulator
+ * storing a complete Monte Carlo calculation. Without MPI, nothing happens
+ * since the per_probe_acc variable already stores the entire list of
+ * accumulators. With MPI, non-master processes send their list of accumulators
+ * to the master process which saves them in the per_probe_acc, after its
+ * accumulators that it has managed, sorted against the identifiers of the
+ * probes listed in process_probes. */
+extern LOCAL_SYM res_T
+gather_accumulators_list
+  (struct sdis_device* dev,
+   const enum mpi_sdis_message msg,
+   const size_t nprobes, /* Total number of probes */
+   const size_t process_probes[2], /* Ids of the probes managed by the process */
+   struct accum* per_probe_acc); /* List of per probe accumulators */
+
 /* Gather the green functions. With MPI, non master processes store in green
  * the gathering of their per thread green functions and sent the result to the
  * master process. The master process gathers both per thread green functions

@@ -59,15 +59,14 @@ sdis_solve_probe
 res_T
 sdis_solve_probe_list
   (struct sdis_scene* scn,
-   const struct sdis_solve_probe_args args[],
-   const size_t nprobes,
+   const struct sdis_solve_probe_list_args args[],
    struct sdis_estimator_buffer** out_buf)
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return solve_probe_list_2d(scn, args, nprobes, out_buf);
+    return solve_probe_list_2d(scn, args, out_buf);
   } else {
-    return solve_probe_list_3d(scn, args, nprobes, out_buf);
+    return solve_probe_list_3d(scn, args, out_buf);
   }
 }
 

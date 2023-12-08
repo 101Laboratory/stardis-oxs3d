@@ -466,6 +466,25 @@ struct sdis_solve_probe_args {
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
 
+struct sdis_solve_probe_list_args {
+  struct sdis_solve_probe_args* probes; /* List of probes to compute */
+  size_t nprobes; /* Total number of probes */
+
+  /* State/type of the RNG to use for the list of probes to calculate.
+   * If a probe defines its own state/type, it takes precedence over the
+   * following variables */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+};
+#define SDIS_SOLVE_PROBE_LIST_ARGS_DEFAULT__ {                                 \
+  NULL, /* List of probes */                                                   \
+  0, /* #probes */                                                             \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
+}
+static const struct sdis_solve_probe_list_args
+SDIS_SOLVE_PROBE_LIST_ARGS_DEFAULT = SDIS_SOLVE_PROBE_LIST_ARGS_DEFAULT__;
+
 /* Arguments of a probe simulation */
 struct sdis_solve_probe_boundary_args {
   size_t nrealisations; /* #realisations */
@@ -1339,8 +1358,7 @@ sdis_solve_probe
 SDIS_API res_T
 sdis_solve_probe_list
   (struct sdis_scene* scn,
-   const struct sdis_solve_probe_args args[],
-   const size_t nprobes,
+   const struct sdis_solve_probe_list_args* args,
    struct sdis_estimator_buffer** buf);
 
 SDIS_API res_T
