@@ -471,8 +471,7 @@ struct sdis_solve_probe_list_args {
   size_t nprobes; /* Total number of probes */
 
   /* State/type of the RNG to use for the list of probes to calculate.
-   * If a probe defines its own state/type, it takes precedence over the
-   * following variables */
+   * The state/type defines per probe is ignored */
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 };
