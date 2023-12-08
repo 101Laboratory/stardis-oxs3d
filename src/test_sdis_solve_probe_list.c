@@ -372,33 +372,69 @@ create_interface
  * Validations
  ******************************************************************************/
 static void
-check_probe_list(struct sdis_scene* scn, struct s3d_scene_view* view)
+check_probe_list
+  (struct sdis_scene* scn,
+   struct s3d_scene_view* view,
+   const int is_master_process)
 {
+  #define NPROBES 10
 
-  struct sdis_solve_probe_args args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
-  struct sdis_mc T = SDIS_MC_NULL;
-  struct sdis_estimator* estimator = NULL;
-
-  const size_t nprobes = 10;
+  /* Probe variables */
+  struct sdis_solve_probe_args probes[NPROBES];
+  struct sdis_solve_probe_list_args args = SDIS_SOLVE_PROBE_LIST_ARGS_DEFAULT;
   size_t iprobe = 0;
+
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_estimator_buffer* estim_buf = NULL;
+
   double ref = 0; /* Analytical reference */
   double delta = 0;
 
   delta = view_compute_delta(view);
-  args.nrealisations = 10000;
 
-  FOR_EACH(iprobe, 0, nprobes) {
-    view_sample_position(view, delta, args.position);
-    OK(sdis_solve_probe(scn, &args, &estimator));
+  /* Setup the list of probes to calculate */
+  args.probes = probes;
+  args.nprobes = NPROBES;
+  FOR_EACH(iprobe, 0, NPROBES) {
+    probes[iprobe] = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+    probes[iprobe].nrealisations = 10000;
+    view_sample_position(view, delta, probes[iprobe].position);
+  }
+
+  /* Check API */
+  BA(sdis_solve_probe_list(NULL, &args, &estim_buf));
+  BA(sdis_solve_probe_list(scn, NULL, &estim_buf));
+  BA(sdis_solve_probe_list(scn, &args, NULL));
+  args.nprobes = 0;
+  BA(sdis_solve_probe_list(scn, &args, &estim_buf));
+  args.nprobes = NPROBES;
+  args.probes = NULL;
+  BA(sdis_solve_probe_list(scn, &args, &estim_buf));
+  args.probes = probes;
+
+  /* Solve the probes */
+  OK(sdis_solve_probe_list(scn, &args, &estim_buf));
+
+  if(!is_master_process) {
+    CHK(estim_buf == NULL);
+    return; /* Nothing to do */
+  }
+
+  /* Check the results */
+  FOR_EACH(iprobe, 0, NPROBES) {
+    const struct sdis_estimator* estimator = NULL;
+    OK(sdis_estimator_buffer_at(estim_buf, iprobe, 0, &estimator));
     OK(sdis_estimator_get_temperature(estimator, &T));
 
-    ref = trilinear_profile(args.position);
+    ref = trilinear_profile(probes[iprobe].position);
     printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
-      SPLIT3(args.position), ref, T.E, T.SE);
+      SPLIT3(probes[iprobe].position), ref, T.E, T.SE);
     CHK(eq_eps(ref, T.E, 3*T.SE));
-
-    OK(sdis_estimator_ref_put(estimator));
   }
+
+  OK(sdis_estimator_buffer_ref_put(estim_buf));
+
+  #undef NPROBES
 }
 
 /*******************************************************************************
@@ -431,7 +467,7 @@ main(int argc, char** argv)
   interf = create_interface(sdis, solid, dummy);
   scn = create_scene(sdis, super_shape, interf);
 
-  check_probe_list(scn, view);
+  check_probe_list(scn, view, is_master_process);
 
   OK(s3dut_mesh_ref_put(super_shape));
   OK(s3d_scene_view_ref_put(view));
