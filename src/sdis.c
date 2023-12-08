@@ -19,7 +19,6 @@
 #include "sdis_c.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
-#include "sdis_estimator_buffer_c.h"
 #include "sdis_green.h"
 #include "sdis_log.h"
 #include "sdis_misc.h"
@@ -620,6 +619,10 @@ gather_accumulators_list
   /* Check pre-conditions */
   ASSERT(dev);
   ASSERT(process_nprobes == 0 || (process_probes && per_probe_acc));
+
+  /* Without MPI, do nothing since per_probe_acc already has all the
+   * accumulators */
+  if(!dev->use_mpi) goto exit;
 
   /* Defines the maximum number of probes managed by a process. In fact, it's
    * the number of probes divided by the number of processes, plus one to manage
