@@ -712,6 +712,8 @@ XD(solve_probe_list)
   }
 
 error:
+  if(per_thread_rng) release_per_thread_rng(scn->dev, per_thread_rng);
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(per_probe_acc_temp) MEM_RM(allocator, per_probe_acc_temp);
   if(per_probe_acc_time) MEM_RM(allocator, per_probe_acc_time);
   if(progress) free_process_progress(scn->dev, progress);
