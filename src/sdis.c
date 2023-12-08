@@ -479,19 +479,29 @@ compute_process_index_range
     range[1] = range[0] + per_process_indices; /* Upper bound is _exclusive */
     ASSERT(range[0] <= range[1]);
 
-    /* Set the remaining number of indexes that are not managed by 1 process */
+    /* Set the remaining number of indexes that are not managed by one process */
     remaining_indices =
       nindices - per_process_indices * (size_t)dev->mpi_nprocs;
 
-    /* Distribute the remaining indices onto the processes */
+    /* Distribute the remaining indices among the processes. Each process whose
+     * rank is lower than the number of remaining indices takes an additional
+     * index. To ensure continuity of indices per process, subsequent processes
+     * shift their initial rank accordingly, i.e. process 1 shifts its indices
+     * by 1, process 2 shifts them by 2 and so on until there are no more
+     * indices to distribute. From then on, subsequent processes simply shift
+     * their index range by the number of remaining indices that have been
+     * distributed. */
     if((size_t)dev->mpi_rank < remaining_indices) {
-      range[1] += 1;
+      range[0] += (size_t)dev->mpi_rank;
+      range[1] += (size_t)dev->mpi_rank + 1/* Take one more index */;
+    } else {
+      range[0] += remaining_indices;
+      range[1] += remaining_indices;
     }
   }
 #endif
   return range[1] - range[0];
 }
-
 
 #ifndef SDIS_ENABLE_MPI
 res_T
