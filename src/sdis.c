@@ -690,6 +690,7 @@ gather_accumulators_list
   }
 
 exit:
+  if(accum_list) MEM_RM(dev->allocator, accum_list);
   return res;
 error:
   goto exit;
