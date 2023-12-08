@@ -143,8 +143,10 @@ XD(solve_one_probe)
     /* Update MC weights */
     acc_temp->sum += w;
     acc_temp->sum2 += w*w;
+    acc_temp->count += 1;
     acc_time->sum += usec;
     acc_time->sum2 += usec*usec;
+    acc_time->count += 1;
   }
 
 exit:
@@ -553,7 +555,7 @@ XD(solve_probe_list)
     struct accum* probe_acc_temp = NULL;
     struct accum* probe_acc_time = NULL;
     const struct sdis_solve_probe_args* probe_args = NULL; /* Solve args */
-    const size_t iprobe = process_probes[i]; /* Probe ID */
+    const size_t iprobe = process_probes[0] + (size_t)i; /* Probe ID */
 
     /* Misc */
     size_t n = 0; /* Number of solved probes */
