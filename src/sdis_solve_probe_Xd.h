@@ -16,6 +16,7 @@
 #include "sdis_c.h"
 #include "sdis_device_c.h"
 #include "sdis_estimator_c.h"
+#include "sdis_estimator_buffer_c.h"
 #include "sdis_log.h"
 #include "sdis_green.h"
 #include "sdis_misc.h"
@@ -88,6 +89,84 @@ check_solve_probe_list_args(const struct sdis_solve_probe_list_args* args)
   }
 
   return RES_OK;
+}
+
+static res_T
+setup_estimator_buffer
+  (struct sdis_device* dev,
+   struct ssp_rng_proxy* rng_proxy,
+   const struct sdis_solve_probe_list_args* solve_args,
+   const struct accum* per_probe_acc_temp,
+   const struct accum* per_probe_acc_time,
+   struct sdis_estimator_buffer** out_estim_buffer)
+{
+  /* Accumulators throughout the buffer */
+  struct accum acc_temp = ACCUM_NULL;
+  struct accum acc_time = ACCUM_NULL;
+  size_t nrealisations = 0;
+
+  struct sdis_estimator_buffer* estim_buf = NULL;
+  size_t iprobe = 0;
+  res_T res = RES_OK;
+
+  ASSERT(dev && rng_proxy && solve_args);
+  ASSERT(per_probe_acc_time && per_probe_acc_time && out_estim_buffer);
+
+  res = estimator_buffer_create(dev, solve_args->nprobes, 1, &estim_buf);
+  if(res != RES_OK) {
+    log_err(dev, "Unable to allocate the estimator buffer.\n");
+    goto error;
+  }
+
+  FOR_EACH(iprobe, 0, solve_args->nprobes) {
+    const struct sdis_solve_probe_args* probe = NULL;
+    const struct accum* probe_acc_temp = NULL;
+    const struct accum* probe_acc_time = NULL;
+    struct sdis_estimator* estim = NULL;
+
+    /* Get probe data */
+    probe = solve_args->probes + iprobe;
+    probe_acc_temp = per_probe_acc_temp + iprobe;
+    probe_acc_time = per_probe_acc_time + iprobe;
+    ASSERT(probe_acc_temp->count == probe_acc_time->count);
+
+    /* Setup probe estimator */
+    estim = estimator_buffer_grab(estim_buf, iprobe, 0);
+    estimator_setup_realisations_count
+      (estim, probe->nrealisations, probe_acc_temp->count);
+    estimator_setup_temperature
+      (estim, probe_acc_temp->sum, probe_acc_temp->sum2);
+    estimator_setup_realisation_time
+      (estim, probe_acc_time->sum, probe_acc_time->sum2);
+
+    /* Update global accumulators */
+    acc_temp.sum +=  probe_acc_temp->sum;
+    acc_temp.sum2 += probe_acc_temp->sum2;
+    acc_temp.count += probe_acc_temp->count;
+    acc_time.sum +=  probe_acc_time->sum;
+    acc_time.sum2 += probe_acc_time->sum2;
+    acc_time.count += probe_acc_time->count;
+    nrealisations += probe->nrealisations;
+  }
+
+  ASSERT(acc_temp.count == acc_time.count);
+
+  /* Setup global estimator */
+  estimator_buffer_setup_realisations_count
+    (estim_buf, nrealisations, acc_temp.count);
+  estimator_buffer_setup_temperature
+    (estim_buf, acc_temp.sum, acc_temp.sum2);
+  estimator_buffer_setup_realisation_time
+    (estim_buf, acc_time.sum, acc_time.sum2);
+
+  res = estimator_buffer_save_rng_state(estim_buf, rng_proxy);
+  if(res != RES_OK) goto error;
+
+exit:
+  *out_estim_buffer = estim_buf;
+  return res;
+error:
+  goto exit;
 }
 
 #endif /* SDIS_SOLVE_PROBE_XD_H */
@@ -613,10 +692,10 @@ XD(solve_probe_list)
   time_current(&time0);
 
   /* Gather the list of accumulators  */
-  #define GATHER_ACCUMS_LIST(Msg, Acc) {                                     \
-    res = gather_accumulators_list                                           \
-      (scn->dev, Msg, args->nprobes, process_probes, per_probe_acc_##Acc);   \
-    if(res != RES_OK) goto error;                                            \
+  #define GATHER_ACCUMS_LIST(Msg, Acc) {                                       \
+    res = gather_accumulators_list                                             \
+      (scn->dev, Msg, args->nprobes, process_probes, per_probe_acc_##Acc);     \
+    if(res != RES_OK) goto error;                                              \
   } (void)0
   GATHER_ACCUMS_LIST(MPI_SDIS_MSG_ACCUM_TEMP, temp);
   GATHER_ACCUMS_LIST(MPI_SDIS_MSG_ACCUM_TIME, time);
@@ -625,6 +704,12 @@ XD(solve_probe_list)
   time_sub(&time0, time_current(&time1), &time0);
   time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
   log_info(scn->dev, "Probes accumulator gathered in %s.\n", buf);
+
+  if(is_master_process) {
+    res = setup_estimator_buffer(scn->dev, rng_proxy, args, per_probe_acc_temp,
+      per_probe_acc_time, &estim_buf);
+    if(res != RES_OK) goto error;
+  }
 
 error:
   if(per_probe_acc_temp) MEM_RM(allocator, per_probe_acc_temp);
