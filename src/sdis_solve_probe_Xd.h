@@ -401,7 +401,7 @@ XD(solve_probe)
       if(res != RES_OK) goto error;                                            \
     } (void)0
     GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TEMP, acc_temp);
-    GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TEMP, acc_time);
+    GATHER_ACCUMS(MPI_SDIS_MSG_ACCUM_TIME, acc_time);
     #undef GATHER_ACCUMS
 
     time_sub(&time0, time_current(&time1), &time0);
