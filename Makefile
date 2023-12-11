@@ -255,6 +255,7 @@ test_all: test
 
 clean_test:
 	@$(SHELL) make.sh clean_test $(TEST_SRC) $(TEST_SRC_MPI) $(TEST_SRC_LONG)
+	rm -f rng_state
 
 ################################################################################
 # Regular tests

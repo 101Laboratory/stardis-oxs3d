@@ -9,5 +9,6 @@ test*
 .config
 .config_test
 .test
+rng_state
 tags
 *.pc
