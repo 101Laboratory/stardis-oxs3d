@@ -730,6 +730,11 @@ sdis_device_ref_put
   (struct sdis_device* dev);
 
 SDIS_API res_T
+sdis_device_is_mpi_used
+  (struct sdis_device* dev,
+   int* is_mpi_used);
+
+SDIS_API res_T
 sdis_device_get_mpi_rank
   (struct sdis_device* dev,
    int* rank);
@@ -1106,6 +1111,11 @@ sdis_scene_get_medium_spread
   (struct sdis_scene* scn,
    const struct sdis_medium* mdm,
    double* spread);
+
+SDIS_API res_T
+sdis_scene_get_device
+  (struct sdis_scene* scn,
+   struct sdis_device** device);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation

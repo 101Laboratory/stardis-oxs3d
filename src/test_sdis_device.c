@@ -37,6 +37,7 @@ main(int argc, char** argv)
   struct logger logger;
   struct mem_allocator allocator;
   struct sdis_device* dev;
+  int is_mpi_used;
 #ifdef SDIS_ENABLE_MPI
   int provided;
 #endif
@@ -84,6 +85,9 @@ main(int argc, char** argv)
 
   args.nthreads_hint = SDIS_NTHREADS_DEFAULT;
   OK(sdis_device_create(&args, &dev));
+  BA(sdis_device_is_mpi_used(NULL, &is_mpi_used));
+  BA(sdis_device_is_mpi_used(dev, NULL));
+
   OK(sdis_device_ref_put(dev));
 
   args.use_mpi = 1;
@@ -91,10 +95,14 @@ main(int argc, char** argv)
 
 #ifndef SDIS_ENABLE_MPI
   OK(sdis_device_create(&args, &dev));
+  OK(sdis_device_is_mpi_used(dev, &is_mpi_used));
+  CHK(!is_mpi_used);
   OK(sdis_device_ref_put(dev));
 #else
   CHK(MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &provided) == MPI_SUCCESS);
   OK(sdis_device_create(&args, &dev));
+  OK(sdis_device_is_mpi_used(dev, &is_mpi_used));
+  CHK(is_mpi_used);
   CHK(MPI_Finalize() == MPI_SUCCESS);
   OK(sdis_device_ref_put(dev));
 #endif
