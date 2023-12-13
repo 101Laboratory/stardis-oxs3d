@@ -721,7 +721,7 @@ post_sync:
     if(res != RES_OK) goto error;
   }
 
-error:
+exit:
   if(per_thread_rng) release_per_thread_rng(scn->dev, per_thread_rng);
   if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
   if(per_probe_acc_temp) MEM_RM(allocator, per_probe_acc_temp);
@@ -729,7 +729,7 @@ error:
   if(progress) free_process_progress(scn->dev, progress);
   if(out_estim_buf) *out_estim_buf = estim_buf;
   return (res_T)res;
-exit:
+error:
   if(estim_buf) {
     SDIS(estimator_buffer_ref_put(estim_buf));
     estim_buf = NULL;
