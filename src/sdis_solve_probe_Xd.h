@@ -600,15 +600,24 @@ XD(solve_probe_list)
   /* Synchronise the processes */
   process_barrier(scn->dev);
 
-  #define PROGRESS_MSG "Solving probes: "
-  print_progress(scn->dev, progress, PROGRESS_MSG);
-
-  /* Begin time registration of the computation */
-  time_current(&time0);
-
   /* Define the range of probes to manage in this process */
   process_nprobes = compute_process_index_range
     (scn->dev, args->nprobes, process_probes);
+
+  #define PROGRESS_MSG "Solving probes: "
+  print_progress(scn->dev, progress, PROGRESS_MSG);
+
+  /* If there is no work to be done on this process (i.e. no probe to
+   * calculate), simply print its completion and go straight to the
+   * synchronization barrier.*/
+  if(process_nprobes == 0) {
+    progress[0] = 100;
+    print_progress_update(scn->dev, progress, PROGRESS_MSG);
+    goto post_sync;
+  }
+
+  /* Begin time registration of the computation */
+  time_current(&time0);
 
   /* Allocate the list of accumulators per probe. On the master process,
    * allocate a complete list in which the accumulators of all processes will be
@@ -668,6 +677,7 @@ XD(solve_probe_list)
     }
   }
 
+post_sync:
   /* Synchronise processes */
   process_barrier(scn->dev);
 
