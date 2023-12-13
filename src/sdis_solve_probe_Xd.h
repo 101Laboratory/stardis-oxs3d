@@ -668,7 +668,7 @@ XD(solve_probe_list)
 
     /* Update progress */
     n = (size_t)ATOMIC_INCR(&nsolved_probes);
-    pcent = (int)((double)n * 100.0 / (double)nprobes + 0.5/*round*/);
+    pcent = (int)((double)n * 100.0 / (double)process_nprobes + 0.5/*round*/);
 
     #pragma omp critical
     if(pcent/pcent_progress > progress[0]/pcent_progress) {
