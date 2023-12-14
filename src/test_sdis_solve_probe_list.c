@@ -184,7 +184,7 @@ view_compute_delta(struct s3d_scene_view* view)
   OK(s3d_scene_view_compute_volume(view, &V));
   CHK(S > 0 && V > 0);
 
-  return (4.0*V/S)/20.0;
+  return (4.0*V/S)/30.0;
 }
 
 static void

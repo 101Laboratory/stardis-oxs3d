@@ -68,9 +68,12 @@ check_solve_probe_args(const struct sdis_solve_probe_args* args)
 }
 
 static INLINE res_T
-check_solve_probe_list_args(const struct sdis_solve_probe_list_args* args)
+check_solve_probe_list_args
+  (struct sdis_device* dev,
+   const struct sdis_solve_probe_list_args* args)
 {
   size_t iprobe = 0;
+
   if(!args) return RES_BAD_ARG;
 
   /* Check the list of probes */
@@ -86,6 +89,13 @@ check_solve_probe_list_args(const struct sdis_solve_probe_list_args* args)
   FOR_EACH(iprobe, 0, args->nprobes) {
     const res_T res = check_solve_probe_args(args->probes+iprobe);
     if(res != RES_OK) return res;
+
+    if(args->probes[iprobe].register_paths != SDIS_HEAT_PATH_NONE) {
+      log_warn(dev,
+        "Unable to save paths for probe %lu. "
+        "Saving path is not supported when solving multiple probes\n",
+        (unsigned long)iprobe);
+    }
   }
 
   return RES_OK;
@@ -572,7 +582,7 @@ XD(solve_probe_list)
 
   /* Check input arguments */
   if(!scn || !out_estim_buf) { res = RES_BAD_ARG; goto error; }
-  res = check_solve_probe_list_args(args);
+  res = check_solve_probe_list_args(scn->dev, args);
   if(res != RES_OK) goto error;
   res = XD(scene_check_dimensionality)(scn);
   if(res != RES_OK) goto error;
