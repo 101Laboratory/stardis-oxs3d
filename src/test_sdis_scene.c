@@ -99,6 +99,7 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   struct senc3d_scene* scn3d;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_scene* scn = NULL;
+  struct sdis_device* dev2 = NULL;
   size_t ntris, npos;
   size_t iprim;
   size_t i;
@@ -162,6 +163,11 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_get_dimension(scn, NULL));
   OK(sdis_scene_get_dimension(scn, &dim));
   CHK(dim == SDIS_SCENE_3D);
+
+  BA(sdis_scene_get_device(NULL, &dev2));
+  BA(sdis_scene_get_device(scn, NULL));
+  OK(sdis_scene_get_device(scn, &dev2));
+  CHK(dev == dev2);
 
   BA(sdis_scene_get_aabb(NULL, lower, upper));
   BA(sdis_scene_get_aabb(scn, NULL, upper));

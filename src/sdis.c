@@ -453,36 +453,54 @@ free_process_progress(struct sdis_device* dev, int32_t progress[])
 }
 
 size_t
-compute_process_realisations_count
+compute_process_index_range
   (const struct sdis_device* dev,
-   const size_t nrealisations)
+   const size_t nindices,
+   size_t range[2])
 {
 #ifndef SDIS_ENABLE_MPI
-  (void)dev, (void)nrealisations;
-  return nrealisations;
+  (void)dev;
+  range[0] = 0;
+  range[1] = nindices; /* Upper bound is _exclusive_ */
 #else
-  size_t per_process_nrealisations = 0;
-  size_t remaining_nrealisations = 0;
   ASSERT(dev);
 
-  if(!dev->use_mpi) return nrealisations;
-
-  /* Compute minimum the number of realisations on each process */
-  per_process_nrealisations = nrealisations / (size_t)dev->mpi_nprocs;
-
-  /* Define the remaining number of realisations that are not handle by one
-   * process */
-  remaining_nrealisations =
-    nrealisations
-  - per_process_nrealisations * (size_t)dev->mpi_nprocs;
-
-  /* Distribute the remaining realisations onto the processes */
-  if((size_t)dev->mpi_rank >= remaining_nrealisations) {
-    return per_process_nrealisations;
+  if(!dev->use_mpi) {
+    range[0] = 0;
+    range[1] = nindices;
   } else {
-    return per_process_nrealisations + 1;
+    size_t per_process_indices = 0;
+    size_t remaining_indices = 0;
+
+    /* Compute the minimum number of indices on each process */
+    per_process_indices = nindices / (size_t)dev->mpi_nprocs;
+
+    range[0] = per_process_indices * (size_t)dev->mpi_rank;
+    range[1] = range[0] + per_process_indices; /* Upper bound is _exclusive */
+    ASSERT(range[0] <= range[1]);
+
+    /* Set the remaining number of indexes that are not managed by one process */
+    remaining_indices =
+      nindices - per_process_indices * (size_t)dev->mpi_nprocs;
+
+    /* Distribute the remaining indices among the processes. Each process whose
+     * rank is lower than the number of remaining indices takes an additional
+     * index. To ensure continuity of indices per process, subsequent processes
+     * shift their initial rank accordingly, i.e. process 1 shifts its indices
+     * by 1, process 2 shifts them by 2 and so on until there are no more
+     * indices to distribute. From then on, subsequent processes simply shift
+     * their index range by the number of remaining indices that have been
+     * distributed. */
+    if((size_t)dev->mpi_rank < remaining_indices) {
+      range[0] += (size_t)dev->mpi_rank;
+      range[1] += (size_t)dev->mpi_rank + 1/* Take one more index */;
+    } else {
+      range[0] += remaining_indices;
+      range[1] += remaining_indices;
+    }
   }
 #endif
+  return range[1] - range[0];
 }
 
 #ifndef SDIS_ENABLE_MPI
@@ -565,6 +583,119 @@ error:
   goto exit;
 }
 #endif /* SDIS_ENABLE_MPI */
+
+#ifndef SDIS_ENABLE_MPI
+res_T
+gather_accumulators_list
+  (struct sdis_device* dev,
+   const enum mpi_sdis_message msg,
+   const size_t nprobes, /* Total number of probes */
+   const size_t process_probes[2], /* Ids of the probes managed by the process */
+   struct accum* per_probe_acc) /* List of per probe accumulators */
+{
+  (void)dev, (void)msg, (void) nprobes;
+  (void)process_probes, (void)per_probe_acc;
+  return RES_OK;
+}
+#else
+res_T
+gather_accumulators_list
+  (struct sdis_device* dev,
+   const enum mpi_sdis_message msg,
+   const size_t nprobes, /* Total number of probes */
+   const size_t process_probes[2], /* Range of probes managed by the process */
+   struct accum* per_probe_acc) /* List of per probe accumulators */
+{
+  struct accum_list {
+    size_t size;
+    /* Simulate a C99 flexible array */
+    ALIGN(16) struct accum accums[1/*Dummy element*/];
+  }* accum_list = NULL;
+  size_t max_per_process_nprobes = 0; /* Maximum #probes per process */
+  size_t process_nprobes = 0; /* Number of process probes */
+  size_t msg_sz = 0; /* Size in bytes of the message to send */
+  res_T res = RES_OK;
+
+  /* Check pre-conditions */
+  ASSERT(dev);
+  ASSERT(process_nprobes == 0 || (process_probes && per_probe_acc));
+
+  /* Without MPI, do nothing since per_probe_acc already has all the
+   * accumulators */
+  if(!dev->use_mpi) goto exit;
+
+  /* Defines the maximum number of probes managed by a process. In fact, it's
+   * the number of probes divided by the number of processes, plus one to manage
+   * the remainder of the entire division: the remaining probes are distributed
+   * between the processes */
+  max_per_process_nprobes = nprobes/(size_t)dev->mpi_nprocs + 1;
+
+  /* Number of probes */
+  process_nprobes = process_probes[1] - process_probes[0];
+
+  /* Allocate the array into which the data to be collected is copied */
+  msg_sz =
+    sizeof(struct accum_list)
+  + sizeof(struct accum)*max_per_process_nprobes
+  - 1/*Dummy element */;
+  if(msg_sz > INT_MAX) {
+    log_err(dev, "%s: invalid MPI message size %lu.\n",
+      FUNC_NAME, (unsigned long)msg_sz);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  accum_list = MEM_CALLOC(dev->allocator, 1, msg_sz);
+  if(!accum_list) {
+    log_err(dev,
+      "%s: unable to allocate the temporary list of accumulators.\n",
+      FUNC_NAME);
+    res = RES_MEM_ERR;
+    goto error;
+  }
+
+  /* Non master process */
+  if(dev->mpi_rank != 0) {
+
+    /* Setup the message to be sent */
+    accum_list->size = process_nprobes;
+    memcpy(accum_list->accums, per_probe_acc,
+      sizeof(struct accum)*process_nprobes);
+
+    mutex_lock(dev->mpi_mutex);
+    MPI(Send(accum_list, (int)msg_sz, MPI_CHAR, 0/*Dst*/, msg, MPI_COMM_WORLD));
+    mutex_unlock(dev->mpi_mutex);
+
+  /* Master process */
+  } else {
+    size_t gathered_nprobes = process_nprobes;
+    int iproc;
+
+    FOR_EACH(iproc, 1, dev->mpi_nprocs) {
+      MPI_Request req;
+
+      /* Asynchronously receive the accumulator of `iproc' */
+      mutex_lock(dev->mpi_mutex);
+      MPI(Irecv
+        (accum_list, (int)msg_sz, MPI_CHAR, iproc, msg, MPI_COMM_WORLD, &req));
+      mutex_unlock(dev->mpi_mutex);
+
+      mpi_waiting_for_request(dev, &req);
+
+      memcpy(per_probe_acc+gathered_nprobes, accum_list->accums,
+        sizeof(struct accum)*accum_list->size);
+
+      gathered_nprobes += accum_list->size;
+    }
+  }
+
+exit:
+  if(accum_list) MEM_RM(dev->allocator, accum_list);
+  return res;
+error:
+  goto exit;
+}
+#endif
 
 #ifndef SDIS_ENABLE_MPI
 res_T

@@ -410,6 +410,14 @@ error:
   goto exit;
 }
 
+res_T
+sdis_scene_get_device(struct sdis_scene* scn, struct sdis_device** device)
+{
+  if(!scn || !device) return RES_BAD_ARG;
+  *device = scn->dev;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
@@ -556,4 +564,3 @@ exit:
 error:
   goto exit;
 }
-

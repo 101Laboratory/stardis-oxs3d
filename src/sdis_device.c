@@ -373,6 +373,18 @@ sdis_device_ref_put(struct sdis_device* dev)
 }
 
 res_T
+sdis_device_is_mpi_used(struct sdis_device* dev, int* is_mpi_used)
+{
+  if(!dev || !is_mpi_used) return RES_BAD_ARG;
+#ifndef SDIS_ENABLE_MPI
+  *is_mpi_used = 0;
+#else
+  *is_mpi_used = dev->use_mpi;
+#endif
+  return RES_OK;
+}
+
+res_T
 sdis_device_get_mpi_rank(struct sdis_device* dev, int* rank)
 {
 #ifndef SDIS_ENABLE_MPI
