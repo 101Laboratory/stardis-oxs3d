@@ -603,7 +603,7 @@ sdis_solve_camera
 
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
-  register_paths = is_master_process 
+  register_paths = is_master_process
     ? args->register_paths : SDIS_HEAT_PATH_NONE;
   #pragma omp parallel for schedule(static, 1/*chunk size*/)
   for(mcode = mcode_1st; mcode < (int64_t)ntiles_adjusted; mcode+=mcode_incr) {
@@ -621,7 +621,7 @@ sdis_solve_camera
     tile_org[0] = morton2D_decode_u16((uint32_t)(mcode>>0));
     if(tile_org[0] >= ntiles_x) continue; /* Discard tile */
     tile_org[1] = morton2D_decode_u16((uint32_t)(mcode>>1));
-    if(tile_org[1] >= ntiles_y) continue; /* Disaard tile */
+    if(tile_org[1] >= ntiles_y) continue; /* Discard tile */
 
     res_local = tile_create(scn->dev->allocator, &tile);
     if(tile == NULL) {

@@ -19,8 +19,8 @@
 #include <rsys/double2.h>
 #include <rsys/double3.h>
 #include <rsys/math.h>
-#include<star/senc2d.h>
-#include<star/senc3d.h>
+#include <star/senc2d.h>
+#include <star/senc3d.h>
 
 struct context {
   const double* positions;
