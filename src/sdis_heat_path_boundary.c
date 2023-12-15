@@ -24,10 +24,6 @@
 
 /* Generate the boundary path sub-routines */
 #define SDIS_XD_DIMENSION 2
-#include "sdis_heat_path_boundary_Xd_fixed_flux.h"
-#define SDIS_XD_DIMENSION 3
-#include "sdis_heat_path_boundary_Xd_fixed_flux.h"
-#define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_boundary_Xd_solid_fluid_picard1.h"
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_boundary_Xd_solid_fluid_picard1.h"
