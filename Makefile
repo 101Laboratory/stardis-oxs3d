@@ -127,10 +127,17 @@ sdis-local.pc: sdis.pc.in config.mk
 	    -e 's#@MPI@#$(PKG_$(DISTRIB_PARALLELISM))#g'\
 	    sdis.pc.in > $@
 
-install: build_library pkg
+src/sdis_version.h: src/sdis_version.h.in config.mk
+	sed -e 's#@VERSION_MAJOR@#$(VERSION_MAJOR)#g' \
+	    -e 's#@VERSION_MINOR@#$(VERSION_MINOR)#g' \
+	    -e 's#@VERSION_PATCH@#$(VERSION_PATCH)#g' \
+	    src/sdis_version.h.in > $@
+
+install: build_library pkg src/sdis_version.h
 	@$(SHELL) make.sh install "$(DESTDIR)$(PREFIX)/lib" $(LIBNAME)
 	@$(SHELL) make.sh install "$(DESTDIR)$(PREFIX)/lib/pkgconfig" sdis.pc
 	@$(SHELL) make.sh install "$(DESTDIR)$(PREFIX)/include/" src/sdis.h
+	@$(SHELL) make.sh install "$(DESTDIR)$(PREFIX)/include/" src/sdis_version.h
 	@$(SHELL) make.sh install "$(DESTDIR)$(PREFIX)/share/doc/stardis-solver" \
 	COPYING README.md
 
@@ -140,6 +147,7 @@ uninstall:
 	rm -f "$(DESTDIR)$(PREFIX)/share/doc/stardis-solver/COPYING"
 	rm -f "$(DESTDIR)$(PREFIX)/share/doc/stardis-solver/README.md"
 	rm -f "$(DESTDIR)$(PREFIX)/include/sdis.h"
+	rm -f "$(DESTDIR)$(PREFIX)/include/sdis_version.h"
 
 ################################################################################
 # Miscellaneous targets

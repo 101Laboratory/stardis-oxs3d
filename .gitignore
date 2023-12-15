@@ -12,3 +12,4 @@ test*
 rng_state
 tags
 *.pc
+src/sdis_version.h
