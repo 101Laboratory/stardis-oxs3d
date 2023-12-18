@@ -118,7 +118,7 @@ get_picard_order(const struct rwalk_context* ctx)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
 #define dX_set_fX CONCAT(CONCAT(CONCAT(d, DIM), _set_f), DIM)
 
-/* Macro making generic its submitted nae to SDIS_XD_DIMENSION */
+/* Macro making generic its submitted name to SDIS_XD_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
 /* Generate the generic data structures and constants */
@@ -155,4 +155,3 @@ struct XD(temperature) {
 static const struct XD(temperature) XD(TEMPERATURE_NULL) = { NULL, 0, 0 };
 
 #endif /* SDIX_<2|3>D_H */
-

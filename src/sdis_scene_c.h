@@ -37,6 +37,9 @@ struct hit_filter_data {
   struct s3d_hit hit_3d;
   double epsilon; /* Threshold defining roughly equal intersections */
 };
+#define HIT_FILTER_DATA_NULL__ {S2D_HIT_NULL__, S3D_HIT_NULL__, 0}
+static const struct hit_filter_data HIT_FILTER_DATA_NULL =
+  HIT_FILTER_DATA_NULL__;
 
 struct get_medium_info {
   /* Targeted position */

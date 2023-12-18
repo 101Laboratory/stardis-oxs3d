@@ -73,7 +73,7 @@ XD(register_heat_vertex_in_fluid)
    const double weight)
 {
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
-  struct hit_filter_data filter_data;
+  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
   const float empirical_dst = 0.1f;
   const float range[2] = {0, FLT_MAX};
   float org[DIM];

@@ -227,7 +227,7 @@ XD(solid_fluid_boundary_picard1_path)
   p_conv = h_conv / h_hat;
   p_cond = h_cond / h_hat;
 
-  /* Handle the net flux  if any */
+  /* Handle the net flux if any */
   handle_net_flux_args.interf = interf;
   handle_net_flux_args.frag = frag;
   handle_net_flux_args.green_path = ctx->green_path;

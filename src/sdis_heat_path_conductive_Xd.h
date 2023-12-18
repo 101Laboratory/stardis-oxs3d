@@ -25,7 +25,7 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
- * Non generic helper function
+ * Non generic helper functions
  ******************************************************************************/
 #ifndef SDIS_HEAT_PATH_CONDUCTIVE_XD_H
 #define SDIS_HEAT_PATH_CONDUCTIVE_XD_H

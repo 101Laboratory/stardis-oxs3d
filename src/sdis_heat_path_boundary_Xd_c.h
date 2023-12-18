@@ -320,7 +320,7 @@ XD(find_reinjection_ray)
   struct sdis_medium* mdm0;
   struct sdis_medium* mdm1;
 
-  struct hit_filter_data filter_data;
+  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
   struct sXd(hit) hit;
   struct sXd(hit) hit0;
   struct sXd(hit) hit1;

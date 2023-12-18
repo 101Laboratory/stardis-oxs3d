@@ -55,7 +55,7 @@ XD(trace_radiative_path)
   /* Launch the radiative random walk */
   for(;;) {
     const struct sdis_interface* interf = NULL;
-    struct hit_filter_data filter_data;
+    struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
     struct sdis_medium* chk_mdm = NULL;
     double alpha;
