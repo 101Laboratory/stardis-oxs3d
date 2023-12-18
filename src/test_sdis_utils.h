@@ -192,7 +192,8 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
   dummy_interface_getter, /* Flux */                                           \
   dummy_interface_getter, /* Emissivity */                                     \
   dummy_interface_getter, /* Specular fraction */                              \
-  dummy_interface_getter  /* Reference temperature */                          \
+  dummy_interface_getter, /* Reference temperature */                          \
+  NULL, /* External sources */                                                 \
 }
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   dummy_interface_getter, /* Convection coef */

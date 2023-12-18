@@ -122,6 +122,10 @@ XD(solid_fluid_boundary_picard1_path)
   /* Input argument used to handle the net flux */
   struct handle_net_flux_args handle_net_flux_args = HANDLE_NET_FLUX_ARGS_NULL;
 
+  /* Input argument used to handle the external net flux */
+  struct XD(handle_external_net_flux_args) handle_external_net_flux_args =
+    XD(HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL);
+
   /* Input/output arguments of the function used to sample a reinjection */
   struct XD(sample_reinjection_step_args) samp_reinject_step_args =
     XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
@@ -236,6 +240,14 @@ XD(solid_fluid_boundary_picard1_path)
   handle_net_flux_args.h_conv = h_conv;
   handle_net_flux_args.h_radi = h_radi_hat;
   res = XD(handle_net_flux)(scn, &handle_net_flux_args, T);
+  if(res != RES_OK) goto error;
+
+  /* Handle the external net flux if any */
+  handle_external_net_flux_args.interf = interf;
+  handle_external_net_flux_args.frag = frag;
+  handle_external_net_flux_args.hit = &rwalk->hit;
+  handle_external_net_flux_args.picard_order = get_picard_order(ctx);
+  res = XD(handle_external_net_flux)(scn, rng, &handle_external_net_flux_args, T);
   if(res != RES_OK) goto error;
 
   /* Fetch the last registered heat path vertex */

@@ -171,15 +171,35 @@ enum sdis_medium_type {
  * medium. */
 typedef double
 (*sdis_medium_getter_T)
-  (const struct sdis_rwalk_vertex* vert,
-   struct sdis_data* data);
+  (const struct sdis_rwalk_vertex* vert, /* Medium position */
+   struct sdis_data* data); /* User data */
 
 /* Functor type used to retrieve the spatio temporal physical properties of an
  * interface. */
 typedef double
 (*sdis_interface_getter_T)
-  (const struct sdis_interface_fragment* frag,
-   struct sdis_data* data);
+  (const struct sdis_interface_fragment* frag, /* Interface position */
+   struct sdis_data* data); /* User data */
+
+/* A sample of an external source */
+struct sdis_external_sources_sample {
+  double dir[3]; /* Direction _to_ the source */
+  double pdf; /* Pdf of sampled direction */
+  double distance; /* Distance to the source [m] */
+  double radiance; /* Constant source radiance [W/m^2/sr] */
+};
+#define SDIS_EXTERNAL_SOURCES_SAMPLE_NULL__ {{0,0,0}, 0, 0, 0}
+static const struct sdis_external_sources_sample
+SDIS_EXTERNAL_SOURCES_SAMPLE_NULL = SDIS_EXTERNAL_SOURCES_SAMPLE_NULL__;
+
+/* Functor for sampling external sources. The returned sample is used to
+ * evaluate an external flux at the interface. */
+typedef res_T
+(*sdis_interface_sample_external_sources_T)
+  (const struct sdis_interface_fragment* frag, /* Interface position */
+   struct ssp_rng* rng, /* Random Number Generator to use */
+   struct sdis_external_sources_sample* sample, /* Returned sample */
+   struct sdis_data* data); /* User data */
 
 /* Define the physical properties of a solid */
 struct sdis_solid_shader {
@@ -198,6 +218,7 @@ struct sdis_solid_shader {
    * unknown for the submitted random walk vertex.
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
+
   /* The time until the initial condition is maintained for this solid;
    * can neither be negative nor infinity, default is 0. */
   double t0;
@@ -238,8 +259,12 @@ struct sdis_interface_side_shader {
 
   /* Reference temperature used in Picard 1 */
   sdis_interface_getter_T reference_temperature;
+
+  /* Manage external sources, i.e. sample them to evaluate the corresponding
+   * external flow. Can be NULL <=> no external source */
+  sdis_interface_sample_external_sources_T sample_external_sources;
 };
-#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL }
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL, NULL }
 static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
   SDIS_INTERFACE_SIDE_SHADER_NULL__;
 
