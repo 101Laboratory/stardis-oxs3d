@@ -183,7 +183,7 @@ interface_side_get_reference_temperature
     ? shader->reference_temperature(frag, interf->data) : -1;
 }
 
-static INLINE sdis_interface_sample_external_sources_T
+static INLINE sdis_sample_external_sources_T
 interface_side_get_external_sources_sampling_functor
   (const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
@@ -198,5 +198,19 @@ interface_side_get_external_sources_sampling_functor
   return shader->sample_external_sources;
 }
 
-#endif /* SDIS_INTERFACE_C_H */
+static INLINE sdis_trace_external_sources_T
+interface_side_get_external_sources_tracing_functor
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  const struct sdis_interface_side_shader* shader;
+  ASSERT(interf && frag);
+  switch(frag->side) {
+    case SDIS_BACK: shader = &interf->shader.back; break;
+    case SDIS_FRONT: shader = &interf->shader.front; break;
+    default: FATAL("Unreachable code\n"); break;
+  }
+  return shader->trace_external_sources;
+}
 
+#endif /* SDIS_INTERFACE_C_H */

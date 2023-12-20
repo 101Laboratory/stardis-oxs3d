@@ -192,13 +192,24 @@ struct sdis_external_sources_sample {
 static const struct sdis_external_sources_sample
 SDIS_EXTERNAL_SOURCES_SAMPLE_NULL = SDIS_EXTERNAL_SOURCES_SAMPLE_NULL__;
 
+/* Is the sample valid */
+#define SDIS_EXTERNAL_SOURCES_SAMPLE_NONE(Sample) ((Sample)->pdf != 0)
+
 /* Functor for sampling external sources. The returned sample is used to
  * evaluate an external flux at the interface. */
 typedef res_T
-(*sdis_interface_sample_external_sources_T)
+(*sdis_sample_external_sources_T)
   (const struct sdis_interface_fragment* frag, /* Interface position */
    struct ssp_rng* rng, /* Random Number Generator to use */
    struct sdis_external_sources_sample* sample, /* Returned sample */
+   struct sdis_data* data); /* User data */
+
+/* Functor returning the external sources hit by a ray */
+typedef res_T
+(*sdis_trace_external_sources_T)
+  (const struct sdis_interface_fragment* frag, /* Interface position */
+   const double dir[3], /* Ray direction */
+   struct sdis_external_sources_sample* sample, /* Hit source */
    struct sdis_data* data); /* User data */
 
 /* Define the physical properties of a solid */
@@ -261,10 +272,14 @@ struct sdis_interface_side_shader {
   sdis_interface_getter_T reference_temperature;
 
   /* Manage external sources, i.e. sample them to evaluate the corresponding
-   * external flow. Can be NULL <=> no external source */
-  sdis_interface_sample_external_sources_T sample_external_sources;
+   * external flux. Can be NULL <=> no external source */
+  sdis_sample_external_sources_T sample_external_sources;
+
+  /* Does the ray target an external source? Can only be NULL if
+   * sample_external_sources is also NULL */
+  sdis_trace_external_sources_T trace_external_sources;
 };
-#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL, NULL }
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
   SDIS_INTERFACE_SIDE_SHADER_NULL__;
 

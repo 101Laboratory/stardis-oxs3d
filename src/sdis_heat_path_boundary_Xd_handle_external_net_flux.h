@@ -31,7 +31,7 @@ XD(check_handle_external_net_flux_args)
    const char* func_name,
    const struct XD(handle_external_net_flux_args)* args)
 {
-  sdis_interface_sample_external_sources_T functor = NULL;
+  sdis_sample_external_sources_T functor = NULL;
   res_T res = RES_OK;
 
   /* Handle bugs */
@@ -66,7 +66,7 @@ XD(handle_external_net_flux)
 {
   /* Sampling external sources */
   struct sdis_external_sources_sample sample = SDIS_EXTERNAL_SOURCES_SAMPLE_NULL;
-  sdis_interface_sample_external_sources_T sample_sources = NULL;
+  sdis_sample_external_sources_T sample_sources = NULL;
 
   /* Ray tracing */
   struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
