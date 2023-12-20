@@ -180,6 +180,9 @@ struct handle_external_net_flux_args_2d {
   struct sdis_heat_path* heat_path; /* Save paths */
 
   size_t picard_order;
+  double h_cond; /* Convective coefficient, i.e. lambda/delta */
+  double h_conv; /* Condutive coefficient */
+  double h_radi; /* Radiative coefficient */
 };
 
 struct handle_external_net_flux_args_3d {
@@ -191,10 +194,13 @@ struct handle_external_net_flux_args_3d {
   struct sdis_heat_path* heat_path; /* Save paths */
 
   size_t picard_order;
+  double h_cond; /* Convective coefficient, i.e. lambda/delta */
+  double h_conv; /* Condutive coefficient */
+  double h_radi; /* Radiative coefficient */
 };
 
-#define HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___2d {NULL,NULL,NULL,NULL,NULL,0}
-#define HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___3d {NULL,NULL,NULL,NULL,NULL,0}
+#define HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___2d {NULL,NULL,NULL,NULL,NULL,0,0,0,0}
+#define HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___3d {NULL,NULL,NULL,NULL,NULL,0,0,0,0}
 static const struct handle_external_net_flux_args_2d
 HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL_2d = HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___2d;
 static const struct handle_external_net_flux_args_3d
