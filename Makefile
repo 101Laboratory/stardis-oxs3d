@@ -191,6 +191,7 @@ TEST_SRC =\
  src/test_sdis_solve_probe_2d.c\
  src/test_sdis_solve_probe2_2d.c\
  src/test_sdis_solve_probe3_2d.c\
+ src/test_sdis_source.c\
  src/test_sdis_transcient.c\
  src/test_sdis_unstationary_atm.c\
  src/test_sdis_volumic_power.c\
@@ -288,6 +289,7 @@ src/test_sdis_solve_probe.d \
 src/test_sdis_solve_probe_2d.d \
 src/test_sdis_solve_probe2_2d.d \
 src/test_sdis_solve_probe3_2d \
+src/test_sdis_source.d \
 src/test_sdis_transcient.d \
 src/test_sdis_unstationary_atm.d \
 src/test_sdis_utils.d \
@@ -318,6 +320,7 @@ src/test_sdis_solve_probe.o \
 src/test_sdis_solve_probe_2d.o \
 src/test_sdis_solve_probe2_2d.o \
 src/test_sdis_solve_probe3_2d.o \
+src/test_sdis_source.o \
 src/test_sdis_transcient.o \
 src/test_sdis_unstationary_atm.o \
 src/test_sdis_utils.o \
@@ -348,6 +351,7 @@ test_sdis_solve_probe \
 test_sdis_solve_probe_2d \
 test_sdis_solve_probe2_2d \
 test_sdis_solve_probe3_2d \
+test_sdis_source \
 test_sdis_transcient \
 test_sdis_unstationary_atm \
 test_sdis_volumic_power \
