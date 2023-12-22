@@ -69,6 +69,7 @@ struct sdis_green_function;
 struct sdis_interface;
 struct sdis_medium;
 struct sdis_scene;
+struct sdis_source;
 
 /* Forward declaration of non ref counted types */
 struct sdis_green_path;
@@ -113,25 +114,6 @@ struct sdis_interface_fragment {
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
-/*******************************************************************************
- * Estimation data types
- ******************************************************************************/
-enum sdis_estimator_type {
-  SDIS_ESTIMATOR_TEMPERATURE, /* In Kelvin */
-  SDIS_ESTIMATOR_FLUX, /* In Watt/m^2 */
-  SDIS_ESTIMATOR_POWER, /* In Watt */
-  SDIS_ESTIMATOR_TYPES_COUNT__
-};
-
-/* Monte-Carlo estimation */
-struct sdis_mc {
-  double E; /* Expected value */
-  double V; /* Variance */
-  double SE; /* Standard error */
-};
-#define SDIS_MC_NULL__ {0, 0, 0}
-static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
-
 /* Input arguments of the sdis_device_create function */
 struct sdis_device_create_args {
   struct logger* logger; /* NULL <=> default logger */
@@ -157,6 +139,44 @@ struct sdis_info {
 };
 #define SDIS_INFO_NULL__ {0}
 static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
+
+/* Type of functor used to retrieve the source's position relative to time. */
+typedef void
+(*sdis_get_position_T)
+  (const double time,
+   double pos[3],
+   struct sdis_data* data);
+
+/* Input arguments of the sdis_spherical_source_create function */
+struct sdis_spherical_source_create_args {
+  sdis_get_position_T position; /* [m] */
+  struct sdis_data* data; /* Data sent to the position functor */
+  double radius; /* [m] */
+  double power; /* Total power [W] */
+};
+#define SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__ {NULL, NULL, 0, 0}
+static const struct sdis_spherical_source_create_args
+SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL =
+  SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__;
+
+/*******************************************************************************
+ * Estimation data types
+ ******************************************************************************/
+enum sdis_estimator_type {
+  SDIS_ESTIMATOR_TEMPERATURE, /* In Kelvin */
+  SDIS_ESTIMATOR_FLUX, /* In Watt/m^2 */
+  SDIS_ESTIMATOR_POWER, /* In Watt */
+  SDIS_ESTIMATOR_TYPES_COUNT__
+};
+
+/* Monte-Carlo estimation */
+struct sdis_mc {
+  double E; /* Expected value */
+  double V; /* Variance */
+  double SE; /* Standard error */
+};
+#define SDIS_MC_NULL__ {0, 0, 0}
+static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
 
 /*******************************************************************************
  * Data type used to describe physical properties
@@ -969,6 +989,24 @@ sdis_interface_get_data
 SDIS_API unsigned
 sdis_interface_get_id
   (const struct sdis_interface* interf);
+
+/*******************************************************************************
+ * External source API. When a scene has external sources, an external flux
+ * (in both its direct and diffuse parts) is imposed on the interfaces.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_spherical_source_create
+  (struct sdis_device* dev,
+   struct sdis_spherical_source_create_args* args,
+   struct sdis_source** source);
+
+SDIS_API res_T
+sdis_source_ref_get
+  (struct sdis_source* source);
+
+SDIS_API res_T
+sdis_source_ref_put
+  (struct sdis_source* source);
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
