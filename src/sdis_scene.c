@@ -108,6 +108,7 @@ scene_release(ref_T * ref)
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   if(scn->senc2d_scn) SENC2D(scene_ref_put(scn->senc2d_scn));
   if(scn->senc3d_scn) SENC3D(scene_ref_put(scn->senc3d_scn));
+  if(scn->source) SDIS(source_ref_put(scn->source));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }

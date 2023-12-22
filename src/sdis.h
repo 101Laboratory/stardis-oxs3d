@@ -201,37 +201,6 @@ typedef double
   (const struct sdis_interface_fragment* frag, /* Interface position */
    struct sdis_data* data); /* User data */
 
-/* A sample of an external source */
-struct sdis_external_sources_sample {
-  double dir[3]; /* Direction _to_ the source */
-  double pdf; /* Pdf of sampled direction */
-  double distance; /* Distance to the source [m] */
-  double radiance; /* Constant source radiance [W/m^2/sr] */
-};
-#define SDIS_EXTERNAL_SOURCES_SAMPLE_NULL__ {{0,0,0}, 0, 0, 0}
-static const struct sdis_external_sources_sample
-SDIS_EXTERNAL_SOURCES_SAMPLE_NULL = SDIS_EXTERNAL_SOURCES_SAMPLE_NULL__;
-
-/* Is the sample valid */
-#define SDIS_EXTERNAL_SOURCES_SAMPLE_NONE(Sample) ((Sample)->pdf != 0)
-
-/* Functor for sampling external sources. The returned sample is used to
- * evaluate an external flux at the interface. */
-typedef res_T
-(*sdis_sample_external_sources_T)
-  (const struct sdis_interface_fragment* frag, /* Interface position */
-   struct ssp_rng* rng, /* Random Number Generator to use */
-   struct sdis_external_sources_sample* sample, /* Returned sample */
-   struct sdis_data* data); /* User data */
-
-/* Functor returning the external sources hit by a ray */
-typedef res_T
-(*sdis_trace_external_sources_T)
-  (const struct sdis_interface_fragment* frag, /* Interface position */
-   const double dir[3], /* Ray direction */
-   struct sdis_external_sources_sample* sample, /* Hit source */
-   struct sdis_data* data); /* User data */
-
 /* Define the physical properties of a solid */
 struct sdis_solid_shader {
   /* Properties */
@@ -291,15 +260,11 @@ struct sdis_interface_side_shader {
   /* Reference temperature used in Picard 1 */
   sdis_interface_getter_T reference_temperature;
 
-  /* Manage external sources, i.e. sample them to evaluate the corresponding
-   * external flux. Can be NULL <=> no external source */
-  sdis_sample_external_sources_T sample_external_sources;
-
-  /* Does the ray target an external source? Can only be NULL if
-   * sample_external_sources is also NULL */
-  sdis_trace_external_sources_T trace_external_sources;
+  /* Define whether external sources interact with the interface, i.e. whether
+   * external fluxes should be processed or not */
+  int handle_external_flux;
 };
-#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL, 1 }
 static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
   SDIS_INTERFACE_SIDE_SHADER_NULL__;
 
@@ -474,6 +439,10 @@ struct sdis_scene_create_args {
 
   /* Min/max temperature used to linearise the radiative temperature */
   double t_range[2];
+
+  /* External source. Can be NULL <=> no external flux will be calculated on
+   * scene interfaces */
+  struct sdis_source* source;
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -485,7 +454,8 @@ struct sdis_scene_create_args {
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
-  {0.0, -1.0} /* Temperature range */                                          \
+  {0.0, -1.0}, /* Temperature range */                                         \
+  NULL /* source */                                                            \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;

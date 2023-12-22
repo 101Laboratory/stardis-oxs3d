@@ -929,6 +929,11 @@ XD(scene_create)
   htable_enclosure_init(dev->allocator, &scn->enclosures);
   htable_d_init(dev->allocator, &scn->tmp_hc_ub);
 
+  if(args->source) {
+    SDIS(source_ref_get(args->source));
+    scn->source = args->source;
+  }
+
   res = XD(run_analyze)
     (scn,
      args->nprimitives,

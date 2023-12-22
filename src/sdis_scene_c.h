@@ -218,6 +218,8 @@ struct sdis_scene {
   double tmin; /* Minimum temperature of the system (In Kelvin) */
   double tmax; /* Maximum temperature of the system (In Kelvin) */
 
+  struct sdis_source* source; /* External source. May be NULL */
+
   ref_T ref;
   struct sdis_device* dev;
 };

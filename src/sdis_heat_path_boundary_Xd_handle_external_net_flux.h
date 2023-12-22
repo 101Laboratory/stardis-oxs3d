@@ -17,6 +17,7 @@
 #include "sdis_interface_c.h"
 #include "sdis_log.h"
 #include "sdis_scene_c.h"
+#include "sdis_source_c.h"
 
 #include <rsys/cstr.h> /* res_to_cstr */
 
@@ -103,26 +104,26 @@ sample_brdf
  ******************************************************************************/
 static INLINE res_T
 XD(check_handle_external_net_flux_args)
-  (const struct sdis_device* dev,
+  (const struct sdis_scene* scn,
    const char* func_name,
    const struct XD(handle_external_net_flux_args)* args)
 {
-  sdis_sample_external_sources_T functor = NULL;
+  int net_flux = 0;
   res_T res = RES_OK;
 
   /* Handle bugs */
-  ASSERT(dev && func_name && args);
+  ASSERT(scn && func_name && args);
   ASSERT(args->interf && args->frag);
   ASSERT(!SXD_HIT_NONE(args->hit));
   ASSERT(args->h_cond >= 0 && args->h_cond && args->h_radi >= 0);
   ASSERT(args->h_cond + args->h_cond + args->h_radi > 0);
 
-  functor = interface_side_get_external_sources_sampling_functor
-    (args->interf, args->frag);
+  net_flux = interface_side_is_external_flux_handled(args->interf, args->frag);
+  net_flux = net_flux && (scn->source != NULL);
 
-  if(functor && args->picard_order != 0) {
+  if(net_flux && args->picard_order != 0) {
     res = RES_BAD_ARG;
-    log_err(dev,
+    log_err(scn->dev,
       "%s: Impossible to process external fluxes when Picard order is not "
       "equal to 1; Picard order is currently set to %lu.\n",
       func_name, (unsigned long)args->picard_order);
@@ -164,7 +165,7 @@ XD(trace_ray)
 static INLINE double /* [W/m^2/sr] */
 XD(direct_contribution)
   (const struct sdis_scene* scn,
-   struct sdis_external_sources_sample* sample,
+   struct source_sample* sample,
    const double pos[DIM],
    const struct sXd(hit)* hit_from)
 {
@@ -172,7 +173,7 @@ XD(direct_contribution)
   ASSERT(scn && sample && pos && hit_from);
 
   /* Is the source hidden */
-  XD(trace_ray)(scn, pos, sample->dir, sample->distance, hit_from, &hit);
+  XD(trace_ray)(scn, pos, sample->dir, sample->dst, hit_from, &hit);
   if(SXD_HIT_NONE(&hit)) return 0; /* [W/m^2/sr] */
 
   return sample->radiance; /* [W/m^2/sr] */
@@ -239,7 +240,7 @@ XD(compute_incident_diffuse_flux)
    const struct sXd(hit)* in_hit) /* Current intersection */
 {
   struct sXd(hit) hit = SXD_HIT_NULL;
-  double pos[DIM] = {0};
+  double pos[3] = {0}; /* In 3D for ray tracing ray to the source */
   double dir[3] = {0}; /* Incident direction (toward the surface). Always 3D.*/
   double N[3] = {0}; /* Surface normal. Always 3D */
   double incident_diffuse_flux = 0; /* [W/m^2] */
@@ -256,10 +257,7 @@ XD(compute_incident_diffuse_flux)
 
   for(;;) {
     /* External sources */
-    struct sdis_external_sources_sample extsrc_sample =
-      SDIS_EXTERNAL_SOURCES_SAMPLE_NULL;
-    sdis_sample_external_sources_T sample_sources = NULL;
-    sdis_trace_external_sources_T trace_sources = NULL;
+    struct source_sample src_sample = SOURCE_SAMPLE_NULL;
 
     /* Interface */
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
@@ -289,10 +287,6 @@ XD(compute_incident_diffuse_flux)
     interf = scene_get_interface(scn, hit.prim.prim_id);
     XD(setup_fragment)(&frag, pos, dir, time, N, &hit);
     XD(setup_brdf)(scn->dev, &brdf, interf, &frag);
-    sample_sources = interface_side_get_external_sources_sampling_functor
-      (interf, &frag);
-    trace_sources = interface_side_get_external_sources_tracing_functor
-      (interf, &frag);
 
     /* Check if path is absorbed */
     if(ssp_rng_canonical(rng) < brdf.emissivity) break;
@@ -304,32 +298,33 @@ XD(compute_incident_diffuse_flux)
 
     /* Calculate the direct contribution if the rebound is specular */
     if(brdf_sample.cpnt == BRDF_SPECULAR) {
-      res = trace_sources(&frag, brdf_sample.dir, &extsrc_sample, interf->data);
-      CHK(res == RES_OK); /* TODO handle the error */
+      res = source_trace_to(scn->source, pos, brdf_sample.dir, time, &src_sample);
+      CHK(res == RES_OK);
 
-      if(!SDIS_EXTERNAL_SOURCES_SAMPLE_NONE(&extsrc_sample)) {
-        const double Ld = XD(direct_contribution)(scn, &extsrc_sample, pos, &hit);
+      if(!SOURCE_SAMPLE_NONE(&src_sample)) {
+        const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
         L = Ld; /* [W/m^2] */
       }
 
     /* Calculate the direct contribution of the rebound is diffuse */
     } else {
+      double cos_theta = 0;
       ASSERT(brdf_sample.cpnt == BRDF_DIFFUSE);
 
       /* Sample an external source to handle its direct contribution at the
        * bounce position */
-      sample_sources(&frag, rng, &extsrc_sample, interf->data);
-      CHK(res == RES_OK); /* TODO handle the error */
+      res = source_sample(scn->source, rng, pos, time, &src_sample);
+      CHK(res == RES_OK);
+      cos_theta = d3_dot(src_sample.dir, N);
 
       /* The source is behind the surface */
-      if(d3_dot(extsrc_sample.dir, N) <= 0) {
+      if(cos_theta <= 0) {
         L = 0; /* [W/m^2] */
 
       /* The source is above the surface */
       } else {
-        const double Ld = XD(direct_contribution)(scn, &extsrc_sample, pos, &hit);
-        const double cos_theta = d3_dot(extsrc_sample.dir, N);
-        L = Ld * cos_theta/PI * extsrc_sample.pdf; /* [W/m^2] */
+        const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
+        L = Ld * cos_theta/PI * src_sample.pdf; /* [W/m^2] */
       }
     }
     incident_diffuse_flux += L;
@@ -350,9 +345,7 @@ XD(handle_external_net_flux)
    struct XD(temperature)* T)
 {
   /* Sampling external sources */
-  struct sdis_external_sources_sample extsrc_sample =
-    SDIS_EXTERNAL_SOURCES_SAMPLE_NULL;
-  sdis_sample_external_sources_T sample_sources = NULL;
+  struct source_sample src_sample = SOURCE_SAMPLE_NULL;
 
   /* External flux */
   double incident_flux = 0; /* [W/m^2] */
@@ -367,31 +360,34 @@ XD(handle_external_net_flux)
   double emissivity = 0; /* Emissivity */
   double Ld = 0; /* Incident radiance [W/m^2/sr] */
   double cos_theta = 0;
+  int handle_flux = 0;
   res_T res = RES_OK;
   ASSERT(scn && args && T);
 
-  res = XD(check_handle_external_net_flux_args)(scn->dev, FUNC_NAME, args);
+  res = XD(check_handle_external_net_flux_args)(scn, FUNC_NAME, args);
   if(res != RES_OK) goto error;
 
-  /* Retrieve the functor to sample external sources */
-  sample_sources = interface_side_get_external_sources_sampling_functor
-    (args->interf, args->frag);
-
   /* No external sources <=> no external fluxes. Nothing to do */
-  if(!sample_sources) goto exit;
+  handle_flux = interface_side_is_external_flux_handled(args->interf, args->frag);
+  handle_flux = net_flux && (scn->source != NULL);
+  if(handle_flux) goto exit;
 
-  /* Sample an external sources */
-  res = sample_sources(args->frag, rng, &extsrc_sample, args->interf->data);
+  /* Sample the external source */
+  res = source_sample
+    (scn->source, rng, args->frag->P, args->frag->time, &src_sample);
   if(res != RES_OK) goto error;
 
   /* Local path data */
   dX(set)(N, args->frag->Ng);
   if(args->frag->side == SDIS_BACK) dX(minus)(N, N);
 
-  /* Calculate the incident direct flux */
-  Ld = XD(direct_contribution)(scn, &extsrc_sample, args->frag->P, args->hit);
-  cos_theta = d3_dot(N, extsrc_sample.dir);
-  incident_flux_direct = cos_theta * Ld / extsrc_sample.pdf; /* [W/m^2] */
+  /* Calculate the incident direct flux if the external source is above the
+   * interface side */
+  cos_theta = d3_dot(N, src_sample.dir);
+  if(cos_theta > 0) {
+    Ld = XD(direct_contribution)(scn, &src_sample, args->frag->P, args->hit);
+    incident_flux_direct = cos_theta * Ld / src_sample.pdf; /* [W/m^2] */
+  }
 
   /* Calculate the incident diffuse flux [W/m^2] */
   incident_flux_diffuse = XD(compute_incident_diffuse_flux)
