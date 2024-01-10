@@ -118,9 +118,9 @@ create_super_shape(void)
 }
 
 /*******************************************************************************
-  * View, i.e. acceleration structure used to query geometry. In this test it is
-  * used to calculate the delta parameter and to sample the probe positions in
-  * the supershape.
+ * View, i.e. acceleration structure used to query geometry. In this test it is
+ * used to calculate the delta parameter and to sample the probe positions in
+ * the supershape.
  ******************************************************************************/
 static void
 view_get_indices(const unsigned itri, unsigned ids[3], void* ctx)
