@@ -183,7 +183,7 @@ XD(direct_contribution)
 
   /* Is the source hidden */
   XD(trace_ray)(scn, pos, sample->dir, sample->dst, hit_from, &hit);
-  if(SXD_HIT_NONE(&hit)) return 0; /* [W/m^2/sr] */
+  if(!SXD_HIT_NONE(&hit)) return 0; /* [W/m^2/sr] */
 
   return sample->radiance; /* [W/m^2/sr] */
 }
