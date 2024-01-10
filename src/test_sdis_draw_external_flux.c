@@ -21,10 +21,11 @@
 
 #define IMG_WIDTH 320
 #define IMG_HEIGHT 240
-#define IMG_SPP 4
-#define SOURCE_POWER 300 /* W */
+#define IMG_SPP 64
+#define SOURCE_POWER 30e6 /* W */
+#define EMISSIVITY 0.5
 #define T_RAD 300 /* [K] */
-#define T_REF 310 /* [K] */
+#define T_REF 300 /* [K] */
 
 /*
  * The system consists of a floor (i.e. a parallelepiped), a super-form floating
@@ -218,7 +219,7 @@ interface_get_emissivity
    struct sdis_data* data)
 {
   (void)frag, (void)data;/* Avoid the "unused variable" warning */
-  return 0.1;
+  return EMISSIVITY;
 }
 
 static struct sdis_interface*
@@ -261,7 +262,7 @@ create_source(struct sdis_device* sdis)
 
   args.position = source_get_position;
   args.data = NULL;
-  args.radius = 0.5; /* [m] */
+  args.radius = 3e-1; /* [m] */
   args.power = SOURCE_POWER; /* [W] */
   OK(sdis_spherical_source_create(sdis, &args, &source));
   return source;
