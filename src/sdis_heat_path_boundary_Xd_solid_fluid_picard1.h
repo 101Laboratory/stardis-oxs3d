@@ -247,6 +247,9 @@ XD(solid_fluid_boundary_picard1_path)
   handle_external_net_flux_args.frag = frag;
   handle_external_net_flux_args.hit = &rwalk->hit;
   handle_external_net_flux_args.picard_order = get_picard_order(ctx);
+  handle_external_net_flux_args.h_cond = h_cond;
+  handle_external_net_flux_args.h_conv = h_conv;
+  handle_external_net_flux_args.h_radi = h_radi_hat;
   res = XD(handle_external_net_flux)(scn, rng, &handle_external_net_flux_args, T);
   if(res != RES_OK) goto error;
 
