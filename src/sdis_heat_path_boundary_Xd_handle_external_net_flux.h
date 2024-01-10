@@ -115,18 +115,27 @@ XD(check_handle_external_net_flux_args)
   ASSERT(scn && func_name && args);
   ASSERT(args->interf && args->frag);
   ASSERT(!SXD_HIT_NONE(args->hit));
-  ASSERT(args->h_cond >= 0 && args->h_cond && args->h_radi >= 0);
-  ASSERT(args->h_cond + args->h_cond + args->h_radi > 0);
+  ASSERT(args->h_cond >= 0 && args->h_conv >= 0 && args->h_radi >= 0);
+  ASSERT(args->h_cond + args->h_conv + args->h_radi > 0);
 
   net_flux = interface_side_is_external_flux_handled(args->interf, args->frag);
   net_flux = net_flux && (scn->source != NULL);
 
-  if(net_flux && args->picard_order != 0) {
-    res = RES_BAD_ARG;
+  if(net_flux && args->picard_order != 1) {
     log_err(scn->dev,
       "%s: Impossible to process external fluxes when Picard order is not "
       "equal to 1; Picard order is currently set to %lu.\n",
       func_name, (unsigned long)args->picard_order);
+    res = RES_BAD_ARG;
+    return res;
+  }
+
+  if(sdis_medium_get_type(args->interf->medium_back)
+  == sdis_medium_get_type(args->interf->medium_front)) {
+    log_err(scn->dev,
+      "%s: external fluxes can only be processed on fluid/solid interfaces.\n",
+      func_name);
+    res = RES_BAD_ARG;
     return res;
   }
 
