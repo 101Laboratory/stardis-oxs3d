@@ -69,7 +69,7 @@ release_source(ref_T* ref)
   struct sdis_source* src = CONTAINER_OF(ref, struct sdis_source, ref);
   ASSERT(ref);
   dev = src->dev;
-  SDIS(data_ref_put(src->spherical.data));
+  if(src->spherical.data) SDIS(data_ref_put(src->spherical.data));
   MEM_RM(dev->allocator, src);
   SDIS(device_ref_put(dev));
 }
@@ -98,7 +98,7 @@ sdis_spherical_source_create
   }
   ref_init(&src->ref);
   SDIS(device_ref_get(dev));
-  SDIS(data_ref_get(args->data));
+  if(args->data) SDIS(data_ref_get(args->data));
   src->spherical = *args;
   src->dev = dev;
 

@@ -57,6 +57,10 @@ check_spherical_source(struct sdis_device* dev)
   OK(sdis_source_ref_put(src));
 
   OK(sdis_data_ref_put(data));
+
+  args.data = NULL;
+  OK(sdis_spherical_source_create(dev, &args, &src));
+  OK(sdis_source_ref_put(src));
 }
 
 /*******************************************************************************
