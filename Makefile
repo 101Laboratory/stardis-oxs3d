@@ -177,6 +177,7 @@ TEST_SRC =\
  src/test_sdis_convection.c\
  src/test_sdis_convection_non_uniform.c\
  src/test_sdis_data.c\
+ src/test_sdis_draw_external_flux.c\
  src/test_sdis_enclosure_limit_conditions.c\
  src/test_sdis_flux.c\
  src/test_sdis_flux2.c\
@@ -365,16 +366,19 @@ test_sdis_volumic_power4 \
 ################################################################################
 # Tests based on Star-3DUT
 ################################################################################
+src/test_sdis_draw_external_flux.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
+src/test_sdis_draw_external_flux.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
+test_sdis_draw_external_flux \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
