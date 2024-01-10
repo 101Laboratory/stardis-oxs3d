@@ -365,6 +365,9 @@ XD(handle_external_net_flux)
   /* Sampled path */
   double N[3] = {0}; /* Normal. Always in 3D */
 
+  /* On the fluid side */
+  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+
   /* Miscellaneous */
   double emissivity = 0; /* Emissivity */
   double Ld = 0; /* Incident radiance [W/m^2/sr] */
@@ -376,39 +379,47 @@ XD(handle_external_net_flux)
   res = XD(check_handle_external_net_flux_args)(scn, FUNC_NAME, args);
   if(res != RES_OK) goto error;
 
+  /* Setup the interface fragment on flud side */
+  frag = *args->frag;
+  if(sdis_medium_get_type(args->interf->medium_front) == SDIS_FLUID) {
+    frag.side = SDIS_FRONT;
+  } else {
+    ASSERT(sdis_medium_get_type(args->interf->medium_front) == SDIS_FLUID);
+    frag.side = SDIS_BACK;
+  }
+
   /* No external sources <=> no external fluxes. Nothing to do */
-  handle_flux = interface_side_is_external_flux_handled(args->interf, args->frag);
+  handle_flux = interface_side_is_external_flux_handled(args->interf, &frag);
   handle_flux = net_flux && (scn->source != NULL);
   if(handle_flux) goto exit;
 
   /* Sample the external source */
   res = source_sample
-    (scn->source, rng, args->frag->P, args->frag->time, &src_sample);
+    (scn->source, rng, frag.P, frag.time, &src_sample);
   if(res != RES_OK) goto error;
 
-  /* Local path data */
-  dX(set)(N, args->frag->Ng);
-  if(args->frag->side == SDIS_BACK) dX(minus)(N, N);
+  /* Setup the normal to ensure that it points toward the fluid medium */
+  dX(set)(N, frag.Ng);
+  if(frag.side == SDIS_BACK) dX(minus)(N, N);
 
   /* Calculate the incident direct flux if the external source is above the
    * interface side */
   cos_theta = d3_dot(N, src_sample.dir);
   if(cos_theta > 0) {
-    Ld = XD(direct_contribution)(scn, &src_sample, args->frag->P, args->hit);
+    Ld = XD(direct_contribution)(scn, &src_sample, frag.P, args->hit);
     incident_flux_direct = cos_theta * Ld / src_sample.pdf; /* [W/m^2] */
   }
 
   /* Calculate the incident diffuse flux [W/m^2] */
   incident_flux_diffuse = XD(compute_incident_diffuse_flux)
-    (scn, rng, args->frag->P, N, args->frag->time, args->hit);
+    (scn, rng, frag.P, N, frag.time, args->hit);
 
   /* Calculate the global incident flux */
   incident_flux = incident_flux_direct + incident_flux_diffuse; /* [W/m^2] */
 
   /* Calculate the net flux */
-  emissivity = interface_side_get_emissivity(args->interf, args->frag);
-  res = interface_side_check_emissivity
-    (scn->dev, emissivity, args->frag->P, args->frag->time);
+  emissivity = interface_side_get_emissivity(args->interf, &frag);
+  res = interface_side_check_emissivity(scn->dev, emissivity, frag.P, frag.time);
   if(res != RES_OK) goto error;
   net_flux = incident_flux * emissivity; /* [W/m^2] */
 
