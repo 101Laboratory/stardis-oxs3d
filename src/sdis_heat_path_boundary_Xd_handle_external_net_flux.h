@@ -333,7 +333,7 @@ XD(compute_incident_diffuse_flux)
       /* The source is above the surface */
       } else {
         const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
-        L = Ld * cos_theta/PI * src_sample.pdf; /* [W/m^2] */
+        L = Ld * cos_theta / (PI * src_sample.pdf); /* [W/m^2] */
       }
     }
     incident_diffuse_flux += L;
