@@ -179,6 +179,7 @@ TEST_SRC =\
  src/test_sdis_data.c\
  src/test_sdis_draw_external_flux.c\
  src/test_sdis_enclosure_limit_conditions.c\
+ src/test_sdis_external_flux.c\
  src/test_sdis_flux.c\
  src/test_sdis_flux2.c\
  src/test_sdis_flux_with_h.c\
@@ -280,6 +281,7 @@ src/test_sdis_convection.d \
 src/test_sdis_convection_non_uniform.d \
 src/test_sdis_data.d \
 src/test_sdis_enclosure_limit_conditions.d \
+src/test_sdis_external_flux.d \
 src/test_sdis_flux.d \
 src/test_sdis_flux2.d \
 src/test_sdis_flux_with_h.d \
@@ -311,6 +313,7 @@ src/test_sdis_convection.o \
 src/test_sdis_convection_non_uniform.o \
 src/test_sdis_data.o \
 src/test_sdis_enclosure_limit_conditions.o \
+src/test_sdis_external_flux.o \
 src/test_sdis_flux.o \
 src/test_sdis_flux2.o \
 src/test_sdis_flux_with_h.o \
@@ -342,6 +345,7 @@ test_sdis_convection \
 test_sdis_convection_non_uniform \
 test_sdis_data \
 test_sdis_enclosure_limit_conditions \
+test_sdis_external_flux \
 test_sdis_flux \
 test_sdis_flux2 \
 test_sdis_flux_with_h \
