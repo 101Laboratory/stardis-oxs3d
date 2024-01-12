@@ -459,8 +459,8 @@ XD(handle_external_net_flux)
 
   /* No external sources <=> no external fluxes. Nothing to do */
   handle_flux = interface_side_is_external_flux_handled(args->interf, &frag);
-  handle_flux = net_flux && (scn->source != NULL);
-  if(handle_flux) goto exit;
+  handle_flux = handle_flux && (scn->source != NULL);
+  if(!handle_flux) goto exit;
 
   /* Sample the external source */
   res = source_sample
