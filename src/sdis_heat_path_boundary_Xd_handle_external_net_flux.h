@@ -97,6 +97,60 @@ sample_brdf
   }
 }
 
+/* Check that the trajectory reaches a valid interface, i.e. that it is on a
+ * fluid/solid interface and has reached it from the fluid */
+static res_T
+check_interface
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  enum sdis_medium_type mdm_frt_type = SDIS_MEDIUM_TYPES_COUNT__;
+  enum sdis_medium_type mdm_bck_type = SDIS_MEDIUM_TYPES_COUNT__;
+  enum sdis_side fluid_side = SDIS_SIDE_NULL__;
+  res_T res = RES_OK;
+
+  mdm_frt_type = sdis_medium_get_type(interf->medium_front);
+  mdm_bck_type = sdis_medium_get_type(interf->medium_back);
+
+  /* Semi-transparent materials are not supported. This means that a solid/solid
+   * interface must not be intersected when tracing radiative paths */
+  if(mdm_frt_type == SDIS_SOLID && mdm_bck_type == SDIS_SOLID) {
+    log_err(interf->dev,
+      "Error when sampling the trajectory to calculate the incident diffuse "
+      "flux. The trajectory reaches a solid/solid interface, whereas this is "
+      "supposed to be impossible (path position: %g, %g, %g).\n",
+      SPLIT3(frag->P));
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  /* Find out which side of the interface the fluid is on */
+  if(mdm_frt_type == SDIS_FLUID) {
+    fluid_side = SDIS_FRONT;
+  } else if(mdm_bck_type == SDIS_FLUID) {
+    fluid_side = SDIS_BACK;
+  } else {
+    FATAL("Unreachable code\n");
+  }
+
+  /* Check that the current position is on the correct side of the interface */
+  if(frag->side != fluid_side) {
+    log_err(interf->dev,
+      "Inconsistent intersection when sampling the trajectory to calculate the "
+      "incident diffuse flux. The radiative path reaches an interface on "
+      "its solid side, whereas this is supposed to be impossible "
+      "(path position: %g, %g, %g).\n",
+      SPLIT3(frag->P));
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 #endif /* SDIS_HEAT_PATH_BOUNDARY_XD_HANDLE_EXTERNAL_NET_FLUX_H */
 
 /*******************************************************************************
@@ -162,6 +216,7 @@ XD(trace_ray)
   ray_range[0] = 0;
   ray_range[1] = (float)distance;
   filter_data.XD(hit) = *hit_from;
+  filter_data.epsilon = 1.e-4;
 #if DIM == 2
   SXD(scene_view_trace_ray_3d
     (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
@@ -220,6 +275,9 @@ XD(setup_brdf)
   double alpha = 0;
   res_T res = RES_OK;
   ASSERT(brdf && frag);
+  ASSERT((frag->side == SDIS_FRONT
+      && sdis_medium_get_type(interf->medium_front) == SDIS_FLUID)
+      || sdis_medium_get_type(interf->medium_back) == SDIS_FLUID);
 
   epsilon = interface_side_get_emissivity(interf, frag);
   res = interface_side_check_emissivity(dev, epsilon, frag->P, frag->time);
@@ -239,14 +297,15 @@ error:
   goto exit;
 }
 
-static double /* [W/m^2] */
+static res_T
 XD(compute_incident_diffuse_flux)
   (const struct sdis_scene* scn,
    struct ssp_rng* rng,
    const double in_pos[DIM], /* position */
    const double in_N[DIM], /* Surface normal. (Away from the surface) */
    const double time,
-   const struct sXd(hit)* in_hit) /* Current intersection */
+   const struct sXd(hit)* in_hit, /* Current intersection */
+   double* out_flux) /* [W/m^2] */
 {
   struct sXd(hit) hit = SXD_HIT_NULL;
   double pos[3] = {0}; /* In 3D for ray tracing ray to the source */
@@ -295,6 +354,11 @@ XD(compute_incident_diffuse_flux)
     /* Retrieve the current interface properties */
     interf = scene_get_interface(scn, hit.prim.prim_id);
     XD(setup_fragment)(&frag, pos, dir, time, N, &hit);
+
+    /* Check that the path reaches a valid interface */
+    res = check_interface(interf, &frag);
+    if(res != RES_OK) goto error;
+
     XD(setup_brdf)(scn->dev, &brdf, interf, &frag);
 
     /* Check if path is absorbed */
@@ -308,7 +372,7 @@ XD(compute_incident_diffuse_flux)
     /* Calculate the direct contribution if the rebound is specular */
     if(brdf_sample.cpnt == BRDF_SPECULAR) {
       res = source_trace_to(scn->source, pos, brdf_sample.dir, time, &src_sample);
-      CHK(res == RES_OK);
+      if(res != RES_OK) goto error;
 
       if(!SOURCE_SAMPLE_NONE(&src_sample)) {
         const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
@@ -340,7 +404,12 @@ XD(compute_incident_diffuse_flux)
   }
 
   incident_diffuse_flux *= PI;
-  return incident_diffuse_flux;
+
+exit:
+  *out_flux = incident_diffuse_flux;
+  return res;
+error:
+  goto exit;
 }
 
 /*******************************************************************************
@@ -411,8 +480,9 @@ XD(handle_external_net_flux)
   }
 
   /* Calculate the incident diffuse flux [W/m^2] */
-  incident_flux_diffuse = XD(compute_incident_diffuse_flux)
-    (scn, rng, frag.P, N, frag.time, args->hit);
+  res = XD(compute_incident_diffuse_flux)
+    (scn, rng, frag.P, N, frag.time, args->hit, &incident_flux_diffuse);
+  if(res != RES_OK) goto error;
 
   /* Calculate the global incident flux */
   incident_flux = incident_flux_direct + incident_flux_diffuse; /* [W/m^2] */
