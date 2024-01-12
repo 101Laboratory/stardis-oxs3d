@@ -453,7 +453,7 @@ XD(handle_external_net_flux)
   if(sdis_medium_get_type(args->interf->medium_front) == SDIS_FLUID) {
     frag.side = SDIS_FRONT;
   } else {
-    ASSERT(sdis_medium_get_type(args->interf->medium_front) == SDIS_FLUID);
+    ASSERT(sdis_medium_get_type(args->interf->medium_back) == SDIS_FLUID);
     frag.side = SDIS_BACK;
   }
 
