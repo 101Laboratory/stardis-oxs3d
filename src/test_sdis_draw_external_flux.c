@@ -160,7 +160,7 @@ mesh_add_ground(struct mesh* mesh)
 MEDIUM_PROP(solid, calorific_capacity, 500.0) /* [J/K/Kg] */
 MEDIUM_PROP(solid, thermal_conductivity, 25.0) /* [W/m/K] */
 MEDIUM_PROP(solid, volumic_mass, 7500.0) /* [kg/m^3] */
-MEDIUM_PROP(solid, temperature, 310/*<=> unknown*/) /* [K] */
+MEDIUM_PROP(solid, temperature, 310) /* [K] */
 MEDIUM_PROP(solid, delta, 1.0/20.0) /* [m] */
 MEDIUM_PROP(fluid, calorific_capacity, 2.0) /* [J/K/Kg] */
 MEDIUM_PROP(fluid, volumic_mass, 25.0) /* |kg/m^3] */

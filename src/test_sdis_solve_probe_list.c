@@ -36,12 +36,12 @@
  * trilinear profile. Thus, we should find by Monte Carlo the temperature
  * defined by the trilinear profile.
  *
- *                       /\ <-- T(x,y,z)
- *      T(z)         ___/  \___
- *       |           \  . T=? /
- *       o-- T(x)    /_  __  _\
- *      /              \/  \/
- *   T(y)
+ *      T(z)             /\ <-- T(x,y,z)
+ *       |  T(y)     ___/  \___
+ *       |/          \  . T=? /
+ *       o--- T(x)   /_  __  _\
+ *                     \/  \/
+ *
  */
 
 /*******************************************************************************
