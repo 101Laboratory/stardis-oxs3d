@@ -144,6 +144,7 @@ create_fluid(struct sdis_device* sdis)
  ******************************************************************************/
 struct interface {
   double emissivity;
+  double specular_fraction;
   double convection_coef; /* [W/m^2/K] */
 };
 
@@ -172,6 +173,7 @@ INTERF_PROP(reference_temperature, T_REF) /* [K] */
     return interf_data->Prop;                                                  \
   }
 INTERF_PROP(emissivity)
+INTERF_PROP(specular_fraction)
 INTERF_PROP(convection_coef) /* [W/m^2/K] */
 #undef INTERF_PROP
 
@@ -181,7 +183,8 @@ create_interface
    struct sdis_medium* front,
    struct sdis_medium* back,
    const double emissivity,
-   const double convection_coef)
+   const double convection_coef,
+   struct interface** out_interf_data) /* May be NULL */
 {
   struct sdis_data* data = NULL;
   struct sdis_interface* interf = NULL;
@@ -193,11 +196,14 @@ create_interface
   interf_data = sdis_data_get(data);
   interf_data->emissivity = emissivity;
   interf_data->convection_coef = convection_coef; /* [W/m^2/K] */
+  interf_data->specular_fraction = 0; /* Diffuse */
+  if(out_interf_data) *out_interf_data = interf_data;
 
   shader.front.temperature = interface_get_temperature;
   shader.back.temperature = interface_get_temperature;
   shader.back.reference_temperature = interface_get_reference_temperature;
   shader.back.emissivity = interface_get_emissivity;
+  shader.back.specular_fraction = interface_get_specular_fraction;
   shader.convection_coef = interface_get_convection_coef;
   shader.convection_coef_upper_bound = convection_coef;
   OK(sdis_interface_create(sdis, front, back, &shader, data, &interf));
@@ -312,27 +318,27 @@ create_scene
  * Validations
  ******************************************************************************/
 static void
-check_diffuse(struct sdis_scene* scn)
+check
+  (struct sdis_scene* scn,
+   const size_t nrealisations,
+   const double analytical_ref)
 {
   struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_estimator* estimator = NULL;
-  const double ref = 375.88; /* Analytical solution [K] */
 
-  probe_args.nrealisations = 10000;
+  probe_args.nrealisations = nrealisations;
   probe_args.position[0] = -0.05;
   probe_args.position[1] = 0;
   probe_args.position[2] = 1000;
   OK(sdis_solve_probe(scn, &probe_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
   printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(probe_args.position), ref, T.E, T.SE);
+    SPLIT3(probe_args.position), analytical_ref, T.E, T.SE);
   OK(sdis_estimator_ref_put(estimator));
 
-  CHK(eq_eps(ref, T.E, 3*T.SE));
+  CHK(eq_eps(analytical_ref, T.E, 3*T.SE));
 }
-
-/* Pour le spéculaire : ref = 417.77 K */
 
 /*******************************************************************************
  * The test
@@ -347,18 +353,26 @@ main(int argc, char** argv)
   struct sdis_interface* interf_wall = NULL;
   struct sdis_source* src = NULL;
   struct sdis_scene* scn = NULL;
+
+  struct interface* ground_interf_data = NULL;
   (void) argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
 
   fluid = create_fluid(dev);
   solid = create_solid(dev);
-  interf_ground = create_interface(dev, solid, fluid, 0/*emissivity*/, 0/*h*/);
-  interf_wall = create_interface(dev, solid, fluid, 1/*emissivity*/, 10/*h*/);
+  interf_ground = create_interface
+    (dev, solid, fluid, 0/*emissivity*/, 0/*h*/, &ground_interf_data);
+  interf_wall = create_interface
+    (dev, solid, fluid, 1/*emissivity*/, 10/*h*/, NULL);
   src = create_source(dev);
   scn = create_scene(dev, interf_ground, interf_wall, src);
 
-  check_diffuse(scn);
+  ground_interf_data->specular_fraction = 0; /* Lambertian */
+  check(scn, 10000/* #réalisation */, 375.88/* Reference [K] */);
+
+  ground_interf_data->specular_fraction = 1; /* Specular */
+  check(scn, 100000/* #réalisaitons */, 417.77/* Reference [K] */);
 
   OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(fluid));
