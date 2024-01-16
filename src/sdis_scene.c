@@ -24,6 +24,7 @@
 #include "sdis.h"
 #include "sdis_interface_c.h"
 #include "sdis_scene_c.h"
+#include "sdis_source_c.h"
 
 #include <float.h>
 #include <limits.h>
@@ -416,6 +417,14 @@ sdis_scene_get_device(struct sdis_scene* scn, struct sdis_device** device)
 {
   if(!scn || !device) return RES_BAD_ARG;
   *device = scn->dev;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_source(struct sdis_scene* scn, struct sdis_source** source)
+{
+  if(!scn || !source) return RES_BAD_ARG;
+  *source = scn->source;
   return RES_OK;
 }
 

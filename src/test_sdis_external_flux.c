@@ -339,35 +339,6 @@ scene_get_position_3d(const size_t ivert, double pos[3], void* ctx)
 }
 
 static struct sdis_scene*
-create_scene_3d
-  (struct sdis_device* sdis,
-   struct sdis_interface* interf_ground,
-   struct sdis_interface* interf_wall,
-   struct sdis_source* source)
-{
-  struct sdis_scene* scn = NULL;
-  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
-  struct scene_context context = SCENE_CONTEXT_NULL;
-
-  context.interf_ground = interf_ground;
-  context.interf_wall = interf_wall;
-
-  scn_args.get_indices = scene_get_indices_3d;
-  scn_args.get_interface = scene_get_interface_3d;
-  scn_args.get_position = scene_get_position_3d;
-  scn_args.nprimitives = ntriangles;
-  scn_args.nvertices = nvertices_3d;
-  scn_args.trad.temperature = 0; /* [K] */
-  scn_args.trad.reference = T_REF; /* [K] */
-  scn_args.t_range[0] = 0; /* [K] */
-  scn_args.t_range[1] = 0; /* [K] */
-  scn_args.source = source;
-  scn_args.context = &context;
-  OK(sdis_scene_create(sdis, &scn_args, &scn));
-  return scn;
-}
-
-static struct sdis_scene*
 create_scene_2d
   (struct sdis_device* sdis,
    struct sdis_interface* interf_ground,
@@ -375,6 +346,7 @@ create_scene_2d
    struct sdis_source* source)
 {
   struct sdis_scene* scn = NULL;
+  struct sdis_source* src = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct scene_context context = SCENE_CONTEXT_NULL;
 
@@ -393,6 +365,48 @@ create_scene_2d
   scn_args.source = source;
   scn_args.context = &context;
   OK(sdis_scene_2d_create(sdis, &scn_args, &scn));
+
+  BA(sdis_scene_get_source(NULL, &src));
+  BA(sdis_scene_get_source(scn, NULL));
+  OK(sdis_scene_get_source(scn, &src));
+  CHK(src == source);
+
+  return scn;
+}
+
+static struct sdis_scene*
+create_scene_3d
+  (struct sdis_device* sdis,
+   struct sdis_interface* interf_ground,
+   struct sdis_interface* interf_wall,
+   struct sdis_source* source)
+{
+  struct sdis_scene* scn = NULL;
+  struct sdis_source* src = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct scene_context context = SCENE_CONTEXT_NULL;
+
+  context.interf_ground = interf_ground;
+  context.interf_wall = interf_wall;
+
+  scn_args.get_indices = scene_get_indices_3d;
+  scn_args.get_interface = scene_get_interface_3d;
+  scn_args.get_position = scene_get_position_3d;
+  scn_args.nprimitives = ntriangles;
+  scn_args.nvertices = nvertices_3d;
+  scn_args.trad.temperature = 0; /* [K] */
+  scn_args.trad.reference = T_REF; /* [K] */
+  scn_args.t_range[0] = 0; /* [K] */
+  scn_args.t_range[1] = 0; /* [K] */
+  scn_args.source = source;
+  scn_args.context = &context;
+  OK(sdis_scene_create(sdis, &scn_args, &scn));
+
+  BA(sdis_scene_get_source(NULL, &src));
+  BA(sdis_scene_get_source(scn, NULL));
+  OK(sdis_scene_get_source(scn, &src));
+  CHK(src == source);
+
   return scn;
 }
 
