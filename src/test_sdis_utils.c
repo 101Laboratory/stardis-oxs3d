@@ -92,17 +92,32 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   struct sdis_solid_shader solid = SDIS_SOLID_SHADER_NULL;
   struct sdis_fluid_shader fluid = SDIS_FLUID_SHADER_NULL;
   struct sdis_interface_shader interf = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_green_function* green = NULL;
+  struct sdis_scene* scn = NULL;
+  struct sdis_source* source = NULL;
   struct green_accum* acc = NULL;
   struct sdis_data* data = NULL;
   enum sdis_medium_type type;
   enum sdis_green_path_end_type end_type;
+  double source_power = 0; /* [W] */
   double power = 0;
   double flux = 0;
+  double external_flux = 0; /* [W/m^2] */
   double time, temp = 0;
   double weight = 0;
   CHK(path && ctx);
 
   acc = ctx;
+
+  BA(sdis_green_path_get_green_function(NULL, NULL));
+  BA(sdis_green_path_get_green_function(path, NULL));
+  BA(sdis_green_path_get_green_function(NULL, &green));
+  OK(sdis_green_path_get_green_function(path, &green));
+
+  BA(sdis_green_function_get_scene(NULL, NULL));
+  BA(sdis_green_function_get_scene(NULL, &scn));
+  BA(sdis_green_function_get_scene(green, NULL));
+  OK(sdis_green_function_get_scene(green, &scn));
 
   BA(sdis_green_path_for_each_power_term(NULL, accum_power_terms, &power));
   BA(sdis_green_path_for_each_power_term(path, NULL, &acc));
@@ -117,6 +132,17 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   BA(sdis_green_path_get_elapsed_time(NULL, &time));
   OK(sdis_green_path_get_elapsed_time(path, &time));
 
+  BA(sdis_green_path_get_external_flux_term(NULL, &external_flux));
+  BA(sdis_green_path_get_external_flux_term(path, NULL));
+  OK(sdis_green_path_get_external_flux_term(path, &external_flux));
+  OK(sdis_scene_get_source(scn, &source));
+  if(source == NULL) {
+    CHK(external_flux == 0);
+  } else {
+    OK(sdis_source_get_power(source, &source_power));
+    external_flux *= source_power;
+  }
+
   BA(sdis_green_path_get_end_type(NULL, NULL));
   BA(sdis_green_path_get_end_type(path, NULL));
   BA(sdis_green_path_get_end_type(NULL, &end_type));
@@ -127,18 +153,7 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   BA(sdis_green_path_get_limit_point(path, NULL));
   if(end_type == SDIS_GREEN_PATH_END_RADIATIVE) {
     struct sdis_ambient_radiative_temperature trad;
-    struct sdis_green_function* green;
-    struct sdis_scene* scn;
     BO(sdis_green_path_get_limit_point(path, &pt));
-    BA(sdis_green_path_get_green_function(NULL, NULL));
-    BA(sdis_green_path_get_green_function(path, NULL));
-    BA(sdis_green_path_get_green_function(NULL, &green));
-    OK(sdis_green_path_get_green_function(path, &green));
-
-    BA(sdis_green_function_get_scene(NULL, NULL));
-    BA(sdis_green_function_get_scene(NULL, &scn));
-    BA(sdis_green_function_get_scene(green, NULL));
-    OK(sdis_green_function_get_scene(green, &scn));
 
     BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
     BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
@@ -172,7 +187,7 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
     }
   }
 
-  weight = temp + power + flux;
+  weight = temp + power + external_flux + flux;
   acc->sum += weight;
   acc->sum2 += weight*weight;
 

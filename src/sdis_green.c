@@ -21,6 +21,7 @@
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_scene_c.h"
+#include "sdis_source_c.h"
 
 #include <star/ssp.h>
 
@@ -83,6 +84,7 @@ flux_term_init(struct mem_allocator* allocator, struct flux_term* term)
 
 struct green_path {
   double elapsed_time;
+  double external_flux_term; /* [W/m^2] */
   struct darray_flux_term flux_terms; /* List of flux terms */
   struct darray_power_term power_terms; /* List of volumic power terms */
   union {
@@ -105,6 +107,7 @@ green_path_init(struct mem_allocator* allocator, struct green_path* path)
   darray_flux_term_init(allocator, &path->flux_terms);
   darray_power_term_init(allocator, &path->power_terms);
   path->elapsed_time = -INF;
+  path->external_flux_term = 0;
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
   path->limit.fragment = SDIS_INTERFACE_FRAGMENT_NULL;
   path->limit_id = UINT_MAX;
@@ -127,6 +130,7 @@ green_path_copy(struct green_path* dst, const struct green_path* src)
   res_T res = RES_OK;
   ASSERT(dst && src);
   dst->elapsed_time = src->elapsed_time;
+  dst->external_flux_term = src->external_flux_term;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->end_type = src->end_type;
@@ -145,6 +149,7 @@ green_path_copy_and_clear(struct green_path* dst, struct green_path* src)
   res_T res = RES_OK;
   ASSERT(dst && src);
   dst->elapsed_time = src->elapsed_time;
+  dst->external_flux_term = src->external_flux_term;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->end_type = src->end_type;
@@ -164,6 +169,7 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
   res_T res = RES_OK;
   ASSERT(dst && src);
   dst->elapsed_time = src->elapsed_time;
+  dst->external_flux_term = src->external_flux_term;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->end_type = src->end_type;
@@ -192,6 +198,7 @@ green_path_write(const struct green_path* path, FILE* stream)
 
   /* Write elapsed time */
   WRITE(&path->elapsed_time, 1);
+  WRITE(&path->external_flux_term, 1);
 
   /* Write the list of flux terms */
   sz = darray_flux_term_size_get(&path->flux_terms);
@@ -242,6 +249,7 @@ green_path_read(struct green_path* path, FILE* stream)
 
   /* Read elapsed time */
   READ(&path->elapsed_time, 1);
+  READ(&path->external_flux_term, 1);
 
   /* Read the list of flux terms */
   READ(&sz, 1);
@@ -397,7 +405,7 @@ green_function_solve_path
    const size_t ipath,
    double* weight)
 {
-  struct sdis_ambient_radiative_temperature trad = 
+  struct sdis_ambient_radiative_temperature trad =
     SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   const struct power_term* power_terms = NULL;
   const struct flux_term* flux_terms = NULL;
@@ -409,6 +417,7 @@ green_function_solve_path
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
   double power;
   double flux;
+  double external_flux;
   double end_temperature;
   size_t i, n;
   res_T res = RES_OK;
@@ -420,7 +429,7 @@ green_function_solve_path
     goto error;
   }
 
-  /* Compute medium power terms */
+  /* Compute medium powers */
   power = 0;
   n = darray_power_term_size_get(&path->power_terms);
   power_terms = darray_power_term_cdata_get(&path->power_terms);
@@ -439,6 +448,13 @@ green_function_solve_path
     frag.side = flux_terms[i].side;
     interf = green_function_fetch_interf(green, flux_terms[i].id);
     flux += flux_terms[i].term * interface_side_get_flux(interf, &frag);
+  }
+
+  /* Compute external flux */
+  external_flux = 0;
+  if(green->scn->source) {
+    external_flux =
+      path->external_flux_term * source_get_power(green->scn->source);
   }
 
   /* Compute path's end temperature */
@@ -466,7 +482,7 @@ green_function_solve_path
   }
 
   /* Compute the path weight */
-  *weight = power + flux + end_temperature;
+  *weight = power + flux + external_flux + end_temperature;
 
 exit:
   return res;
@@ -1032,7 +1048,7 @@ error:
 
 res_T
 sdis_green_function_get_scene
-  (const struct sdis_green_function* green, 
+  (const struct sdis_green_function* green,
    struct sdis_scene** scn)
 {
   if(!green || !scn) return RES_BAD_ARG;
@@ -1351,6 +1367,34 @@ exit:
 error:
   goto exit;
 }
+
+res_T
+sdis_green_path_get_external_flux_term
+  (struct sdis_green_path* path_handle,
+   double* external_flux_term)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !external_flux_term) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__; (void)green;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+
+  *external_flux_term = path->external_flux_term;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 
 /*******************************************************************************
  * Local functions
@@ -1709,4 +1753,14 @@ exit:
   return res;
 error:
   goto exit;
+}
+
+res_T
+green_path_add_external_flux_term
+  (struct green_path_handle* handle,
+   const double val) /* [W/m^2/sr] */
+{
+  ASSERT(handle);
+  handle->path->external_flux_term += val;
+  return RES_OK;
 }

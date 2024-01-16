@@ -240,7 +240,12 @@ XD(direct_contribution)
   XD(trace_ray)(scn, pos, sample->dir, sample->dst, hit_from, &hit);
   if(!SXD_HIT_NONE(&hit)) return 0; /* [W/m^2/sr] */
 
-  return sample->radiance; /* [W/m^2/sr] */
+  /* Note that the value returned is not the source's actual radiance, but the
+   * radiance relative to the source's power. Care must therefore be taken to
+   * multiply it by the power of the source to obtain its real contribution.
+   * This trick makes it possible to manage the external flux in the green
+   * function. */
+  return sample->radiance_term; /* [W/m^2/sr] */
 }
 
 static INLINE void
@@ -430,6 +435,7 @@ XD(handle_external_net_flux)
   double incident_flux_diffuse = 0; /* [W/m^2] */
   double incident_flux_direct = 0; /* [W/m^2] */
   double net_flux = 0; /* [W/m^2] */
+  double external_flux_term = 0; /* [W/m^2] */
 
   /* Sampled path */
   double N[3] = {0}; /* Normal. Always in 3D */
@@ -493,8 +499,19 @@ XD(handle_external_net_flux)
   if(res != RES_OK) goto error;
   net_flux = incident_flux * emissivity; /* [W/m^2] */
 
+  /* Until now, the net flux was calculated in relation to the source power.
+   * What is calculated is the external flux term of the green function. This
+   * must be multiplied by the source power to obtain the actual external flux*/
+  external_flux_term = net_flux / (args->h_radi + args->h_conv + args->h_cond);
+
   /* Update the Monte Carlo weight */
-  T->value += net_flux / (args->h_radi + args->h_conv + args->h_cond);
+  T->value += external_flux_term * source_get_power(scn->source);
+
+  /* Register the external net flux term */
+  if(args->green_path) {
+    res = green_path_add_external_flux_term(args->green_path, external_flux_term);
+    if(res != RES_OK) goto error;
+  }
 
 exit:
   return res;

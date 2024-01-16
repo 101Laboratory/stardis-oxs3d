@@ -16,6 +16,7 @@
 #ifndef SDIS_SOURCE_C_H
 #define SDIS_SOURCE_C_H
 
+#include <rsys/hash.h>
 #include <rsys/rsys.h>
 
 struct sdis_source;
@@ -25,9 +26,17 @@ struct source_sample {
   double dir[3]; /* Direction _to_ the source */
   double pdf; /* pdf of sampled direction */
   double dst; /* Distance to the source [m] */
+  double power; /* [W] */
   double radiance; /* [W/m^2/sr] */
+
+  /* Radiance relative to power, i.e. the source power is assumed to be equal to
+   * 1. It must be multiplied by the source power to obtain the actual radiance
+   * of the source. In other words, this variable defines the contribution of
+   * the source independently of its power, and can therefore be recorded in the
+   * green function */
+  double radiance_term; /* [W/m^2/sr] */
 };
-#define SOURCE_SAMPLE_NULL__ {{0,0,0}, 0, 0, 0}
+#define SOURCE_SAMPLE_NULL__ {{0,0,0}, 0, 0, 0, 0, 0}
 static const struct source_sample SOURCE_SAMPLE_NULL = SOURCE_SAMPLE_NULL__;
 
 /* Helper macro used to define whether a sample is valid or not */
@@ -55,5 +64,10 @@ source_trace_to
 extern LOCAL_SYM double /* [W] */
 source_get_power
   (const struct sdis_source* source);
+
+extern LOCAL_SYM void
+source_compute_signature
+  (const struct sdis_source* source,
+   hash256_T hash);
 
 #endif /* SDIS_SOURCE_C_H */

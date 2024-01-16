@@ -482,6 +482,13 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   SHA256_UPD(&scn->trad.reference, 1);
   SHA256_UPD(&scn->tmax, 1);
   SHA256_UPD(&scn->fp_to_meter, 1);
+
+  if(scn->source) {
+    hash256_T src_hash;
+    source_compute_signature(scn->source, src_hash);
+    sha256_ctx_update(&sha256_ctx, src_hash, sizeof(hash256_T));
+  }
+
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;
     size_t ivert;

@@ -186,7 +186,9 @@ source_sample
     d3_set(sample->dir, main_dir);
     sample->pdf = 1;
     sample->dst = dst;
-    sample->radiance = src->spherical.power / (4*PI*dst*dst); /* [W/m^2/sr] */
+    sample->power = src->spherical.power; /* [W] */
+    sample->radiance_term = 1.0 / (4*PI*dst*dst); /* [W/m^2/sr] */
+    sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
 
   /* Spherical source */
   } else {
@@ -197,10 +199,11 @@ source_sample
     ssp_ran_sphere_cap_uniform /* pdf = 1/(2*PI*(1-cos(half_angle))) */
       (rng, main_dir, cos_half_angle, sample->dir, &sample->pdf);
 
-
     /* Set other sample variables */
     sample->dst = dst - radius; /* From pos to source boundaries [m] */
-    sample->radiance = src->spherical.power / (PI*area); /* [W/m^2/sr] */
+    sample->power = src->spherical.power; /* [W] */
+    sample->radiance_term = 1.0 / (PI*area); /* [W/m^2/sr] */
+    sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
   }
 
 exit:
@@ -257,7 +260,7 @@ source_trace_to
     goto error;
   }
 
-  /* Compute the the half angle of the source as seen from pos */
+  /* Compute the half angle of the source as seen from pos */
   half_angle = asin(radius/dst);
 
   /* The source is missed */
@@ -271,7 +274,9 @@ source_trace_to
     d3_set(sample->dir, dir);
     sample->pdf = 1;
     sample->dst = dst - radius; /* From pos to source boundaries [m] */
-    sample->radiance = src->spherical.power / (PI*area); /* [W/m^2/sr] */
+    sample->power = src->spherical.power; /* [W] */
+    sample->radiance_term = 1.0 / (PI*area); /* [W/m^2/sr] */
+    sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
   }
 
 exit:
@@ -286,4 +291,21 @@ source_get_power(const struct sdis_source* src)
 {
   ASSERT(src);
   return src->spherical.power;
+}
+
+void
+source_compute_signature(const struct sdis_source* src, hash256_T hash)
+{
+  struct sha256_ctx ctx;
+  ASSERT(src && hash);
+
+  /* Calculate the source signature. Currently, it is only the source radius.
+   * But the Source API is designed to be independent of source type. In the
+   * future, the source will not necessarily be spherical, so the data to be
+   * hashed will depend on the type of source. This function anticipate this by
+   * calculating a hash even if it is currently dispensable. */
+  sha256_ctx_init(&ctx);
+  sha256_ctx_update
+    (&ctx, (const char*)&src->spherical.radius, sizeof(src->spherical.radius));
+  sha256_ctx_finalize(&ctx, hash);
 }

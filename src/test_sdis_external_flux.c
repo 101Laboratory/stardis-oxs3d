@@ -422,8 +422,6 @@ check
   struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_estimator* estimator = NULL;
-  enum sdis_scene_dimension dim;
-  const char* dim_str = NULL;
 
   probe_args.position[0] = -0.05;
   probe_args.position[1] = 1000;
@@ -432,14 +430,37 @@ check
   OK(sdis_solve_probe(scn, &probe_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
 
-  OK(sdis_scene_get_dimension(scn, &dim));
-  switch(dim) {
-    case SDIS_SCENE_2D: dim_str = "2D"; break;
-    case SDIS_SCENE_3D: dim_str = "3D"; break;
-    default: FATAL("Unreachable code.\n"); break;
-  }
-  printf("%s: T(%g, %g, %g) = %g ~ %g +/- %g\n",
-    dim_str, SPLIT3(probe_args.position), analytical_ref, T.E, T.SE);
+  printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
+    SPLIT3(probe_args.position), analytical_ref, T.E, T.SE);
+  OK(sdis_estimator_ref_put(estimator));
+
+  CHK(eq_eps(analytical_ref, T.E, 3*T.SE));
+}
+
+static void
+check_green
+  (struct sdis_scene* scn,
+   const size_t nrealisations,
+   const double analytical_ref)
+{
+  struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_green_function* green = NULL;
+  struct sdis_estimator* estimator = NULL;
+
+  probe_args.position[0] = -0.05;
+  probe_args.position[1] = 1000;
+  probe_args.position[2] = 0;
+  probe_args.nrealisations = nrealisations;
+  OK(sdis_solve_probe_green_function(scn, &probe_args, &green));
+  OK(sdis_green_function_solve(green, &estimator));
+  check_green_function(green);
+
+  OK(sdis_estimator_get_temperature(estimator, &T));
+
+  printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
+    SPLIT3(probe_args.position), analytical_ref, T.E, T.SE);
+  OK(sdis_green_function_ref_put(green));
   OK(sdis_estimator_ref_put(estimator));
 
   CHK(eq_eps(analytical_ref, T.E, 3*T.SE));
@@ -477,11 +498,11 @@ main(int argc, char** argv)
 
   ground_interf_data->specular_fraction = 0; /* Lambertian */
   check(scn_2d, 10000/* #réalisations */, 375.88/* Reference [K] */);
-  check(scn_3d, 10000/* #réalisations */, 375.88/* Reference [K] */);
+  check_green(scn_3d, 10000/* #réalisations */, 375.88/* Reference [K] */);
 
   ground_interf_data->specular_fraction = 1; /* Specular */
   check(scn_2d, 100000/* #réalisations */, 417.77/* Reference [K] */);
-  check(scn_3d, 100000/* #réalisations */, 417.77/* Reference [K] */);
+  check_green(scn_3d, 100000/* #réalisations */, 417.77/* Reference [K] */);
 
   OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(fluid));

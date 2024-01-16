@@ -246,6 +246,7 @@ XD(solid_fluid_boundary_picard1_path)
   handle_external_net_flux_args.interf = interf;
   handle_external_net_flux_args.frag = frag;
   handle_external_net_flux_args.hit = &rwalk->hit;
+  handle_external_net_flux_args.green_path = ctx->green_path;
   handle_external_net_flux_args.picard_order = get_picard_order(ctx);
   handle_external_net_flux_args.h_cond = h_cond;
   handle_external_net_flux_args.h_conv = h_conv;

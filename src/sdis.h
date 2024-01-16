@@ -1374,6 +1374,14 @@ sdis_green_path_for_each_flux_term
    sdis_process_interface_flux_term_T func,
    void* context);
 
+/* Return the external flux term, i.e. the relative net flux along the path from
+ * the external source. Multiply it by the power of the source to obtain its
+ * contribution to the path. */
+SDIS_API res_T
+sdis_green_path_get_external_flux_term
+  (struct sdis_green_path* path,
+   double* external_flux_term); /* [W/m^2] */
+
 /*******************************************************************************
  * Heat path API
  ******************************************************************************/
