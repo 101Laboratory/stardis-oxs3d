@@ -35,11 +35,12 @@
  *         +---+            \__/
  *            (0,500)
  *
- *   Z        (0,0)
- *   | Y       *--------E=0------------- - - -
- *   |/        |
- *   o---X     *------------------------ - - -
- *            (0,-1)
+ *            (0,0)
+ *    Y        *--------E=0------------- - - -
+ *    |        |
+ *    o--X     *------------------------ - - -
+ *   /        (0,-1)
+ *  Z
  *
  */
 
@@ -49,30 +50,60 @@
 /*******************************************************************************
  * Geometries
  ******************************************************************************/
-static const double positions[] = {
+static const double positions_2d[] = {
   /* Ground */
-  0.0,    -1e6, -1.0,
-  1.0e12, -1e6, -1.0,
-  0.0,     1e6, -1.0,
-  1.0e12,  1e6, -1.0,
-  0.0,    -1e6,  0.0,
-  1.0e12, -1e6,  0.0,
-  0.0,     1e6,  0.0,
-  1.0e12,  1e6,  0.0,
+  1.0e12, -1.0,
+  0.0,    -1.0,
+  0.0,     0.0,
+  1.0e12,  0.0,
 
   /* Wall */
-  -0.1, -500.0,  500.0,
-   0.0, -500.0,  500.0,
+   0.0,  500.0,
+  -0.1,  500.0,
+  -0.1, 1500.0,
+   0.0, 1500.0
+};
+static const size_t nvertices_2d = sizeof(positions_2d) / (sizeof(double)*2);
+
+static const double positions_3d[] = {
+  /* Ground */
+  0.0,    -1.0, -1.0e6,
+  1.0e12, -1.0, -1.0e6,
+  0.0,     1.0, -1.0e6,
+  1.0e12,  1.0, -1.0e6,
+  0.0,    -1.0,  1.0e6,
+  1.0e12, -1.0,  1.0e6,
+  0.0,     1.0,  1.0e6,
+  1.0e12,  1.0,  1.0e6,
+
+  /* Wall */
+  -0.1,  500.0, -500.0,
+   0.0,  500.0, -500.0,
+  -0.1, 1500.0, -500.0,
+   0.0, 1500.0, -500.0,
   -0.1,  500.0,  500.0,
    0.0,  500.0,  500.0,
-  -0.1, -500.0, 1500.0,
-   0.0, -500.0, 1500.0,
-  -0.1,  500.0, 1500.0,
-   0.0,  500.0, 1500.0
+  -0.1, 1500.0,  500.0,
+   0.0, 1500.0,  500.0
 };
-const size_t nvertices = sizeof(positions) / (sizeof(double)*3);
+static const size_t nvertices_3d = sizeof(positions_3d) / (sizeof(double)*3);
 
-static const size_t indices[] = {
+static const size_t indices_2d[] = {
+  /* Ground */
+  0, 1, /* -y */
+  1, 2, /* -x */
+  2, 3, /* +y */
+  3, 0, /* +x */
+
+  /* Wall */
+  4, 5, /* -y */
+  5, 6, /* -x */
+  6, 7, /* +y */
+  7, 4  /* +x */
+};
+static const size_t nsegments = sizeof(indices_2d) / (sizeof(size_t)*2);
+
+static const size_t indices_3d[] = {
   /* Ground */
   0, 2, 1, 1, 2, 3, /* -z */
   0, 4, 2, 2, 4, 6, /* -x */
@@ -89,7 +120,7 @@ static const size_t indices[] = {
   10, 14, 15, 15, 11, 10, /* +y */
   8,  9,  13, 13, 12, 8   /* -y */
 };
-const size_t ntriangles = sizeof(indices) / (sizeof(size_t)*3);
+static const size_t ntriangles = sizeof(indices_3d) / (sizeof(size_t)*3);
 
 /*******************************************************************************
  * Media
@@ -226,8 +257,8 @@ source_get_position
   (void)time, (void)data; /* Avoid the "unusued variable" warning */
 
   pos[0] = cos(elevation) * distance;
-  pos[1] = 0;
-  pos[2] = sin(elevation) * distance;
+  pos[1] = sin(elevation) * distance;
+  pos[2] = 0;
 }
 
 static struct sdis_source*
@@ -254,39 +285,61 @@ struct scene_context {
 static const struct scene_context SCENE_CONTEXT_NULL = {NULL, NULL};
 
 static void
-scene_get_indices(const size_t itri, size_t ids[3], void* ctx)
+scene_get_indices_2d(const size_t iseg, size_t ids[2], void* ctx)
+{
+  struct scene_context* context = ctx;
+  CHK(ids && context && iseg < nsegments);
+  ids[0] = (unsigned)indices_2d[iseg*2+0];
+  ids[1] = (unsigned)indices_2d[iseg*2+1];
+}
+
+static void
+scene_get_indices_3d(const size_t itri, size_t ids[3], void* ctx)
 {
   struct scene_context* context = ctx;
   CHK(ids && context && itri < ntriangles);
-  ids[0] = (unsigned)indices[itri*3+0];
-  ids[1] = (unsigned)indices[itri*3+1];
-  ids[2] = (unsigned)indices[itri*3+2];
+  ids[0] = (unsigned)indices_3d[itri*3+0];
+  ids[1] = (unsigned)indices_3d[itri*3+1];
+  ids[2] = (unsigned)indices_3d[itri*3+2];
 }
 
 static void
-scene_get_interface(const size_t itri, struct sdis_interface** interf, void* ctx)
+scene_get_interface_2d(const size_t iseg, struct sdis_interface** interf, void* ctx)
+{
+  struct scene_context* context = ctx;
+  CHK(interf && context && iseg < nsegments);
+  *interf = iseg < 4 ? context->interf_ground : context->interf_wall;
+}
+
+static void
+scene_get_interface_3d(const size_t itri, struct sdis_interface** interf, void* ctx)
 {
   struct scene_context* context = ctx;
   CHK(interf && context && itri < ntriangles);
-  if(itri < 12) {
-    *interf = context->interf_ground;
-  } else {
-    *interf = context->interf_wall;
-  }
+  *interf = itri < 12 ? context->interf_ground : context->interf_wall;
 }
 
 static void
-scene_get_position(const size_t ivert, double pos[3], void* ctx)
+scene_get_position_2d(const size_t ivert, double pos[2], void* ctx)
 {
   struct scene_context* context = ctx;
-  CHK(pos && context && ivert < nvertices);
-  pos[0] = positions[ivert*3+0];
-  pos[1] = positions[ivert*3+1];
-  pos[2] = positions[ivert*3+2];
+  CHK(pos && context && ivert < nvertices_2d);
+  pos[0] = positions_2d[ivert*2+0];
+  pos[1] = positions_2d[ivert*2+1];
+}
+
+static void
+scene_get_position_3d(const size_t ivert, double pos[3], void* ctx)
+{
+  struct scene_context* context = ctx;
+  CHK(pos && context && ivert < nvertices_3d);
+  pos[0] = positions_3d[ivert*3+0];
+  pos[1] = positions_3d[ivert*3+1];
+  pos[2] = positions_3d[ivert*3+2];
 }
 
 static struct sdis_scene*
-create_scene
+create_scene_3d
   (struct sdis_device* sdis,
    struct sdis_interface* interf_ground,
    struct sdis_interface* interf_wall,
@@ -299,11 +352,11 @@ create_scene
   context.interf_ground = interf_ground;
   context.interf_wall = interf_wall;
 
-  scn_args.get_indices = scene_get_indices;
-  scn_args.get_interface = scene_get_interface;
-  scn_args.get_position = scene_get_position;
+  scn_args.get_indices = scene_get_indices_3d;
+  scn_args.get_interface = scene_get_interface_3d;
+  scn_args.get_position = scene_get_position_3d;
   scn_args.nprimitives = ntriangles;
-  scn_args.nvertices = nvertices;
+  scn_args.nvertices = nvertices_3d;
   scn_args.trad.temperature = 0; /* [K] */
   scn_args.trad.reference = T_REF; /* [K] */
   scn_args.t_range[0] = 0; /* [K] */
@@ -311,6 +364,35 @@ create_scene
   scn_args.source = source;
   scn_args.context = &context;
   OK(sdis_scene_create(sdis, &scn_args, &scn));
+  return scn;
+}
+
+static struct sdis_scene*
+create_scene_2d
+  (struct sdis_device* sdis,
+   struct sdis_interface* interf_ground,
+   struct sdis_interface* interf_wall,
+   struct sdis_source* source)
+{
+  struct sdis_scene* scn = NULL;
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct scene_context context = SCENE_CONTEXT_NULL;
+
+  context.interf_ground = interf_ground;
+  context.interf_wall = interf_wall;
+
+  scn_args.get_indices = scene_get_indices_2d;
+  scn_args.get_interface = scene_get_interface_2d;
+  scn_args.get_position = scene_get_position_2d;
+  scn_args.nprimitives = nsegments;
+  scn_args.nvertices = nvertices_2d;
+  scn_args.trad.temperature = 0; /* [K] */
+  scn_args.trad.reference = T_REF; /* [K] */
+  scn_args.t_range[0] = 0; /* [K] */
+  scn_args.t_range[1] = 0; /* [K] */
+  scn_args.source = source;
+  scn_args.context = &context;
+  OK(sdis_scene_2d_create(sdis, &scn_args, &scn));
   return scn;
 }
 
@@ -326,15 +408,24 @@ check
   struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_estimator* estimator = NULL;
+  enum sdis_scene_dimension dim;
+  const char* dim_str = NULL;
 
-  probe_args.nrealisations = nrealisations;
   probe_args.position[0] = -0.05;
-  probe_args.position[1] = 0;
-  probe_args.position[2] = 1000;
+  probe_args.position[1] = 1000;
+  probe_args.position[2] = 0;
+  probe_args.nrealisations = nrealisations;
   OK(sdis_solve_probe(scn, &probe_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
-  printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
-    SPLIT3(probe_args.position), analytical_ref, T.E, T.SE);
+
+  OK(sdis_scene_get_dimension(scn, &dim));
+  switch(dim) {
+    case SDIS_SCENE_2D: dim_str = "2D"; break;
+    case SDIS_SCENE_3D: dim_str = "3D"; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  printf("%s: T(%g, %g, %g) = %g ~ %g +/- %g\n",
+    dim_str, SPLIT3(probe_args.position), analytical_ref, T.E, T.SE);
   OK(sdis_estimator_ref_put(estimator));
 
   CHK(eq_eps(analytical_ref, T.E, 3*T.SE));
@@ -352,7 +443,8 @@ main(int argc, char** argv)
   struct sdis_interface* interf_ground = NULL;
   struct sdis_interface* interf_wall = NULL;
   struct sdis_source* src = NULL;
-  struct sdis_scene* scn = NULL;
+  struct sdis_scene* scn_2d = NULL;
+  struct sdis_scene* scn_3d = NULL;
 
   struct interface* ground_interf_data = NULL;
   (void) argc, (void)argv;
@@ -366,13 +458,16 @@ main(int argc, char** argv)
   interf_wall = create_interface
     (dev, solid, fluid, 1/*emissivity*/, 10/*h*/, NULL);
   src = create_source(dev);
-  scn = create_scene(dev, interf_ground, interf_wall, src);
+  scn_2d = create_scene_2d(dev, interf_ground, interf_wall, src);
+  scn_3d = create_scene_3d(dev, interf_ground, interf_wall, src);
 
   ground_interf_data->specular_fraction = 0; /* Lambertian */
-  check(scn, 10000/* #réalisation */, 375.88/* Reference [K] */);
+  check(scn_2d, 10000/* #réalisations */, 375.88/* Reference [K] */);
+  check(scn_3d, 10000/* #réalisations */, 375.88/* Reference [K] */);
 
   ground_interf_data->specular_fraction = 1; /* Specular */
-  check(scn, 100000/* #réalisaitons */, 417.77/* Reference [K] */);
+  check(scn_2d, 100000/* #réalisations */, 417.77/* Reference [K] */);
+  check(scn_3d, 100000/* #réalisations */, 417.77/* Reference [K] */);
 
   OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(fluid));
@@ -380,7 +475,8 @@ main(int argc, char** argv)
   OK(sdis_interface_ref_put(interf_ground));
   OK(sdis_interface_ref_put(interf_wall));
   OK(sdis_source_ref_put(src));
-  OK(sdis_scene_ref_put(scn));
+  OK(sdis_scene_ref_put(scn_2d));
+  OK(sdis_scene_ref_put(scn_3d));
   CHK(mem_allocated_size() == 0);
   return 0;
 }
