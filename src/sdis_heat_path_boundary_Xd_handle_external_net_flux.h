@@ -340,7 +340,7 @@ XD(compute_incident_diffuse_flux)
     double wi[3] = {0}; /* Incident direction (outward the surface). Always 3D */
     double vec[DIM] = {0}; /* Temporary variable */
 
-    dX(minus)(wi, dir);
+    d3_minus(wi, dir); /* Always in 3D */
 
     /* Find the following surface along the direction of propagation */
     XD(trace_ray)(scn, pos, dir, INF, &hit, &hit);
@@ -367,7 +367,7 @@ XD(compute_incident_diffuse_flux)
     /* Sample rebound direction */
     if(frag.side == SDIS_BACK) dX(minus)(N, N); /* Revert normal if necessary */
     sample_brdf(&brdf, rng, wi, N, &brdf_sample);
-    dX(set)(dir, brdf_sample.dir);
+    d3_set(dir, brdf_sample.dir); /* Always in 3D */
 
     /* Calculate the direct contribution if the rebound is specular */
     if(brdf_sample.cpnt == BRDF_SPECULAR) {
