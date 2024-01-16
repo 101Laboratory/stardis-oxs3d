@@ -179,7 +179,6 @@ TEST_SRC =\
  src/test_sdis_data.c\
  src/test_sdis_draw_external_flux.c\
  src/test_sdis_enclosure_limit_conditions.c\
- src/test_sdis_external_flux.c\
  src/test_sdis_flux.c\
  src/test_sdis_flux2.c\
  src/test_sdis_flux_with_h.c\
@@ -206,6 +205,7 @@ TEST_SRC_MPI =\
  src/test_sdis.c\
  src/test_sdis_compute_power.c\
  src/test_sdis_device.c\
+ src/test_sdis_external_flux.c\
  src/test_sdis_solve_camera.c\
  src/test_sdis_solve_medium.c\
  src/test_sdis_solve_medium_2d.c\
@@ -281,7 +281,6 @@ src/test_sdis_convection.d \
 src/test_sdis_convection_non_uniform.d \
 src/test_sdis_data.d \
 src/test_sdis_enclosure_limit_conditions.d \
-src/test_sdis_external_flux.d \
 src/test_sdis_flux.d \
 src/test_sdis_flux2.d \
 src/test_sdis_flux_with_h.d \
@@ -313,7 +312,6 @@ src/test_sdis_convection.o \
 src/test_sdis_convection_non_uniform.o \
 src/test_sdis_data.o \
 src/test_sdis_enclosure_limit_conditions.o \
-src/test_sdis_external_flux.o \
 src/test_sdis_flux.o \
 src/test_sdis_flux2.o \
 src/test_sdis_flux_with_h.o \
@@ -345,7 +343,6 @@ test_sdis_convection \
 test_sdis_convection_non_uniform \
 test_sdis_data \
 test_sdis_enclosure_limit_conditions \
-test_sdis_external_flux \
 test_sdis_flux \
 test_sdis_flux2 \
 test_sdis_flux_with_h \
@@ -408,18 +405,21 @@ test_sdis_scene \
 ################################################################################
 src/test_sdis.d \
 src/test_sdis_device.d \
+src/test_sdis_external_flux.d \
 src/test_sdis_solve_medium_2d.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS_MPI) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis.o \
 src/test_sdis_device.o \
+src/test_sdis_external_flux.o \
 src/test_sdis_solve_medium_2d.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS_MPI) -c $(@:.o=.c) -o $@
 
 test_sdis \
 test_sdis_device \
+test_sdis_external_flux \
 test_sdis_solve_medium_2d \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS_MPI) -o $@ src/$@.o $(TEST_LIBS_MPI)

@@ -417,7 +417,8 @@ static void
 check
   (struct sdis_scene* scn,
    const size_t nrealisations,
-   const double analytical_ref)
+   const double analytical_ref,
+   const int is_master_process)
 {
   struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
@@ -428,8 +429,10 @@ check
   probe_args.position[2] = 0;
   probe_args.nrealisations = nrealisations;
   OK(sdis_solve_probe(scn, &probe_args, &estimator));
-  OK(sdis_estimator_get_temperature(estimator, &T));
 
+  if(!is_master_process) return;
+
+  OK(sdis_estimator_get_temperature(estimator, &T));
   printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
     SPLIT3(probe_args.position), analytical_ref, T.E, T.SE);
   OK(sdis_estimator_ref_put(estimator));
@@ -441,7 +444,8 @@ static void
 check_green
   (struct sdis_scene* scn,
    const size_t nrealisations,
-   const double analytical_ref)
+   const double analytical_ref,
+   const int is_master_process)
 {
   struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
@@ -453,6 +457,9 @@ check_green
   probe_args.position[2] = 0;
   probe_args.nrealisations = nrealisations;
   OK(sdis_solve_probe_green_function(scn, &probe_args, &green));
+
+  if(!is_master_process) return;
+
   OK(sdis_green_function_solve(green, &estimator));
   check_green_function(green);
 
@@ -482,9 +489,10 @@ main(int argc, char** argv)
   struct sdis_scene* scn_3d = NULL;
 
   struct interface* ground_interf_data = NULL;
+  int is_master_process = 0;
   (void) argc, (void)argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   fluid = create_fluid(dev);
   solid = create_solid(dev);
@@ -497,14 +505,13 @@ main(int argc, char** argv)
   scn_3d = create_scene_3d(dev, interf_ground, interf_wall, src);
 
   ground_interf_data->specular_fraction = 0; /* Lambertian */
-  check(scn_2d, 10000/* #réalisations */, 375.88/* Reference [K] */);
-  check_green(scn_3d, 10000/* #réalisations */, 375.88/* Reference [K] */);
+  check(scn_2d, 10000, 375.88, is_master_process);
+  check_green(scn_3d, 10000, 375.88, is_master_process);
 
   ground_interf_data->specular_fraction = 1; /* Specular */
-  check(scn_2d, 100000/* #réalisations */, 417.77/* Reference [K] */);
-  check_green(scn_3d, 100000/* #réalisations */, 417.77/* Reference [K] */);
+  check(scn_2d, 100000, 417.77, is_master_process);
+  check_green(scn_3d, 100000, 417.77, is_master_process);
 
-  OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_interface_ref_put(interf_ground));
@@ -512,6 +519,9 @@ main(int argc, char** argv)
   OK(sdis_source_ref_put(src));
   OK(sdis_scene_ref_put(scn_2d));
   OK(sdis_scene_ref_put(scn_3d));
+
+  free_default_device(dev);
+
   CHK(mem_allocated_size() == 0);
   return 0;
 }
