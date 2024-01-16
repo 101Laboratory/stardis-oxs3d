@@ -126,6 +126,14 @@ sdis_source_ref_put(struct sdis_source* src)
   return RES_OK;
 }
 
+res_T
+sdis_source_get_power(const struct sdis_source* src, double* power)
+{
+  if(!src || !power) return RES_BAD_ARG;
+  *power = source_get_power(src);
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
@@ -271,4 +279,11 @@ exit:
 error:
   *sample = SOURCE_SAMPLE_NULL;
   goto exit;
+}
+
+double
+source_get_power(const struct sdis_source* src)
+{
+  ASSERT(src);
+  return src->spherical.power;
 }

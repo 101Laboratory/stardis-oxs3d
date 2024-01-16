@@ -52,4 +52,8 @@ source_trace_to
    const double time, /* Time at which ray is traced */
    struct source_sample* sample); /* pdf == 0 if no source is reached */
 
+extern LOCAL_SYM double /* [W] */
+source_get_power
+  (const struct sdis_source* source);
+
 #endif /* SDIS_SOURCE_C_H */

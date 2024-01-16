@@ -36,6 +36,7 @@ check_spherical_source(struct sdis_device* dev)
     SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL;
   struct sdis_source* src = NULL;
   struct sdis_data* data = NULL;
+  double power = 0;
 
   /* Create a data to check its memory management */
   OK(sdis_data_create(dev, sizeof(double[3]), ALIGNOF(double[3]), NULL, &data));
@@ -49,6 +50,11 @@ check_spherical_source(struct sdis_device* dev)
   BA(sdis_spherical_source_create(dev, NULL, &src));
   BA(sdis_spherical_source_create(dev, &args, NULL));
   OK(sdis_spherical_source_create(dev, &args, &src));
+
+  BA(sdis_source_get_power(NULL, &power));
+  BA(sdis_source_get_power(src, NULL));
+  OK(sdis_source_get_power(src, &power));
+  CHK(power == args.power);
 
   BA(sdis_source_ref_get(NULL));
   OK(sdis_source_ref_get(src));
