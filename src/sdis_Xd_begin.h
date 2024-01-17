@@ -85,10 +85,17 @@ get_picard_order(const struct rwalk_context* ctx)
   #include <rsys/double2.h>
   #include <rsys/float2.h>
   #include <star/s2d.h>
+
+  #define FORMAT_VECX "%g, %g"
+  #define SPLITX(V) SPLIT2(V)
+
 #elif SDIS_XD_DIMENSION == 3
   #include <rsys/double3.h>
   #include <rsys/float3.h>
   #include <star/s3d.h>
+
+  #define FORMAT_VECX "%g, %g, %g"
+  #define SPLITX(V) SPLIT3(V)
 #else
   #error "Invalid dimension."
 #endif

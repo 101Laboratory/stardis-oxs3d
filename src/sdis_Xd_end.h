@@ -38,4 +38,7 @@
 #undef fX_set_dX
 #undef dX_set_fX
 
+#undef FORMAT_VECX
+#undef SPLITX
+
 #undef SDIS_XD_BEGIN_H__

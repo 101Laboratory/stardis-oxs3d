@@ -36,29 +36,19 @@ XD(check_Tref)
 {
   ASSERT(scn && pos && func_name);
 
-#if DIM == 2
-  #define STR_VECX "%g %g"
-  #define SPLITX SPLIT2
-#else
-  #define STR_VECX "%g %g %g"
-  #define SPLITX SPLIT3
-#endif
   if(Tref < 0) {
     log_err(scn->dev,
-      "%s: invalid reference temperature `%gK' at the position `"STR_VECX"'.\n",
+      "%s: invalid reference temperature `%gK' at the position `"FORMAT_VECX"'.\n",
       func_name, Tref, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
   }
   if(Tref > scn->tmax) {
     log_err(scn->dev,
       "%s: invalid maximum temperature `%gK'. The reference temperature `%gK' "
-      "at the position `"STR_VECX"' is greater than this temperature.\n",
+      "at the position `"FORMAT_VECX"' is greater than this temperature.\n",
       func_name, scn->tmax, Tref, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
   }
-#undef STR_VECX
-#undef SPLITX
-
   return RES_OK;
 }
 

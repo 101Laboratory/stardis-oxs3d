@@ -97,3 +97,7 @@ conductive_path_3d
 #include "sdis_heat_path_conductive_delta_sphere_Xd.h"
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_conductive_delta_sphere_Xd.h"
+#define SDIS_XD_DIMENSION 2
+#include "sdis_heat_path_conductive_wos_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_heat_path_conductive_wos_Xd.h"
