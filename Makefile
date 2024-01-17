@@ -38,6 +38,7 @@ SRC =\
  src/sdis_green.c\
  src/sdis_heat_path.c\
  src/sdis_heat_path_boundary.c\
+ src/sdis_heat_path_conductive.c\
  src/sdis_interface.c\
  src/sdis_log.c\
  src/sdis_medium.c\
