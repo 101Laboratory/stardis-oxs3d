@@ -1173,7 +1173,7 @@ sdis_scene_get_device
 SDIS_API res_T
 sdis_scene_get_source
   (struct sdis_scene* scn,
-   struct sdis_source** src); /* May be NULL <=> no source */
+   struct sdis_source** src); /* The returned pointer can be NULL <=> no source */
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
