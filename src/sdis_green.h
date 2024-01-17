@@ -20,9 +20,9 @@
 #include <rsys/rsys.h>
 
 /* Current version the green function data structure. One should increment it
- * and perform a version management onto serialized data when the gren function
+ * and perform a version management onto serialized data when the green function
  * data structure is updated. */
-static const int SDIS_GREEN_FUNCTION_VERSION = 2;
+static const int SDIS_GREEN_FUNCTION_VERSION = 3;
 
 /* Forward declaration */
 struct accum;
@@ -105,6 +105,11 @@ green_path_add_flux_term
    struct sdis_interface* interf,
    const struct sdis_interface_fragment* fragment,
    const double term);
+
+extern LOCAL_SYM res_T
+green_path_add_external_flux_term
+  (struct green_path_handle* handle,
+   const double term); /* [W/m^2/sr] */
 
 #endif /* SDIS_GREEN_H */
 

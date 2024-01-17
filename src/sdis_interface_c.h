@@ -17,6 +17,8 @@
 #define SDIS_INTERFACE_C_H
 
 #include "sdis.h"
+#include "sdis_log.h"
+
 #include <rsys/free_list.h>
 #include <rsys/ref_count.h>
 #include <float.h>
@@ -183,5 +185,76 @@ interface_side_get_reference_temperature
     ? shader->reference_temperature(frag, interf->data) : -1;
 }
 
-#endif /* SDIS_INTERFACE_C_H */
+static INLINE int
+interface_side_is_external_flux_handled
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag)
+{
+  const struct sdis_interface_side_shader* shader;
+  ASSERT(interf && frag);
+  switch(frag->side) {
+    case SDIS_FRONT: shader = &interf->shader.front; break;
+    case SDIS_BACK: shader = &interf->shader.back; break;
+    default: FATAL("Unreachable code\n"); break;
+  }
+  return shader->handle_external_flux;
+}
 
+/*******************************************************************************
+ * Check interface properties
+ ******************************************************************************/
+#define DEFINE_INTERF_CHK_PROP_FUNC(Interf, Prop, Low, Upp, LowIsInc, UppIsInc)\
+  static INLINE res_T                                                          \
+  Interf##_check_##Prop                                                        \
+    (struct sdis_device* dev,                                                  \
+     const double val, /* Value of the property */                             \
+     const double pos[3], /* Position at which the property was queried */     \
+     const double time) /* Time at which the property was queried */           \
+  {                                                                            \
+    const int low_test = LowIsInc ? Low <= val : Low < val;                    \
+    const int upp_test = UppIsInc ? Upp >= val : Upp > val;                    \
+    const char low_char = LowIsInc ? '[' : ']';                                \
+    const char upp_char = UppIsInc ? ']' : '[';                                \
+    ASSERT(dev && pos);                                                        \
+                                                                               \
+    if(!low_test || !upp_test) {                                               \
+      log_err(dev,                                                             \
+        "invalid "STR(Interf)" "PROP_STR(Prop)" '%g': "                        \
+        "it must be in %c%g, %g%c -- position=%g, %g, %g; time=%g\n",          \
+        val, low_char, (double)Low, (double)Upp, upp_char, SPLIT3(pos), time); \
+      return RES_BAD_ARG;                                                      \
+    }                                                                          \
+    return RES_OK;                                                             \
+  }
+
+#define PROP_STR(Prop) CONCAT(PROP_STR_, Prop)
+#define PROP_STR_convection_coef "convection coefficient"
+#define PROP_STR_thermal_contact_resistance "thermal contact resistance"
+#define PROP_STR_convection_coef_upper_bound "convection coefficient upper bound"
+#define PROP_STR_temperature "temperature"
+#define PROP_STR_flux "net flux"
+#define PROP_STR_emissivity "emissivity"
+#define PROP_STR_specular_fraction "specular fraction"
+#define PROP_STR_reference_temperature "reference temperature"
+
+DEFINE_INTERF_CHK_PROP_FUNC(interface, convection_coef, 0, INF, 1, 1)
+DEFINE_INTERF_CHK_PROP_FUNC(interface, thermal_contact_resistance, 0, INF, 1, 1)
+DEFINE_INTERF_CHK_PROP_FUNC(interface, convection_coef_upper_bound, 0, INF, 1, 1)
+DEFINE_INTERF_CHK_PROP_FUNC(interface_side, temperature, 0, INF, 1, 1)
+DEFINE_INTERF_CHK_PROP_FUNC(interface_side, flux, -INF, INF, 1, 1)
+DEFINE_INTERF_CHK_PROP_FUNC(interface_side, emissivity, 0, 1, 1, 1)
+DEFINE_INTERF_CHK_PROP_FUNC(interface_side, specular_fraction, 0, 1, 1, 1)
+DEFINE_INTERF_CHK_PROP_FUNC(interface_side, reference_temperature, 0, INF, 1, 1)
+
+#undef DEFINE_INTERF_CHK_PROP_FUNC
+#undef PROP_STR
+#undef PROP_STR_convection_coef
+#undef PROP_STR_thermal_contact_resistance
+#undef PROP_STR_convection_coef_upper_bound
+#undef PROP_STR_temperature
+#undef PROP_STR_flux
+#undef PROP_STR_emissivity
+#undef PROP_STR_specular_fraction
+#undef PROP_STR_reference_temperature
+
+#endif /* SDIS_INTERFACE_C_H */

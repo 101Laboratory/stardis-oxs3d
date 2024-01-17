@@ -34,11 +34,10 @@ struct rwalk_context {
   double That2; /* That^2 */
   double That3; /* That^3 */
 
-  /* Maximum branchings i.e. the maximum number of times
-   * XD(compute_temperature) can be called. It controls the number of
-   * ramifications of the heat path and currently is correlated to the Picard
-   * order used to estimate the radiative temperature. max_branchings ==
-   * picard_order-1 */
+  /* Maximum branchings i.e. the maximum number of times XD(sample_coupled_path)
+   * can be called. It controls the number of ramifications of the heat path and
+   * currently is correlated to the Picard order used to estimate the radiative
+   * temperature. max_branchings == picard_order-1 */
   size_t max_branchings;
 
   /* Number of heat path branchings */

@@ -24,6 +24,7 @@
 #include "sdis.h"
 #include "sdis_interface_c.h"
 #include "sdis_scene_c.h"
+#include "sdis_source_c.h"
 
 #include <float.h>
 #include <limits.h>
@@ -108,6 +109,7 @@ scene_release(ref_T * ref)
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   if(scn->senc2d_scn) SENC2D(scene_ref_put(scn->senc2d_scn));
   if(scn->senc3d_scn) SENC3D(scene_ref_put(scn->senc3d_scn));
+  if(scn->source) SDIS(source_ref_put(scn->source));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }
@@ -418,6 +420,14 @@ sdis_scene_get_device(struct sdis_scene* scn, struct sdis_device** device)
   return RES_OK;
 }
 
+res_T
+sdis_scene_get_source(struct sdis_scene* scn, struct sdis_source** source)
+{
+  if(!scn || !source) return RES_BAD_ARG;
+  *source = scn->source;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
@@ -472,6 +482,13 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   SHA256_UPD(&scn->trad.reference, 1);
   SHA256_UPD(&scn->tmax, 1);
   SHA256_UPD(&scn->fp_to_meter, 1);
+
+  if(scn->source) {
+    hash256_T src_hash;
+    source_compute_signature(scn->source, src_hash);
+    sha256_ctx_update(&sha256_ctx, src_hash, sizeof(hash256_T));
+  }
+
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;
     size_t ivert;

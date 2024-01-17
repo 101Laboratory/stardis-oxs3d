@@ -41,3 +41,7 @@
 #include "sdis_heat_path_boundary_Xd.h"
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_boundary_Xd.h"
+#define SDIS_XD_DIMENSION 2
+#include "sdis_heat_path_boundary_Xd_handle_external_net_flux.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_heat_path_boundary_Xd_handle_external_net_flux.h"

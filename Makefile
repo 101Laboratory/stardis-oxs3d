@@ -46,6 +46,7 @@ SRC =\
  src/sdis_scene.c\
  src/sdis_solve.c\
  src/sdis_solve_camera.c\
+ src/sdis_source.c\
  src/sdis_tile.c\
  $($(DISTRIB_PARALLELISM)_SRC)
 OBJ = $(SRC:.c=.o)
@@ -176,6 +177,7 @@ TEST_SRC =\
  src/test_sdis_convection.c\
  src/test_sdis_convection_non_uniform.c\
  src/test_sdis_data.c\
+ src/test_sdis_draw_external_flux.c\
  src/test_sdis_enclosure_limit_conditions.c\
  src/test_sdis_flux.c\
  src/test_sdis_flux2.c\
@@ -190,6 +192,7 @@ TEST_SRC =\
  src/test_sdis_solve_probe_2d.c\
  src/test_sdis_solve_probe2_2d.c\
  src/test_sdis_solve_probe3_2d.c\
+ src/test_sdis_source.c\
  src/test_sdis_transcient.c\
  src/test_sdis_unstationary_atm.c\
  src/test_sdis_volumic_power.c\
@@ -202,6 +205,7 @@ TEST_SRC_MPI =\
  src/test_sdis.c\
  src/test_sdis_compute_power.c\
  src/test_sdis_device.c\
+ src/test_sdis_external_flux.c\
  src/test_sdis_solve_camera.c\
  src/test_sdis_solve_medium.c\
  src/test_sdis_solve_medium_2d.c\
@@ -287,6 +291,7 @@ src/test_sdis_solve_probe.d \
 src/test_sdis_solve_probe_2d.d \
 src/test_sdis_solve_probe2_2d.d \
 src/test_sdis_solve_probe3_2d \
+src/test_sdis_source.d \
 src/test_sdis_transcient.d \
 src/test_sdis_unstationary_atm.d \
 src/test_sdis_utils.d \
@@ -317,6 +322,7 @@ src/test_sdis_solve_probe.o \
 src/test_sdis_solve_probe_2d.o \
 src/test_sdis_solve_probe2_2d.o \
 src/test_sdis_solve_probe3_2d.o \
+src/test_sdis_source.o \
 src/test_sdis_transcient.o \
 src/test_sdis_unstationary_atm.o \
 src/test_sdis_utils.o \
@@ -347,6 +353,7 @@ test_sdis_solve_probe \
 test_sdis_solve_probe_2d \
 test_sdis_solve_probe2_2d \
 test_sdis_solve_probe3_2d \
+test_sdis_source \
 test_sdis_transcient \
 test_sdis_unstationary_atm \
 test_sdis_volumic_power \
@@ -360,16 +367,19 @@ test_sdis_volumic_power4 \
 ################################################################################
 # Tests based on Star-3DUT
 ################################################################################
+src/test_sdis_draw_external_flux.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
+src/test_sdis_draw_external_flux.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
+test_sdis_draw_external_flux \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
@@ -395,18 +405,21 @@ test_sdis_scene \
 ################################################################################
 src/test_sdis.d \
 src/test_sdis_device.d \
+src/test_sdis_external_flux.d \
 src/test_sdis_solve_medium_2d.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS_MPI) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis.o \
 src/test_sdis_device.o \
+src/test_sdis_external_flux.o \
 src/test_sdis_solve_medium_2d.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS_MPI) -c $(@:.o=.c) -o $@
 
 test_sdis \
 test_sdis_device \
+test_sdis_external_flux \
 test_sdis_solve_medium_2d \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS_MPI) -o $@ src/$@.o $(TEST_LIBS_MPI)

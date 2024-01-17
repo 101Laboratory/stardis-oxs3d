@@ -169,6 +169,58 @@ handle_net_flux_3d
    struct temperature_3d* T);
 
 /*******************************************************************************
+ * Handle external flux
+ ******************************************************************************/
+struct handle_external_net_flux_args_2d {
+  struct sdis_interface* interf;
+  const struct sdis_interface_fragment* frag;
+  const struct s2d_hit* hit;
+
+  struct green_path_handle* green_path; /* Store the propagator */
+  struct sdis_heat_path* heat_path; /* Save paths */
+
+  size_t picard_order;
+  double h_cond; /* Convective coefficient, i.e. lambda/delta */
+  double h_conv; /* Condutive coefficient */
+  double h_radi; /* Radiative coefficient */
+};
+
+struct handle_external_net_flux_args_3d {
+  struct sdis_interface* interf;
+  const struct sdis_interface_fragment* frag;
+  const struct s3d_hit* hit;
+
+  struct green_path_handle* green_path; /* Store the propagator */
+  struct sdis_heat_path* heat_path; /* Save paths */
+
+  size_t picard_order;
+  double h_cond; /* Convective coefficient, i.e. lambda/delta */
+  double h_conv; /* Condutive coefficient */
+  double h_radi; /* Radiative coefficient */
+};
+
+#define HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___2d {NULL,NULL,NULL,NULL,NULL,0,0,0,0}
+#define HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___3d {NULL,NULL,NULL,NULL,NULL,0,0,0,0}
+static const struct handle_external_net_flux_args_2d
+HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL_2d = HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___2d;
+static const struct handle_external_net_flux_args_3d
+HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL_3d = HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL___3d;
+
+extern LOCAL_SYM res_T
+handle_external_net_flux_2d
+  (const struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const struct handle_external_net_flux_args_2d* args,
+   struct temperature_2d* T);
+
+extern LOCAL_SYM res_T
+handle_external_net_flux_3d
+  (const struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const struct handle_external_net_flux_args_3d* args,
+   struct temperature_3d* T);
+
+/*******************************************************************************
  * Boundary sub-paths
  ******************************************************************************/
 extern LOCAL_SYM res_T

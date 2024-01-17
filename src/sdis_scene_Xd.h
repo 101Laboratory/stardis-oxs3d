@@ -354,6 +354,7 @@ hit_shared_edge
   int edge_ivertex = 0; /* Temporary variable */
   int tri0_ivertex, tri1_ivertex;
   int iv0, iv1, iv2;
+  int hit_edge;
   ASSERT(tri0 && tri1 && pos0 && pos1);
 
   /* Fetch the vertices of the triangle 0 */
@@ -432,8 +433,15 @@ hit_shared_edge
   f3_sub(E1, tri1_vertices[tri1_edge[1]].value, pos1);
   tmp1_2area = f3_len(f3_cross(N1, E0, E1));
 
-  return (eq_epsf(tri0_2area, 0, 1.e-6f) || tmp0_2area/tri0_2area < ON_EDGE_EPSILON)
-      && (eq_epsf(tri1_2area, 0, 1.e-6f) || tmp1_2area/tri1_2area < ON_EDGE_EPSILON);
+  hit_edge =
+  (  eq_epsf(tri0_2area, 0, 1.e-6f)
+  || eq_epsf(tmp0_2area, 0, 1.e-6f)
+  || tmp0_2area/tri0_2area < ON_EDGE_EPSILON);
+  hit_edge = hit_edge &&
+  (  eq_epsf(tri1_2area, 0, 1.e-6f)
+  || eq_epsf(tmp1_2area, 0, 1.e-6f)
+  || tmp1_2area/tri1_2area < ON_EDGE_EPSILON);
+  return hit_edge;
 }
 #undef ON_EDGE_EPSILON
 #endif /* DIM == 2 */
@@ -928,6 +936,11 @@ XD(scene_create)
   darray_prim_prop_init(dev->allocator, &scn->prim_props);
   htable_enclosure_init(dev->allocator, &scn->enclosures);
   htable_d_init(dev->allocator, &scn->tmp_hc_ub);
+
+  if(args->source) {
+    SDIS(source_ref_get(args->source));
+    scn->source = args->source;
+  }
 
   res = XD(run_analyze)
     (scn,
