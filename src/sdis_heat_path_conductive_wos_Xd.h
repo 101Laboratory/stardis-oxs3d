@@ -50,7 +50,7 @@ error:
 }
 
 static res_T
-XD(setup_hit)
+XD(setup_hit_wos)
   (struct sdis_scene* scn,
    const struct sXd(hit)* hit,
    struct XD(rwalk)* rwalk)
@@ -114,6 +114,59 @@ error:
 }
 
 static res_T
+XD(setup_hit_rt)
+  (struct sdis_scene* scn,
+   const double pos[DIM],
+   const double dir[DIM],
+   const struct sXd(hit)* hit,
+   struct XD(rwalk)* rwalk)
+{
+  /* Properties */
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* mdm = NULL;
+  enum sdis_side side = SDIS_SIDE_NULL__;
+
+  /* Miscellaneous */
+  double tgt[DIM] = {0}; /* Target point, i.e. hit position */
+  double N[DIM] = {0};
+  res_T res = RES_OK;
+
+  /* Check pre-conditions */
+  ASSERT(pos && dir && rwalk && hit);
+  ASSERT(dX(is_normalized)(dir));
+
+  /* Calculate on which side the intersection occurs */
+  dX(muld)(tgt, dir, hit->distance);
+  dX(add)(tgt, tgt, pos);
+  dX_set_fX(N, hit->normal);
+  dX(normalize)(N, N);
+  side = dX(dot)(N, dir) > 0 ? SDIS_BACK : SDIS_FRONT;
+
+  /* Fetch interface properties and check path consistency */
+  interf = scene_get_interface(scn, hit->prim.prim_id);
+  mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
+  if(mdm != rwalk->mdm) {
+    log_err(scn->dev,
+      "%s: the conductive path has reached an invalid interface; "
+      "unexpected medium (position: "FORMAT_VECX"; side: %s).\n",
+      FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
+    res = RES_BAD_OP_IRRECOVERABLE;
+    goto error;
+  }
+
+  /* Update the random walk */
+  dX(set)(rwalk->vtx.P, tgt);
+  rwalk->hit = *hit;
+  rwalk->hit_side = side;
+  rwalk->mdm = NULL;
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
 XD(sample_next_position)
   (struct sdis_scene* scn,
    struct XD(rwalk)* rwalk,
@@ -122,15 +175,13 @@ XD(sample_next_position)
   /* Intersection */
   struct sXd(hit) hit = SXD_HIT_NULL;
 
-  /* Step */
-  double pos[DIM] = {0};
-  double dir[DIM] = {0};
-
   /* Walk on sphere */
+  double wos_distance = 0;
+  double wos_epsilon = 0;
   float wos_pos[DIM] = {0};
   float wos_radius = 0;
-  float wos_epsilon = 0;
 
+  /* Miscellaneous */
   res_T res = RES_OK;
   ASSERT(rwalk && rng);
 
@@ -138,35 +189,82 @@ XD(sample_next_position)
   wos_radius = (float)INF;
   fX_set_dX(wos_pos, rwalk->vtx.P);
   SXD(scene_view_closest_point(scn->sXd(view), wos_pos, wos_radius, NULL, &hit));
+  CHK(!SXD_HIT_NONE(&hit));
+  wos_distance = hit.distance;
 
   /* The current position is in the epsilon shell:
    * move it to the nearest interface position */
-  wos_epsilon = (float)(scn->fp_to_meter*1.e-6);
-  if(hit.distance <= wos_epsilon) {
-    XD(setup_hit)(scn, &hit, rwalk);
-    goto exit;
-  }
+  wos_epsilon = scn->fp_to_meter*1.e-6;
+  if(wos_distance <= wos_epsilon) {
+    res = XD(setup_hit_wos)(scn, &hit, rwalk);
+    if(res != RES_OK) goto error;
 
   /* Uniformly sample a new position on the surrounding sphere */
+  } else {
+    double pos[DIM] = {0};
+    double dir[DIM] = {0};
+    struct sdis_medium* mdm = NULL;
+
 #if DIM == 2
-  ssp_ran_circle_uniform(rng, dir, NULL);
+    ssp_ran_circle_uniform(rng, dir, NULL);
 #else
-  ssp_ran_sphere_uniform(rng, dir, NULL);
+    ssp_ran_sphere_uniform(rng, dir, NULL);
 #endif
-  dX(muld)(pos, dir, (double)hit.distance);
-  dX(add)(pos, pos, rwalk->vtx.P);
+    dX(muld)(pos, dir, (double)hit.distance);
+    dX(add)(pos, pos, rwalk->vtx.P);
 
-  /* TODO check that the new position is in the expected medium. The
-   * inconsistency of the medium means that there were numerical problems in
-   * moving the position. We can instead move the path to the solid interface,
-   * since we can assume that the invalid position is actually in the epsilon
-   * shell. */
+    /* Check that the new position is in the expected medium */
+    res = scene_get_medium_in_closed_boundaries(scn, pos, &mdm);
+    if(res != RES_OK) goto error;
 
-  /* Set new path position */
-  dX(set)(rwalk->vtx.P, pos);
+    /* No medium inconsistency => move the path to the new position */
+    if(mdm == rwalk->mdm) {
+      dX(set)(rwalk->vtx.P, pos);
+
+    /* As a result, the new position is detected as being in the wrong medium.
+     * This means that there has been a numerical problem in moving the
+     * position, which has therefore jumped the solid boundary. To solve this
+     * problem, we can move the trajectory on the solid interface along the
+     * direction of displacement. Indeed, we can assume that the position we
+     * want to move to is actually inside the epsilon shell. In this case, the
+     * trajectory will be moved to this interface in the next step anyway. */
+    } else {
+      float rt_pos[DIM] = {0};
+      float rt_dir[DIM] = {0};
+      float rt_range[2] = {0, 0};
+
+      fX_set_dX(rt_pos, pos);
+      fX_set_dX(rt_dir, dir);
+      rt_range[0] = 0;
+      rt_range[1] = (float)INF;
+      SXD(scene_view_trace_ray(scn->sXd(view), rt_pos, rt_dir, rt_range, NULL, &hit));
+
+      /* An intersection should be found. If not, we can do nothing and simply
+       * reject the path.
+       *
+       * TODO: we could take the treatment of numerical problems a step further
+       * by sampling other directions and trying to move in them again. But at
+       * present, and until we have proof to the contrary, we assume that the
+       * rejection of a path should not occur, or that it will be so rare that
+       * we don't care to save it. */
+      if(SXD_HIT_NONE(&hit)) {
+        log_err(scn->dev,
+          "%s: unable to the next diffusive position "
+          "(position: "FORMAT_VECX"; direction: "FORMAT_VECX"; distance: %g\n",
+          FUNC_NAME, SPLITX(pos), SPLITX(dir), wos_distance);
+        res = RES_BAD_OP_IRRECOVERABLE;
+        goto error;
+      }
+
+      res = XD(setup_hit_rt)(scn, pos, dir, &hit, rwalk);
+      if(res != RES_OK) goto error;
+    }
+  }
 
 exit:
   return res;
+error:
+  goto exit;
 }
 
 /*******************************************************************************
