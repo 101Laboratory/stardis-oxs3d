@@ -89,6 +89,13 @@ enum sdis_scene_dimension {
   SDIS_SCENE_3D
 };
 
+enum sdis_diffusion_algorithm {
+  SDIS_DIFFUSION_DELTA_SPHERE,
+  SDIS_DIFFUSION_WOS, /* Walk on Sphere */
+  SDIS_DIFFUSION_ALGORITHMS_COUNT__,
+  SDIS_DIFFUSION_NONE = SDIS_DIFFUSION_ALGORITHMS_COUNT__
+};
+
 /* Random walk vertex, i.e. a spatiotemporal position at a given step of the
  * random walk. */
 struct sdis_rwalk_vertex {
@@ -477,6 +484,8 @@ struct sdis_solve_probe_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -491,6 +500,7 @@ struct sdis_solve_probe_args {
   SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
@@ -531,6 +541,8 @@ struct sdis_solve_probe_boundary_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -547,6 +559,7 @@ struct sdis_solve_probe_boundary_args {
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_probe_boundary_args
@@ -569,6 +582,8 @@ struct sdis_solve_boundary_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -585,6 +600,7 @@ struct sdis_solve_boundary_args {
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
@@ -604,6 +620,8 @@ struct sdis_solve_medium_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -618,6 +636,7 @@ struct sdis_solve_medium_args {
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
@@ -636,6 +655,8 @@ struct sdis_solve_probe_boundary_flux_args {
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
   10000, /* #realisations */                                                   \
@@ -644,7 +665,8 @@ struct sdis_solve_probe_boundary_flux_args {
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE /* Diffusion algorithm */                        \
 }
 static const struct sdis_solve_probe_boundary_flux_args
 SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -663,6 +685,8 @@ struct sdis_solve_boundary_flux_args {
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                              \
   10000, /* #realisations */                                                   \
@@ -671,7 +695,8 @@ struct sdis_solve_boundary_flux_args {
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE /* Diffusion algorithm */                        \
 }
 static const struct sdis_solve_boundary_flux_args
 SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -692,6 +717,8 @@ struct sdis_solve_camera_args {
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use */
+
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
   NULL, /* Camera */                                                           \
@@ -701,7 +728,8 @@ struct sdis_solve_camera_args {
   256, /* #realisations per pixel */                                           \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE /* Diffusion algorithm */                        \
 }
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
   SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;

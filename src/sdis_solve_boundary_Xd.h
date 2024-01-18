@@ -78,6 +78,11 @@ check_solve_boundary_args(const struct sdis_solve_boundary_args* args)
     return RES_BAD_ARG;
   }
 
+  /* Check the diffusion algorithm */
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
   return RES_OK;
 }
 
@@ -405,6 +410,7 @@ XD(solve_boundary)
     realis_args.green_path = pgreen_path;
     realis_args.heat_path = pheat_path;
     realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = args->diff_algo;
     realis_args.uv[0] = uv[0];
 #if SDIS_XD_DIMENSION == 3
     realis_args.uv[1] = uv[1];
@@ -805,6 +811,7 @@ XD(solve_boundary_flux)
     realis_args.solid_side = solid_side;
     realis_args.flux_mask = flux_mask;
     realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = args->diff_algo;
     realis_args.uv[0] = uv[0];
 #if SDIS_XD_DIMENSION == 3
     realis_args.uv[1] = uv[1];

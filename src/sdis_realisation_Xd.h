@@ -39,7 +39,8 @@ check_probe_realisation_args(const struct probe_realisation_args* args)
       && args->rng
       && args->medium
       && args->time >= 0
-      && args->picard_order > 0;
+      && args->picard_order > 0
+      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
 }
 
 static INLINE int
@@ -53,7 +54,8 @@ check_boundary_realisation_args(const struct boundary_realisation_args* args)
       && args->uv[1] <= 1
       && args->time >= 0
       && args->picard_order > 0
-      && (args->side == SDIS_FRONT || args->side == SDIS_BACK);
+      && (args->side == SDIS_FRONT || args->side == SDIS_BACK)
+      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
 }
 
 static INLINE int
@@ -68,7 +70,8 @@ check_boundary_flux_realisation_args
       && args->uv[1] <= 1
       && args->time >= 0
       && args->picard_order > 0
-      && (args->solid_side == SDIS_FRONT || args->solid_side == SDIS_BACK);
+      && (args->solid_side == SDIS_FRONT || args->solid_side == SDIS_BACK)
+      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
 }
 #endif /* SDIS_REALISATION_XD_H */
 
@@ -234,6 +237,7 @@ XD(probe_realisation)
   ctx.That3 = ctx.That * ctx.That2;
   ctx.max_branchings = args->picard_order - 1;
   ctx.irealisation = args->irealisation;
+  ctx.diff_algo = args->diff_algo;
 
   res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
@@ -309,6 +313,7 @@ XD(boundary_realisation)
   ctx.That3 = ctx.That * ctx.That2;
   ctx.max_branchings = args->picard_order - 1;
   ctx.irealisation = args->irealisation;
+  ctx.diff_algo = args->diff_algo;
 
   res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
@@ -396,6 +401,7 @@ XD(boundary_flux_realisation)
     ctx.That3 = That3;                                                         \
     ctx.max_branchings = args->picard_order - 1;                               \
     ctx.irealisation = args->irealisation;                                     \
+    ctx.diff_algo = args->diff_algo;                                           \
     dX(set)(rwalk.vtx.P, P);                                                   \
     fX(set)(rwalk.hit.normal, N);                                              \
     T = XD(TEMPERATURE_NULL);                                                  \

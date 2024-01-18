@@ -72,6 +72,11 @@ check_solve_camera_args(const struct sdis_solve_camera_args* args)
     return RES_BAD_ARG;
   }
 
+  /* Check the diffusion algorithm */
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
   return RES_OK;
 }
 
@@ -87,6 +92,7 @@ solve_pixel
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
    const size_t picard_order,
+   const enum sdis_diffusion_algorithm diff_algo,
    struct sdis_estimator* estimator,
    struct pixel* pixel)
 {
@@ -135,6 +141,7 @@ solve_pixel
     realis_args.picard_order = picard_order;
     realis_args.heat_path = pheat_path;
     realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = diff_algo;
     d3_set(realis_args.position, ray_pos);
     d3_set(realis_args.direction, ray_dir);
     res_simul = ray_realisation_3d(scn, &realis_args, &w);
@@ -197,6 +204,7 @@ solve_tile
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
    const size_t picard_order,
+   const enum sdis_diffusion_algorithm diff_algo,
    struct sdis_estimator_buffer* buf,
    struct tile* tile)
 {
@@ -234,7 +242,7 @@ solve_tile
     }
     res = solve_pixel
       (scn, rng, mdm, cam, time_range, ipix_image, spp, register_paths, pix_sz,
-       picard_order, estimator, pixel);
+       picard_order, diff_algo, estimator, pixel);
     if(res != RES_OK) goto error;
   }
 
@@ -651,7 +659,8 @@ sdis_solve_camera
     /* Draw the tile */
     res_local = solve_tile
       (scn, rng, medium, args->cam, args->time_range, tile_org, tile_sz,
-       args->spp, register_paths, pix_sz, args->picard_order, buf, tile);
+       args->spp, register_paths, pix_sz, args->picard_order, args->diff_algo,
+       buf, tile);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;

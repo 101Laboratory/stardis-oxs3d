@@ -20,14 +20,15 @@
  * Helper functions
  ******************************************************************************/
 static INLINE int
-check_ray_realisatio_args(const struct ray_realisation_args* args)
+check_ray_realisation_args(const struct ray_realisation_args* args)
 {
   return args
       && args->rng
       && args->medium
       && args->medium->type == SDIS_FLUID
       && args->time >= 0
-      && args->picard_order > 0;
+      && args->picard_order > 0
+      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
 }
 
 /*******************************************************************************
@@ -50,7 +51,7 @@ ray_realisation_3d
   struct temperature_3d T = TEMPERATURE_NULL_3d;
   float dir[3];
   res_T res = RES_OK;
-  ASSERT(scn && weight && check_ray_realisatio_args(args));
+  ASSERT(scn && weight && check_ray_realisation_args(args));
 
   d3_set(rwalk.vtx.P, args->position);
   rwalk.vtx.time = args->time;
@@ -67,6 +68,7 @@ ray_realisation_3d
   ctx.That3 = ctx.That * ctx.That2;
   ctx.max_branchings = args->picard_order - 1;
   ctx.irealisation = args->irealisation;
+  ctx.diff_algo = args->diff_algo;
   
   f3_set_d3(dir, args->direction);
 

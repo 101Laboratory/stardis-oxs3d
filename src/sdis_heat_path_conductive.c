@@ -78,7 +78,19 @@ conductive_path_2d
    struct ssp_rng* rng,
    struct temperature_2d* T)
 {
-  return conductive_path_delta_sphere_2d(scn, ctx, rwalk, rng, T);
+  res_T res = RES_OK;
+  ASSERT(ctx);
+
+  switch(ctx->diff_algo) {
+    case SDIS_DIFFUSION_DELTA_SPHERE:
+      res = conductive_path_delta_sphere_2d(scn, ctx, rwalk, rng, T);
+      break;
+    case SDIS_DIFFUSION_WOS:
+      res = conductive_path_wos_2d(scn, ctx, rwalk, rng, T);
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return res;
 }
 
 res_T
@@ -89,7 +101,19 @@ conductive_path_3d
    struct ssp_rng* rng,
    struct temperature_3d* T)
 {
-  return conductive_path_delta_sphere_3d(scn, ctx, rwalk, rng, T);
+  res_T res = RES_OK;
+  ASSERT(ctx);
+
+  switch(ctx->diff_algo) {
+    case SDIS_DIFFUSION_DELTA_SPHERE:
+      res = conductive_path_delta_sphere_3d(scn, ctx, rwalk, rng, T);
+      break;
+    case SDIS_DIFFUSION_WOS:
+      res = conductive_path_wos_3d(scn, ctx, rwalk, rng, T);
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return res;
 }
 
 /* Generate the conductive path functions */

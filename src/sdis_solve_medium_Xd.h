@@ -172,6 +172,11 @@ check_solve_medium_args(const struct sdis_solve_medium_args* args)
     return RES_BAD_ARG;
   }
 
+  /* Check the diffusion algorithm */
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
   return RES_OK;
 }
 
@@ -436,6 +441,7 @@ XD(solve_medium)
     realis_args.green_path = pgreen_path;
     realis_args.heat_path = pheat_path;
     realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = args->diff_algo;
     dX(set)(realis_args.position, pos);
     res_simul = XD(probe_realisation)(scn, &realis_args, &weight);
     if(res_simul != RES_OK && res_simul != RES_BAD_OP) {
