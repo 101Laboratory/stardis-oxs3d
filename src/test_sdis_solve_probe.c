@@ -397,6 +397,9 @@ main(int argc, char** argv)
   solve_args.picard_order = 0;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
   solve_args.picard_order = 1;
+  solve_args.diff_algo = SDIS_DIFFUSION_NONE;
+  BA(sdis_solve_probe(scn, &solve_args, &estimator));
+  solve_args.diff_algo = SDIS_DIFFUSION_DELTA_SPHERE;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
 
   BA(sdis_estimator_get_type(estimator, NULL));
