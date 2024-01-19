@@ -233,7 +233,7 @@ XD(sample_next_position)
       float rt_dir[DIM] = {0};
       float rt_range[2] = {0, 0};
 
-      fX_set_dX(rt_pos, pos);
+      fX_set_dX(rt_pos, rwalk->vtx.P);
       fX_set_dX(rt_dir, dir);
       rt_range[0] = 0;
       rt_range[1] = (float)INF;
@@ -256,7 +256,7 @@ XD(sample_next_position)
         goto error;
       }
 
-      res = XD(setup_hit_rt)(scn, pos, dir, &hit, rwalk);
+      res = XD(setup_hit_rt)(scn, rwalk->vtx.P, dir, &hit, rwalk);
       if(res != RES_OK) goto error;
     }
   }
