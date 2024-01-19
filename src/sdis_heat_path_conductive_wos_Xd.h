@@ -37,8 +37,8 @@ XD(check_medium_consistency)
   /* Check medium consistency */
   if(mdm != rwalk->mdm) {
     log_err(scn->dev,
-      "%s: invalid solid walk. Unexpected medium (position: "FORMAT_VECX").\n",
-      FUNC_NAME, SPLITX(rwalk->vtx.P));
+      "%s:%s: invalid solid walk. Unexpected medium (position: "FORMAT_VECX").\n",
+      __FILE__, FUNC_NAME, SPLITX(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
@@ -94,9 +94,9 @@ XD(setup_hit_wos)
   mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
   if(mdm != rwalk->mdm) {
     log_err(scn->dev,
-      "%s: the conductive path has reached an invalid interface; "
+      "%s:%s: the conductive path has reached an invalid interface; "
       "unexpected medium (position: "FORMAT_VECX"; side: %s).\n",
-      FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
+      __FILE__, FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
@@ -147,9 +147,9 @@ XD(setup_hit_rt)
   mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
   if(mdm != rwalk->mdm) {
     log_err(scn->dev,
-      "%s: the conductive path has reached an invalid interface; "
+      "%s:%s: the conductive path has reached an invalid interface; "
       "unexpected medium (position: "FORMAT_VECX"; side: %s).\n",
-      FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
+      __FILE__, FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
@@ -249,9 +249,9 @@ XD(sample_next_position)
        * we don't care to save it. */
       if(SXD_HIT_NONE(&hit)) {
         log_err(scn->dev,
-          "%s: unable to the next diffusive position "
+          "%s:%s: unable to find the next diffusion position "
           "(position: "FORMAT_VECX"; direction: "FORMAT_VECX"; distance: %g\n",
-          FUNC_NAME, SPLITX(pos), SPLITX(dir), wos_distance);
+          __FILE__, FUNC_NAME, SPLITX(pos), SPLITX(dir), wos_distance);
         res = RES_BAD_OP_IRRECOVERABLE;
         goto error;
       }
