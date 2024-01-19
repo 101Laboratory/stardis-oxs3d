@@ -333,7 +333,7 @@ XD(conductive_path_wos)
   }
 
   T->func = XD(boundary_path);
-  ASSERT(rwalk->mdm = NULL);
+  ASSERT(rwalk->mdm == NULL);
 
 exit:
   return res;
