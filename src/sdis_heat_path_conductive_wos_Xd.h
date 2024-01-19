@@ -49,6 +49,120 @@ error:
   goto exit;
 }
 
+#if DIM == 2
+static INLINE enum sdis_side
+compute_hit_side_2d
+  (const struct sdis_scene* scn,
+   const struct s2d_hit* hit,
+   const double pos[2])
+{
+  struct s2d_attrib p0, p1; /* Segment positions */
+  double v0[2] = {0}; /* Vector from segment vertex 0 to segment vertex 1 */
+  double v1[2] = {0}; /* Vector from segment vertex 0 to input position */
+  double z = 0;
+
+  /* Check pre-conditions */
+  ASSERT(scn && hit && pos && !S2D_HIT_NONE(hit));
+
+  /* Retrieve the positions of the intersected segment */
+  S2D(segment_get_vertex_attrib(&hit->prim, 0, S2D_POSITION, &p0));
+  S2D(segment_get_vertex_attrib(&hit->prim, 1, S2D_POSITION, &p1));
+
+  v0[0] = p1.value[0] - p0.value[0];
+  v0[1] = p1.value[1] - p0.value[1];
+  v1[0] = pos[0] - p0.value[0];
+  v1[1] = pos[1] - p0.value[1];
+
+  /* Z coordinate of the cross product between v0 and v1. Its sign indicates on
+   * which side of the segment the position lies. */
+  z = d2_cross(v1, v0);
+  return z > 0 ? SDIS_FRONT : SDIS_BACK;
+}
+#endif
+
+#if DIM == 3
+static INLINE enum sdis_side
+compute_hit_side_3d
+  (const struct sdis_scene* scn,
+   const struct s3d_hit* hit,
+   const double pos[3])
+{
+  struct s3d_attrib v0; /* Position of the 1st triangle vertex */
+  double p[3] = {0}; /* Position of the 1st triangle vertex in double */
+  double N[3] = {0}; /* Normalized triangle normal */
+  double D = 0; /* Last parameter of the plane triangle plane equation */
+  double dst = 0; /* Distance of pos to the plane */
+
+  /* Check pre-conditions */
+  ASSERT(scn && hit && pos && !S3D_HIT_NONE(hit));
+
+  /* Retrieve the positions of the intersected triangle */
+  S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
+  d3_set_f3(p, v0.value);
+
+  /* Compute the plane equation of the triangle */
+  d3_set_f3(N, hit->normal);
+  d3_normalize(N, N);
+  D = -d3_dot(N, p);
+
+  /* Calculate the distance of the input position from the plane of the triangle
+   * and use the sign to define which side of the triangle the position is on */
+  dst = d3_dot(N, pos) + D;
+  return dst > 0 ? SDIS_FRONT : SDIS_BACK;
+}
+#endif
+
+/* Verify that the submitted position is in the expected medium */
+static res_T
+XD(check_diffusion_position)
+  (struct sdis_scene* scn,
+   const struct sdis_medium* expected_medium,
+   const double pos[DIM])
+{
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* mdm = NULL;
+  enum sdis_side side;
+
+  struct sXd(hit) hit = SXD_HIT_NULL;
+  float wos_pos[DIM] = {0};
+  float wos_radius = 0;
+  res_T res = RES_OK;
+
+  /* Check pre-conditions */
+  ASSERT(scn && expected_medium && pos);
+
+  /* Look for the nearest surface within 1 mm of the position to be checked. By
+   * limiting the search radius we speed up the closest point query. If no
+   * surface is found, we assume that the position is in the intended medium.
+   * We rely on this assumption because this function is used to verify
+   * positions during diffusive random walks. Diffusion algorithms ensure that
+   * positions are in the current medium. This function is only concerned with
+   * numerical problems which, once the new position has been calculated,
+   * position the random walk beyond the medium. In other words, the path jumps
+   * a boundary that lies within the numerical imprecision of the calculation,
+   * i.e. very close to the position to be verified. So, if no surface is found
+   * close to this position, it means that there is no nearby boundary and,
+   * consequently, no numerical problem of this kind could have arisen. */
+  wos_radius = (float)(scn->fp_to_meter * 1.0e-3);
+  fX_set_dX(wos_pos, pos);
+  SXD(scene_view_closest_point(scn->sXd(view), wos_pos, wos_radius, NULL, &hit));
+  if(SXD_HIT_NONE(&hit)) goto exit;
+
+  /* Fetch interface properties and check path consistency */
+  interf = scene_get_interface(scn, hit.prim.prim_id);
+  side = XD(compute_hit_side)(scn, &hit, pos);
+  mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
+  if(mdm != expected_medium) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 static res_T
 XD(setup_hit_wos)
   (struct sdis_scene* scn,
@@ -66,8 +180,6 @@ XD(setup_hit_wos)
 
   /* Miscellaneous */
   double tgt[DIM] = {0}; /* Target point, i.e. hit position */
-  double dir[DIM] = {0}; /* Direction along which intersection occurs */
-  double N[DIM] = {0}; /* Normal of the intersected triangle */
   res_T res = RES_OK;
 
   /* Check pre-conditions */
@@ -83,11 +195,7 @@ XD(setup_hit_wos)
 
   /* Calculate on which side the intersection occurs */
   dX_set_fX(tgt, attr.value);
-  dX_set_fX(N, hit->normal);
-  dX(sub)(dir, tgt, rwalk->vtx.P);
-  dX(normalize)(dir, dir);
-  dX(normalize)(N, N);
-  side = dX(dot)(N, dir) > 0 ? SDIS_BACK : SDIS_FRONT;
+  side = XD(compute_hit_side)(scn, hit, rwalk->vtx.P);
 
   /* Fetch interface properties and check path consistency */
   interf = scene_get_interface(scn, hit->prim.prim_id);
@@ -203,7 +311,6 @@ XD(sample_next_position)
   } else {
     double pos[DIM] = {0};
     double dir[DIM] = {0};
-    struct sdis_medium* mdm = NULL;
 
 #if DIM == 2
     ssp_ran_circle_uniform(rng, dir, NULL);
@@ -213,12 +320,19 @@ XD(sample_next_position)
     dX(muld)(pos, dir, (double)hit.distance);
     dX(add)(pos, pos, rwalk->vtx.P);
 
-    /* Check that the new position is in the expected medium */
-    res = scene_get_medium_in_closed_boundaries(scn, pos, &mdm);
-    if(res != RES_OK) goto error;
+    /* Check that the new position is in the intended medium. Please note that
+     * we do not use the scene_get_medium_in_closed_boundaries function. It uses
+     * the ray-tracing operator, which has its own numerical uncertainty that is
+     * not the same as that of the closest point operator used by this
+     * scattering algorithm. It can therefore return the expected medium,
+     * whereas the nearest point operator would return an inconsistent medium.
+     * The next diffusion step would then detect an error. This is why we use a
+     * new function based on the same geometric operator used in the present
+     * algorithm. */
+    res = XD(check_diffusion_position)(scn, rwalk->mdm, pos);
 
-    /* No medium inconsistency => move the path to the new position */
-    if(mdm == rwalk->mdm) {
+    /* Diffusion position is valid => move the path to the new position */
+    if(res == RES_OK) {
       dX(set)(rwalk->vtx.P, pos);
 
     /* As a result, the new position is detected as being in the wrong medium.
