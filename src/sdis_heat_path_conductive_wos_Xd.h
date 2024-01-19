@@ -283,6 +283,7 @@ XD(conductive_path_wos)
   struct solid_props props = SOLID_PROPS_NULL;
 
   /* Miscellaneous */
+  size_t ndiffusion_steps = 0; /* For debug */
   int eval_green = 0;
   res_T res = RES_OK;
   (void)ctx; /* Avoid the "unused variable" warning */
@@ -327,6 +328,8 @@ XD(conductive_path_wos)
       T->done = 1;
       break;
     }
+
+    ++ndiffusion_steps;
   }
 
   T->func = XD(boundary_path);
