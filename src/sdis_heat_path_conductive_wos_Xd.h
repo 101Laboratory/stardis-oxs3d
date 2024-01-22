@@ -52,9 +52,8 @@ error:
 #if DIM == 2
 static INLINE enum sdis_side
 compute_hit_side_2d
-  (const struct sdis_scene* scn,
-   const struct s2d_hit* hit,
-   const double pos[2])
+  (const struct s2d_hit* hit,
+   const double pos[2]) /* Position from which intersection occurs */
 {
   struct s2d_attrib p0, p1; /* Segment positions */
   double v0[2] = {0}; /* Vector from segment vertex 0 to segment vertex 1 */
@@ -83,9 +82,8 @@ compute_hit_side_2d
 #if DIM == 3
 static INLINE enum sdis_side
 compute_hit_side_3d
-  (const struct sdis_scene* scn,
-   const struct s3d_hit* hit,
-   const double pos[3])
+  (const struct s3d_hit* hit,
+   const double pos[3]) /* Position from which intersection occurs */
 {
   struct s3d_attrib v0; /* Position of the 1st triangle vertex */
   double p[3] = {0}; /* Position of the 1st triangle vertex in double */
@@ -150,7 +148,7 @@ XD(check_diffusion_position)
 
   /* Fetch interface properties and check path consistency */
   interf = scene_get_interface(scn, hit.prim.prim_id);
-  side = XD(compute_hit_side)(scn, &hit, pos);
+  side = XD(compute_hit_side)(&hit, pos);
   mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
   if(mdm != expected_medium) {
     res = RES_BAD_ARG;
@@ -195,7 +193,7 @@ XD(setup_hit_wos)
 
   /* Calculate on which side the intersection occurs */
   dX_set_fX(tgt, attr.value);
-  side = XD(compute_hit_side)(scn, hit, rwalk->vtx.P);
+  side = XD(compute_hit_side)(hit, rwalk->vtx.P);
 
   /* Fetch interface properties and check path consistency */
   interf = scene_get_interface(scn, hit->prim.prim_id);
