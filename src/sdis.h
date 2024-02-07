@@ -553,6 +553,27 @@ static const struct sdis_solve_probe_boundary_args
 SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__;
 
+/* Input arguments of the solve function that distributes the calculations of
+ * several boundary probes rather than the realizations of a probe */
+struct sdis_solve_probe_boundary_list_args {
+  struct sdis_solve_probe_boundary_args* probes; /* List of probes to compute */
+  size_t nprobes; /* Total number of probes */
+
+  /* State/type of the RNG to use for the list of probes to calculate.
+   * The state/type defines per probe is ignored */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+};
+#define SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT__ {                        \
+  NULL, /* List of probes */                                                   \
+  0, /* #probes */                                                             \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
+}
+static const struct sdis_solve_probe_boundary_list_args
+SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT__;
+
 struct sdis_solve_boundary_args {
   size_t nrealisations; /* #realisations */
   const size_t* primitives; /* List of boundary primitives to handle */
@@ -1424,18 +1445,6 @@ sdis_solve_probe
    const struct sdis_solve_probe_args* args,
    struct sdis_estimator** estimator);
 
-/* Calculate temperature for a list of probe points. Unlike its
- * single-probe counterpart, this function parallelizes the list of
- * probes, rather than calculating a single probe. Calling this function
- * is therefore more advantageous in terms of load distribution when the
- * number of probe points to be evaluated is large compared to the cost
- * of calculating a single probe point. */
-SDIS_API res_T
-sdis_solve_probe_list
-  (struct sdis_scene* scn,
-   const struct sdis_solve_probe_list_args* args,
-   struct sdis_estimator_buffer** buf);
-
 SDIS_API res_T
 sdis_solve_probe_boundary
   (struct sdis_scene* scn,
@@ -1484,6 +1493,27 @@ sdis_compute_power
   (struct sdis_scene* scn,
    const struct sdis_compute_power_args* args,
    struct sdis_estimator** estimator);
+
+/*******************************************************************************
+ * Solvers of a list of probes
+ *
+ * Unlike their single-probe counterpart, this function parallelizes the list of
+ * probes, rather than calculating a single probe. Calling these functions is
+ * therefore more advantageous in terms of load distribution when the number of
+ * probes to be evaluated is large compared to the cost of calculating a single
+ * probe.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_solve_probe_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_list_args* args,
+   struct sdis_estimator_buffer** buf);
+
+SDIS_API res_T
+sdis_solve_probe_boundary_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_boundary_list_args* args,
+   struct sdis_estimator_buffer** buf);
 
 /*******************************************************************************
  * Green solvers.
