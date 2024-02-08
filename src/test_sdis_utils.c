@@ -498,4 +498,3 @@ check_green_serialization
   OK(sdis_estimator_ref_put(e2));
   OK(sdis_green_function_ref_put(green2));
 }
-
