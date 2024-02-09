@@ -476,10 +476,10 @@ compute_process_index_range
     per_process_indices = nindices / (size_t)dev->mpi_nprocs;
 
     range[0] = per_process_indices * (size_t)dev->mpi_rank;
-    range[1] = range[0] + per_process_indices; /* Upper bound is _exclusive */
+    range[1] = range[0] + per_process_indices; /* Upper bound is _exclusive_ */
     ASSERT(range[0] <= range[1]);
 
-    /* Set the remaining number of indexes that are not managed by one process */
+    /* Set the remaining number of indices that are not managed by one process */
     remaining_indices =
       nindices - per_process_indices * (size_t)dev->mpi_nprocs;
 
