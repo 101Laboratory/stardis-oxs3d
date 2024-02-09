@@ -47,15 +47,14 @@ check_spherical_source_create_args
     return RES_BAD_ARG;
   }
 
-  if(args->radius < 0) {
-    log_err(dev, "%s: invalid source radius '%g' m. It cannot be negative.\n",
-      func_name, args->radius);
+  if(!args->power) {
+    log_err(dev, "%s: the power functor is missing.\n", func_name);
     return RES_BAD_ARG;
   }
 
-  if(args->power < 0) {
-    log_err(dev, "%s: invalid source power '%g' W. It cannot be negative.\n",
-      func_name, args->power);
+  if(args->radius < 0) {
+    log_err(dev, "%s: invalid source radius '%g' m. It cannot be negative.\n",
+      func_name, args->radius);
     return RES_BAD_ARG;
   }
 
@@ -126,12 +125,11 @@ sdis_source_ref_put(struct sdis_source* src)
   return RES_OK;
 }
 
-res_T
-sdis_source_get_power(const struct sdis_source* src, double* power)
+double
+sdis_source_get_power(struct sdis_source* src, const double time /* [s] */)
 {
-  if(!src || !power) return RES_BAD_ARG;
-  *power = source_get_power(src);
-  return RES_OK;
+  ASSERT(src);
+  return source_get_power(src, time);
 }
 
 /*******************************************************************************
@@ -151,13 +149,22 @@ source_sample
   double cos_half_angle; /* [radians] */
   double dst; /* [m] */
   double radius; /* Source radius [m] */
+  double power; /* Source power [W] */
   double area; /* Source area [m^2] */
   res_T res = RES_OK;
   ASSERT(src && rng && pos && sample);
 
-  /* Retrieve current source position and radius */
+  /* Retrieve current source position, radius and power */
   src->spherical.position(time, src_pos, src->spherical.data);
+  power = src->spherical.power(time, src->spherical.data);
   radius = src->spherical.radius;
+
+  if(power < 0) {
+    log_err(src->dev, "%s: invalid source power '%g' W. It cannot be negative.\n",
+      FUNC_NAME, power);
+    res = RES_BAD_ARG;
+    goto error;
+  }
 
   area = 4*PI*radius*radius; /* [m^2] */
 
@@ -186,7 +193,7 @@ source_sample
     d3_set(sample->dir, main_dir);
     sample->pdf = 1;
     sample->dst = dst;
-    sample->power = src->spherical.power; /* [W] */
+    sample->power = power; /* [W] */
     sample->radiance_term = 1.0 / (4*PI*dst*dst); /* [W/m^2/sr] */
     sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
 
@@ -201,7 +208,7 @@ source_sample
 
     /* Set other sample variables */
     sample->dst = dst - radius; /* From pos to source boundaries [m] */
-    sample->power = src->spherical.power; /* [W] */
+    sample->power = power; /* [W] */
     sample->radiance_term = 1.0 / (PI*area); /* [W/m^2/sr] */
     sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
   }
@@ -223,6 +230,7 @@ source_trace_to
   double src_pos[3]; /* [m] */
   double main_dir[3];
   double radius; /* [m] */
+  double power; /* [W] */
   double dst; /* Distance from pos to the source center [m] */
   double half_angle; /* [radian] */
   res_T res = RES_OK;
@@ -237,8 +245,16 @@ source_trace_to
     goto exit;
   }
 
-  /* Retrieve current source position and radius */
+  /* Retrieve current source position and power */
   src->spherical.position(time, src_pos, src->spherical.data);
+  power = src->spherical.power(time, src->spherical.data);
+
+  if(power < 0) {
+    log_err(src->dev, "%s: invalid source power '%g' W. It cannot be negative.\n",
+      FUNC_NAME, power);
+    res = RES_BAD_ARG;
+    goto error;
+  }
 
   /* compute the direction of `pos' toward the center of the source */
   d3_sub(main_dir, src_pos, pos);
@@ -274,7 +290,7 @@ source_trace_to
     d3_set(sample->dir, dir);
     sample->pdf = 1;
     sample->dst = dst - radius; /* From pos to source boundaries [m] */
-    sample->power = src->spherical.power; /* [W] */
+    sample->power = power; /* [W] */
     sample->radiance_term = 1.0 / (PI*area); /* [W/m^2/sr] */
     sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
   }
@@ -286,11 +302,11 @@ error:
   goto exit;
 }
 
-double
-source_get_power(const struct sdis_source* src)
+double /* [W] */
+source_get_power(const struct sdis_source* src, const double time /* [s] */)
 {
   ASSERT(src);
-  return src->spherical.power;
+  return src->spherical.power(time, src->spherical.data);
 }
 
 void

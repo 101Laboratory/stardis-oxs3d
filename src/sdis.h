@@ -140,19 +140,25 @@ struct sdis_info {
 #define SDIS_INFO_NULL__ {0}
 static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
 
-/* Type of functor used to retrieve the source's position relative to time. */
+/* Type of functor used to retrieve the source's position relative to time */
 typedef void
 (*sdis_get_position_T)
   (const double time,
    double pos[3],
    struct sdis_data* data);
 
+/* Type of functor used to retrieve the source's power relative to time */
+typedef double
+(*sdis_get_power_T)
+  (const double time,
+   struct sdis_data* data);
+
 /* Input arguments of the sdis_spherical_source_create function */
 struct sdis_spherical_source_create_args {
   sdis_get_position_T position; /* [m] */
+  sdis_get_power_T power; /* Total power [W] */
   struct sdis_data* data; /* Data sent to the position functor */
   double radius; /* [m] */
-  double power; /* Total power [W] */
 };
 #define SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__ {NULL, NULL, 0, 0}
 static const struct sdis_spherical_source_create_args
@@ -999,10 +1005,10 @@ SDIS_API res_T
 sdis_source_ref_put
   (struct sdis_source* source);
 
-SDIS_API res_T
+SDIS_API double
 sdis_source_get_power
-  (const struct sdis_source* src,
-   double* power);/* [W] */
+  (struct sdis_source* source,
+   const double time); /* [s] */
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
@@ -1526,7 +1532,7 @@ sdis_solve_probe_boundary_list
  *
  * Also note that the green solvers assume that the interface fluxes are
  * constant in time and space. The same applies to the volumic power of the
- * solid media.
+ * solid media and the power of external sources.
  *
  * If these assumptions are not ensured by the caller, the behavior of the
  * estimated green function is undefined.

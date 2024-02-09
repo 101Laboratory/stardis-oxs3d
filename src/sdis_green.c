@@ -453,8 +453,10 @@ green_function_solve_path
   /* Compute external flux */
   external_flux = 0;
   if(green->scn->source) {
+    /* NOTE: The power of the source is assumed to be constant over time and is
+     * therefore recovered at steady state */
     external_flux =
-      path->external_flux_term * source_get_power(green->scn->source);
+      path->external_flux_term * source_get_power(green->scn->source, INF);
   }
 
   /* Compute path's end temperature */

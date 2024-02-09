@@ -99,7 +99,6 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   struct sdis_data* data = NULL;
   enum sdis_medium_type type;
   enum sdis_green_path_end_type end_type;
-  double source_power = 0; /* [W] */
   double power = 0;
   double flux = 0;
   double external_flux = 0; /* [W/m^2] */
@@ -139,8 +138,9 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   if(source == NULL) {
     CHK(external_flux == 0);
   } else {
-    OK(sdis_source_get_power(source, &source_power));
-    external_flux *= source_power;
+    /* NOTE: source power is assumed constant in time and is therefore retrieved
+     * at steady state*/
+    external_flux *= sdis_source_get_power(source, INF); /* [W] */
   }
 
   BA(sdis_green_path_get_end_type(NULL, NULL));

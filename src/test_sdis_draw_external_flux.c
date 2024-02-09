@@ -182,6 +182,13 @@ source_get_position
   pos[2] = 5.0;
 }
 
+static double
+source_get_power(const double time, struct sdis_data* data)
+{
+  (void)time, (void)data; /* Avoid the "unusued variable" warning */
+  return SOURCE_POWER; /* [W] */
+}
+
 static struct sdis_source*
 create_source(struct sdis_device* sdis)
 {
@@ -189,9 +196,9 @@ create_source(struct sdis_device* sdis)
   struct sdis_source* source = NULL;
 
   args.position = source_get_position;
+  args.power = source_get_power;
   args.data = NULL;
   args.radius = 3e-1; /* [m] */
-  args.power = SOURCE_POWER; /* [W] */
   OK(sdis_spherical_source_create(sdis, &args, &source));
   return source;
 }
