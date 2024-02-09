@@ -420,9 +420,12 @@ check_probe_boundary_list(struct sdis_scene* scn, const int is_master_process)
 
   /* Solve the probes */
   OK(sdis_solve_probe_boundary_list(scn, &args, &estim_buf));
-  check_estimator_buffer(estim_buf, scn, &args);
-
-  OK(sdis_estimator_buffer_ref_put(estim_buf));
+  if(!is_master_process) {
+    CHK(estim_buf == NULL);
+  } else {
+    check_estimator_buffer(estim_buf, scn, &args);
+    OK(sdis_estimator_buffer_ref_put(estim_buf));
+  }
 
   #undef NPROBES
 }
@@ -448,7 +451,7 @@ main(int argc, char** argv)
   int is_master_process = 1;
   (void)argc, (void)argv;
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+  create_default_device(&argc, &argv, &is_master_process, &dev);
 
   /* Setup the mesh */
   mesh_init(&mesh);
@@ -472,12 +475,14 @@ main(int argc, char** argv)
   check_probe_boundary_list(scn, is_master_process);
 
   mesh_release(&mesh);
-  OK(sdis_device_ref_put(dev));
   OK(sdis_interface_ref_put(solid_fluid));
   OK(sdis_interface_ref_put(solid_solid));
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_scene_ref_put(scn));
+
+  free_default_device(dev);
+
   CHK(mem_allocated_size() == 0);
   return 0;
 }

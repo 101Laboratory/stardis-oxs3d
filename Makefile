@@ -192,7 +192,6 @@ TEST_SRC =\
  src/test_sdis_solve_probe_2d.c\
  src/test_sdis_solve_probe2_2d.c\
  src/test_sdis_solve_probe3_2d.c\
- src/test_sdis_solve_probe_boundary_list.c\
  src/test_sdis_source.c\
  src/test_sdis_transcient.c\
  src/test_sdis_unstationary_atm.c\
@@ -213,7 +212,8 @@ TEST_SRC_MPI =\
  src/test_sdis_solve_boundary.c\
  src/test_sdis_solve_boundary_flux.c\
  src/test_sdis_solve_probe2.c\
- src/test_sdis_solve_probe_list.c
+ src/test_sdis_solve_probe_list.c\
+ src/test_sdis_solve_probe_boundary_list.c
 TEST_OBJ =\
  $(TEST_SRC:.c=.o)\
  $(TEST_SRC_MPI:.c=.o)\
@@ -371,21 +371,18 @@ test_sdis_volumic_power4 \
 src/test_sdis_draw_external_flux.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
-src/test_sdis_solve_probe_boundary_list.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis_draw_external_flux.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
-src/test_sdis_solve_probe_boundary_list.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
 test_sdis_draw_external_flux \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
-test_sdis_solve_probe_boundary_list \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S3DUT_LIBS)
 
@@ -434,18 +431,21 @@ test_sdis_solve_medium_2d \
 src/test_sdis_compute_power.d \
 src/test_sdis_solve_camera.d \
 src/test_sdis_solve_medium.d \
+src/test_sdis_solve_probe_boundary_list.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis_compute_power.o \
 src/test_sdis_solve_camera.o \
 src/test_sdis_solve_medium.o \
+src/test_sdis_solve_probe_boundary_list.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
 test_sdis_compute_power \
 test_sdis_solve_camera \
 test_sdis_solve_medium \
+test_sdis_solve_probe_boundary_list \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S3DUT_LIBS)
 
