@@ -16,6 +16,8 @@
 #ifndef SDIS_H
 #define SDIS_H
 
+#include <star/s2d.h>
+#include <star/s3d.h>
 #include <star/ssp.h>
 
 #include <rsys/hash.h>
@@ -164,6 +166,19 @@ struct sdis_spherical_source_create_args {
 static const struct sdis_spherical_source_create_args
 SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL =
   SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__;
+
+struct sdis_scene_find_closest_point_args {
+  double position[3]; /* Query position */
+  double radius; /* Maxium search distance around pos */
+
+  /* User defined filter function */
+  s2d_hit_filter_function_T filter_2d;
+  s3d_hit_filter_function_T filter_3d;
+  void* filter_data; /* Filter function data */
+};
+#define SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__ {{0,0,0}, 0, NULL, NULL, NULL}
+static const struct sdis_scene_find_closest_point_args
+SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL = SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__;
 
 /*******************************************************************************
  * Estimation data types
@@ -1118,8 +1133,7 @@ sdis_scene_set_temperature_range
 SDIS_API res_T
 sdis_scene_find_closest_point
   (const struct sdis_scene* scn,
-   const double pos[], /* Query position */
-   const double radius, /* Maximum search distance around pos */
+   const struct sdis_scene_find_closest_point_args* args,
    size_t* iprim, /* Primitive index onto which the closest point lies */
    double uv[]); /* Parametric cordinate onto the primitive */
 

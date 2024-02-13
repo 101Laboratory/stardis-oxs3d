@@ -13,8 +13,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef SDIS_SCENE_DIMENSION
-
 #ifndef SDIS_SCENE_XD_H
 #define SDIS_SCENE_XD_H
 
@@ -123,8 +121,20 @@ check_sdis_scene_create_args(const struct sdis_scene_create_args* args)
       && args->fp_to_meter > 0;
 }
 
+static INLINE res_T
+check_sdis_scene_find_closest_point_args
+  (const struct sdis_scene_find_closest_point_args* args)
+{
+  /* Undefined input arguments */
+  if(!args) return RES_BAD_ARG;
+
+  /* Invalid radius */
+  if(args->radius <= 0) return RES_BAD_ARG;
+
+  return RES_OK;
+}
+
 #endif /* SDIS_SCENE_XD_H */
-#else /* !SDIS_SCENE_DIMENSION */
 
 #include "sdis_device_c.h"
 
@@ -137,39 +147,18 @@ check_sdis_scene_create_args(const struct sdis_scene_create_args* args)
 #include <limits.h>
 
 /* Check the submitted dimension and include its specific headers */
-#define SENCXD_DIM SDIS_SCENE_DIMENSION
-#if (SDIS_SCENE_DIMENSION == 2)
+#define SENCXD_DIM SDIS_XD_DIMENSION
+#if (SDIS_XD_DIMENSION == 2)
   #include <star/sencX2d.h>
   #include <star/s2d.h>
-#elif (SDIS_SCENE_DIMENSION == 3)
+#elif (SDIS_XD_DIMENSION == 3)
   #include <star/sencX3d.h>
   #include <star/s3d.h>
 #else
-  #error "Invalid SDIS_SCENE_DIMENSION value."
+  #error "Invalid SDIS_XD_DIMENSION value."
 #endif
 
-/* Syntactic sugar */
-#define DIM SDIS_SCENE_DIMENSION
-
-/* Star-XD macros generic to SDIS_SCENE_DIMENSION */
-#define sXd(Name) CONCAT(CONCAT(CONCAT(s, DIM), d_), Name)
-#define SXD CONCAT(CONCAT(S, DIM), D)
-#define SXD_VERTEX_DATA_NULL CONCAT(CONCAT(S,DIM),D_VERTEX_DATA_NULL)
-#define SXD_POSITION CONCAT(CONCAT(S, DIM), D_POSITION)
-#define SXD_TRACE CONCAT(CONCAT(S,DIM), D_TRACE)
-#define SXD_SAMPLE CONCAT(CONCAT(S,DIM), D_SAMPLE)
-#define SXD_GET_PRIMITIVE CONCAT(CONCAT(S,DIM), D_GET_PRIMITIVE)
-#define SXD_HIT_NONE CONCAT(CONCAT(S,DIM), D_HIT_NONE)
-#define SXD_PRIMITIVE_EQ CONCAT(CONCAT(S,DIM), D_PRIMITIVE_EQ)
-#define SXD_FLOATX CONCAT(CONCAT(CONCAT(S,DIM), D_FLOAT), DIM)
-
-/* Vector macros generic to SDIS_SCENE_DIMENSION */
-#define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
-#define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
-#define fXX_mulfX CONCAT(CONCAT(CONCAT(CONCAT(f, DIM), DIM), _mulf), DIM)
-
-/* Macro making generic its subimitted name to SDIS_SCENE_DIMENSION */
-#define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
+#include "sdis_Xd_begin.h"
 
 #if DIM == 2
   #define HIT_ON_BOUNDARY hit_on_vertex
@@ -454,15 +443,22 @@ XD(hit_filter_function)
    const float org[DIM],
    const float dir[DIM],
    const float range[2],
-   void* ray_data,
+   void* query_data,
    void* global_data)
 {
-  const struct hit_filter_data* filter_data = ray_data;
+  const struct hit_filter_data* filter_data = query_data;
   const struct sXd(hit)* hit_from = &filter_data->XD(hit);
   (void)org, (void)dir, (void)global_data, (void)range;
 
   /* No user defined data. Do not filter */
-  if(!ray_data || SXD_HIT_NONE(hit_from)) return 0;
+  if(!filter_data || SXD_HIT_NONE(hit_from)) return 0;
+
+  /* Call the custom filter function if it exists
+   * or perform regular filtering otherwise */
+  if(filter_data->XD(custom_filter)) {
+    return filter_data->XD(custom_filter)
+      (hit, org, dir, range, filter_data->custom_filter_data, global_data);
+  }
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
@@ -988,8 +984,7 @@ error:
 static res_T
 XD(scene_find_closest_point)
   (const struct sdis_scene* scn,
-   const double pos[3],
-   const double radius,
+   const struct sdis_scene_find_closest_point_args* args,
    size_t* iprim,
    double uv[2])
 {
@@ -998,30 +993,37 @@ XD(scene_find_closest_point)
   float query_radius;
   res_T res = RES_OK;
 
-  if(!scn || !pos || radius <= 0 || !iprim || !uv
-  || scene_is_2d(scn) != (DIM == 2)) {
+  if(!scn || !iprim || !uv || scene_is_2d(scn) != (DIM == 2)) {
     res = RES_BAD_ARG;
     goto error;
   }
+  res = check_sdis_scene_find_closest_point_args(args);
+  if(res != RES_OK) goto error;
 
   /* Avoid a null query radius due to casting in single-precision */
-  query_radius = MMAX((float)radius, FLT_MIN);
+  query_radius = MMAX((float)args->radius, FLT_MIN);
 
-  fX_set_dX(query_pos, pos);
-  res = sXd(scene_view_closest_point)
-    (scn->sXd(view), query_pos, query_radius, NULL, &hit);
+  fX_set_dX(query_pos, args->position);
+
+  /* Do not filter anything */
+  if(!args->XD(filter)) {
+    res = sXd(scene_view_closest_point)
+      (scn->sXd(view), query_pos, query_radius, NULL, &hit);
+
+  /* Filter points according to user-defined filter function */
+  } else {
+    struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
+    filter_data.XD(custom_filter) = args->XD(filter);
+    filter_data.custom_filter_data = args->filter_data;
+    res = sXd(scene_view_closest_point)
+      (scn->sXd(view), query_pos, query_radius, &filter_data, &hit);
+  }
+
   if(res != RES_OK) {
-#if DIM == 2
     log_err(scn->dev,
-      "%s: error querying the closest position at {%g, %g} "
+      "%s: error querying the closest position at `"FORMAT_VECX"' "
       "for a radius of %g -- %s.\n",
-      FUNC_NAME, SPLIT2(query_pos), query_radius, res_to_cstr(res));
-#else
-   log_err(scn->dev,
-      "%s: error querying the closest position at {%g, %g, %g} "
-      "for a radius of %g -- %s.\n",
-      FUNC_NAME, SPLIT3(query_pos), query_radius, res_to_cstr(res));
-#endif
+      FUNC_NAME, SPLITX(query_pos), query_radius, res_to_cstr(res));
    goto error;
   }
 
@@ -1250,29 +1252,12 @@ error:
   goto exit;
 }
 
-#if (SDIS_SCENE_DIMENSION == 2)
-#include <star/sencX2d_undefs.h>
-#else /* SDIS_SCENE_DIMENSION == 3 */
-#include <star/sencX3d_undefs.h>
+#if (SDIS_XD_DIMENSION == 2)
+  #include <star/sencX2d_undefs.h>
+#else /* SDIS_XD_DIMENSION == 3 */
+  #include <star/sencX3d_undefs.h>
 #endif
 
-#undef SDIS_SCENE_DIMENSION
-#undef DIM
-#undef sXd
-#undef SXD
-#undef SXD_VERTEX_DATA_NULL
-#undef SXD_POSITION
-#undef SXD_FLOAT3
-#undef SXD_TRACE
-#undef SXD_TRACE
-#undef SXD_GET_PRIMITIVE
-#undef SXD_HIT_NONE
-#undef SXD_PRIMITIVE_EQ
-#undef SXD_FLOATX
-#undef fX
-#undef fX_set_dX
-#undef fXX_mulfX
-#undef XD
 #undef HIT_ON_BOUNDARY
 
-#endif /* !SDIS_SCENE_DIMENSION */
+#include "sdis_Xd_end.h"

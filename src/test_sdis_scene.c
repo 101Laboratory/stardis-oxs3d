@@ -98,6 +98,8 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_scene_find_closest_point_args closest_pt_args =
+    SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_device* dev2 = NULL;
   size_t ntris, npos;
@@ -195,12 +197,15 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_boundary_project_position(scn, 6, pos, NULL));
   OK(sdis_scene_boundary_project_position(scn, 6, pos, uv1));
 
-  BA(sdis_scene_find_closest_point(NULL, pos, INF, &iprim, uv2));
-  BA(sdis_scene_find_closest_point(scn, NULL, INF, &iprim, uv2));
-  BA(sdis_scene_find_closest_point(scn, pos, 0, &iprim, uv2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, NULL, uv2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, &iprim, NULL));
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.position[2] = pos[2];
+  closest_pt_args.radius = INF;
+  BA(sdis_scene_find_closest_point(NULL, &closest_pt_args, &iprim, uv2));
+  BA(sdis_scene_find_closest_point(scn, NULL, &iprim, uv2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, NULL, uv2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, NULL));
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
 
   CHK(iprim == 6);
   CHK(d2_eq_eps(uv0, uv1, 1.e-6));
@@ -209,7 +214,10 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   pos[0] = 0.5;
   pos[1] = 0.1;
   pos[2] = 0.25;
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.position[2] = pos[2];
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
   CHK(iprim == 10);
 
   OK(sdis_scene_boundary_project_position(scn, 10, pos, uv0));
@@ -219,7 +227,11 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   dst = d3_len(d3_sub(pos1, pos, pos1));
   CHK(eq_eps(dst, 0.1, 1.e-6));
 
-  OK(sdis_scene_find_closest_point(scn, pos, 0.09, &iprim, uv2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.position[2] = pos[2];
+  closest_pt_args.radius = 0.09;
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
   CHK(iprim == SDIS_PRIMITIVE_NONE);
 
   FOR_EACH(i, 0, 64) {
@@ -228,7 +240,12 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
 
     OK(sdis_scene_get_boundary_position(scn, 4, uv0, pos));
     OK(sdis_scene_boundary_project_position(scn, 4, pos, uv1));
-    OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+
+    closest_pt_args.position[0] = pos[0];
+    closest_pt_args.position[1] = pos[1];
+    closest_pt_args.position[2] = pos[2];
+    closest_pt_args.radius = INF;
+    OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
     CHK(d2_eq_eps(uv0, uv1, 1.e-6));
     CHK(d2_eq_eps(uv1, uv2, 1.e-6));
     CHK(iprim == 4);
@@ -264,6 +281,8 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   double duplicated_vertices[] = { 0, 0, 0, 0 };
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_scene_find_closest_point_args closest_pt_args =
+    SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
   struct sdis_ambient_radiative_temperature trad =
     SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   double lower[2], upper[2];
@@ -407,12 +426,14 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_boundary_project_position(scn, 1, pos, NULL));
   OK(sdis_scene_boundary_project_position(scn, 1, pos, &u1));
 
-  BA(sdis_scene_find_closest_point(NULL, pos, INF, &iprim, &u2));
-  BA(sdis_scene_find_closest_point(scn, NULL, INF, &iprim, &u2));
-  BA(sdis_scene_find_closest_point(scn, pos, 0, &iprim, &u2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, NULL, &u2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, &iprim, NULL));
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.radius = INF;
+  BA(sdis_scene_find_closest_point(NULL, &closest_pt_args, &iprim, &u2));
+  BA(sdis_scene_find_closest_point(scn, NULL, &iprim, &u2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, NULL, &u2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, NULL));
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
 
   CHK(eq_eps(u0, u1, 1.e-6));
   CHK(eq_eps(u1, u2, 1.e-6));
@@ -420,7 +441,10 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 
   pos[0] = 0.5;
   pos[1] = 0.1;
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.radius = INF;
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
   CHK(iprim == 0);
 
   OK(sdis_scene_boundary_project_position(scn, 0, pos, &u0));
@@ -430,7 +454,10 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   dst = d2_len(d2_sub(pos1, pos, pos1));
   CHK(eq_eps(dst, 0.1, 1.e-6));
 
-  OK(sdis_scene_find_closest_point(scn, pos, 0.09, &iprim, &u2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.radius = 0.09;
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
   CHK(iprim == SDIS_PRIMITIVE_NONE);
 
   FOR_EACH(i, 0, 64) {
@@ -438,7 +465,11 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 
     OK(sdis_scene_get_boundary_position(scn, 2, &u0, pos));
     OK(sdis_scene_boundary_project_position(scn, 2, pos, &u1));
-    OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+
+    closest_pt_args.position[0] = pos[0];
+    closest_pt_args.position[1] = pos[1];
+    closest_pt_args.radius = INF;
+    OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
     CHK(eq_eps(u0, u1, 1.e-6));
     CHK(eq_eps(u1, u2, 1.e-6));
     CHK(iprim == 2);

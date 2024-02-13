@@ -400,20 +400,25 @@ check_probe_boundary_list(struct sdis_scene* scn, const int is_master_process)
     SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT;
   size_t iprobe;
 
+  /* Miscellaneous */
+  struct sdis_scene_find_closest_point_args closest_pt_args =
+    SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
+
   (void)is_master_process;
 
   /* Setup the list of probes to calculate */
   args.probes = probes;
   args.nprobes = NPROBES;
   FOR_EACH(iprobe, 0, NPROBES) {
-    double pos[3] = {0, 0, 0};
-    sample_sphere(pos);
+    sample_sphere(closest_pt_args.position);
+    closest_pt_args.radius = INF;
 
     probes[iprobe] = SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
     probes[iprobe].nrealisations = 10000;
     probes[iprobe].side = SDIS_FRONT;
+
     OK(sdis_scene_find_closest_point
-      (scn, pos, INF, &probes[iprobe].iprim, probes[iprobe].uv));
+      (scn, &closest_pt_args, &probes[iprobe].iprim, probes[iprobe].uv));
   }
 
   check_probe_boundary_list_api(scn, &args);

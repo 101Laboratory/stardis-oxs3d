@@ -13,14 +13,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#include "sdis_scene_Xd.h"
-
-/* Generate the Generic functions of the scene */
-#define SDIS_SCENE_DIMENSION 2
-#include "sdis_scene_Xd.h"
-#define SDIS_SCENE_DIMENSION 3
-#include "sdis_scene_Xd.h"
-
 #include "sdis.h"
 #include "sdis_interface_c.h"
 #include "sdis_scene_c.h"
@@ -28,6 +20,12 @@
 
 #include <float.h>
 #include <limits.h>
+
+/* Generate the Generic functions of the scene */
+#define SDIS_XD_DIMENSION 2
+#include "sdis_scene_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_scene_Xd.h"
 
 /*******************************************************************************
  * Helper function
@@ -240,16 +238,15 @@ sdis_scene_set_temperature_range
 res_T
 sdis_scene_find_closest_point
   (const struct sdis_scene* scn,
-   const double pos[],
-   const double radius,
+   const struct sdis_scene_find_closest_point_args* args,
    size_t* iprim,
    double uv[])
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return scene_find_closest_point_2d(scn, pos, radius, iprim, uv);
+    return scene_find_closest_point_2d(scn, args, iprim, uv);
   } else {
-    return scene_find_closest_point_3d(scn, pos, radius, iprim, uv);
+    return scene_find_closest_point_3d(scn, args, iprim, uv);
   }
 }
 
