@@ -447,11 +447,11 @@ XD(hit_filter_function)
    void* global_data)
 {
   const struct hit_filter_data* filter_data = query_data;
-  const struct sXd(hit)* hit_from = &filter_data->XD(hit);
+  const struct sXd(hit)* hit_from = NULL;
   (void)org, (void)dir, (void)global_data, (void)range;
 
   /* No user defined data. Do not filter */
-  if(!filter_data || SXD_HIT_NONE(hit_from)) return 0;
+  if(!filter_data) return 0;
 
   /* Call the custom filter function if it exists
    * or perform regular filtering otherwise */
@@ -459,6 +459,10 @@ XD(hit_filter_function)
     return filter_data->XD(custom_filter)
       (hit, org, dir, range, filter_data->custom_filter_data, global_data);
   }
+
+  /* There is no intersection to discard */
+  hit_from = &filter_data->XD(hit);
+  if(SXD_HIT_NONE(hit_from)) return 0;
 
   if(SXD_PRIMITIVE_EQ(&hit_from->prim, &hit->prim)) return 1;
 
