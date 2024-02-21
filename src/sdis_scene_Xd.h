@@ -328,22 +328,17 @@ static int
 hit_shared_edge
   (const struct s3d_primitive* tri0,
    const struct s3d_primitive* tri1,
+   const float uv0[2], /* Barycentric coordinates of tested position on tri0 */
+   const float uv1[2], /* Barycentric coordinates of tested position on tri1 */
    const float pos0[3], /* Tested position onto the triangle 0 */
    const float pos1[3]) /* Tested Position onto the triangle 1 */
 {
   struct s3d_attrib tri0_vertices[3]; /* Vertex positions of the triangle 0 */
   struct s3d_attrib tri1_vertices[3]; /* Vertex positions of the triangle 1 */
-  float E0[3], E1[3]; /* Temporary variables storing triangle edges */
-  float N0[3], N1[3]; /* Temporary Normals */
-  float tri0_2area, tri1_2area; /* 2*area of the submitted triangles */
-  float tmp0_2area, tmp1_2area;
-  float cos_normals;
   int tri0_edge[2] = {-1, -1}; /* Shared edge vertex ids for the triangle 0 */
   int tri1_edge[2] = {-1, -1}; /* Shared edge vertex ids for the triangle 1 */
   int edge_ivertex = 0; /* Temporary variable */
   int tri0_ivertex, tri1_ivertex;
-  int iv0, iv1, iv2;
-  int hit_edge;
   ASSERT(tri0 && tri1 && pos0 && pos1);
 
   /* Fetch the vertices of the triangle 0 */
@@ -375,62 +370,100 @@ hit_shared_edge
   }}
 
   /* The triangles do not have a common edge */
-  if(edge_ivertex < 2) return 0;
+  if(edge_ivertex == 0) {
+    return 0;
 
-  /* Ensure that the vertices of the shared edge are registered in the right
-   * order regarding the triangle vertices, i.e. (0,1), (1,2) or (2,0) */
-  if((tri0_edge[0]+1)%3 != tri0_edge[1]) SWAP(int, tri0_edge[0], tri0_edge[1]);
-  if((tri1_edge[0]+1)%3 != tri1_edge[1]) SWAP(int, tri1_edge[0], tri1_edge[1]);
+  /* The triangles have a common vertex */
+  } else if(edge_ivertex == 1) {
+    float bcoord0, bcoord1;
+    int hit_vertex;
 
-  /* Compute the shared edge normal lying in the triangle 0 plane */
-  iv0 =  tri0_edge[0];
-  iv1 =  tri0_edge[1];
-  iv2 = (tri0_edge[1]+1) % 3;
-  f3_sub(E0, tri0_vertices[iv1].value, tri0_vertices[iv0].value);
-  f3_sub(E1, tri0_vertices[iv2].value, tri0_vertices[iv0].value);
-  f3_cross(N0, E0, E1); /* Triangle 0 normal */
-  tri0_2area = f3_len(N0);
-  f3_cross(N0, N0, E0);
+    /* Retrieve the barycentric coordinate of the position on triangle 0
+     * corresponding to the vertex shared between the 2 triangles. */
+    switch(tri0_edge[0]) {
+      case 0: bcoord0 = uv0[0]; break;
+      case 1: bcoord0 = uv0[1]; break;
+      case 2: bcoord0 = CLAMP(1.f - uv0[0] - uv0[1], 0.f, 1.f); break;
+    }
 
-  /* Compute the shared edge normal lying in the triangle 1 plane */
-  iv0 =  tri1_edge[0];
-  iv1 =  tri1_edge[1];
-  iv2 = (tri1_edge[1]+1) % 3;
-  f3_sub(E0, tri1_vertices[iv1].value, tri1_vertices[iv0].value);
-  f3_sub(E1, tri1_vertices[iv2].value, tri1_vertices[iv0].value);
-  f3_cross(N1, E0, E1);
-  tri1_2area = f3_len(N1);
-  f3_cross(N1, N1, E0);
+    /* Retrieve the barycentric coordinate of the position on triangle 1
+     * corresponding to the vertex shared between the 2 triangles. */
+    switch(tri1_edge[0]) {
+      case 0: bcoord1 = uv1[0]; break;
+      case 1: bcoord1 = uv1[1]; break;
+      case 2: bcoord1 = CLAMP(1.f - uv0[0] - uv0[1], 0.f, 1.f); break;
+    }
 
-  /* Compute the cosine between the 2 edge normals */
-  f3_normalize(N0, N0);
-  f3_normalize(N1, N1);
-  cos_normals = f3_dot(N0, N1);
+    /* Check that the both positions lie on the shared vertex */
+    hit_vertex = eq_epsf(1.f, bcoord0, ON_VERTEX_EPSILON)
+            && eq_epsf(1.f, bcoord1, ON_VERTEX_EPSILON);
+    return hit_vertex;
 
-  /* The angle formed by the 2 triangles is sharp */
-  if(cos_normals > SHARP_ANGLE_COS_THRESOLD) return 0;
+  /* The triangles have a common edge */
+  } else {
+    float E0[3], E1[3]; /* Temporary variables storing triangle edges */
+    float N0[3], N1[3]; /* Temporary Normals */
+    float tri0_2area, tri1_2area; /* 2*area of the submitted triangles */
+    float tmp0_2area, tmp1_2area;
+    float cos_normals;
+    int iv0, iv1, iv2;
+    int hit_edge;
 
-  /* Compute the 2 times the area of the (pos0, shared_edge.vertex0,
-   * shared_edge.vertex1) triangles */
-  f3_sub(E0, tri0_vertices[tri0_edge[0]].value, pos0);
-  f3_sub(E1, tri0_vertices[tri0_edge[1]].value, pos0);
-  tmp0_2area = f3_len(f3_cross(N0, E0, E1));
+    /* Ensure that the vertices of the shared edge are registered in the right
+     * order regarding the triangle vertices, i.e. (0,1), (1,2) or (2,0) */
+    if((tri0_edge[0]+1)%3 != tri0_edge[1]) SWAP(int, tri0_edge[0], tri0_edge[1]);
+    if((tri1_edge[0]+1)%3 != tri1_edge[1]) SWAP(int, tri1_edge[0], tri1_edge[1]);
 
-  /* Compute the 2 times the area of the (pos1, shared_edge.vertex0,
-   * shared_edge.vertex1) triangles */
-  f3_sub(E0, tri1_vertices[tri1_edge[0]].value, pos1);
-  f3_sub(E1, tri1_vertices[tri1_edge[1]].value, pos1);
-  tmp1_2area = f3_len(f3_cross(N1, E0, E1));
+    /* Compute the shared edge normal lying in the triangle 0 plane */
+    iv0 =  tri0_edge[0];
+    iv1 =  tri0_edge[1];
+    iv2 = (tri0_edge[1]+1) % 3;
+    f3_sub(E0, tri0_vertices[iv1].value, tri0_vertices[iv0].value);
+    f3_sub(E1, tri0_vertices[iv2].value, tri0_vertices[iv0].value);
+    f3_cross(N0, E0, E1); /* Triangle 0 normal */
+    tri0_2area = f3_len(N0);
+    f3_cross(N0, N0, E0);
 
-  hit_edge =
-  (  eq_epsf(tri0_2area, 0, 1.e-6f)
-  || eq_epsf(tmp0_2area, 0, 1.e-6f)
-  || tmp0_2area/tri0_2area < ON_EDGE_EPSILON);
-  hit_edge = hit_edge &&
-  (  eq_epsf(tri1_2area, 0, 1.e-6f)
-  || eq_epsf(tmp1_2area, 0, 1.e-6f)
-  || tmp1_2area/tri1_2area < ON_EDGE_EPSILON);
-  return hit_edge;
+    /* Compute the shared edge normal lying in the triangle 1 plane */
+    iv0 =  tri1_edge[0];
+    iv1 =  tri1_edge[1];
+    iv2 = (tri1_edge[1]+1) % 3;
+    f3_sub(E0, tri1_vertices[iv1].value, tri1_vertices[iv0].value);
+    f3_sub(E1, tri1_vertices[iv2].value, tri1_vertices[iv0].value);
+    f3_cross(N1, E0, E1);
+    tri1_2area = f3_len(N1);
+    f3_cross(N1, N1, E0);
+
+    /* Compute the cosine between the 2 edge normals */
+    f3_normalize(N0, N0);
+    f3_normalize(N1, N1);
+    cos_normals = f3_dot(N0, N1);
+
+    /* The angle formed by the 2 triangles is sharp */
+    if(cos_normals > SHARP_ANGLE_COS_THRESOLD) return 0;
+
+    /* Compute the 2 times the area of the (pos0, shared_edge.vertex0,
+     * shared_edge.vertex1) triangles */
+    f3_sub(E0, tri0_vertices[tri0_edge[0]].value, pos0);
+    f3_sub(E1, tri0_vertices[tri0_edge[1]].value, pos0);
+    tmp0_2area = f3_len(f3_cross(N0, E0, E1));
+
+    /* Compute the 2 times the area of the (pos1, shared_edge.vertex0,
+     * shared_edge.vertex1) triangles */
+    f3_sub(E0, tri1_vertices[tri1_edge[0]].value, pos1);
+    f3_sub(E1, tri1_vertices[tri1_edge[1]].value, pos1);
+    tmp1_2area = f3_len(f3_cross(N1, E0, E1));
+
+    hit_edge =
+    (  eq_epsf(tri0_2area, 0, 1.e-6f)
+    || eq_epsf(tmp0_2area, 0, 1.e-6f)
+    || tmp0_2area/tri0_2area < ON_EDGE_EPSILON);
+    hit_edge = hit_edge &&
+    (  eq_epsf(tri1_2area, 0, 1.e-6f)
+    || eq_epsf(tmp1_2area, 0, 1.e-6f)
+    || tmp1_2area/tri1_2area < ON_EDGE_EPSILON);
+    return hit_edge;
+  }
 }
 #undef ON_EDGE_EPSILON
 #endif /* DIM == 2 */
@@ -471,14 +504,17 @@ XD(hit_filter_function)
 
   if(eq_epsf(hit->distance, 0, (float)filter_data->epsilon)) {
     float pos[DIM];
+    int reject_hit = 0;
     fX(add)(pos, org, fX(mulf)(pos, dir, hit->distance));
     /* If the targeted point is near of the origin, check that it lies on an
      * edge/vertex shared by the 2 primitives */
 #if DIM == 2
-    return hit_shared_vertex(&hit_from->prim, &hit->prim, org, pos);
+    reject_hit = hit_shared_vertex(&hit_from->prim, &hit->prim, org, pos);
 #else
-    return hit_shared_edge(&hit_from->prim, &hit->prim, org, pos);
+    reject_hit = hit_shared_edge
+      (&hit_from->prim, &hit->prim, hit_from->uv, hit->uv, org, pos);
 #endif
+    return reject_hit;
   }
   return 0;
 }
