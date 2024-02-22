@@ -384,6 +384,7 @@ hit_shared_edge
       case 0: bcoord0 = uv0[0]; break;
       case 1: bcoord0 = uv0[1]; break;
       case 2: bcoord0 = CLAMP(1.f - uv0[0] - uv0[1], 0.f, 1.f); break;
+      default: FATAL("Unreachable code\n"); break;
     }
 
     /* Retrieve the barycentric coordinate of the position on triangle 1
@@ -392,6 +393,7 @@ hit_shared_edge
       case 0: bcoord1 = uv1[0]; break;
       case 1: bcoord1 = uv1[1]; break;
       case 2: bcoord1 = CLAMP(1.f - uv0[0] - uv0[1], 0.f, 1.f); break;
+      default: FATAL("Unreachable code\n"); break;
     }
 
     /* Check that the both positions lie on the shared vertex */
