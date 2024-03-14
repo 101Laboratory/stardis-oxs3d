@@ -13,9 +13,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_device_c.h"
 #include "sdis_heat_path_conductive_c.h"
 #include "sdis_medium_c.h"
 #include "sdis_scene_c.h"
+
+#include <star/swf.h>
 
 #include "sdis_Xd_begin.h"
 
@@ -42,6 +45,69 @@ XD(check_medium_consistency)
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static res_T
+XD(time_travel)
+  (struct sdis_scene* scn,
+   struct XD(rwalk)* rwalk,
+   struct ssp_rng* rng,
+   const double alpha, /* Diffusivity, i.e. lambda/(rho*cp) */
+   const double t0, /* Initial time [s] */
+   const double distance, /* Displacement. Must be multipled by fp_to_meter */
+   struct XD(temperature)* T)
+{
+  double dst = 0; /* Distance [m] */
+  double tau = 0; /* Time [s] */
+  double x = 0;
+  double r = 0;
+  double temperature = 0; /* [k] */
+  res_T res = RES_OK;
+  ASSERT(scn && rwalk && rng && alpha && T);
+
+  /* No displacement => no time travel */
+  if(distance == 0) goto exit;
+
+  /* Sample x = tau*alpha/distance^2 */
+  r = ssp_rng_canonical(rng);
+  x = swf_tabulation_inverse(XD(scn->dev->H), SWF_QUADRATIC, r);
+
+  /* Retrieve the time to travel */
+  dst = distance * scn->fp_to_meter;
+  tau = x / alpha * dst * dst;
+
+  /* Increment the elapsed time */
+  rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
+
+  if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
+
+  /* Let's take a trip back in time */
+  rwalk->vtx.time -= MMAX(t0, rwalk->vtx.time - tau);
+
+  /* Thepath does not reach the initial condition */
+  if(rwalk->vtx.time > t0) goto exit;
+
+  /* Fethc the initial temperature */
+  temperature = medium_get_temperature(rwalk->mdm, &rwalk->vtx);
+  if(temperature < 0) {
+    log_err(scn->dev,
+      "%s:%s: the path reaches the initial condition but the "
+      "%s temperature remains unknown -- position=%g, %g, %g\n",
+      __FILE__, FUNC_NAME,
+      medium_type_to_string(sdis_medium_get_type(rwalk->mdm)),
+      SPLIT3(rwalk->vtx.P));
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Update the temperature */
+  T->value += temperature;
+  T->done = 1;
 
 exit:
   return res;
@@ -276,7 +342,8 @@ static res_T
 XD(sample_next_position)
   (struct sdis_scene* scn,
    struct XD(rwalk)* rwalk,
-   struct ssp_rng* rng)
+   struct ssp_rng* rng,
+   double* distance) /* Displacement distance */
 {
   /* Intersection */
   struct sXd(hit) hit = SXD_HIT_NULL;
@@ -289,7 +356,7 @@ XD(sample_next_position)
 
   /* Miscellaneous */
   res_T res = RES_OK;
-  ASSERT(rwalk && rng);
+  ASSERT(rwalk && rng && distance);
 
   /* Find the closest distance from the current position to the geometry */
   wos_radius = (float)INF;
@@ -374,6 +441,7 @@ XD(sample_next_position)
   }
 
 exit:
+  *distance = hit.distance;
   return res;
 error:
   goto exit;
@@ -393,6 +461,7 @@ XD(conductive_path_wos)
   /* Properties */
   struct solid_props props_ref = SOLID_PROPS_NULL;
   struct solid_props props = SOLID_PROPS_NULL;
+  double alpha = 0; /* diffusivity, i.e. lambda/(rho*cp) */
 
   /* Miscellaneous */
   size_t ndiffusion_steps = 0; /* For debug */
@@ -418,12 +487,24 @@ XD(conductive_path_wos)
    * with respect to the properties of the reinjected position. */
   solid_get_properties(rwalk->mdm, &rwalk->vtx, &props_ref);
 
+  /* The algorithm assumes that lambda, rho and cp are constants. The
+   * diffusivity of the material (alpha) can therefore be calculated once */
+  alpha = props_ref.lambda / (props_ref.rho * props_ref.cp);
+
   /* Sample a diffusive path */
   for(;;) {
+    double distance = 0;
 
     /* Find the next position of the conductive path */
-    res = XD(sample_next_position)(scn, rwalk, rng);
+    res = XD(sample_next_position)(scn, rwalk, rng, &distance);
     if(res != RES_OK) goto error;
+
+    /* Going back in time */
+    res = XD(time_travel)(scn, rwalk, rng, alpha, props_ref.t0, distance, T);
+    if(res != RES_OK) goto error;
+
+    /* The path reaches the initial condition */
+    if(T->done) break;
 
     /* The path reaches a boundary */
     if(!SXD_HIT_NONE(&rwalk->hit)) break;

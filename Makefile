@@ -90,6 +90,8 @@ libsdis.o: $(OBJ)
 	  echo "senc3d $(SENC3D_VERSION) not found" >&2; exit 1; fi
 	@if ! $(PKG_CONFIG) --atleast-version $(SSP_VERSION) star-sp; then \
 	  echo "star-sp $(SSP_VERSION) not found" >&2; exit 1; fi
+	@if ! $(PKG_CONFIG) --atleast-version $(SWF_VERSION) swf; then \
+	  echo "swf $(SWF_VERSION) not found" >&2; exit 1; fi
 	@echo "config done" > $@
 
 .SUFFIXES: .c .d .o
