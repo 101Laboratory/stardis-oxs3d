@@ -63,7 +63,8 @@ source_trace_to
 
 extern LOCAL_SYM double /* [W] */
 source_get_power
-  (const struct sdis_source* source);
+  (const struct sdis_source* source,
+   const double time); /* [s] */
 
 extern LOCAL_SYM void
 source_compute_signature

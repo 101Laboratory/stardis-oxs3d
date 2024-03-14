@@ -36,8 +36,15 @@ struct hit_filter_data {
   struct s2d_hit hit_2d;
   struct s3d_hit hit_3d;
   double epsilon; /* Threshold defining roughly equal intersections */
+
+  /* Bypass the regular filter function */
+  s2d_hit_filter_function_T custom_filter_2d;
+  s3d_hit_filter_function_T custom_filter_3d;
+
+  /* Custom filter query data. It is ignored if custom_filter is NULL */
+  void* custom_filter_data;
 };
-#define HIT_FILTER_DATA_NULL__ {S2D_HIT_NULL__, S3D_HIT_NULL__, 0}
+#define HIT_FILTER_DATA_NULL__ {S2D_HIT_NULL__,S3D_HIT_NULL__,0,NULL,NULL,NULL}
 static const struct hit_filter_data HIT_FILTER_DATA_NULL =
   HIT_FILTER_DATA_NULL__;
 

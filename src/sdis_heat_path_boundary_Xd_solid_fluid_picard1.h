@@ -49,6 +49,7 @@ XD(check_Tref)
       func_name, scn->tmax, Tref, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
   }
+
   return RES_OK;
 }
 

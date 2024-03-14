@@ -26,7 +26,16 @@ spherical_source_get_position
    struct sdis_data* data)
 {
   (void)time, (void)data;
-  pos[0] = pos[1] = pos[2] = 1.234;
+  pos[0] = pos[1] = pos[2] = 1.234; /* [m] */
+}
+
+static double
+spherical_source_get_power
+  (const double time,
+   struct sdis_data* data)
+{
+  (void)time, (void)data;
+  return 10; /* [W] */
 }
 
 static void
@@ -36,25 +45,21 @@ check_spherical_source(struct sdis_device* dev)
     SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL;
   struct sdis_source* src = NULL;
   struct sdis_data* data = NULL;
-  double power = 0;
 
   /* Create a data to check its memory management */
   OK(sdis_data_create(dev, sizeof(double[3]), ALIGNOF(double[3]), NULL, &data));
 
   args.position = spherical_source_get_position;
+  args.power = spherical_source_get_power;
   args.data = data;
   args.radius = 1;
-  args.power = 10;
 
   BA(sdis_spherical_source_create(NULL, &args, &src));
   BA(sdis_spherical_source_create(dev, NULL, &src));
   BA(sdis_spherical_source_create(dev, &args, NULL));
   OK(sdis_spherical_source_create(dev, &args, &src));
 
-  BA(sdis_source_get_power(NULL, &power));
-  BA(sdis_source_get_power(src, NULL));
-  OK(sdis_source_get_power(src, &power));
-  CHK(power == args.power);
+  CHK(sdis_source_get_power(src, INF) == 10);
 
   BA(sdis_source_ref_get(NULL));
   OK(sdis_source_ref_get(src));
@@ -67,6 +72,12 @@ check_spherical_source(struct sdis_device* dev)
   args.data = NULL;
   OK(sdis_spherical_source_create(dev, &args, &src));
   OK(sdis_source_ref_put(src));
+
+  args.position = NULL;
+  BA(sdis_spherical_source_create(dev, &args, &src));
+  args.position = spherical_source_get_position;
+  args.power = NULL;
+  BA(sdis_spherical_source_create(dev, &args, &src));
 }
 
 /*******************************************************************************

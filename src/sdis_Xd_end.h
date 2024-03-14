@@ -31,11 +31,14 @@
 #undef SXD_FLOAT2
 #undef SXD_FLOAT3
 #undef SXD_FLOATX
+#undef SXD_GET_PRIMITIVE
 #undef SXD_SAMPLE
+#undef SXD_TRACE
 
 #undef dX
 #undef fX
 #undef fX_set_dX
+#undef fXX_mulfX
 #undef dX_set_fX
 
 #undef FORMAT_VECX

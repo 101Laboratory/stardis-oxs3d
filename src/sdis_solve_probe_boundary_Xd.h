@@ -80,6 +80,40 @@ check_solve_probe_boundary_args
 }
 
 static INLINE res_T
+check_solve_probe_boundary_list_args
+  (struct sdis_device* dev,
+   const struct sdis_solve_probe_boundary_list_args* args)
+{
+  size_t iprobe = 0;
+
+  if(!args) return RES_BAD_ARG;
+
+  /* Check the list of probes */
+  if(!args->probes || !args->nprobes) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check the RNG type */
+  if(!args->rng_state && args->rng_type >= SSP_RNG_TYPES_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
+  FOR_EACH(iprobe, 0, args->nprobes) {
+    const res_T res = check_solve_probe_boundary_args(args->probes+iprobe);
+    if(res != RES_OK) return res;
+
+    if(args->probes[iprobe].register_paths != SDIS_HEAT_PATH_NONE) {
+      log_warn(dev,
+        "Unable to save paths for probe boundary %lu. "
+        "Saving path is not supported when solving multiple probes\n",
+        (unsigned long)iprobe);
+    }
+  }
+
+  return RES_OK;
+}
+
+static INLINE res_T
 check_solve_probe_boundary_flux_args
   (const struct sdis_solve_probe_boundary_flux_args* args)
 {
@@ -118,6 +152,66 @@ check_solve_probe_boundary_flux_args
 }
 
 #endif /* SDIS_SOLVE_PROBE_BOUNDARY_XD_H */
+
+static res_T
+XD(solve_one_probe_boundary)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const struct sdis_solve_probe_boundary_args* args,
+   struct accum* acc_temp,
+   struct accum* acc_time)
+{
+  size_t irealisation = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && rng && check_solve_probe_boundary_args(args) == RES_OK);
+
+  *acc_temp = ACCUM_NULL;
+  *acc_time = ACCUM_NULL;
+
+  FOR_EACH(irealisation, 0, args->nrealisations) {
+    struct boundary_realisation_args realis_args = BOUNDARY_REALISATION_ARGS_NULL;
+    double w = NaN; /* MC weight */
+    double usec = 0; /* Time of a realisation */
+    double time = 0; /* Sampled observation time */
+    struct time t0, t1; /* Register the time spent solving a realisation */
+
+    /* Begin time registration of the realisation */
+    time_current(&t0);
+
+    /* Sample observation time */
+    time = sample_time(rng, args->time_range);
+
+    /* Run a realisation */
+    realis_args.rng = rng;
+    realis_args.iprim = args->iprim;
+    realis_args.time = time;
+    realis_args.picard_order = args->picard_order;
+    realis_args.side = args->side;
+    realis_args.irealisation = irealisation;
+    realis_args.uv[0] = args->uv[0];
+#if SDIS_XD_DIMENSION == 3
+    realis_args.uv[1] = args->uv[1];
+#endif
+    res = XD(boundary_realisation)(scn, &realis_args, &w);
+    if(res != RES_OK) goto error;
+
+    /* Stop time registration */
+    time_sub(&t0, time_current(&t1), &t0);
+    usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+
+    /* Update MC weights */
+    acc_temp->sum += w;
+    acc_temp->sum2 += w*w;
+    acc_temp->count += 1;
+    acc_time->sum += usec;
+    acc_time->sum2 += usec*usec;
+    acc_time->count += 1;
+  }
+exit:
+  return res;
+error:
+  goto exit;
+}
 
 /*******************************************************************************
  * Local functions
@@ -418,6 +512,207 @@ exit:
 error:
   if(estimator) { SDIS(estimator_ref_put(estimator)); estimator = NULL; }
   if(green) { SDIS(green_function_ref_put(green)); green = NULL; }
+  goto exit;
+}
+
+static res_T
+XD(solve_probe_boundary_list)
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_boundary_list_args* args,
+   struct sdis_estimator_buffer** out_estim_buf)
+{
+  /* Time registration */
+  struct time time0, time1;
+  char buf[128]; /* Temporary buffer used to store formated time */
+
+  /* Device variable */
+  struct mem_allocator* allocator = NULL;
+
+  /* Stardis variables */
+  struct sdis_estimator_buffer* estim_buf = NULL;
+
+  /* Random Number generator */
+  struct ssp_rng_proxy* rng_proxy = NULL;
+  struct ssp_rng** per_thread_rng = NULL;
+
+  /* Probe variables */
+  size_t process_probes[2] = {0, 0}; /* Probes range managed by the process */
+  size_t process_nprobes = 0; /* Number of probes managed by the process */
+  size_t nprobes = 0;
+  struct accum* per_probe_acc_temp = NULL;
+  struct accum* per_probe_acc_time = NULL;
+
+  /* Miscellaneous */
+  int32_t* progress = NULL; /* Per process progress bar */
+  int is_master_process = 0;
+  int pcent_progress = 1; /* Percentage requiring progress update */
+  int64_t i = 0;
+  ATOMIC nsolved_probes = 0;
+  ATOMIC res = RES_OK;
+
+  if(!scn || !out_estim_buf) { res = RES_BAD_ARG; goto error; }
+  res = check_solve_probe_boundary_list_args(scn->dev, args);
+  if(res != RES_OK) goto error;
+  res = XD(scene_check_dimensionality)(scn);
+  if(res != RES_OK) goto error;
+
+#ifdef SDIS_ENABLE_MPI
+  is_master_process = !scn->dev->use_mpi || scn->dev->mpi_rank == 0;
+#endif
+
+  allocator = scn->dev->allocator;
+
+  /* Update the progress bar every percent if escape sequences are allowed in
+   * log messages or only every 10 percent when only plain text is allowed.
+   * This reduces the number of lines of plain text printed */
+  pcent_progress = scn->dev->no_escape_sequence ? 10 : 1;
+
+  /* Create the per threads RNGs */
+  res = create_per_thread_rng
+    (scn->dev, args->rng_state, args->rng_type, &rng_proxy, &per_thread_rng);
+  if(res != RES_OK) goto error;
+
+  /* Allocate the per process progress status */
+  res = alloc_process_progress(scn->dev, &progress);
+  if(res != RES_OK) goto error;
+
+  /* Synchronise the processes */
+  process_barrier(scn->dev);
+
+  /* Define the range of probes to manage in this process */
+  process_nprobes = compute_process_index_range
+    (scn->dev, args->nprobes, process_probes);
+
+  #define PROGRESS_MSG "Solving surface probes: "
+  print_progress(scn->dev, progress, PROGRESS_MSG);
+
+  /* If there is no work to be done on this process (i.e. no probe to
+   * calculate), simply print its completion and go straight to the
+   * synchronization barrier.*/
+  if(process_nprobes == 0) {
+    progress[0] = 100;
+    print_progress_update(scn->dev, progress, PROGRESS_MSG);
+    goto post_sync;
+  }
+
+  /* Allocate the list of accumulators per probe. On the master process,
+   * allocate a complete list in which the accumulators of all processes will be
+   * stored. */
+  nprobes = is_master_process ? args->nprobes : process_nprobes;
+  per_probe_acc_temp = MEM_CALLOC(allocator, nprobes, sizeof(*per_probe_acc_temp));
+  per_probe_acc_time = MEM_CALLOC(allocator, nprobes, sizeof(*per_probe_acc_time));
+  if(!per_probe_acc_temp || !per_probe_acc_time) {
+    log_err(scn->dev, "Unable to allocate the list of accumulators per probe.\n");
+    res = RES_MEM_ERR;
+    goto error;
+  }
+
+  /* Begin time registration of the computation */
+  time_current(&time0);
+
+  /* Calculation of probe list */
+  #pragma omp parallel for schedule(static)
+  for(i = 0; i < (int64_t)process_nprobes; ++i) {
+    /* Thread */
+    const int ithread = omp_get_thread_num(); /* Thread ID */
+    struct ssp_rng* rng = per_thread_rng[ithread]; /* RNG of the thread */
+
+    /* Probe */
+    struct accum* probe_acc_temp = NULL;
+    struct accum* probe_acc_time = NULL;
+    const struct sdis_solve_probe_boundary_args* probe_args = NULL;
+    const size_t iprobe = process_probes[0] + (size_t)i; /* Probe ID */
+
+    /* Miscellaneous */
+    size_t n = 0; /* Number of solved probes */
+    int pcent = 0; /* Current progress */
+    res_T res_local = RES_OK;
+
+    if(ATOMIC_GET(&res) != RES_OK) continue; /* An error occurred */
+
+    /* Retrieve the probe arguments */
+    probe_args = &args->probes[iprobe];
+
+    /* Retrieve the probe accumulators */
+    probe_acc_temp = &per_probe_acc_temp[i];
+    probe_acc_time = &per_probe_acc_time[i];
+
+    res_local = XD(solve_one_probe_boundary)
+      (scn, rng, probe_args, probe_acc_temp, probe_acc_time);
+    if(res_local != RES_OK) {
+      ATOMIC_SET(&res, res_local);
+      continue;
+    }
+
+    /* Update progress */
+    n = (size_t)ATOMIC_INCR(&nsolved_probes);
+    pcent = (int)((double)n * 100.0 / (double)process_nprobes + 0.5/*round*/);
+
+    #pragma omp critical
+    if(pcent/pcent_progress > progress[0]/pcent_progress) {
+      progress[0] = pcent;
+      print_progress_update(scn->dev, progress, PROGRESS_MSG);
+    }
+  }
+
+post_sync:
+  /* Synchronise processes */
+  process_barrier(scn->dev);
+
+  res = gather_res_T(scn->dev, (res_T)res);
+  if(res != RES_OK) goto error;
+
+  print_progress_completion(scn->dev, progress, PROGRESS_MSG);
+  #undef PROGRESS_MSG
+
+  /* Report computatio time */
+  time_sub(&time0, time_current(&time1), &time0);
+  time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+  log_info(scn->dev, "%lu surface probes solved in %s.\n",
+    (unsigned long)args->nprobes, buf);
+
+  /* Gather the RNG proxy sequence IDs and ensure that the RNG proxy state of
+   * the master process is greater than the RNG proxy state of all other
+   * processes */
+  res = gather_rng_proxy_sequence_id(scn->dev, rng_proxy);
+  if(res != RES_OK) goto error;
+
+  time_current(&time0);
+
+  /* Gather the list of accumulators  */
+  #define GATHER_ACCUMS_LIST(Msg, Acc) {                                       \
+    res = gather_accumulators_list                                             \
+      (scn->dev, Msg, args->nprobes, process_probes, per_probe_acc_##Acc);     \
+    if(res != RES_OK) goto error;                                              \
+  } (void)0
+  GATHER_ACCUMS_LIST(MPI_SDIS_MSG_ACCUM_TEMP, temp);
+  GATHER_ACCUMS_LIST(MPI_SDIS_MSG_ACCUM_TIME, time);
+  #undef GATHER_ACCUMS_LIST
+
+  time_sub(&time0, time_current(&time1), &time0);
+  time_dump(&time0, TIME_ALL, NULL, buf, sizeof(buf));
+  log_info(scn->dev, "Probes accumulator gathered in %s.\n", buf);
+
+  if(is_master_process) {
+    res = estimator_buffer_create_from_observable_list_probe_boundary
+      (scn->dev, rng_proxy, args->probes, per_probe_acc_temp,
+       per_probe_acc_time, args->nprobes, &estim_buf);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  if(per_thread_rng) release_per_thread_rng(scn->dev, per_thread_rng);
+  if(rng_proxy) SSP(rng_proxy_ref_put(rng_proxy));
+  if(per_probe_acc_temp) MEM_RM(allocator, per_probe_acc_temp);
+  if(per_probe_acc_time) MEM_RM(allocator, per_probe_acc_time);
+  if(progress) free_process_progress(scn->dev, progress);
+  if(out_estim_buf) *out_estim_buf = estim_buf;
+  return (res_T)res;
+error:
+  if(estim_buf) {
+    SDIS(estimator_buffer_ref_put(estim_buf));
+    estim_buf = NULL;
+  }
   goto exit;
 }
 

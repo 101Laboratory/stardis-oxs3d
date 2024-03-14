@@ -14,10 +14,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis.h"
+#include "test_sdis_mesh.h"
 #include "test_sdis_utils.h"
 
 #include <star/s3dut.h>
-#include <rsys/stretchy_array.h>
 
 #define IMG_WIDTH 320
 #define IMG_HEIGHT 240
@@ -37,80 +37,6 @@
 /*******************************************************************************
  * Geometries
  ******************************************************************************/
-struct mesh {
-  double* positions; /* List of double 3 */
-  size_t* indices; /* List of size_t 3 */
-};
-#define MESH_NULL__ {NULL, NULL}
-static const struct mesh MESH_NULL = MESH_NULL__;
-
-static INLINE void
-mesh_init(struct mesh* mesh)
-{
-  CHK(mesh);
-  *mesh = MESH_NULL;
-}
-
-static INLINE void
-mesh_release(struct mesh* mesh)
-{
-  CHK(mesh);
-  sa_release(mesh->positions);
-  sa_release(mesh->indices);
-}
-
-/* Number of vertices */
-static INLINE size_t
-mesh_nvertices(const struct mesh* mesh)
-{
-  CHK(mesh);
-  return sa_size(mesh->positions) / 3/* #coords per vertex */;
-}
-
-/* Number of triangles */
-static INLINE size_t
-mesh_ntriangles(const struct mesh* mesh)
-{
-  CHK(mesh);
-  return sa_size(mesh->indices) / 3/* #indices per triangle */;
-}
-
-static void
-mesh_append
-  (struct mesh* mesh,
-   const struct s3dut_mesh_data* mesh_data,
-   const double in_translate[3]) /* May be NULL */
-{
-  double translate[3] = {0, 0, 0};
-  double* positions = NULL;
-  size_t* indices = NULL;
-  size_t ivert = 0;
-  size_t i = 0;
-  CHK(mesh != NULL);
-
-  ivert = mesh_nvertices(mesh);
-  positions = sa_add(mesh->positions, mesh_data->nvertices*3);
-  indices = sa_add(mesh->indices, mesh_data->nprimitives*3);
-
-  if(in_translate) {
-    translate[0] = in_translate[0];
-    translate[1] = in_translate[1];
-    translate[2] = in_translate[2];
-  }
-
-  FOR_EACH(i, 0, mesh_data->nvertices) {
-    positions[i*3 + 0] = mesh_data->positions[i*3 + 0] + translate[0];
-    positions[i*3 + 1] = mesh_data->positions[i*3 + 1] + translate[1];
-    positions[i*3 + 2] = mesh_data->positions[i*3 + 2] + translate[2];
-  }
-
-  FOR_EACH(i, 0, mesh_data->nprimitives) {
-    indices[i*3 + 0] = mesh_data->indices[i*3 + 0] + ivert;
-    indices[i*3 + 1] = mesh_data->indices[i*3 + 1] + ivert;
-    indices[i*3 + 2] = mesh_data->indices[i*3 + 2] + ivert;
-  }
-}
-
 static void
 mesh_add_super_shape(struct mesh* mesh)
 {
@@ -125,7 +51,8 @@ mesh_add_super_shape(struct mesh* mesh)
   f1.A = 1.0; f1.B = 2; f1.M =  3.6; f1.N0 = 1; f1.N1 = 2; f1.N2 = 0.7;
   OK(s3dut_create_super_shape(NULL, &f0, &f1, radius, nslices, nslices/2, &sshape));
   OK(s3dut_mesh_get_data(sshape, &sshape_data));
-  mesh_append(mesh, &sshape_data, NULL);
+  mesh_append(mesh, sshape_data.positions, sshape_data.nvertices,
+    sshape_data.indices, sshape_data.nprimitives, NULL);
   OK(s3dut_mesh_ref_put(sshape));
 }
 
@@ -140,7 +67,8 @@ mesh_add_ground(struct mesh* mesh)
 
   OK(s3dut_create_cuboid(NULL, 20, 20, DEPTH, &ground));
   OK(s3dut_mesh_get_data(ground, &ground_data));
-  mesh_append(mesh, &ground_data, translate);
+  mesh_append(mesh, ground_data.positions, ground_data.nvertices,
+    ground_data.indices, ground_data.nprimitives, translate);
   OK(s3dut_mesh_ref_put(ground));
   #undef DEPTH
 }
@@ -254,6 +182,13 @@ source_get_position
   pos[2] = 5.0;
 }
 
+static double
+source_get_power(const double time, struct sdis_data* data)
+{
+  (void)time, (void)data; /* Avoid the "unusued variable" warning */
+  return SOURCE_POWER; /* [W] */
+}
+
 static struct sdis_source*
 create_source(struct sdis_device* sdis)
 {
@@ -261,9 +196,9 @@ create_source(struct sdis_device* sdis)
   struct sdis_source* source = NULL;
 
   args.position = source_get_position;
+  args.power = source_get_power;
   args.data = NULL;
   args.radius = 3e-1; /* [m] */
-  args.power = SOURCE_POWER; /* [W] */
   OK(sdis_spherical_source_create(sdis, &args, &source));
   return source;
 }

@@ -42,6 +42,7 @@
 
   #define FORMAT_VECX "%g, %g, %g"
   #define SPLITX(V) SPLIT3(V)
+
 #else
   #error "Invalid dimension."
 #endif
@@ -61,13 +62,16 @@
 #define SXD_FLOAT2 CONCAT(CONCAT(S, DIM), D_FLOAT2)
 #define SXD_FLOAT3 CONCAT(CONCAT(S, DIM), D_FLOAT3)
 #define SXD_FLOATX CONCAT(CONCAT(CONCAT(S,DIM), D_FLOAT), DIM)
+#define SXD_GET_PRIMITIVE CONCAT(CONCAT(S, DIM), D_GET_PRIMITIVE)
 #define SXD_SAMPLE CONCAT(CONCAT(S, DIM), D_SAMPLE)
+#define SXD_TRACE CONCAT(CONCAT(S, DIM), D_TRACE)
 #define SXD_PRIMITIVE_EQ CONCAT(CONCAT(S, DIM), D_PRIMITIVE_EQ)
 
 /* Vector macros generic to SDIS_XD_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
+#define fXX_mulfX CONCAT(CONCAT(CONCAT(CONCAT(f, DIM), DIM), _mulf), DIM)
 #define dX_set_fX CONCAT(CONCAT(CONCAT(d, DIM), _set_f), DIM)
 
 /* Macro making generic its submitted name to SDIS_XD_DIMENSION */
@@ -81,6 +85,8 @@
   #else
     #define SDIS_3D_H
   #endif
+
+struct rwalk_context;
 
 /* Current state of the random walk */
 struct XD(rwalk) {

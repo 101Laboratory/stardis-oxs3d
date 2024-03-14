@@ -505,7 +505,7 @@ XD(handle_external_net_flux)
   external_flux_term = net_flux / (args->h_radi + args->h_conv + args->h_cond);
 
   /* Update the Monte Carlo weight */
-  T->value += external_flux_term * source_get_power(scn->source);
+  T->value += external_flux_term * source_get_power(scn->source, frag.time);
 
   /* Register the external net flux term */
   if(args->green_path) {

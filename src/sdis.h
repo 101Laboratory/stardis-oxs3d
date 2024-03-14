@@ -16,6 +16,8 @@
 #ifndef SDIS_H
 #define SDIS_H
 
+#include <star/s2d.h>
+#include <star/s3d.h>
 #include <star/ssp.h>
 
 #include <rsys/hash.h>
@@ -147,24 +149,43 @@ struct sdis_info {
 #define SDIS_INFO_NULL__ {0}
 static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
 
-/* Type of functor used to retrieve the source's position relative to time. */
+/* Type of functor used to retrieve the source's position relative to time */
 typedef void
 (*sdis_get_position_T)
   (const double time,
    double pos[3],
    struct sdis_data* data);
 
+/* Type of functor used to retrieve the source's power relative to time */
+typedef double
+(*sdis_get_power_T)
+  (const double time,
+   struct sdis_data* data);
+
 /* Input arguments of the sdis_spherical_source_create function */
 struct sdis_spherical_source_create_args {
   sdis_get_position_T position; /* [m] */
+  sdis_get_power_T power; /* Total power [W] */
   struct sdis_data* data; /* Data sent to the position functor */
   double radius; /* [m] */
-  double power; /* Total power [W] */
 };
 #define SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__ {NULL, NULL, 0, 0}
 static const struct sdis_spherical_source_create_args
 SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL =
   SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__;
+
+struct sdis_scene_find_closest_point_args {
+  double position[3]; /* Query position */
+  double radius; /* Maxium search distance around pos */
+
+  /* User defined filter function */
+  s2d_hit_filter_function_T filter_2d;
+  s3d_hit_filter_function_T filter_3d;
+  void* filter_data; /* Filter function data */
+};
+#define SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__ {{0,0,0}, 0, NULL, NULL, NULL}
+static const struct sdis_scene_find_closest_point_args
+SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL = SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__;
 
 /*******************************************************************************
  * Estimation data types
@@ -565,6 +586,27 @@ struct sdis_solve_probe_boundary_args {
 static const struct sdis_solve_probe_boundary_args
 SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__;
+
+/* Input arguments of the solve function that distributes the calculations of
+ * several boundary probes rather than the realizations of a probe */
+struct sdis_solve_probe_boundary_list_args {
+  struct sdis_solve_probe_boundary_args* probes; /* List of probes to compute */
+  size_t nprobes; /* Total number of probes */
+
+  /* State/type of the RNG to use for the list of probes to calculate.
+   * The state/type defines per probe is ignored */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+};
+#define SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT__ {                        \
+  NULL, /* List of probes */                                                   \
+  0, /* #probes */                                                             \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
+}
+static const struct sdis_solve_probe_boundary_list_args
+SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT__;
 
 struct sdis_solve_boundary_args {
   size_t nrealisations; /* #realisations */
@@ -1006,10 +1048,10 @@ SDIS_API res_T
 sdis_source_ref_put
   (struct sdis_source* source);
 
-SDIS_API res_T
+SDIS_API double
 sdis_source_get_power
-  (const struct sdis_source* src,
-   double* power);/* [W] */
+  (struct sdis_source* source,
+   const double time); /* [s] */
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
@@ -1119,8 +1161,7 @@ sdis_scene_set_temperature_range
 SDIS_API res_T
 sdis_scene_find_closest_point
   (const struct sdis_scene* scn,
-   const double pos[], /* Query position */
-   const double radius, /* Maximum search distance around pos */
+   const struct sdis_scene_find_closest_point_args* args,
    size_t* iprim, /* Primitive index onto which the closest point lies */
    double uv[]); /* Parametric cordinate onto the primitive */
 
@@ -1452,18 +1493,6 @@ sdis_solve_probe
    const struct sdis_solve_probe_args* args,
    struct sdis_estimator** estimator);
 
-/* Calculate temperature for a list of probe points. Unlike its
- * single-probe counterpart, this function parallelizes the list of
- * probes, rather than calculating a single probe. Calling this function
- * is therefore more advantageous in terms of load distribution when the
- * number of probe points to be evaluated is large compared to the cost
- * of calculating a single probe point. */
-SDIS_API res_T
-sdis_solve_probe_list
-  (struct sdis_scene* scn,
-   const struct sdis_solve_probe_list_args* args,
-   struct sdis_estimator_buffer** buf);
-
 SDIS_API res_T
 sdis_solve_probe_boundary
   (struct sdis_scene* scn,
@@ -1514,6 +1543,27 @@ sdis_compute_power
    struct sdis_estimator** estimator);
 
 /*******************************************************************************
+ * Solvers of a list of probes
+ *
+ * Unlike their single-probe counterpart, this function parallelizes the list of
+ * probes, rather than calculating a single probe. Calling these functions is
+ * therefore more advantageous in terms of load distribution when the number of
+ * probes to be evaluated is large compared to the cost of calculating a single
+ * probe.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_solve_probe_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_list_args* args,
+   struct sdis_estimator_buffer** buf);
+
+SDIS_API res_T
+sdis_solve_probe_boundary_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_boundary_list_args* args,
+   struct sdis_estimator_buffer** buf);
+
+/*******************************************************************************
  * Green solvers.
  *
  * Note that only the interfaces/media with flux/volumic power defined during
@@ -1524,7 +1574,7 @@ sdis_compute_power
  *
  * Also note that the green solvers assume that the interface fluxes are
  * constant in time and space. The same applies to the volumic power of the
- * solid media.
+ * solid media and the power of external sources.
  *
  * If these assumptions are not ensured by the caller, the behavior of the
  * estimated green function is undefined.

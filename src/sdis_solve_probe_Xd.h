@@ -106,84 +106,6 @@ check_solve_probe_list_args
   return RES_OK;
 }
 
-static res_T
-setup_estimator_buffer
-  (struct sdis_device* dev,
-   struct ssp_rng_proxy* rng_proxy,
-   const struct sdis_solve_probe_list_args* solve_args,
-   const struct accum* per_probe_acc_temp,
-   const struct accum* per_probe_acc_time,
-   struct sdis_estimator_buffer** out_estim_buffer)
-{
-  /* Accumulators throughout the buffer */
-  struct accum acc_temp = ACCUM_NULL;
-  struct accum acc_time = ACCUM_NULL;
-  size_t nrealisations = 0;
-
-  struct sdis_estimator_buffer* estim_buf = NULL;
-  size_t iprobe = 0;
-  res_T res = RES_OK;
-
-  ASSERT(dev && rng_proxy && solve_args);
-  ASSERT(per_probe_acc_time && per_probe_acc_time && out_estim_buffer);
-
-  res = estimator_buffer_create(dev, solve_args->nprobes, 1, &estim_buf);
-  if(res != RES_OK) {
-    log_err(dev, "Unable to allocate the estimator buffer.\n");
-    goto error;
-  }
-
-  FOR_EACH(iprobe, 0, solve_args->nprobes) {
-    const struct sdis_solve_probe_args* probe = NULL;
-    const struct accum* probe_acc_temp = NULL;
-    const struct accum* probe_acc_time = NULL;
-    struct sdis_estimator* estim = NULL;
-
-    /* Get probe data */
-    probe = solve_args->probes + iprobe;
-    probe_acc_temp = per_probe_acc_temp + iprobe;
-    probe_acc_time = per_probe_acc_time + iprobe;
-    ASSERT(probe_acc_temp->count == probe_acc_time->count);
-
-    /* Setup probe estimator */
-    estim = estimator_buffer_grab(estim_buf, iprobe, 0);
-    estimator_setup_realisations_count
-      (estim, probe->nrealisations, probe_acc_temp->count);
-    estimator_setup_temperature
-      (estim, probe_acc_temp->sum, probe_acc_temp->sum2);
-    estimator_setup_realisation_time
-      (estim, probe_acc_time->sum, probe_acc_time->sum2);
-
-    /* Update global accumulators */
-    acc_temp.sum +=  probe_acc_temp->sum;
-    acc_temp.sum2 += probe_acc_temp->sum2;
-    acc_temp.count += probe_acc_temp->count;
-    acc_time.sum +=  probe_acc_time->sum;
-    acc_time.sum2 += probe_acc_time->sum2;
-    acc_time.count += probe_acc_time->count;
-    nrealisations += probe->nrealisations;
-  }
-
-  ASSERT(acc_temp.count == acc_time.count);
-
-  /* Setup global estimator */
-  estimator_buffer_setup_realisations_count
-    (estim_buf, nrealisations, acc_temp.count);
-  estimator_buffer_setup_temperature
-    (estim_buf, acc_temp.sum, acc_temp.sum2);
-  estimator_buffer_setup_realisation_time
-    (estim_buf, acc_time.sum, acc_time.sum2);
-
-  res = estimator_buffer_save_rng_state(estim_buf, rng_proxy);
-  if(res != RES_OK) goto error;
-
-exit:
-  *out_estim_buffer = estim_buf;
-  return res;
-error:
-  goto exit;
-}
-
 #endif /* SDIS_SOLVE_PROBE_XD_H */
 
 static res_T
@@ -633,9 +555,6 @@ XD(solve_probe_list)
     goto post_sync;
   }
 
-  /* Begin time registration of the computation */
-  time_current(&time0);
-
   /* Allocate the list of accumulators per probe. On the master process,
    * allocate a complete list in which the accumulators of all processes will be
    * stored. */
@@ -647,6 +566,9 @@ XD(solve_probe_list)
     res = RES_MEM_ERR;
     goto error;
   }
+
+  /* Begin time registration of the computation */
+  time_current(&time0);
 
   /* Here we go! Calculation of probe list */
   omp_set_num_threads((int)scn->dev->nthreads);
@@ -733,8 +655,9 @@ post_sync:
   log_info(scn->dev, "Probes accumulator gathered in %s.\n", buf);
 
   if(is_master_process) {
-    res = setup_estimator_buffer(scn->dev, rng_proxy, args, per_probe_acc_temp,
-      per_probe_acc_time, &estim_buf);
+    res = estimator_buffer_create_from_observable_list_probe
+      (scn->dev, rng_proxy, args->probes, per_probe_acc_temp,
+       per_probe_acc_time, args->nprobes, &estim_buf);
     if(res != RES_OK) goto error;
   }
 
