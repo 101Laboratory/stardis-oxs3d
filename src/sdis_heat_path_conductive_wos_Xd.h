@@ -61,7 +61,7 @@ compute_hit_side_2d
   double z = 0;
 
   /* Check pre-conditions */
-  ASSERT(scn && hit && pos && !S2D_HIT_NONE(hit));
+  ASSERT(hit && pos && !S2D_HIT_NONE(hit));
 
   /* Retrieve the positions of the intersected segment */
   S2D(segment_get_vertex_attrib(&hit->prim, 0, S2D_POSITION, &p0));
@@ -92,7 +92,7 @@ compute_hit_side_3d
   double dst = 0; /* Distance of pos to the plane */
 
   /* Check pre-conditions */
-  ASSERT(scn && hit && pos && !S3D_HIT_NONE(hit));
+  ASSERT(hit && pos && !S3D_HIT_NONE(hit));
 
   /* Retrieve the positions of the intersected triangle */
   S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
