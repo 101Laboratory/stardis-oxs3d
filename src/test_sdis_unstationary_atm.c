@@ -26,7 +26,7 @@
  * The physical configuration is the following: a slab of fluid with known
  * thermophysical properties but unknown temperature is located between a
  * "ground" and a slab of solid, with also a unknown temperature profile. On
- * the other side of the solid slab, is a "atmosphere" with known temperature,
+ * the other side of the solid slab, is an "atmosphere" with known temperature,
  * and known radiative temperature.
  *
  * Solving the system means: finding the temperature of the ground, of the
@@ -35,7 +35,7 @@
  * reference)
  *
  * The reference for this system comes from a numerical method and is not
- * analytic.  Thus the compliance test MC VS reference is not the usual |MC -
+ * analytic. Thus the compliance test MC VS reference is not the usual |MC -
  * ref| <= 3*sigma but is |MC -ref| <= (Tmax -Tmin) * 0.01.
  *
  *          3D                                      2D
