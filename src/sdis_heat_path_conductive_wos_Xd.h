@@ -87,7 +87,7 @@ XD(time_travel)
   if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
 
   /* Let's take a trip back in time */
-  rwalk->vtx.time -= MMAX(t0, rwalk->vtx.time - tau);
+  rwalk->vtx.time = MMAX(t0, rwalk->vtx.time - tau);
 
   /* Thepath does not reach the initial condition */
   if(rwalk->vtx.time > t0) goto exit;
@@ -273,11 +273,13 @@ XD(setup_hit_wos)
     goto error;
   }
 
-  /* Update the random walk */
+  /* Random walk update. Do not set the medium to NULL as the intersection is
+   * found regardless of time, so the initial condition could be reached before
+   * the interface. So we can't yet assume that the random walk has left the
+   * current medium */
   dX(set)(rwalk->vtx.P, tgt);
   rwalk->hit = *hit;
   rwalk->hit_side = side;
-  rwalk->mdm = NULL;
 
 exit:
   return res;
@@ -326,11 +328,13 @@ XD(setup_hit_rt)
     goto error;
   }
 
-  /* Update the random walk */
+  /* Random walk update. Do not set the medium to NULL as the intersection is
+   * found regardless of time, so the initial condition could be reached before
+   * the interface. So we can't yet assume that the random walk has left the
+   * current medium */
   dX(set)(rwalk->vtx.P, tgt);
   rwalk->hit = *hit;
   rwalk->hit_side = side;
-  rwalk->mdm = NULL;
 
 exit:
   return res;
@@ -504,10 +508,17 @@ XD(conductive_path_wos)
     if(res != RES_OK) goto error;
 
     /* The path reaches the initial condition */
-    if(T->done) break;
+    if(T->done) {
+      T->func = NULL;
+      break;
+    }
 
     /* The path reaches a boundary */
-    if(!SXD_HIT_NONE(&rwalk->hit)) break;
+    if(!SXD_HIT_NONE(&rwalk->hit)) {
+      T->func = XD(boundary_path);
+      rwalk->mdm = NULL;
+      break;
+    }
 
     /* Retreive and check solid properties at the new position */
     res = solid_get_properties(rwalk->mdm, &rwalk->vtx, &props);
@@ -524,9 +535,6 @@ XD(conductive_path_wos)
 
     ++ndiffusion_steps;
   }
-
-  T->func = XD(boundary_path);
-  ASSERT(rwalk->mdm == NULL);
 
 exit:
   return res;
