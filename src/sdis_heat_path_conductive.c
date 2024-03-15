@@ -25,6 +25,7 @@ res_T
 check_solid_constant_properties
   (struct sdis_device* dev,
    const int evaluate_green,
+   const int use_wos_diffusion,
    const struct solid_props* props_ref,
    const struct solid_props* props)
 {
@@ -55,11 +56,11 @@ check_solid_constant_properties
     goto error;
   }
 
-  if(evaluate_green && props_ref->power != props->power) {
+  if((evaluate_green || use_wos_diffusion) && props_ref->power != props->power) {
     log_err(dev,
-      "%s: invalid volumic power. When estimating the green function, a "
-      "constant volumic power is assumed for the whole solid.\n",
-      FUNC_NAME);
+      "%s: invalid variable power density. Stardis expects a constant power "
+      "density per solid when using WoS diffusion and/or green function "
+      "evaluation.", FUNC_NAME);
     res = RES_BAD_ARG;
     goto error;
   }

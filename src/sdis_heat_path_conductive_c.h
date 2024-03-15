@@ -33,6 +33,7 @@ extern LOCAL_SYM res_T
 check_solid_constant_properties
   (struct sdis_device* dev,
    const int evaluate_green,
+   const int use_wos_diffusion,
    const struct solid_props* props_ref,
    const struct solid_props* props);
 

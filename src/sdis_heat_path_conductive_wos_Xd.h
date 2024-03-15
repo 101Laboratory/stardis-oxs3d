@@ -59,7 +59,8 @@ XD(time_travel)
    struct ssp_rng* rng,
    const double alpha, /* Diffusivity, i.e. lambda/(rho*cp) */
    const double t0, /* Initial time [s] */
-   const double distance, /* Displacement. Must be multipled by fp_to_meter */
+   const double distance, /* Displacement [m/fp_to_meter] */
+   double* out_time, /* Travel time */
    struct XD(temperature)* T)
 {
   double dst = 0; /* Distance [m] */
@@ -67,8 +68,9 @@ XD(time_travel)
   double x = 0;
   double r = 0;
   double temperature = 0; /* [k] */
+  double time = 0; /* [s] */
   res_T res = RES_OK;
-  ASSERT(scn && rwalk && rng && alpha && T);
+  ASSERT(scn && rwalk && rng && alpha > 0 && out_time && T);
 
   /* No displacement => no time travel */
   if(distance == 0) goto exit;
@@ -78,11 +80,12 @@ XD(time_travel)
   x = swf_tabulation_inverse(XD(scn->dev->H), SWF_QUADRATIC, r);
 
   /* Retrieve the time to travel */
-  dst = distance * scn->fp_to_meter;
+  dst = distance * scn->fp_to_meter; /* [m] */
   tau = x / alpha * dst * dst;
+  time = MMIN(tau, rwalk->vtx.time - t0);
 
   /* Increment the elapsed time */
-  rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
+  rwalk->elapsed_time += time;
 
   if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
 
@@ -110,6 +113,7 @@ XD(time_travel)
   T->done = 1;
 
 exit:
+  *out_time = time;
   return res;
 error:
   goto exit;
@@ -451,6 +455,51 @@ error:
   goto exit;
 }
 
+static res_T
+XD(handle_volumic_power_wos)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   const struct solid_props* props,
+   const double alpha, /* Diffusivity, i.e. lambda/(rho*cp) */
+   const double distance, /* [m/fp_to_meter] */
+   const double time, /* [s] */
+   struct XD(temperature)* T)
+{
+  double dst = distance * scn->fp_to_meter; /* [m] */
+  double sqr_dst = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && rng && props && alpha >= 0 && distance >= 0 && time >= 0 && T);
+
+  if(props->power == SDIS_VOLUMIC_POWER_NONE) goto exit;
+
+  /* No displacement => no power density */
+  if(distance == 0) { ASSERT(time == 0); goto exit; }
+
+  /* The path does not reach the initial condition */
+  if(!T->done) {
+    sqr_dst = dst*dst;
+
+  /* The path reaches the initial condition. Sample a distance corresponding to
+   * the travel time to the initial condition.
+   *
+   * TODO while we use the H function to sample the distance, it seems more
+   * accurate to use the U function, i.e. the one to be used to handle
+   * non-uniform initial conditions. For the moment, this function is not
+   * available, hence the use of H */
+  } else {
+    /* x = time*alpha/distance^2 */
+    const double r = ssp_rng_canonical(rng);
+    const double x = swf_tabulation_inverse(XD(scn->dev->H), SWF_QUADRATIC, r);
+
+    sqr_dst = alpha * time / x;
+  }
+
+  T->value += props->power * sqr_dst / (2*DIM*props->lambda);
+
+exit:
+  return res;
+}
+
 /*******************************************************************************
  * Local function
  ******************************************************************************/
@@ -469,7 +518,8 @@ XD(conductive_path_wos)
 
   /* Miscellaneous */
   size_t ndiffusion_steps = 0; /* For debug */
-  int eval_green = 0;
+  const int green = 0;
+  const int wos = 1;
   res_T res = RES_OK;
   (void)ctx; /* Avoid the "unused variable" warning */
 
@@ -490,6 +540,7 @@ XD(conductive_path_wos)
    * thus verify that the properties are constant throughout the random walk
    * with respect to the properties of the reinjected position. */
   solid_get_properties(rwalk->mdm, &rwalk->vtx, &props_ref);
+  props = props_ref;
 
   /* The algorithm assumes that lambda, rho and cp are constants. The
    * diffusivity of the material (alpha) can therefore be calculated once */
@@ -497,14 +548,19 @@ XD(conductive_path_wos)
 
   /* Sample a diffusive path */
   for(;;) {
-    double distance = 0;
+    double dst = 0; /* [m/fp_to_meter] */
+    double time = 0; /* [s] */
 
     /* Find the next position of the conductive path */
-    res = XD(sample_next_position)(scn, rwalk, rng, &distance);
+    res = XD(sample_next_position)(scn, rwalk, rng, &dst);
     if(res != RES_OK) goto error;
 
     /* Going back in time */
-    res = XD(time_travel)(scn, rwalk, rng, alpha, props_ref.t0, distance, T);
+    res = XD(time_travel)(scn, rwalk, rng, alpha, props.t0, dst, &time, T);
+    if(res != RES_OK) goto error;
+
+    /* Add the volumic power density */
+    res = XD(handle_volumic_power_wos)(scn, rng, &props, alpha, dst, time, T);
     if(res != RES_OK) goto error;
 
     /* The path reaches the initial condition */
@@ -523,7 +579,7 @@ XD(conductive_path_wos)
     /* Retreive and check solid properties at the new position */
     res = solid_get_properties(rwalk->mdm, &rwalk->vtx, &props);
     if(res != RES_OK) goto error;
-    res = check_solid_constant_properties(scn->dev, eval_green, &props_ref, &props);
+    res = check_solid_constant_properties(scn->dev, green, wos, &props_ref, &props);
     if(res != RES_OK) goto error;
 
     /* The temperature is known, the path has reached a limit condition */

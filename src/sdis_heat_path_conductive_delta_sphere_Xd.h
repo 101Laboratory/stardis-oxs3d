@@ -385,7 +385,7 @@ XD(conductive_path_delta_sphere)
     if(res != RES_OK) goto error;
 
     res = check_solid_constant_properties
-      (scn->dev, ctx->green_path != NULL, &props_ref, &props);
+      (scn->dev, ctx->green_path != NULL, 0/*use WoS?*/, &props_ref, &props);
     if(res != RES_OK) goto error;
 
     /* Check the limit condition
