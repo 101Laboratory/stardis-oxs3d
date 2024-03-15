@@ -22,14 +22,14 @@
  * and validates the result against the calculated values by analytically
  * solving the green functions.
  *
- *          T3
+ *          T3  (0.1,0.1,0.1)
  *       +-------+
  *      /'  T4  /|
  *     +-------+ | T1
  *  T0 | +.....|.+
  *     |, T5   |/
  *     +-------+
- *        T2
+ * (0,0,0) T2
  */
 
 #define T_INIT 280 /* [K] */
@@ -223,9 +223,20 @@ check_probe
 }
 
 static void
-check(struct sdis_scene* scn, const enum sdis_diffusion_algorithm diff_algo)
+check
+  (struct sdis_scene* scn,
+   const enum sdis_diffusion_algorithm diff_algo)
 {
+  const char* str_algo = NULL;
   size_t i = 0;
+
+  switch(diff_algo) {
+    case SDIS_DIFFUSION_WOS: str_algo = "Walk on Sphere"; break;
+    case SDIS_DIFFUSION_DELTA_SPHERE: str_algo = "Delta sphere"; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+
+  printf("\n\x1b[1m\x1b[35m%s\x1b[0m\n", str_algo);
   FOR_EACH(i, 0, nreferences) {
     check_probe(scn, references + i, diff_algo);
   }
