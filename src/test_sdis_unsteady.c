@@ -41,11 +41,10 @@
 #define T5 300 /* [K] */
 
 #define NREALISATIONS 10000
-
 #define FP_TO_METER 0.1
 
 struct reference {
-  double pos[3]; /* [FP_TO_METER.m] */
+  double pos[3]; /* [m/FP_TO_METER] */
   double time; /* [s] */
   double temp; /* [K] */
 };
