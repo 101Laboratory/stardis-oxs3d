@@ -120,24 +120,148 @@ create_dummy(struct sdis_device* sdis)
 }
 
 /*******************************************************************************
+ * Interface of the system
+ ******************************************************************************/
+static double /* [K] */
+interface_get_temperature
+  (const struct sdis_interface_fragment* frag,
+   struct sdis_data* data)
+{
+  (void)data;
+  ASSERT(frag);
+
+       if(frag->Ng[0] ==  1) return T0;
+  else if(frag->Ng[0] == -1) return T1;
+  else if(frag->Ng[1] ==  1) return -1; /* Unknown temperature */
+  else if(frag->Ng[1] == -1) return -1; /* Unknown temperature */
+  else FATAL("Unreachable code\n");
+}
+
+static struct sdis_interface*
+create_interface
+  (struct sdis_device* sdis,
+   struct sdis_medium* front,
+   struct sdis_medium* back)
+{
+  struct sdis_interface* interf = NULL;
+  struct sdis_interface_shader shader = SDIS_INTERFACE_SHADER_NULL;
+
+  shader.front.temperature = interface_get_temperature;
+  shader.back.temperature = interface_get_temperature;
+  OK(sdis_interface_create(sdis, front, back, &shader, NULL, &interf));
+  return interf;
+}
+
+/*******************************************************************************
+ * The scene
+ ******************************************************************************/
+static void
+get_interface(const size_t itri, struct sdis_interface** interf, void* ctx)
+{
+  (void)itri;
+  ASSERT(interf && ctx);
+  *interf = ctx;
+}
+
+static struct sdis_scene*
+create_scene
+  (struct sdis_device* sdis,
+   struct sdis_interface* interf)
+{
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_scene* scn = NULL;
+
+  scn_args.get_indices = square_get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = square_get_position;
+  scn_args.nprimitives = square_nsegments;
+  scn_args.nvertices = square_nvertices;
+  scn_args.context = interf;
+  scn_args.fp_to_meter = FP_TO_METER;
+  OK(sdis_scene_2d_create(sdis, &scn_args, &scn));
+
+  return scn;
+}
+
+/*******************************************************************************
+ * Validations
+ ******************************************************************************/
+static void
+check_probe
+  (struct sdis_scene* scn,
+   const struct reference* ref,
+   const enum sdis_diffusion_algorithm diff_algo)
+{
+  struct sdis_solve_probe_args args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_estimator* estimator = NULL;
+  CHK(ref);
+
+  args.position[0] = ref->pos[0];
+  args.position[1] = ref->pos[1];
+  args.time_range[0] =
+  args.time_range[1] = ref->time; /* [s] */
+  args.diff_algo = diff_algo;
+  args.nrealisations = NREALISATIONS;
+  OK(sdis_solve_probe(scn, &args, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+
+  printf("T(%g, %g) at %g s = %g ~ %g +/- %g\n",
+    ref->pos[0]*FP_TO_METER, ref->pos[1]*FP_TO_METER,
+    ref->time, ref->temp, T.E, T.SE);
+  CHK(eq_eps(ref->temp, T.E, 3*T.SE));
+
+  OK(sdis_estimator_ref_put(estimator));
+}
+
+static void
+check
+  (struct sdis_scene* scn,
+   const enum sdis_diffusion_algorithm diff_algo)
+{
+  const char* str_algo = NULL;
+  size_t i = 0;
+
+  switch(diff_algo) {
+    case SDIS_DIFFUSION_WOS: str_algo = "Walk on Sphere"; break;
+    case SDIS_DIFFUSION_DELTA_SPHERE: str_algo = "Delta sphere"; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+
+  printf("\n\x1b[1m\x1b[35m%s\x1b[0m\n", str_algo);
+  FOR_EACH(i, 0, nreferences) {
+    check_probe(scn, references + i, diff_algo);
+  }
+}
+
+/*******************************************************************************
  * The test
  ******************************************************************************/
 int
 main(int argc, char** argv)
 {
   struct sdis_device* sdis = NULL;
+  struct sdis_interface* interf = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* dummy = NULL;
+  struct sdis_scene* scene = NULL;
   (void)argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &sdis));
 
   solid = create_solid(sdis);
   dummy = create_dummy(sdis);
+  interf = create_interface(sdis, solid, dummy);
+  scene = create_scene(sdis, interf);
 
+  /*check(scene, SDIS_DIFFUSION_DELTA_SPHERE);*/
+  check(scene, SDIS_DIFFUSION_WOS);
+
+  OK(sdis_device_ref_put(sdis));
+  OK(sdis_interface_ref_put(interf));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(dummy));
-  OK(sdis_device_ref_put(sdis));
+  OK(sdis_scene_ref_put(scene));
 
   CHK(mem_allocated_size() == 0);
   return 0;
