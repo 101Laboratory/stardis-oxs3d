@@ -59,10 +59,10 @@ XD(time_travel)
    struct ssp_rng* rng,
    const double alpha, /* Diffusivity, i.e. lambda/(rho*cp) */
    const double t0, /* Initial time [s] */
-   const double distance, /* Displacement [m/fp_to_meter] */
-   double* out_time, /* Travel time */
+   double* distance, /* Displacement [m/fp_to_meter] */
    struct XD(temperature)* T)
 {
+  double dir[DIM] = {0};
   double dst = 0; /* Distance [m] */
   double tau = 0; /* Time [s] */
   double x = 0;
@@ -70,7 +70,10 @@ XD(time_travel)
   double temperature = 0; /* [k] */
   double time = 0; /* [s] */
   res_T res = RES_OK;
-  ASSERT(scn && rwalk && rng && alpha > 0 && out_time && T);
+  ASSERT(scn && rwalk && rng && alpha > 0 && distance && T);
+
+  dst = *distance * scn->fp_to_meter;
+  ASSERT(dst >= 0);
 
   /* No displacement => no time travel */
   if(distance == 0) goto exit;
@@ -80,7 +83,6 @@ XD(time_travel)
   x = swf_tabulation_inverse(XD(scn->dev->H), SWF_QUADRATIC, r);
 
   /* Retrieve the time to travel */
-  dst = distance * scn->fp_to_meter; /* [m] */
   tau = x / alpha * dst * dst;
   time = MMIN(tau, rwalk->vtx.time - t0);
 
@@ -95,7 +97,29 @@ XD(time_travel)
   /* The path does not reach the initial condition */
   if(rwalk->vtx.time > t0) goto exit;
 
-  /* Fethc the initial temperature */
+  /* The path reaches the initial condition. Sample a distance corresponding to
+   * the travel time to the initial condition.
+   *
+   * TODO while we use the H function to sample the distance, one should use the
+   * U function. For the moment, this function is not available, hence the use
+   * of H. This is not a problem, since we currently assume that the initial
+   * condition is uniform. Position is only used for path geometry */
+  r = ssp_rng_canonical(rng);
+  x = swf_tabulation_inverse(XD(scn->dev->H), SWF_QUADRATIC, r);
+  dst = sqrt(alpha * time / x);
+  *distance = dst; /* Update travel distance */
+
+  /* Uniformly sample a direction and move along it of the distance that
+   * separate the current position ot its initial condition */
+#if DIM == 2
+  ssp_ran_circle_uniform(rng, dir, NULL);
+#else
+  ssp_ran_sphere_uniform(rng, dir, NULL);
+#endif
+  dX(muld)(dir, dir, dst);
+  dX(add)(rwalk->vtx.P, rwalk->vtx.P, dir);
+
+  /* Fetch the initial temperature */
   temperature = medium_get_temperature(rwalk->mdm, &rwalk->vtx);
   if(temperature < 0) {
     log_err(scn->dev,
@@ -113,7 +137,6 @@ XD(time_travel)
   T->done = 1;
 
 exit:
-  *out_time = time;
   return res;
 error:
   goto exit;
@@ -458,43 +481,20 @@ error:
 static res_T
 XD(handle_volumic_power_wos)
   (struct sdis_scene* scn,
-   struct ssp_rng* rng,
    const struct solid_props* props,
-   const double alpha, /* Diffusivity, i.e. lambda/(rho*cp) */
    const double distance, /* [m/fp_to_meter] */
-   const double time, /* [s] */
    struct XD(temperature)* T)
 {
   double dst = distance * scn->fp_to_meter; /* [m] */
-  double sqr_dst = 0;
   res_T res = RES_OK;
-  ASSERT(scn && rng && props && alpha >= 0 && distance >= 0 && time >= 0 && T);
+  ASSERT(scn && props && distance >= 0 && T);
 
   if(props->power == SDIS_VOLUMIC_POWER_NONE) goto exit;
 
   /* No displacement => no power density */
-  if(distance == 0) { ASSERT(time == 0); goto exit; }
+  if(distance == 0) goto exit;
 
-  /* The path does not reach the initial condition */
-  if(!T->done) {
-    sqr_dst = dst*dst;
-
-  /* The path reaches the initial condition. Sample a distance corresponding to
-   * the travel time to the initial condition.
-   *
-   * TODO while we use the H function to sample the distance, it seems more
-   * accurate to use the U function, i.e. the one to be used to handle
-   * non-uniform initial conditions. For the moment, this function is not
-   * available, hence the use of H */
-  } else {
-    /* x = time*alpha/distance^2 */
-    const double r = ssp_rng_canonical(rng);
-    const double x = swf_tabulation_inverse(XD(scn->dev->H), SWF_QUADRATIC, r);
-
-    sqr_dst = alpha * time / x;
-  }
-
-  T->value += props->power * sqr_dst / (2*DIM*props->lambda);
+  T->value += props->power * dst*dst / (2*DIM*props->lambda);
 
 exit:
   return res;
@@ -549,18 +549,17 @@ XD(conductive_path_wos)
   /* Sample a diffusive path */
   for(;;) {
     double dst = 0; /* [m/fp_to_meter] */
-    double time = 0; /* [s] */
 
     /* Find the next position of the conductive path */
     res = XD(sample_next_position)(scn, rwalk, rng, &dst);
     if(res != RES_OK) goto error;
 
     /* Going back in time */
-    res = XD(time_travel)(scn, rwalk, rng, alpha, props.t0, dst, &time, T);
+    res = XD(time_travel)(scn, rwalk, rng, alpha, props.t0, &dst, T);
     if(res != RES_OK) goto error;
 
     /* Add the volumic power density */
-    res = XD(handle_volumic_power_wos)(scn, rng, &props, alpha, dst, time, T);
+    res = XD(handle_volumic_power_wos)(scn, &props, dst, T);
     if(res != RES_OK) goto error;
 
     /* The path reaches the initial condition */
@@ -589,7 +588,7 @@ XD(conductive_path_wos)
       break;
     }
 
-    ++ndiffusion_steps;
+    ++ndiffusion_steps; /* For debug */
   }
 
 exit:
