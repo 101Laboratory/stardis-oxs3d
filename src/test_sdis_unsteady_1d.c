@@ -254,7 +254,7 @@ main(int argc, char** argv)
   interf = create_interface(sdis, solid, dummy);
   scene = create_scene(sdis, interf);
 
-  /*check(scene, SDIS_DIFFUSION_DELTA_SPHERE);*/
+  check(scene, SDIS_DIFFUSION_DELTA_SPHERE);
   check(scene, SDIS_DIFFUSION_WOS);
 
   OK(sdis_device_ref_put(sdis));
