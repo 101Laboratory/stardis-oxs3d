@@ -92,7 +92,7 @@ XD(time_travel)
   /* Let's take a trip back in time */
   rwalk->vtx.time = MMAX(t0, rwalk->vtx.time - tau);
 
-  /* Thepath does not reach the initial condition */
+  /* The path does not reach the initial condition */
   if(rwalk->vtx.time > t0) goto exit;
 
   /* Fethc the initial temperature */
