@@ -550,8 +550,16 @@ XD(conductive_path_wos)
   for(;;) {
     double dst = 0; /* [m/fp_to_meter] */
 
+    /* Register the new vertex against the heat path */
+    #define REGISTER_HEAT_VERTEX {                                             \
+      res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,        \
+        SDIS_HEAT_VERTEX_CONDUCTION, (int)ctx->nbranchings);                   \
+      if(res != RES_OK) goto error;                                            \
+    } (void)0
+
     /* The temperature is known */
     if(props.temperature >= 0) {
+      REGISTER_HEAT_VERTEX;
       T->value += props.temperature;
       T->done = 1;
       break;
@@ -571,16 +579,20 @@ XD(conductive_path_wos)
 
     /* The path reaches the initial condition */
     if(T->done) {
+      REGISTER_HEAT_VERTEX;
       T->func = NULL;
       break;
     }
 
     /* The path reaches a boundary */
     if(!SXD_HIT_NONE(&rwalk->hit)) {
+      REGISTER_HEAT_VERTEX;
       T->func = XD(boundary_path);
       rwalk->mdm = NULL;
       break;
     }
+
+    #undef REGISTER_VERTEX
 
     /* Retreive and check solid properties at the new position */
     res = solid_get_properties(rwalk->mdm, &rwalk->vtx, &props);
