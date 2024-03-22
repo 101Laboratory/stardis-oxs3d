@@ -550,6 +550,13 @@ XD(conductive_path_wos)
   for(;;) {
     double dst = 0; /* [m/fp_to_meter] */
 
+    /* The temperature is known */
+    if(props.temperature >= 0) {
+      T->value += props.temperature;
+      T->done = 1;
+      break;
+    }
+
     /* Find the next position of the conductive path */
     res = XD(sample_next_position)(scn, rwalk, rng, &dst);
     if(res != RES_OK) goto error;
@@ -580,13 +587,6 @@ XD(conductive_path_wos)
     if(res != RES_OK) goto error;
     res = check_solid_constant_properties(scn->dev, green, wos, &props_ref, &props);
     if(res != RES_OK) goto error;
-
-    /* The temperature is known, the path has reached a limit condition */
-    if(props.temperature >= 0) {
-      T->value += props.temperature;
-      T->done = 1;
-      break;
-    }
 
     ++ndiffusion_steps; /* For debug */
   }
