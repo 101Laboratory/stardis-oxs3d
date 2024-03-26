@@ -247,8 +247,9 @@ struct sdis_solid_shader {
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
 
-  /* The time until the initial condition is maintained for this solid;
-   * can neither be negative nor infinity, default is 0. */
+  /* The time until the initial condition is maintained for this solid.
+   * Can be negative or set to +/- infinity to simulate a system that is always
+   * in the initial state or never reaches it, respectively. */
   double t0;
 };
 #define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, 0}
@@ -265,8 +266,10 @@ struct sdis_fluid_shader {
    * unknown for the submitted random walk vertex.
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
-  /* The time until the initial condition is maintained for this fluid;
-   * can neither be negative nor infinity, default is 0. */
+
+  /* The time until the initial condition is maintained for this fluid.
+   * Can be negative or set to +/- infinity to simulate a system that is always
+   * in the initial state or never reaches it, respectively. */
   double t0;
 };
 #define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL, 0}
