@@ -52,7 +52,7 @@
 
 /* Syntactic sugar used to define whether a temperature is known or not */
 #define SDIS_TEMPERATURE_NONE NaN /* Unknown temperature */
-#define SDIS_TEMPERATURE_IS_KNOWN(Temp) (IS_NaN(Temp))
+#define SDIS_TEMPERATURE_IS_KNOWN(Temp) (!IS_NaN(Temp))
 #define SDIS_TEMPERATURE_IS_UNKNOWN(Temp) (!SDIS_TEMPERATURE_IS_KNOWN(Temp))
 
 /* Forward declaration of external opaque data types */
