@@ -188,6 +188,7 @@ XD(solve_one_probe_boundary)
     realis_args.picard_order = args->picard_order;
     realis_args.side = args->side;
     realis_args.irealisation = irealisation;
+    realis_args.diff_algo = args->diff_algo;
     realis_args.uv[0] = args->uv[0];
 #if SDIS_XD_DIMENSION == 3
     realis_args.uv[1] = args->uv[1];
