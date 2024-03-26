@@ -211,7 +211,7 @@ XD(probe_realisation)
     /* Check the initial condition. */
     rwalk.vtx.time = t0;
     tmp = get_initial_temperature(args->medium, &rwalk.vtx);
-    if(tmp >= 0) {
+    if(SDIS_TEMPERATURE_IS_KNOWN(tmp)) {
       *weight = tmp;
       goto exit;
     }
@@ -242,7 +242,7 @@ XD(probe_realisation)
   res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) goto error;
 
-  ASSERT(T.value >= 0);
+  ASSERT(SDIS_TEMPERATURE_IS_KNOWN(T.value));
   *weight = T.value;
 
 exit:
@@ -424,7 +424,7 @@ XD(boundary_flux_realisation)
     T.func = XD(radiative_path);
     res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) return res;
-    ASSERT(T.value >= 0);
+    ASSERT(SDIS_TEMPERATURE_IS_KNOWN(T.value));
     result->Tradiative = T.value;
   }
 

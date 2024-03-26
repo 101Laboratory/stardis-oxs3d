@@ -790,7 +790,7 @@ XD(solve_boundary_flux)
     frag.side = solid_side;
     imposed_flux = interface_side_get_flux(interf, &frag);
     imposed_temp = interface_side_get_temperature(interf, &frag);
-    if(imposed_temp >= 0) {
+    if(SDIS_TEMPERATURE_IS_KNOWN(imposed_temp)) {
       /* Flux computation on T boundaries is not supported yet */
       log_err(scn->dev, "%s: Attempt to compute a flux at a Dirichlet boundary "
         "(not available yet).\n", FUNC_NAME);
@@ -829,7 +829,7 @@ XD(solve_boundary_flux)
       /* Convective flux from fluid to solid */
       const double w_conv = hc * (result.Tfluid - result.Tboundary);
       /* Radiative flux from ambient to solid */
-      const double w_rad = (result.Tradiative < 0) ?
+      const double w_rad = SDIS_TEMPERATURE_IS_UNKNOWN(result.Tradiative) ?
         0 : hr * (result.Tradiative - result.Tboundary);
       /* Imposed flux that goes _into_ the solid */
       const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;

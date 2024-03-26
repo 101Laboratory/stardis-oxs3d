@@ -39,7 +39,6 @@
 
 #define CONVECTION_COEF 10
 #define DELTA 0.00625
-#define UNKNOWN_TEMPERATURE -1
 #define NREALISATIONS 10000
 #define Text 360.0
 
@@ -57,7 +56,7 @@ DEFINE_MEDIUM_GETTER(solid_get_calorific_capacity, 1)
 DEFINE_MEDIUM_GETTER(solid_get_thermal_conductivity, 1)
 DEFINE_MEDIUM_GETTER(solid_get_volumic_mass, 1)
 DEFINE_MEDIUM_GETTER(solid_get_delta, DELTA)
-DEFINE_MEDIUM_GETTER(solid_get_temperature, UNKNOWN_TEMPERATURE)
+DEFINE_MEDIUM_GETTER(solid_get_temperature, SDIS_TEMPERATURE_NONE)
 DEFINE_MEDIUM_GETTER(fluid_get_temperature, *((double*)sdis_data_cget(data)))
 #undef DEFINE_MEDIUM_GETTER
 

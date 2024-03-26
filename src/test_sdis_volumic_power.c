@@ -45,7 +45,6 @@
  * (0,0,0) /////
  */
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 10000 /* #realisations */
 
 #define T0 320
@@ -72,7 +71,7 @@ fluid_get_temperature
 {
   (void)data;
   CHK(vtx != NULL);
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -116,7 +115,7 @@ solid_get_temperature
   CHK(data != NULL);
   t0 = ((const struct solid*)sdis_data_cget(data))->t0;
   if(vtx->time > t0) {
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   } else {
     return ((const struct solid*)sdis_data_cget(data))->initial_temperature;
   }
@@ -174,7 +173,7 @@ solve
   struct sdis_mc time = SDIS_MC_NULL;
   size_t nreals;
   size_t nfails;
-  double ref = -1;
+  double ref = SDIS_TEMPERATURE_NONE;
   enum sdis_scene_dimension dim;
   const int nsimuls = 4;
   int isimul;
@@ -466,7 +465,7 @@ main(int argc, char** argv)
   /* Create the adiabatic interface */
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
   OK(sdis_data_ref_put(data));

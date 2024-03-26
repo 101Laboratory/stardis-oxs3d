@@ -36,10 +36,10 @@ XD(check_Tref)
 {
   ASSERT(scn && pos && func_name);
 
-  if(Tref < 0) {
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(Tref)) {
     log_err(scn->dev,
-      "%s: invalid reference temperature `%gK' at the position `"FORMAT_VECX"'.\n",
-      func_name, Tref, SPLITX(pos));
+      "%s: invalid reference temperature at the position `"FORMAT_VECX"'.\n",
+      func_name, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
   }
   if(Tref > scn->tmax) {
@@ -60,7 +60,7 @@ XD(rwalk_get_Tref)
    const struct XD(temperature)* T,
    double* out_Tref)
 {
-  double Tref = -1;
+  double Tref = SDIS_TEMPERATURE_NONE;
   res_T res = RES_OK;
   ASSERT(rwalk && T && out_Tref);
 
@@ -304,6 +304,7 @@ XD(solid_fluid_boundary_picard1_path)
     /* Get the Tref at the end of the candidate radiative path */
     res = XD(rwalk_get_Tref)(scn, &rwalk_s, &T_s, &Tref_s);
     if(res != RES_OK) goto error;
+    ASSERT(SDIS_TEMPERATURE_IS_KNOWN(Tref_s));
 
     h_radi = BOLTZMANN_CONSTANT * epsilon *
       ( Tref*Tref*Tref

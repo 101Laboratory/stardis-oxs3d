@@ -390,7 +390,7 @@ XD(conductive_path_delta_sphere)
 
     /* Check the limit condition
      * REVIEW Rfo: This can be a bug if the random walk comes from a boundary */
-    if(props.temperature >= 0) {
+    if(SDIS_TEMPERATURE_IS_KNOWN(props.temperature)) {
       T->value += props.temperature;
       T->done = 1;
 

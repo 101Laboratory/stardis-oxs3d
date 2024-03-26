@@ -62,7 +62,6 @@
   *                           (0,0)///////
   */
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 100000 /* #realisations */
 
 #define Tf 300.0
@@ -133,7 +132,7 @@ solid_get_temperature
 {
   (void) data;
   CHK(vtx != NULL);
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 /*******************************************************************************
@@ -289,7 +288,7 @@ main(int argc, char** argv)
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->hc = 0;
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   interf_props->emissivity = 0;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
@@ -313,7 +312,7 @@ main(int argc, char** argv)
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->hc = H;
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   interf_props->emissivity = EPSILON;
   interf_props->reference_temperature = Tref;
   interf_shader.back.emissivity = interface_get_emissivity;

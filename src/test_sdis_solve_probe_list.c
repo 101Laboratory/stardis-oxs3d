@@ -310,7 +310,7 @@ create_scene
 SOLID_PROP(calorific_capacity, 500.0) /* [J/K/Kg] */
 SOLID_PROP(thermal_conductivity, 25.0) /* [W/m/K] */
 SOLID_PROP(volumic_mass, 7500.0) /* [kg/m^3] */
-SOLID_PROP(temperature, -1/*<=> unknown*/) /* [K] */
+SOLID_PROP(temperature, SDIS_TEMPERATURE_NONE) /* [K] */
 #undef SOLID_PROP
 
 static double

@@ -78,7 +78,7 @@ XD(trace_radiative_path)
 #endif
     if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
       rwalk->hit_side = SDIS_SIDE_NULL__;
-      if(scn->trad.temperature >= 0) {
+      if(SDIS_TEMPERATURE_IS_KNOWN(scn->trad.temperature)) {
         T->value += scn->trad.temperature;
         T->done = 1;
 

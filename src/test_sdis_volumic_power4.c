@@ -270,7 +270,7 @@ main(int argc, char** argv)
   solid_param->lambda = LAMBDA;
   solid_param->delta = DELTA;
   solid_param->volumic_power = Power;
-  solid_param->temperature = -1;
+  solid_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
 
@@ -283,7 +283,7 @@ main(int argc, char** argv)
     NULL, &data));
   interf_param = sdis_data_get(data);
   interf_param->h = 0;
-  interf_param->temperature = -1;
+  interf_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
     &interf_adiabatic));
   OK(sdis_data_ref_put(data));
@@ -293,7 +293,7 @@ main(int argc, char** argv)
     NULL, &data));
   interf_param = sdis_data_get(data);
   interf_param->h = H;
-  interf_param->temperature = -1;
+  interf_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_interface_create(dev, solid, fluid1, &interf_shader, data,
     &interf_solid_fluid1));
   OK(sdis_data_ref_put(data));
@@ -303,7 +303,7 @@ main(int argc, char** argv)
     NULL, &data));
   interf_param = sdis_data_get(data);
   interf_param->h = H;
-  interf_param->temperature = -1;
+  interf_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_interface_create(dev, solid, fluid2, &interf_shader, data,
     &interf_solid_fluid2));
   OK(sdis_data_ref_put(data));

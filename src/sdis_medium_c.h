@@ -109,7 +109,7 @@ static const struct solid_props SOLID_PROPS_NULL = SOLID_PROPS_NULL__;
  ******************************************************************************/
 DEFINE_MDM_CHK_PROP_FUNC(fluid, calorific_capacity, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(fluid, volumic_mass, 0, INF, 0, 1)
-DEFINE_MDM_CHK_PROP_FUNC(fluid, temperature, 0, INF, 1, 1)
+DEFINE_MDM_CHK_PROP_FUNC(fluid, temperature, -INF, INF, 1, 1)
 
 DEFINE_MDM_GET_PROP_FUNC(fluid, calorific_capacity)
 DEFINE_MDM_GET_PROP_FUNC(fluid, volumic_mass)
@@ -165,7 +165,7 @@ DEFINE_MDM_CHK_PROP_FUNC(solid, thermal_conductivity, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, volumic_mass, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, delta, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, volumic_power, -INF, INF, 1, 1)
-DEFINE_MDM_CHK_PROP_FUNC(solid, temperature, 0, INF, 1, 1)
+DEFINE_MDM_CHK_PROP_FUNC(solid, temperature, -INF, INF, 1, 1)
 
 DEFINE_MDM_GET_PROP_FUNC(solid, calorific_capacity)
 DEFINE_MDM_GET_PROP_FUNC(solid, thermal_conductivity)

@@ -408,8 +408,8 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_set_temperature_range(NULL, t_range));
   BA(sdis_scene_set_temperature_range(scn, NULL));
   OK(sdis_scene_set_temperature_range(scn, t_range));
-  t_range[0] = -1;
-  t_range[1] = -1;
+  t_range[0] = SDIS_TEMPERATURE_NONE;
+  t_range[1] = SDIS_TEMPERATURE_NONE;
   OK(sdis_scene_get_temperature_range(scn, t_range));
   CHK(t_range[0] == 1);
   CHK(t_range[1] == 100);

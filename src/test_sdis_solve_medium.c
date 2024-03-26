@@ -272,7 +272,7 @@ main(int argc, char** argv)
   solid_param->lambda = 0.1;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = SDIS_TEMPERATURE_NONE; /* Unknown temperature */
   OK(sdis_solid_create(dev, &solid_shader, data, &solid0));
   OK(sdis_data_ref_put(data));
 
@@ -284,7 +284,7 @@ main(int argc, char** argv)
   solid_param->lambda = 1.0;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = SDIS_TEMPERATURE_NONE; /* Unknown temperature */
   OK(sdis_solid_create(dev, &solid_shader, data, &solid1));
   OK(sdis_data_ref_put(data));
 
@@ -403,7 +403,7 @@ main(int argc, char** argv)
   /* Check simulation error handling when paths are registered */
   solve_args.nrealisations = 10;
   solve_args.register_paths = SDIS_HEAT_PATH_ALL;
-  fluid_param->temperature = -1;
+  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
   BA(sdis_solve_medium(scn, &solve_args, &estimator));
   fluid_param->temperature = Tf1;
   OK(sdis_solve_medium(scn, &solve_args, &estimator));

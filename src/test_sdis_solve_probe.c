@@ -329,7 +329,7 @@ main(int argc, char** argv)
   solid_param->lambda = 0.1;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = SDIS_TEMPERATURE_NONE; /* Unknown temperature */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
@@ -457,7 +457,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
 
   /* The external fluid cannot have an unknown temperature */
-  fluid_param->temperature = -1;
+  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
 
   fluid_param->temperature = 300;
@@ -571,7 +571,7 @@ main(int argc, char** argv)
   solve_args.register_paths = SDIS_HEAT_PATH_ALL;
 
   /* Check simulation error handling when paths are registered */
-  fluid_param->temperature = -1;
+  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
 
   fluid_param->temperature = 300;

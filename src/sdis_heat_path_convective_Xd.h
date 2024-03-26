@@ -119,7 +119,7 @@ XD(handle_known_fluid_temperature)
   temperature = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
 
   /* Check if the temperature is known */
-  known_temperature = temperature >= 0;
+  known_temperature = SDIS_TEMPERATURE_IS_KNOWN(temperature);
   if(!known_temperature) goto exit;
 
   T->value += temperature;

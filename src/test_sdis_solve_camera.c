@@ -28,7 +28,6 @@
 
 #include <string.h>
 
-#define UNKOWN_TEMPERATURE -1
 #define IMG_WIDTH 157
 #define IMG_HEIGHT 53
 #define SPP 30 /* #Samples per pixel, i.e. #realisations per pixel */
@@ -152,7 +151,7 @@ struct fluid {
   double rho;
   double temperature;
 };
-static const struct fluid FLUID_NULL = {0, 0, UNKOWN_TEMPERATURE};
+static const struct fluid FLUID_NULL = {0, 0, SDIS_TEMPERATURE_NONE};
 
 static double
 fluid_get_calorific_capacity
@@ -188,7 +187,7 @@ struct solid {
   double delta;
   double temperature;
 };
-static const struct solid SOLID_NULL = {0, 0, 0, 0, UNKOWN_TEMPERATURE};
+static const struct solid SOLID_NULL = {0, 0, 0, 0, SDIS_TEMPERATURE_NONE};
 
 static double
 solid_get_calorific_capacity
@@ -241,7 +240,7 @@ struct interf {
   double reference_temperature;
 };
 static const struct interf INTERF_NULL = {
-  0, 0, 0, UNKOWN_TEMPERATURE, UNKOWN_TEMPERATURE
+  0, 0, 0, SDIS_TEMPERATURE_NONE, SDIS_TEMPERATURE_NONE
 };
 
 static double
@@ -595,21 +594,21 @@ main(int argc, char** argv)
   solid_param.lambda = 0.1;
   solid_param.rho = 1.0;
   solid_param.delta = 1.0/20.0;
-  solid_param.temperature = UNKOWN_TEMPERATURE;
+  solid_param.temperature = SDIS_TEMPERATURE_NONE;
   create_solid(dev, &solid_param, &solid);
 
   /* Create the fluid0/solid interface */
   interface_param.hc = 1;
   interface_param.epsilon = 0;
   interface_param.specular_fraction = 0;
-  interface_param.temperature = UNKOWN_TEMPERATURE;
+  interface_param.temperature = SDIS_TEMPERATURE_NONE;
   create_interface(dev, solid, fluid0, &interface_param, &interf0);
 
   /* Create the fluid1/solid interface */
   interface_param.hc = 0.1;
   interface_param.epsilon = 1;
   interface_param.specular_fraction = 1;
-  interface_param.temperature = UNKOWN_TEMPERATURE;
+  interface_param.temperature = SDIS_TEMPERATURE_NONE;
   interface_param.reference_temperature = 300;
   create_interface(dev, fluid1, solid, &interface_param, &interf1);
 
@@ -674,7 +673,7 @@ main(int argc, char** argv)
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   solve_args.cam = cam;
   OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-  trad.temperature = -1;
+  trad.temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   trad.temperature = 300;
@@ -767,7 +766,7 @@ main(int argc, char** argv)
   solve_args.rng_type = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_type;
 
   pfluid_param = sdis_data_get(sdis_medium_get_data(fluid1));
-  pfluid_param->temperature = UNKOWN_TEMPERATURE;
+  pfluid_param->temperature = SDIS_TEMPERATURE_NONE;
 
   /* Check simulation error handling */
   BA(sdis_solve_camera(scn, &solve_args, &buf));

@@ -121,7 +121,7 @@ XD(time_travel)
 
   /* Fetch the initial temperature */
   temperature = medium_get_temperature(rwalk->mdm, &rwalk->vtx);
-  if(temperature < 0) {
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(temperature)) {
     log_err(scn->dev,
       "%s:%s: the path reaches the initial condition but the "
       "%s temperature remains unknown -- position=%g, %g, %g\n",
@@ -558,7 +558,7 @@ XD(conductive_path_wos)
     } (void)0
 
     /* The temperature is known */
-    if(props.temperature >= 0) {
+    if(SDIS_TEMPERATURE_IS_KNOWN(props.temperature)) {
       REGISTER_HEAT_VERTEX;
       T->value += props.temperature;
       T->done = 1;

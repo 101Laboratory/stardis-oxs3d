@@ -18,8 +18,6 @@
 
 #include <star/ssp.h>
 
-#define UNKNOWN_TEMPERATURE -1
-
 /* The scene is composed of a solid square whose temperature is unknown. The
  * square segments on +/-X are in contact with a fluid and their convection
  * coefficient is null while their emissivity is 1. The left and right fluids
@@ -113,7 +111,7 @@ static double
 temperature_unknown(const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(vtx != NULL); (void)data;
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -171,7 +169,7 @@ interface_get_temperature
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   const struct interfac* interf;
-  double T = -1;
+  double T = SDIS_TEMPERATURE_NONE;
   CHK(data != NULL && frag != NULL);
   interf = sdis_data_cget(data);
   switch(frag->side) {
@@ -229,7 +227,7 @@ interface_get_reference_temperature
   (const struct sdis_interface_fragment* frag, struct sdis_data* data)
 {
   const struct interfac* interf;
-  double T = -1;
+  double T = SDIS_TEMPERATURE_NONE;
   CHK(data != NULL && frag != NULL);
   interf = sdis_data_cget(data);
   switch(frag->side) {
@@ -398,7 +396,7 @@ main(int argc, char** argv)
 
   /* Create the interface that emits radiative heat from the solid */
   interf = INTERFACE_NULL;
-  interf.back.temperature = UNKNOWN_TEMPERATURE;
+  interf.back.temperature = SDIS_TEMPERATURE_NONE;
   interf.back.emissivity = emissivity;
   interf.back.specular_fraction = -1; /* Should not be fetched */
   interf.back.reference_temperature = Tref;
@@ -406,7 +404,7 @@ main(int argc, char** argv)
 
   /* Create the interface that forces the radiative heat to bounce */
   interf = INTERFACE_NULL;
-  interf.front.temperature = UNKNOWN_TEMPERATURE;
+  interf.front.temperature = SDIS_TEMPERATURE_NONE;
   interf.front.emissivity = 0;
   interf.front.specular_fraction = 1;
   interf.front.reference_temperature = Tref;

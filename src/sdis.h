@@ -50,6 +50,11 @@
 #define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
 #define SDIS_PRIMITIVE_NONE SIZE_MAX /* Invalid primitive */
 
+/* Syntactic sugar used to define whether a temperature is known or not */
+#define SDIS_TEMPERATURE_NONE NaN /* Unknown temperature */
+#define SDIS_TEMPERATURE_IS_KNOWN(Temp) (IS_NaN(Temp))
+#define SDIS_TEMPERATURE_IS_UNKNOWN(Temp) (!SDIS_TEMPERATURE_IS_KNOWN(Temp))
+
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
@@ -242,8 +247,8 @@ struct sdis_solid_shader {
    * submitted position and time */
   sdis_medium_getter_T volumic_power;  /* In W.m^-3 */
 
-  /* Initial/limit condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted random walk vertex.
+  /* Initial/limit condition. A temperature set to SDIS_TEMPERATURE_NONE
+   * means that the temperature is unknown for the submitted random walk vertex.
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
 
@@ -262,8 +267,8 @@ struct sdis_fluid_shader {
   sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
 
-  /* Initial/limit condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted random walk vertex.
+  /* Initial/limit condition. A temperature set to SDIS_TEMPERATURE_NONE
+   * means that the temperature is unknown for the submitted random walk vertex.
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
 
@@ -280,8 +285,8 @@ static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
 struct sdis_interface_side_shader {
   /* Fixed temperature/flux. May be NULL if the temperature/flux is unknown
    * onto the whole interface */
-  sdis_interface_getter_T temperature;  /* In Kelvin. < 0 <=> Unknown temp */
-  sdis_interface_getter_T flux; /* In W.m^-2. SDIS_FLUX_NONE <=> no flux  */
+  sdis_interface_getter_T temperature; /* [K]. SDIS_TEMPERATURE_NONE = Unknown */
+  sdis_interface_getter_T flux; /* [W.m^-2]. SDIS_FLUX_NONE = no flux  */
 
   /* Control the emissivity of the interface. May be NULL for solid/solid
    * interface or if the emissivity is 0 onto the whole interface. */

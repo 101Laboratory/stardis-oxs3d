@@ -84,7 +84,7 @@ solid_get_temperature
   (void)data;
   ASSERT(vtx);
   if(vtx->time <= 0) return T_INIT; /* Initial temperature [K] */
-  return -1; /* Unknown temperature */
+  return SDIS_TEMPERATURE_NONE; /* Unknown temperature */
 }
 
 static struct sdis_medium*
@@ -132,8 +132,8 @@ interface_get_temperature
 
        if(frag->Ng[0] ==  1) return T0;
   else if(frag->Ng[0] == -1) return T1;
-  else if(frag->Ng[1] ==  1) return -1; /* Unknown temperature */
-  else if(frag->Ng[1] == -1) return -1; /* Unknown temperature */
+  else if(frag->Ng[1] ==  1) return SDIS_TEMPERATURE_NONE;
+  else if(frag->Ng[1] == -1) return SDIS_TEMPERATURE_NONE;
   else FATAL("Unreachable code\n");
 }
 

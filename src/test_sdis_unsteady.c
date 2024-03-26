@@ -88,7 +88,7 @@ solid_get_temperature
   (void)data;
   ASSERT(vtx);
   if(vtx->time <= 0) return T_INIT; /* Initial temperature [K] */
-  return -1; /* Unknown temperature */
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static struct sdis_medium*

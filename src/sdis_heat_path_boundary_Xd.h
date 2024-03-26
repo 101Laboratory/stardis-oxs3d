@@ -54,7 +54,7 @@ XD(boundary_path)
 
   /* Check if the boundary temperature is known */
   tmp = interface_side_get_temperature(interf, &frag);
-  if(tmp >= 0) {
+  if(SDIS_TEMPERATURE_IS_KNOWN(tmp)) {
     T->value += tmp;
     T->done = 1;
 

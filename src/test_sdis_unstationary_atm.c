@@ -60,8 +60,6 @@
 #define T0_SOLID 300
 #define T0_FLUID 300
 
-#define UNKNOWN_TEMPERATURE -1
-
 #define N 10000 /* #realisations */
 
 #define TG 310
@@ -275,7 +273,7 @@ solid_get_temperature
   solid = ((struct solid*)sdis_data_cget(data));
   if(vtx->time <= solid->t0)
     return solid->temperature;
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 struct fluid {
@@ -294,7 +292,7 @@ fluid_get_temperature
   fluid = ((struct fluid*)sdis_data_cget(data));
   if(vtx->time <= fluid->t0)
     return fluid->temperature;
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -756,7 +754,7 @@ main(int argc, char** argv)
   solid_props->rho = 1;
   solid_props->delta = 1;
   solid_props->t0 = INF;
-  solid_props->temperature = UNKNOWN_TEMPERATURE;
+  solid_props->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &dummy_solid));
   OK(sdis_data_ref_put(data));
 
@@ -786,7 +784,7 @@ main(int argc, char** argv)
   OK(sdis_data_ref_put(data));
 
   /* Create the adiabatic interfaces */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = 0;
   interf_props.emissivity = 0;
   interf_props.Tref = TREF;
@@ -794,7 +792,7 @@ main(int argc, char** argv)
   create_interface(dev, solid, dummy_solid, &interf_props, &interf_adiabatic_2);
 
   /* Create the P interface */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = HC;
   interf_props.emissivity = 1;
   interf_props.Tref = TREF;
@@ -808,7 +806,7 @@ main(int argc, char** argv)
   create_interface(dev, fluid, dummy_solid, &interf_props, &interf_TG);
 
   /* Create the TA interface */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = HA;
   interf_props.emissivity = 1;
   interf_props.Tref = TREF;

@@ -18,7 +18,6 @@
 
 #include <string.h>
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 10000
 
 /* This test consists in solving the stationary temperature profile in a solid
@@ -234,7 +233,7 @@ solid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(vtx && data);
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -607,15 +606,15 @@ main(int argc, char** argv)
   create_fluid(dev, &fluid);
 
   /* Create the adiabatic interface for the solid */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = -1;
   interf_props.emissivity = -1;
   interf_props.specular_fraction = -1;
-  interf_props.Tref = UNKNOWN_TEMPERATURE;
+  interf_props.Tref = SDIS_TEMPERATURE_NONE;
   create_interface(dev, solid, dummy, &interf_props, interfaces+ADIABATIC);
 
   /* Create the interface between the solid and the fluid */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = 0;
   interf_props.emissivity = 1;
   interf_props.specular_fraction = 0;

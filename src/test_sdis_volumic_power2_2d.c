@@ -19,11 +19,10 @@
 
 #define N 10000 /* #realisations */
 #define Pw 10000 /* Volumic power */
-#define NONE -1
 
 /* H delta T */
-#define Tboundary1 NONE
-#define Tboundary2 NONE
+#define Tboundary1 SDIS_TEMPERATURE_NONE
+#define Tboundary2 SDIS_TEMPERATURE_NONE
 #define DELTA 0.01
 #define Tref 286.83 /* In Celsius. Computed with Syrthes at the position 0.5 */
 
@@ -373,7 +372,7 @@ main(int argc, char** argv)
   solid_param->lambda = 1;
   solid_param->delta = DELTA;
   solid_param->P = SDIS_VOLUMIC_POWER_NONE;
-  solid_param->T = -1;
+  solid_param->T = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid1));
   OK(sdis_data_ref_put(data));
 
@@ -386,7 +385,7 @@ main(int argc, char** argv)
   solid_param->lambda = 10;
   solid_param->delta = DELTA;
   solid_param->P = Pw;
-  solid_param->T = -1;
+  solid_param->T = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid2));
   OK(sdis_data_ref_put(data));
 

@@ -120,7 +120,9 @@ interface_side_get_temperature
     case SDIS_BACK: shader = &interf->shader.back; break;
     default: FATAL("Unreachable code.\n");
   }
-  return shader->temperature ? shader->temperature(frag, interf->data) : -1;
+  return shader->temperature
+    ? shader->temperature(frag, interf->data)
+    : SDIS_TEMPERATURE_NONE;
 }
 
 static INLINE double
@@ -182,7 +184,8 @@ interface_side_get_reference_temperature
     default: FATAL("Unreachable code\n"); break;
   }
   return shader->reference_temperature
-    ? shader->reference_temperature(frag, interf->data) : -1;
+    ? shader->reference_temperature(frag, interf->data)
+    : SDIS_TEMPERATURE_NONE;
 }
 
 static INLINE int
