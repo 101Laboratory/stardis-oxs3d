@@ -161,7 +161,7 @@ struct interfac {
 };
 
 static const struct interfac INTERFACE_NULL = {
-  0, {-1, -1, -1, -1}, {-1, -1, -1, -1}
+  0, {SDIS_TEMPERATURE_NONE, -1, -1, -1}, {-1, -1, -1, -1}
 };
 
 static double
