@@ -232,7 +232,15 @@ XD(solid_fluid_boundary_picardN_path)
   /* Compute the convective, conductive and the upper bound radiative coef */
   h_conv = interface_get_convection_coef(interf, frag);
   h_cond = lambda / (delta * scn->fp_to_meter);
-  h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * That3 * epsilon;
+  h_radi_hat = epsilon > 0 ? 4.0 * BOLTZMANN_CONSTANT * That3 * epsilon : 0;
+
+  if(epsilon <= 0) {
+    h_radi_hat = 0; /* No radiative transfert */
+  } else {
+    res = scene_check_temperature_range(scn);
+    if(res != RES_OK) { res = RES_BAD_OP_IRRECOVERABLE; goto error; }
+    h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * That3 * epsilon;
+  }
 
   /* Compute a global upper bound coefficient */
   h_hat = h_conv + h_cond + h_radi_hat;

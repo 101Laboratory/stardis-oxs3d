@@ -23,6 +23,7 @@
 #include "sdis_misc.h"
 #include "sdis_realisation.h"
 #include "sdis_scene_c.h"
+#include "sdis_heat_path_boundary_c.h" /* check_Tref_<2d|3d> */
 
 #include <rsys/clock_time.h>
 #include <star/ssp.h>
@@ -784,9 +785,16 @@ XD(solve_boundary_flux)
 
     /* Fetch interface parameters */
     epsilon = interface_side_get_emissivity(interf, &frag);
-    Tref = interface_side_get_reference_temperature(interf, &frag);
     hc = interface_get_convection_coef(interf, &frag);
-    hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
+    Tref = interface_side_get_reference_temperature(interf, &frag);
+    if(epsilon <= 0) {
+      hr = 0;
+    } else {
+      res_local = XD(check_Tref)(scn, frag.P, Tref, FUNC_NAME);
+      if(res_local != RES_OK) { ATOMIC_SET(&res, &res_local); continue; }
+      hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
+    }
+
     frag.side = solid_side;
     imposed_flux = interface_side_get_flux(interf, &frag);
     imposed_temp = interface_side_get_temperature(interf, &frag);
@@ -827,10 +835,9 @@ XD(solve_boundary_flux)
     } else if(res_simul == RES_OK) { /* Update accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
       /* Convective flux from fluid to solid */
-      const double w_conv = hc * (result.Tfluid - result.Tboundary);
+      const double w_conv = hc > 0 ? hc * (result.Tfluid - result.Tboundary) : 0;
       /* Radiative flux from ambient to solid */
-      const double w_rad = SDIS_TEMPERATURE_IS_UNKNOWN(result.Tradiative) ?
-        0 : hr * (result.Tradiative - result.Tboundary);
+      const double w_rad = hr > 0 ? hr * (result.Tradiative - result.Tboundary) : 0;
       /* Imposed flux that goes _into_ the solid */
       const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
       const double w_total = w_conv + w_rad + w_imp;

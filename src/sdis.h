@@ -53,7 +53,7 @@
 /* Syntactic sugar used to define whether a temperature is known or not */
 #define SDIS_TEMPERATURE_NONE NaN /* Unknown temperature */
 #define SDIS_TEMPERATURE_IS_KNOWN(Temp) (!IS_NaN(Temp))
-#define SDIS_TEMPERATURE_IS_UNKNOWN(Temp) (!SDIS_TEMPERATURE_IS_KNOWN(Temp))
+#define SDIS_TEMPERATURE_IS_UNKNOWN(Temp) (IS_NaN(Temp))
 
 /* Forward declaration of external opaque data types */
 struct logger;
@@ -454,7 +454,10 @@ struct sdis_ambient_radiative_temperature {
   double temperature; /* In Kelvin */
   double reference; /* Used to linearise the radiative transfer */
 };
-#define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {-1, -1}
+#define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {                            \
+  SDIS_TEMPERATURE_NONE,                                                       \
+  SDIS_TEMPERATURE_NONE                                                        \
+}
 static const struct sdis_ambient_radiative_temperature
 SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL =
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__;
@@ -490,7 +493,7 @@ struct sdis_scene_create_args {
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
   SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
-  {0.0, -1.0}, /* Temperature range */                                         \
+  {SDIS_TEMPERATURE_NONE, SDIS_TEMPERATURE_NONE}, /* Temperature range */      \
   NULL /* source */                                                            \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =

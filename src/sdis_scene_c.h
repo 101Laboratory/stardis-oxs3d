@@ -290,6 +290,14 @@ extern LOCAL_SYM res_T
 scene_check_dimensionality_3d
   (const struct sdis_scene* scn);
 
+/* Check that the temperature range of the scene is well defined, i.e. that the
+ * minimum and maximum temperatures are known and that they define a valid
+ * range. If this is not the case, the function displays an error message and
+ * returns RES_BAD_ARG */
+extern LOCAL_SYM res_T
+scene_check_temperature_range
+  (const struct sdis_scene* scn);
+
 static INLINE void
 scene_get_enclosure_ids
   (const struct sdis_scene* scn,

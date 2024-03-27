@@ -992,4 +992,40 @@ error:
   goto exit;
 }
 
+res_T
+XD(check_Tref)
+  (const struct sdis_scene* scn,
+   const double pos[DIM],
+   const double Tref,
+   const char* func_name)
+{
+  ASSERT(scn && pos && func_name);
+
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(Tref)) {
+    log_err(scn->dev,
+      "%s: invalid reference temperature at the position `"FORMAT_VECX"'.\n",
+      func_name, SPLITX(pos));
+    return RES_BAD_OP_IRRECOVERABLE;
+  }
+
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmin)
+  || SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmax)) {
+    log_err(scn->dev,
+      "%s: invalid scene temperature range. "
+      "At least one boundary is unknown.\n",
+      func_name);
+    return RES_BAD_OP_IRRECOVERABLE;
+  }
+
+  if(Tref > scn->tmax) {
+    log_err(scn->dev,
+      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK' "
+      "at the position `"FORMAT_VECX"' is greater than this temperature.\n",
+      func_name, scn->tmax, Tref, SPLITX(pos));
+    return RES_BAD_OP_IRRECOVERABLE;
+  }
+
+  return RES_OK;
+}
+
 #include "sdis_Xd_end.h"

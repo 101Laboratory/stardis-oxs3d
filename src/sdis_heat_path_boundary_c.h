@@ -221,6 +221,23 @@ handle_external_net_flux_3d
    struct temperature_3d* T);
 
 /*******************************************************************************
+ * Miscellaneous functions
+ ******************************************************************************/
+extern LOCAL_SYM res_T
+check_Tref_2d
+  (const struct sdis_scene* scn,
+   const double pos[2],
+   const double Tref,
+   const char* call_func_name);
+
+extern LOCAL_SYM res_T
+check_Tref_3d
+  (const struct sdis_scene* scn,
+   const double pos[3],
+   const double Tref,
+   const char* call_func_name);
+
+/*******************************************************************************
  * Boundary sub-paths
  ******************************************************************************/
 extern LOCAL_SYM res_T

@@ -578,3 +578,41 @@ exit:
 error:
   goto exit;
 }
+
+res_T
+scene_check_temperature_range(const struct sdis_scene* scn)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmin)) {
+    log_err(scn->dev,
+      "%s the defined minimum temperature is unknown "
+      "when it is expected to be known.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmax)) {
+    log_err(scn->dev,
+      "%s the defined maximum temperature is unknown "
+      "when it is expected to be known.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(scn->tmin > scn->tmax) {
+    log_err(scn->dev,
+      "%s: defined temperature range degenerated -- [%g, %g] K\n",
+      FUNC_NAME, scn->tmin, scn->tmax);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
