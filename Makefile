@@ -200,6 +200,7 @@ TEST_SRC =\
  src/test_sdis_unstationary_atm.c\
  src/test_sdis_unsteady.c\
  src/test_sdis_unsteady_1d.c\
+ src/test_sdis_unsteady_analytic_profile.c\
  src/test_sdis_volumic_power.c\
  src/test_sdis_volumic_power4.c
 TEST_SRC_LONG =\
@@ -382,18 +383,21 @@ test_sdis_volumic_power4 \
 src/test_sdis_draw_external_flux.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
+src/test_sdis_unsteady_analytic_profile.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis_draw_external_flux.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
+src/test_sdis_unsteady_analytic_profile.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
 test_sdis_draw_external_flux \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
+test_sdis_unsteady_analytic_profile \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S3DUT_LIBS)
 
