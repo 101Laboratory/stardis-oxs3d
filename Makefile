@@ -201,6 +201,7 @@ TEST_SRC =\
  src/test_sdis_unsteady.c\
  src/test_sdis_unsteady_1d.c\
  src/test_sdis_unsteady_analytic_profile.c\
+ src/test_sdis_unsteady_analytic_profile_2d.c\
  src/test_sdis_volumic_power.c\
  src/test_sdis_volumic_power4.c
 TEST_SRC_LONG =\
@@ -303,6 +304,7 @@ src/test_sdis_transcient.d \
 src/test_sdis_unstationary_atm.d \
 src/test_sdis_unsteady.d \
 src/test_sdis_unsteady_1d.d \
+src/test_sdis_unsteady_analytic_profile_2d.d \
 src/test_sdis_utils.d \
 src/test_sdis_volumic_power.d \
 src/test_sdis_volumic_power2.d \
@@ -336,6 +338,7 @@ src/test_sdis_transcient.o \
 src/test_sdis_unstationary_atm.o \
 src/test_sdis_unsteady.o \
 src/test_sdis_unsteady_1d.o \
+src/test_sdis_unsteady_analytic_profile_2d.o \
 src/test_sdis_utils.o \
 src/test_sdis_volumic_power.o \
 src/test_sdis_volumic_power2.o \
@@ -369,6 +372,7 @@ test_sdis_transcient \
 test_sdis_unstationary_atm \
 test_sdis_unsteady \
 test_sdis_unsteady_1d \
+test_sdis_unsteady_analytic_profile_2d \
 test_sdis_volumic_power \
 test_sdis_volumic_power2 \
 test_sdis_volumic_power2_2d \
