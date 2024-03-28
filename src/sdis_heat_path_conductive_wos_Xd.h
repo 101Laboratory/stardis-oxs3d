@@ -483,21 +483,60 @@ XD(handle_volumic_power_wos)
   (struct sdis_scene* scn,
    const struct solid_props* props,
    const double distance, /* [m/fp_to_meter] */
+   double* power_term,
    struct XD(temperature)* T)
 {
   double dst = distance * scn->fp_to_meter; /* [m] */
+  double term = 0;
   res_T res = RES_OK;
-  ASSERT(scn && props && distance >= 0 && T);
+  ASSERT(scn && props && distance >= 0 && power_term && T);
 
   if(props->power == SDIS_VOLUMIC_POWER_NONE) goto exit;
 
   /* No displacement => no power density */
   if(distance == 0) goto exit;
 
-  T->value += props->power * dst*dst / (2*DIM*props->lambda);
+  term = dst*dst / (2*DIM*props->lambda);
+  T->value += props->power * term;
+
+exit:
+  *power_term = term;
+  return res;
+}
+
+static res_T
+XD(update_green_path)
+  (struct green_path_handle* green_path,
+   struct XD(rwalk)* rwalk,
+   struct sdis_medium* mdm,
+   const struct solid_props* props,
+   const double power_term,
+   const struct XD(temperature)* T)
+{
+  res_T res = RES_OK;
+  ASSERT(mdm && props && T);
+
+  /* Is the green function estimated? */
+  if(!green_path) goto exit;
+
+  /* Save power term for green function if any */
+  if(props->power != SDIS_VOLUMIC_POWER_NONE) {
+    res = green_path_add_power_term(green_path, mdm, &rwalk->vtx, power_term);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Set the green path limit to the current position if the initial condition
+   * has been reached */
+  if(T->done) {
+    res = green_path_set_limit_vertex
+      (green_path, mdm, &rwalk->vtx, rwalk->elapsed_time);
+    if(res != RES_OK) goto error;
+  }
 
 exit:
   return res;
+error:
+  goto exit;
 }
 
 /*******************************************************************************
@@ -512,13 +551,15 @@ XD(conductive_path_wos)
    struct XD(temperature)* T)
 {
   /* Properties */
+  struct sdis_medium* mdm = NULL;
   struct solid_props props_ref = SOLID_PROPS_NULL;
   struct solid_props props = SOLID_PROPS_NULL;
   double alpha = 0; /* diffusivity, i.e. lambda/(rho*cp) */
 
   /* Miscellaneous */
   size_t ndiffusion_steps = 0; /* For debug */
-  const int green = 0;
+  double green_power_term = 0;
+  int green = 0;
   const int wos = 1;
   res_T res = RES_OK;
   (void)ctx; /* Avoid the "unused variable" warning */
@@ -526,6 +567,14 @@ XD(conductive_path_wos)
   /* Check pre-conditions */
   ASSERT(scn && ctx && rwalk && rng && T);
   ASSERT(sdis_medium_get_type(rwalk->mdm) == SDIS_SOLID);
+
+  /* Is green evaluated evaluated */
+  green = ctx->green_path != NULL;
+
+  /* Keep track of the solid. After conduction, a boundary may have been
+   * reached, so the random walk medium is NULL. However, this medium is still
+   * needed to update the green path. Hence this backup */
+  mdm = rwalk->mdm;
 
   res = XD(check_medium_consistency)(scn, rwalk);
   if(res != RES_OK) goto error;
@@ -548,6 +597,7 @@ XD(conductive_path_wos)
 
   /* Sample a diffusive path */
   for(;;) {
+    double power_term = 0; /* */
     double dst = 0; /* [m/fp_to_meter] */
 
     /* Register the new vertex against the heat path */
@@ -574,8 +624,11 @@ XD(conductive_path_wos)
     if(res != RES_OK) goto error;
 
     /* Add the volumic power density */
-    res = XD(handle_volumic_power_wos)(scn, &props, dst, T);
+    res = XD(handle_volumic_power_wos)(scn, &props, dst, &power_term, T);
     if(res != RES_OK) goto error;
+
+    /* Accumulate the power term */
+    if(green) green_power_term += power_term;
 
     /* The path reaches the initial condition */
     if(T->done) {
@@ -602,6 +655,10 @@ XD(conductive_path_wos)
 
     ++ndiffusion_steps; /* For debug */
   }
+
+  /* Save green function data */
+  res = XD(update_green_path)
+    (ctx->green_path, rwalk, mdm, &props_ref, green_power_term, T);
 
 exit:
   return res;
