@@ -84,7 +84,7 @@ static double temperature(const double pos[2], const double time)
 }
 
 static void
-dump_heat_path
+dump_paths
   (FILE* fp,
    struct sdis_scene* scn,
    const enum sdis_diffusion_algorithm diff_algo,
@@ -390,12 +390,12 @@ main(int argc, char** argv)
 
   /* Write 10 heat paths sampled by the delta sphere algorithm */
   CHK(fp = fopen("paths_delta_sphere_2d.vtk", "w"));
-  dump_heat_path(fp, scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 10);
+  dump_paths(fp, scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 10);
   CHK(fclose(fp) == 0);
 
   /* Write 10 heat paths sampled by the WoS algorithm */
   CHK(fp = fopen("paths_wos_2d.vtk", "w"));
-  dump_heat_path(fp, scn, SDIS_DIFFUSION_WOS, pos, time, 10);
+  dump_paths(fp, scn, SDIS_DIFFUSION_WOS, pos, time, 10);
   CHK(fclose(fp) == 0);
 
   release_super_shape(&sshape);

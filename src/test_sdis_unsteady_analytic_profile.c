@@ -78,6 +78,43 @@ temperature(const double pos[3], const double time)
   return temp;
 }
 
+static INLINE void
+dump_s3dut_mesh(FILE* fp, const struct s3dut_mesh* mesh)
+{
+  struct s3dut_mesh_data mesh_data;
+
+  OK(s3dut_mesh_get_data(mesh, &mesh_data));
+  dump_mesh(fp, mesh_data .positions, mesh_data.nvertices,
+    mesh_data.indices, mesh_data.nprimitives);
+}
+
+static void
+dump_paths
+  (FILE* fp,
+   struct sdis_scene* scn,
+   const enum sdis_diffusion_algorithm diff_algo,
+   const double pos[3],
+   const double time,
+   const size_t npaths)
+{
+  struct sdis_solve_probe_args args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_estimator* estimator = NULL;
+
+  args.nrealisations = npaths;
+  args.position[0] = pos[0];
+  args.position[1] = pos[1];
+  args.position[2] = pos[2];
+  args.time_range[0] = time;
+  args.time_range[1] = time;
+  args.diff_algo = diff_algo;
+  args.register_paths = SDIS_HEAT_PATH_ALL;
+  OK(sdis_solve_probe(scn, &args, &estimator));
+
+  dump_heat_paths(fp, estimator);
+
+  OK(sdis_estimator_ref_put(estimator));
+}
+
 /*******************************************************************************
  * Geometry
  ******************************************************************************/
@@ -296,6 +333,7 @@ main(int argc, char** argv)
   struct sdis_scene* scn = NULL;
 
   /* Miscellaneous */
+  FILE* fp = NULL;
   struct s3dut_mesh* super_shape = NULL;
   const double pos[3] = {0.2,0.3,0.4}; /* [m/fp_to_meter] */
   const double time = 5; /* [s] */
@@ -306,6 +344,11 @@ main(int argc, char** argv)
 
   super_shape = create_super_shape();
 
+  /* Save the super shape geometry for debug and visualisation */
+  CHK(fp = fopen("super_shape_3d.obj", "w"));
+  dump_s3dut_mesh(fp, super_shape);
+  CHK(fclose(fp) == 0);
+
   solid = create_solid(sdis);
   dummy = create_dummy(sdis);
   interf = create_interface(sdis, solid, dummy);
@@ -314,6 +357,16 @@ main(int argc, char** argv)
   check_probe(scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 0/*green*/);
   check_probe(scn, SDIS_DIFFUSION_WOS, pos, time, 0/*green*/);
   check_probe(scn, SDIS_DIFFUSION_WOS, pos, time, 1/*green*/);
+
+  /* Write 10 heat paths sampled by the delta sphere algorithm */
+  CHK(fp = fopen("paths_delta_sphere_3d.vtk", "w"));
+  dump_paths(fp, scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 10);
+  CHK(fclose(fp) == 0);
+
+  /* Write 10 heat paths sampled by the WoS algorithm */
+  CHK(fp = fopen("paths_wos_3d.vtk", "w"));
+  dump_paths(fp, scn, SDIS_DIFFUSION_WOS, pos, time, 10);
+  CHK(fclose(fp) == 0);
 
   OK(s3dut_mesh_ref_put(super_shape));
   OK(sdis_device_ref_put(sdis));
