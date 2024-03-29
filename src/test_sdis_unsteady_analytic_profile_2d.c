@@ -37,7 +37,7 @@
  *
  */
 
-#define LAMBDA 0.1  /* [W/(m.K)] */
+#define LAMBDA 0.1 /* [W/(m.K)] */
 #define RHO 25.0 /* [kg/m^3] */
 #define CP 2.0 /* [J/K/kg)] */
 #define DELTA 1.0/20.0 /* [m/fp_to_meter] */
@@ -54,11 +54,33 @@ static const struct super_shape SUPER_SHAPE_NULL = SUPER_SHAPE_NULL__;
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
+/* Unsteady-state temperature profile. Its corresponding power term is :
+ * P(x, y) = A*[12*x^2*y^3 + 5*x^4*y] */
 static double temperature(const double pos[2], const double time)
 {
-  /* TODO write the 2D unsteady-state temperature profile */
-  (void)pos, (void)time;
-  return 280.0;
+  const double kx = PI/4;
+  const double ky = PI/4;
+  const double alpha = LAMBDA / (RHO*CP); /* Diffusivity */
+
+  const double A = 0; /* No termal source */
+  const double B1 = 0;
+  const double B2 = 1000;
+
+  double x, y, t;
+  double a, b, c;
+  double temp;
+  ASSERT(pos);
+
+  x = pos[0];
+  y = pos[1];
+  t = time;
+
+  a = B1*(x*x*x - 3*x*y*y);
+  b = B2*sin(kx*x)*sin(ky*y)*exp(-alpha*(kx*kx + ky*ky)*t);
+  c = A * x*x*x*x + y*y*y;
+
+  temp = (a + b - c) / LAMBDA;
+  return temp;
 }
 
 /*******************************************************************************
