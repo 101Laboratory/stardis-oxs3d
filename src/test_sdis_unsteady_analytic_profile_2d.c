@@ -83,6 +83,32 @@ static double temperature(const double pos[2], const double time)
   return temp;
 }
 
+static void
+dump_heat_path
+  (FILE* fp,
+   struct sdis_scene* scn,
+   const enum sdis_diffusion_algorithm diff_algo,
+   const double pos[2],
+   const double time,
+   const size_t npaths)
+{
+  struct sdis_solve_probe_args args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_estimator* estimator = NULL;
+
+  args.nrealisations = npaths;
+  args.position[0] = pos[0];
+  args.position[1] = pos[1];
+  args.time_range[0] = time;
+  args.time_range[1] = time;
+  args.diff_algo = diff_algo;
+  args.register_paths = SDIS_HEAT_PATH_ALL;
+  OK(sdis_solve_probe(scn, &args, &estimator));
+
+  dump_heat_paths(fp, estimator);
+
+  OK(sdis_estimator_ref_put(estimator));
+}
+
 /*******************************************************************************
  * Solid, i.e. medium of the super shape
  ******************************************************************************/
@@ -292,7 +318,7 @@ check_probe
    const double time, /* [s] */
    const int green)
 {
-  struct sdis_solve_probe_args args  = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_solve_probe_args args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_estimator* estimator = NULL;
   double ref = 0;
@@ -336,6 +362,8 @@ main(int argc, char** argv)
   struct sdis_medium* dummy = NULL; /* Medium surrounding the solid */
   struct sdis_scene* scn = NULL;
 
+  /* Miscellaneous */
+  FILE* fp = NULL;
   struct super_shape sshape = SUPER_SHAPE_NULL;
   const double pos[3] = {0.2,0.3}; /* [m/fp_to_meter] */
   const double time = 5; /* [s] */
@@ -345,6 +373,12 @@ main(int argc, char** argv)
 
   sshape = create_super_shape();
 
+  /* Save the super shape geometry for debug and visualisation */
+  CHK(fp = fopen("super_shape_2d.obj", "w"));
+  dump_segments(fp, sshape.positions, super_shape_nvertices(&sshape),
+    sshape.indices, super_shape_nsegments(&sshape));
+  CHK(fclose(fp) == 0);
+
   solid = create_solid(sdis);
   dummy = create_dummy(sdis);
   interf = create_interface(sdis, solid, dummy);
@@ -353,6 +387,16 @@ main(int argc, char** argv)
   check_probe(scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 0/*green*/);
   check_probe(scn, SDIS_DIFFUSION_WOS, pos, time, 0/*green*/);
   check_probe(scn, SDIS_DIFFUSION_WOS, pos, time, 1/*green*/);
+
+  /* Write 10 heat paths sampled by the delta sphere algorithm */
+  CHK(fp = fopen("delta_sphere_2d.vtk", "w"));
+  dump_heat_path(fp, scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 10);
+  CHK(fclose(fp) == 0);
+
+  /* Write 10 heat paths sampled by the WoS algorithm */
+  CHK(fp = fopen("wos_2d.vtk", "w"));
+  dump_heat_path(fp, scn, SDIS_DIFFUSION_WOS, pos, time, 10);
+  CHK(fclose(fp) == 0);
 
   release_super_shape(&sshape);
   OK(sdis_device_ref_put(sdis));

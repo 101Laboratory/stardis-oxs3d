@@ -627,19 +627,19 @@ XD(conductive_path_wos)
     res = XD(handle_volumic_power_wos)(scn, &props, dst, &power_term, T);
     if(res != RES_OK) goto error;
 
+    REGISTER_HEAT_VERTEX;
+
     /* Accumulate the power term */
     if(green) green_power_term += power_term;
 
     /* The path reaches the initial condition */
     if(T->done) {
-      REGISTER_HEAT_VERTEX;
       T->func = NULL;
       break;
     }
 
     /* The path reaches a boundary */
     if(!SXD_HIT_NONE(&rwalk->hit)) {
-      REGISTER_HEAT_VERTEX;
       T->func = XD(boundary_path);
       rwalk->mdm = NULL;
       break;
