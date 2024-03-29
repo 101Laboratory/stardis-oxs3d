@@ -267,7 +267,8 @@ check_probe
   (struct sdis_scene* scn,
    const enum sdis_diffusion_algorithm diff_algo,
    const double pos[2],
-   const double time) /* [s] */
+   const double time, /* [s] */
+   const int green)
 {
   struct sdis_solve_probe_args args  = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
@@ -281,7 +282,15 @@ check_probe
   args.time_range[1] = time;
   args.diff_algo = diff_algo;
 
-  OK(sdis_solve_probe(scn, &args, &estimator));
+  if(!green) {
+    OK(sdis_solve_probe(scn, &args, &estimator));
+  } else {
+    struct sdis_green_function* greenfn = NULL;
+
+    OK(sdis_solve_probe_green_function(scn, &args, &greenfn));
+    OK(sdis_green_function_solve(greenfn, &estimator));
+    OK(sdis_green_function_ref_put(greenfn));
+  }
   OK(sdis_estimator_get_temperature(estimator, &T));
 
   ref = temperature(pos, time);
@@ -319,8 +328,9 @@ main(int argc, char** argv)
   interf = create_interface(sdis, solid, dummy);
   scn = create_scene(sdis, &sshape, interf);
 
-  check_probe(scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time);
-  check_probe(scn, SDIS_DIFFUSION_WOS, pos, time);
+  check_probe(scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 0/*green*/);
+  check_probe(scn, SDIS_DIFFUSION_WOS, pos, time, 0/*green*/);
+  check_probe(scn, SDIS_DIFFUSION_WOS, pos, time, 1/*green*/);
 
   release_super_shape(&sshape);
   OK(sdis_device_ref_put(sdis));
