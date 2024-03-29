@@ -275,6 +275,7 @@ test_all: test
 
 clean_test:
 	@$(SHELL) make.sh clean_test $(TEST_SRC) $(TEST_SRC_MPI) $(TEST_SRC_LONG)
+	rm -f super_shape_2d.obj paths_wos_2d.vtk paths_delta_sphere_2d.vtk
 	rm -f rng_state
 
 ################################################################################

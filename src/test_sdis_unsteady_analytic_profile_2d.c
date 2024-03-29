@@ -389,12 +389,12 @@ main(int argc, char** argv)
   check_probe(scn, SDIS_DIFFUSION_WOS, pos, time, 1/*green*/);
 
   /* Write 10 heat paths sampled by the delta sphere algorithm */
-  CHK(fp = fopen("delta_sphere_2d.vtk", "w"));
+  CHK(fp = fopen("paths_delta_sphere_2d.vtk", "w"));
   dump_heat_path(fp, scn, SDIS_DIFFUSION_DELTA_SPHERE, pos, time, 10);
   CHK(fclose(fp) == 0);
 
   /* Write 10 heat paths sampled by the WoS algorithm */
-  CHK(fp = fopen("wos_2d.vtk", "w"));
+  CHK(fp = fopen("paths_wos_2d.vtk", "w"));
   dump_heat_path(fp, scn, SDIS_DIFFUSION_WOS, pos, time, 10);
   CHK(fclose(fp) == 0);
 
