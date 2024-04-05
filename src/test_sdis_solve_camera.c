@@ -30,7 +30,7 @@
 
 #define IMG_WIDTH 157
 #define IMG_HEIGHT 53
-#define SPP 30 /* #Samples per pixel, i.e. #realisations per pixel */
+#define SPP 32 /* #Samples per pixel, i.e. #realisations per pixel */
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
@@ -748,7 +748,7 @@ main(int argc, char** argv)
 
   /* Check the RNG state */
   OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
-  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  OK(ssp_rng_discard(rng, 3141592653589)); /* Move the RNG state  */
   solve_args.rng_state = rng;
   solve_args.rng_type = SSP_RNG_TYPE_NULL;
   OK(sdis_solve_camera(scn, &solve_args, &buf2));

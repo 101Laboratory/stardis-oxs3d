@@ -296,7 +296,7 @@ main(int argc, char** argv)
 
   /* Check the RNG state */
   OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
-  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  OK(ssp_rng_discard(rng, 3141592653589)); /* Move the RNG state  */
   solve_args.rng_state = rng;
   solve_args.rng_type = SSP_RNG_TYPE_NULL;
   OK(sdis_solve_probe(scn, &solve_args, &estimator2));
