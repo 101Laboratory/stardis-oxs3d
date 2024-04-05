@@ -13,62 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef SDIS_XD_BEGIN_H
-#define SDIS_XD_BEGIN_H
-
+#include "sdis.h"
 #include <rsys/rsys.h>
-
-/* Forward declaration */
-struct green_path_handle;
-struct sdis_heat_path;
-
-struct rwalk_context {
-  struct green_path_handle* green_path;
-  struct sdis_heat_path* heat_path;
-
-  double Tmin; /* Lower bound temperature */
-  double Tmin2; /* Tmin^2 */
-  double Tmin3; /* Tmin^3 */
-
-  double That; /* Upper bound temperature */
-  double That2; /* That^2 */
-  double That3; /* That^3 */
-
-  /* Maximum branchings i.e. the maximum number of times XD(sample_coupled_path)
-   * can be called. It controls the number of ramifications of the heat path and
-   * currently is correlated to the Picard order used to estimate the radiative
-   * temperature. max_branchings == picard_order-1 */
-  size_t max_branchings;
-
-  /* Number of heat path branchings */
-  size_t nbranchings;
-
-  /* Id of the realisation (for debug) */
-  size_t irealisation;
-};
-#define RWALK_CONTEXT_NULL__ {                                                 \
-  NULL, /* Green path */                                                       \
-  NULL, /* Heat path */                                                        \
-  0, /* Tmin */                                                                \
-  0, /* Tmin^2 */                                                              \
-  0, /* Tmin^3 */                                                              \
-  0, /* That */                                                                \
-  0, /* That^2 */                                                              \
-  0, /* That^3 */                                                              \
-  0, /* Max #branchings */                                                     \
-  SIZE_MAX, /* #branchings */                                                  \
-  SIZE_MAX /* realisation id */                                                \
-}
-static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
-
-static INLINE size_t
-get_picard_order(const struct rwalk_context* ctx)
-{
-  ASSERT(ctx);
-  return ctx->max_branchings + 1;
-}
-
-#endif /* SDIS_XD_BEGIN_H */
 
 #ifdef SDIS_XD_BEGIN_H__
   #error "This header is already included without its associated sdis_Xd_end.h file."
@@ -139,6 +85,8 @@ get_picard_order(const struct rwalk_context* ctx)
   #else
     #define SDIS_3D_H
   #endif
+
+struct rwalk_context;
 
 /* Current state of the random walk */
 struct XD(rwalk) {

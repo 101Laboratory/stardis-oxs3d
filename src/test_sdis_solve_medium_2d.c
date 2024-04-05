@@ -256,7 +256,7 @@ main(int argc, char** argv)
   solid_param->lambda = 0.1;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid0));
   OK(sdis_data_ref_put(data));
 
@@ -268,7 +268,7 @@ main(int argc, char** argv)
   solid_param->lambda = 1.0;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid1));
   OK(sdis_data_ref_put(data));
 

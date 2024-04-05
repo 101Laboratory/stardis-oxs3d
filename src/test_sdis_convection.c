@@ -48,7 +48,6 @@
  * (0,0,0)
  */
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 100000 /* #realisations */
 
 #define Tf_0 280.0
@@ -73,9 +72,9 @@ fluid_get_temperature
 {
   CHK(vtx != NULL);
   if(*((int*)sdis_data_cget(is_stationary))) {
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   } else {
-    return vtx->time <= 0 ? Tf_0 : UNKNOWN_TEMPERATURE;
+    return vtx->time <= 0 ? Tf_0 : SDIS_TEMPERATURE_NONE;
   }
 }
 

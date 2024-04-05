@@ -138,7 +138,7 @@ MEDIUM_PROP(medium, volumic_mass, 1700) /* [kj/m^3] */
 MEDIUM_PROP(medium, calorific_capacity, 800) /* [J/K/Kg] */
 MEDIUM_PROP(solid, thermal_conductivity, 1.15) /* [W/m/K] */
 MEDIUM_PROP(solid, delta, 0.1/20.0) /* [m] */
-MEDIUM_PROP(solid, temperature, -1/*<=> unknown*/) /* [K] */
+MEDIUM_PROP(solid, temperature, SDIS_TEMPERATURE_NONE/*<=> unknown*/) /* [K] */
 MEDIUM_PROP(fluid, temperature, T_FLUID) /* [K] */
 #undef MEDIUM_PROP
 
@@ -188,7 +188,7 @@ struct interface {
     (void)frag, (void)data; /* Avoid the "unused variable" warning */          \
     return Val;                                                                \
   }
-INTERF_PROP(temperature, -1/*<=> unknown*/) /* [K] */
+INTERF_PROP(temperature, SDIS_TEMPERATURE_NONE/*<=> unknown*/) /* [K] */
 INTERF_PROP(reference_temperature, T_REF) /* [K] */
 #undef INTERF_PROP
 

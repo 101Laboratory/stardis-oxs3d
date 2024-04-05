@@ -428,4 +428,3 @@ check_green_serialization
    struct sdis_scene* scn);
 
 #endif /* TEST_SDIS_UTILS_H */
-

@@ -92,7 +92,7 @@ MEDIUM_PROP(solid, temperature, 310) /* [K] */
 MEDIUM_PROP(solid, delta, 1.0/20.0) /* [m] */
 MEDIUM_PROP(fluid, calorific_capacity, 2.0) /* [J/K/Kg] */
 MEDIUM_PROP(fluid, volumic_mass, 25.0) /* |kg/m^3] */
-MEDIUM_PROP(fluid, temperature, -1/*<=> unknown*/) /* [K] */
+MEDIUM_PROP(fluid, temperature, SDIS_TEMPERATURE_NONE) /* [K] */
 #undef MEDIUM_PROP
 
 static struct sdis_medium*
@@ -138,7 +138,7 @@ interface_get_temperature
    struct sdis_data* data)
 {
   (void)frag, (void)data;/* Avoid the "unused variable" warning */
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double

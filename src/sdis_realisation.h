@@ -65,9 +65,18 @@ struct probe_realisation_args {
   struct green_path_handle* green_path; /* May be NULL */
   struct sdis_heat_path* heat_path; /* May be NULL */
   size_t irealisation; /* Id of the realisation (for debug) */
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define PROBE_REALISATION_ARGS_NULL__ {                                        \
-  NULL, NULL, {0,0,0}, -1, 0, NULL, NULL, SIZE_MAX                             \
+  NULL, /* RNG */                                                              \
+  NULL, /* Medium */                                                           \
+  {0,0,0}, /* Position */                                                      \
+  -1, /* Observation time */                                                   \
+  0, /* Picard order */                                                        \
+  NULL, /* Green path */                                                       \
+  NULL, /* Heat path */                                                        \
+  SIZE_MAX, /* Realisation ID */                                               \
+  SDIS_DIFFUSION_NONE /* Diffusion algorithm */                                \
 }
 static const struct probe_realisation_args PROBE_REALISATION_ARGS_NULL =
   PROBE_REALISATION_ARGS_NULL__;
@@ -97,9 +106,19 @@ struct boundary_realisation_args {
   struct green_path_handle* green_path; /* May be NULL */
   struct sdis_heat_path* heat_path; /* May be NULL */
   size_t irealisation; /* Id of the realisation (for debug) */
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define BOUNDARY_REALISATION_ARGS_NULL__ {                                     \
-  NULL, SIZE_MAX, {0,0}, -1, 0, SDIS_SIDE_NULL__, NULL, NULL, SIZE_MAX         \
+  NULL, /* RNG */                                                              \
+  SIZE_MAX,  /* Primitive ID */                                                \
+  {0,0}, /* Parametric coordinates */                                          \
+  -1, /* Observation time */                                                   \
+  0, /* Picard order */                                                        \
+  SDIS_SIDE_NULL__, /* Interface side */                                       \
+  NULL, /* Green path */                                                       \
+  NULL, /* Heat path */                                                        \
+  SIZE_MAX, /* Realisation ID */                                               \
+  SDIS_DIFFUSION_NONE /* Diffusion algorithm */                                \
 }
 static const struct boundary_realisation_args BOUNDARY_REALISATION_ARGS_NULL =
   BOUNDARY_REALISATION_ARGS_NULL__;
@@ -128,9 +147,18 @@ struct boundary_flux_realisation_args {
   enum sdis_side solid_side; /* Side of the geometric primitive */
   int flux_mask; /* Combination of enum flux_flag */
   size_t irealisation; /* Id of the realisation (for debug) */
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define BOUNDARY_FLUX_REALISATION_ARGS_NULL__ {                                \
-  NULL, SIZE_MAX, {0,0}, -1, 0, SDIS_SIDE_NULL__, 0, SIZE_MAX                  \
+  NULL, /* RNG */                                                              \
+  SIZE_MAX, /* Primitive ID */                                                 \
+  {0,0}, /* Parametric coordinates */                                          \
+  -1, /* Observation time */                                                   \
+  0, /* Picard order */                                                        \
+  SDIS_SIDE_NULL__, /* Interface side */                                       \
+  0, /* Flux mask */                                                           \
+  SIZE_MAX, /* Realisation ID */                                               \
+  SDIS_DIFFUSION_NONE /* Diffusion algorithm */                                \
 }
 static const struct boundary_flux_realisation_args
 BOUNDARY_FLUX_REALISATION_ARGS_NULL = BOUNDARY_FLUX_REALISATION_ARGS_NULL__;
@@ -159,9 +187,18 @@ struct ray_realisation_args {
   size_t picard_order; /* Picard order to estimate radiative temperature */
   struct sdis_heat_path* heat_path; /* May be NULL */
   size_t irealisation; /* Id of the realisation (for debug) */
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define RAY_REALISATION_ARGS_NULL__ {                                          \
-  NULL, NULL, {0,0,0}, {0,0,0}, -1, 0, NULL, SIZE_MAX                          \
+  NULL, /* RNG */                                                              \
+  NULL, /* Medium */                                                           \
+  {0,0,0}, /* Position */                                                      \
+  {0,0,0}, /* Direction */                                                     \
+  -1, /* Observation time */                                                   \
+  0, /* Picard order */                                                        \
+  NULL, /* Heat path */                                                        \
+  SIZE_MAX, /* Realisation ID */                                               \
+  SDIS_DIFFUSION_NONE /* Diffusion algorithm */                                \
 }
 static const struct ray_realisation_args RAY_REALISATION_ARGS_NULL =
   RAY_REALISATION_ARGS_NULL__;

@@ -54,7 +54,7 @@ XD(time_rewind)
 
   /* Fetch the initial temperature */
   temperature = medium_get_temperature(rwalk->mdm, &rwalk->vtx);
-  if(temperature < 0) {
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(temperature)) {
     log_err(rwalk->mdm->dev, "the path reaches the limit condition but the "
       "%s temperature remains unknown -- position=%g, %g, %g\n",
       medium_type_to_string(sdis_medium_get_type(rwalk->mdm)),

@@ -63,10 +63,12 @@ main(int argc, char** argv)
   BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
   fluid_shader.temperature = DUMMY_FLUID_SHADER.temperature;
 
-  fluid_shader.t0 = -1;
-  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+  fluid_shader.t0 = -INF;
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+  OK(sdis_medium_ref_put(fluid));
   fluid_shader.t0 = INF;
-  BA(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+  OK(sdis_medium_ref_put(fluid));
   fluid_shader.t0 = DUMMY_FLUID_SHADER.t0;
 
   BA(sdis_fluid_create(dev, &SDIS_FLUID_SHADER_NULL, NULL, &fluid));
@@ -106,10 +108,12 @@ main(int argc, char** argv)
   BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   solid_shader.temperature = DUMMY_SOLID_SHADER.temperature;
 
-  solid_shader.t0 = -1;
-  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+  solid_shader.t0 = -INF;
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+  OK(sdis_medium_ref_put(solid));
   solid_shader.t0 = INF;
-  BA(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+  OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
+  OK(sdis_medium_ref_put(solid));
   solid_shader.t0 = DUMMY_SOLID_SHADER.t0;
 
   OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));

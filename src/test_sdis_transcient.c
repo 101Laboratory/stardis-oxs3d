@@ -18,8 +18,6 @@
 
 #include <string.h>
 
-#define UNKNOWN_TEMPERATURE -1
-
 /*
  * The scene is composed of a solid cuboid whose temperature is fixed on its 6
  * faces. The test consist in checking that the estimated temperature at a
@@ -225,7 +223,7 @@ solid_get_temperature
   if(vtx->time <= 0) {
     return ((const struct solid*)sdis_data_cget(data))->init_temperature;
   } else {
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   }
 }
 
@@ -542,7 +540,7 @@ main(int argc, char** argv)
   interfs[3] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[3]);
   interfs[4] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[4]);
   interfs[5] = create_interface(dev, solid, fluid, &interf_shader, Tbounds[5]);
-  interfs[6] = create_interface(dev, solid, solid, &interf_shader, UNKNOWN_TEMPERATURE);
+  interfs[6] = create_interface(dev, solid, solid, &interf_shader, SDIS_TEMPERATURE_NONE);
 
   /* Setup the box scene context */
   ctx.indices = box_indices;

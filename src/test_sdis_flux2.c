@@ -16,8 +16,6 @@
 #include "sdis.h"
 #include "test_sdis_utils.h"
 
-#define UNKNOWN_TEMPERATURE -1
-
 /* This test consists in solving the temperature profile in a solid slab
  * surrounded by two different convective and radiative temperatures. The
  * conductivity of the solid material is known, as well as its thickness. A net
@@ -175,7 +173,7 @@ solid_get_temperature
   CHK(vtx && solid);
 
   if(vtx->time > 0) {
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   } else {
     /* The initial temperature is a linear profile between T1 and T2, where T1
      * and T2 are the temperature on the left and right slab boundary,
@@ -489,8 +487,8 @@ main(int argc, char** argv)
   interf_props.h = 0;
   interf_props.emissivity = 0;
   interf_props.phi = SDIS_FLUX_NONE;
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
-  interf_props.Tref = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
+  interf_props.Tref = SDIS_TEMPERATURE_NONE;
   create_interface(dev, solid, dummy, &interf_props, &interfaces[ADIABATIC]);
 
   /* Interfaces with a fixed temperature */
@@ -506,7 +504,7 @@ main(int argc, char** argv)
   interf_props.h = 2;
   interf_props.emissivity = 1;
   interf_props.phi = 10000;
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.Tref = 300;
   create_interface
     (dev, solid, fluid1, &interf_props, &interfaces[SOLID_FLUID_WITH_FLUX]);
@@ -514,7 +512,7 @@ main(int argc, char** argv)
   interf_props.h = 8;
   interf_props.emissivity = 1;
   interf_props.phi = SDIS_FLUX_NONE;
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.Tref = 300;
   create_interface
     (dev, solid, fluid2, &interf_props, &interfaces[SOLID_FLUID]);

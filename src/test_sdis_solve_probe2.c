@@ -78,7 +78,7 @@ temperature_unknown(const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)data;
   CHK(vtx != NULL && IS_INF(vtx->time));
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -255,7 +255,7 @@ main(int argc, char** argv)
   solve_args.position[2] = 0.5;
   solve_args.time_range[0] = INF;
   solve_args.time_range[1] = INF;
-
+  solve_args.diff_algo = SDIS_DIFFUSION_WOS;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
 
   ref = 350 * solve_args.position[2] + (1-solve_args.position[2]) * 300;

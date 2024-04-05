@@ -383,8 +383,16 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
   BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
   OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-  CHK(trad.temperature == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature);
-  CHK(trad.reference == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference);
+  if(SDIS_TEMPERATURE_IS_KNOWN(trad.temperature)) {
+    CHK(trad.temperature == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature);
+  } else {
+    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature));
+  }
+  if(SDIS_TEMPERATURE_IS_KNOWN(trad.reference)) {
+    CHK(trad.reference == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference);
+  } else {
+    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference));
+  }
 
   trad.temperature = 100;
   trad.reference = 110;
@@ -399,8 +407,16 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_get_temperature_range(scn, NULL));
   BA(sdis_scene_get_temperature_range(NULL, t_range));
   OK(sdis_scene_get_temperature_range(scn, t_range));
-  CHK(t_range[0] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]);
-  CHK(t_range[1] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[1]);
+  if(SDIS_TEMPERATURE_IS_KNOWN(t_range[0])) {
+    CHK(t_range[0] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]);
+  } else {
+    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]));
+  }
+  if(SDIS_TEMPERATURE_IS_KNOWN(t_range[1])) {
+    CHK(t_range[1] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[1]);
+  } else {
+    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]));
+  }
 
   t_range[0] = 1;
   t_range[1] = 100;
@@ -408,8 +424,8 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_set_temperature_range(NULL, t_range));
   BA(sdis_scene_set_temperature_range(scn, NULL));
   OK(sdis_scene_set_temperature_range(scn, t_range));
-  t_range[0] = -1;
-  t_range[1] = -1;
+  t_range[0] = SDIS_TEMPERATURE_NONE;
+  t_range[1] = SDIS_TEMPERATURE_NONE;
   OK(sdis_scene_get_temperature_range(scn, t_range));
   CHK(t_range[0] == 1);
   CHK(t_range[1] == 100);

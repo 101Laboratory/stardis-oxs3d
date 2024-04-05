@@ -43,7 +43,6 @@
  * (0,0,0) /////
  */
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 10000
 
 #define PHI 10.0
@@ -96,7 +95,7 @@ solid_get_temperature
   (void)data;
   CHK(vtx != NULL);
   if(vtx->time > 0)
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   else
     return T0;
 }
@@ -146,7 +145,7 @@ solve
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   size_t nreals;
   size_t nfails;
-  double ref = -1;
+  double ref = SDIS_TEMPERATURE_NONE;
   const int nsimuls = 4;
   int isimul;
   enum sdis_scene_dimension dim;
@@ -392,7 +391,7 @@ main(int argc, char** argv)
   /* Create the adiabatic interface */
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   interf_props->phi = 0;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
@@ -409,7 +408,7 @@ main(int argc, char** argv)
   /* Create the PHI interface */
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   interf_props->phi = PHI;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_phi));

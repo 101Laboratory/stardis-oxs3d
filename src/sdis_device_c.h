@@ -36,6 +36,7 @@
 struct mutex;
 struct ssp_rng;
 struct ssp_rng_proxy;
+struct swf_tabulation;
 
 struct name { FITEM; void* mem; };
 #define FITEM_TYPE name
@@ -63,6 +64,9 @@ struct sdis_device {
 
   struct s2d_device* s2d_dev;
   struct s3d_device* s3d_dev;
+
+  struct swf_tabulation* H_2d;
+  struct swf_tabulation* H_3d;
 
   ref_T ref;
 };

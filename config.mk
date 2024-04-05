@@ -63,6 +63,10 @@ SSP_VERSION = 0.14
 SSP_CFLAGS = $$($(PKG_CONFIG) $(PCFLAGS) --cflags star-sp)
 SSP_LIBS = $$($(PKG_CONFIG) $(PCFLAGS) --libs star-sp)
 
+SWF_VERSION = 0.0
+SWF_CFLAGS = $$($(PKG_CONFIG) $(PCFLAGS) --cflags swf)
+SWF_LIBS = $$($(PKG_CONFIG) $(PCFLAGS) --libs swf)
+
 # For tests only
 S3DUT_VERSION = 0.4
 S3DUT_CFLAGS = $$($(PKG_CONFIG) $(PCFLAGS) --cflags s3dut)
@@ -75,6 +79,7 @@ DPDC_CFLAGS =\
  $(SENC2D_CFLAGS)\
  $(SENC3D_CFLAGS)\
  $(SSP_CFLAGS)\
+ $(SWF_CFLAGS)\
  $($(DISTRIB_PARALLELISM)_CFLAGS)\
  -fopenmp
 DPDC_LIBS =\
@@ -84,6 +89,7 @@ DPDC_LIBS =\
  $(SENC2D_LIBS)\
  $(SENC3D_LIBS)\
  $(SSP_LIBS)\
+ $(SWF_LIBS)\
  $($(DISTRIB_PARALLELISM)_LIBS)\
  -lm\
  -fopenmp

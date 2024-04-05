@@ -64,6 +64,11 @@ check_solve_probe_args(const struct sdis_solve_probe_args* args)
     return RES_BAD_ARG;
   }
 
+  /* Check the diffusion algorithm */
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
   return RES_OK;
 }
 
@@ -143,6 +148,7 @@ XD(solve_one_probe)
     realis_args.time = time;
     realis_args.picard_order = args->picard_order;
     realis_args.irealisation = irealisation;
+    realis_args.diff_algo = args->diff_algo;
     dX(set)(realis_args.position, args->position);
     res = XD(probe_realisation)(scn, &realis_args, &w);
     if(res != RES_OK) goto error;
@@ -327,6 +333,7 @@ XD(solve_probe)
     realis_args.green_path = pgreen_path;
     realis_args.heat_path = pheat_path;
     realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = args->diff_algo;
     dX(set)(realis_args.position, args->position);
     res_simul = XD(probe_realisation)(scn, &realis_args, &w);
 

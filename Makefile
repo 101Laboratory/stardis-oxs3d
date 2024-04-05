@@ -38,6 +38,7 @@ SRC =\
  src/sdis_green.c\
  src/sdis_heat_path.c\
  src/sdis_heat_path_boundary.c\
+ src/sdis_heat_path_conductive.c\
  src/sdis_interface.c\
  src/sdis_log.c\
  src/sdis_medium.c\
@@ -89,6 +90,8 @@ libsdis.o: $(OBJ)
 	  echo "senc3d $(SENC3D_VERSION) not found" >&2; exit 1; fi
 	@if ! $(PKG_CONFIG) --atleast-version $(SSP_VERSION) star-sp; then \
 	  echo "star-sp $(SSP_VERSION) not found" >&2; exit 1; fi
+	@if ! $(PKG_CONFIG) --atleast-version $(SWF_VERSION) swf; then \
+	  echo "swf $(SWF_VERSION) not found" >&2; exit 1; fi
 	@echo "config done" > $@
 
 .SUFFIXES: .c .d .o
@@ -195,6 +198,10 @@ TEST_SRC =\
  src/test_sdis_source.c\
  src/test_sdis_transcient.c\
  src/test_sdis_unstationary_atm.c\
+ src/test_sdis_unsteady.c\
+ src/test_sdis_unsteady_1d.c\
+ src/test_sdis_unsteady_analytic_profile.c\
+ src/test_sdis_unsteady_analytic_profile_2d.c\
  src/test_sdis_volumic_power.c\
  src/test_sdis_volumic_power4.c
 TEST_SRC_LONG =\
@@ -268,6 +275,8 @@ test_all: test
 
 clean_test:
 	@$(SHELL) make.sh clean_test $(TEST_SRC) $(TEST_SRC_MPI) $(TEST_SRC_LONG)
+	rm -f super_shape_2d.obj paths_wos_2d.vtk paths_delta_sphere_2d.vtk
+	rm -f super_shape_3d.obj paths_wos_3d.vtk paths_delta_sphere_3d.vtk
 	rm -f rng_state
 
 ################################################################################
@@ -295,6 +304,9 @@ src/test_sdis_solve_probe3_2d \
 src/test_sdis_source.d \
 src/test_sdis_transcient.d \
 src/test_sdis_unstationary_atm.d \
+src/test_sdis_unsteady.d \
+src/test_sdis_unsteady_1d.d \
+src/test_sdis_unsteady_analytic_profile_2d.d \
 src/test_sdis_utils.d \
 src/test_sdis_volumic_power.d \
 src/test_sdis_volumic_power2.d \
@@ -326,6 +338,9 @@ src/test_sdis_solve_probe3_2d.o \
 src/test_sdis_source.o \
 src/test_sdis_transcient.o \
 src/test_sdis_unstationary_atm.o \
+src/test_sdis_unsteady.o \
+src/test_sdis_unsteady_1d.o \
+src/test_sdis_unsteady_analytic_profile_2d.o \
 src/test_sdis_utils.o \
 src/test_sdis_volumic_power.o \
 src/test_sdis_volumic_power2.o \
@@ -357,6 +372,9 @@ test_sdis_solve_probe3_2d \
 test_sdis_source \
 test_sdis_transcient \
 test_sdis_unstationary_atm \
+test_sdis_unsteady \
+test_sdis_unsteady_1d \
+test_sdis_unsteady_analytic_profile_2d \
 test_sdis_volumic_power \
 test_sdis_volumic_power2 \
 test_sdis_volumic_power2_2d \
@@ -371,18 +389,21 @@ test_sdis_volumic_power4 \
 src/test_sdis_draw_external_flux.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
+src/test_sdis_unsteady_analytic_profile.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis_draw_external_flux.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
+src/test_sdis_unsteady_analytic_profile.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
 test_sdis_draw_external_flux \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
+test_sdis_unsteady_analytic_profile \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S3DUT_LIBS)
 

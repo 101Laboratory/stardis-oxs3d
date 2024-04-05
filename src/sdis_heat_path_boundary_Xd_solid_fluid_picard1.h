@@ -28,39 +28,13 @@
  * Helper functions
  ******************************************************************************/
 static INLINE res_T
-XD(check_Tref)
-  (const struct sdis_scene* scn,
-   const double pos[DIM],
-   const double Tref,
-   const char* func_name)
-{
-  ASSERT(scn && pos && func_name);
-
-  if(Tref < 0) {
-    log_err(scn->dev,
-      "%s: invalid reference temperature `%gK' at the position `"FORMAT_VECX"'.\n",
-      func_name, Tref, SPLITX(pos));
-    return RES_BAD_OP_IRRECOVERABLE;
-  }
-  if(Tref > scn->tmax) {
-    log_err(scn->dev,
-      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK' "
-      "at the position `"FORMAT_VECX"' is greater than this temperature.\n",
-      func_name, scn->tmax, Tref, SPLITX(pos));
-    return RES_BAD_OP_IRRECOVERABLE;
-  }
-
-  return RES_OK;
-}
-
-static INLINE res_T
 XD(rwalk_get_Tref)
   (const struct sdis_scene* scn,
    const struct XD(rwalk)* rwalk,
    const struct XD(temperature)* T,
    double* out_Tref)
 {
-  double Tref = -1;
+  double Tref = SDIS_TEMPERATURE_NONE;
   res_T res = RES_OK;
   ASSERT(rwalk && T && out_Tref);
 
@@ -213,7 +187,13 @@ XD(solid_fluid_boundary_picard1_path)
   /* Compute the convective, conductive and the upper bound radiative coef */
   h_conv = interface_get_convection_coef(interf, frag);
   h_cond = lambda / delta_m;
-  h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * ctx->That3 * epsilon;
+  if(epsilon <= 0) {
+    h_radi_hat = 0; /* No radiative transfert */
+  } else {
+    res = scene_check_temperature_range(scn);
+    if(res != RES_OK) { res = RES_BAD_OP_IRRECOVERABLE; goto error; }
+    h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * ctx->That3 * epsilon;
+  }
 
   /* Compute a global upper bound coefficient */
   h_hat = h_conv + h_cond + h_radi_hat;
@@ -304,6 +284,12 @@ XD(solid_fluid_boundary_picard1_path)
     /* Get the Tref at the end of the candidate radiative path */
     res = XD(rwalk_get_Tref)(scn, &rwalk_s, &T_s, &Tref_s);
     if(res != RES_OK) goto error;
+
+    /* The reference temperatures must be known, as this is a radiative path.
+     * If this is not the case, an error should be reported before this point.
+     * Hence these assertions to detect unexpected behavior */
+    ASSERT(SDIS_TEMPERATURE_IS_KNOWN(Tref));
+    ASSERT(SDIS_TEMPERATURE_IS_KNOWN(Tref_s));
 
     h_radi = BOLTZMANN_CONSTANT * epsilon *
       ( Tref*Tref*Tref

@@ -107,7 +107,7 @@ solid_get_temperature
    struct sdis_data* data)
 {
   (void)data, (void)vtx;
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double

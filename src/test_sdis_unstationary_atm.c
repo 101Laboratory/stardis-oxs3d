@@ -26,7 +26,7 @@
  * The physical configuration is the following: a slab of fluid with known
  * thermophysical properties but unknown temperature is located between a
  * "ground" and a slab of solid, with also a unknown temperature profile. On
- * the other side of the solid slab, is a "atmosphere" with known temperature,
+ * the other side of the solid slab, is an "atmosphere" with known temperature,
  * and known radiative temperature.
  *
  * Solving the system means: finding the temperature of the ground, of the
@@ -35,7 +35,7 @@
  * reference)
  *
  * The reference for this system comes from a numerical method and is not
- * analytic.  Thus the compliance test MC VS reference is not the usual |MC -
+ * analytic. Thus the compliance test MC VS reference is not the usual |MC -
  * ref| <= 3*sigma but is |MC -ref| <= (Tmax -Tmin) * 0.01.
  *
  *          3D                                      2D
@@ -59,8 +59,6 @@
 
 #define T0_SOLID 300
 #define T0_FLUID 300
-
-#define UNKNOWN_TEMPERATURE -1
 
 #define N 10000 /* #realisations */
 
@@ -275,7 +273,7 @@ solid_get_temperature
   solid = ((struct solid*)sdis_data_cget(data));
   if(vtx->time <= solid->t0)
     return solid->temperature;
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 struct fluid {
@@ -294,7 +292,7 @@ fluid_get_temperature
   fluid = ((struct fluid*)sdis_data_cget(data));
   if(vtx->time <= fluid->t0)
     return fluid->temperature;
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -756,7 +754,7 @@ main(int argc, char** argv)
   solid_props->rho = 1;
   solid_props->delta = 1;
   solid_props->t0 = INF;
-  solid_props->temperature = UNKNOWN_TEMPERATURE;
+  solid_props->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &dummy_solid));
   OK(sdis_data_ref_put(data));
 
@@ -786,7 +784,7 @@ main(int argc, char** argv)
   OK(sdis_data_ref_put(data));
 
   /* Create the adiabatic interfaces */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = 0;
   interf_props.emissivity = 0;
   interf_props.Tref = TREF;
@@ -794,7 +792,7 @@ main(int argc, char** argv)
   create_interface(dev, solid, dummy_solid, &interf_props, &interf_adiabatic_2);
 
   /* Create the P interface */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = HC;
   interf_props.emissivity = 1;
   interf_props.Tref = TREF;
@@ -808,7 +806,7 @@ main(int argc, char** argv)
   create_interface(dev, fluid, dummy_solid, &interf_props, &interf_TG);
 
   /* Create the TA interface */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = HA;
   interf_props.emissivity = 1;
   interf_props.Tref = TREF;

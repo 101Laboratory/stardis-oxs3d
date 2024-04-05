@@ -19,7 +19,6 @@
 #include <rsys/stretchy_array.h>
 #include <star/s3dut.h>
 
-#define UNKOWN_TEMPERATURE -1
 #define N 100000ul /* #realisations */
 #define POWER0 10
 #define POWER1 5
