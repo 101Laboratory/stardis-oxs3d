@@ -1001,27 +1001,58 @@ XD(check_Tref)
 {
   ASSERT(scn && pos && func_name);
 
+  #define CHECK_TBOUND(Bound, Name) {                                          \
+    if(SDIS_TEMPERATURE_IS_UNKNOWN(Bound)) {                                   \
+      log_err(scn->dev,                                                        \
+        "%s: the "Name" temperature cannot be unknown "                        \
+        "to sampling a radiative path.\n",                                     \
+        func_name);                                                            \
+      return RES_BAD_OP_IRRECOVERABLE;                                         \
+    }                                                                          \
+                                                                               \
+    if((Bound) < 0) {                                                          \
+      log_err(scn->dev,                                                        \
+        "%s: the "Name" temperature cannot be negative "                       \
+        "to sample a radiative path (T"Name" = %g K).\n",                      \
+        func_name, (Bound));                                                   \
+      return RES_BAD_OP_IRRECOVERABLE;                                         \
+    }                                                                          \
+  } (void) 0
+  CHECK_TBOUND(scn->tmin, "min");
+  CHECK_TBOUND(scn->tmax, "max");
+  #undef CHECK_TBOUND
+
+  if(scn->tmin > scn->tmax) {
+    log_err(scn->dev,
+      "%s: the temperature range cannot be degenerated to sample a radiative "
+      "path (Tmin = %g K; Tmax = %g K).\n",
+      func_name, scn->tmin, scn->tmax);
+    return RES_BAD_OP_IRRECOVERABLE;
+  }
+
   if(SDIS_TEMPERATURE_IS_UNKNOWN(Tref)) {
     log_err(scn->dev,
-      "%s: invalid reference temperature at the position `"FORMAT_VECX"'.\n",
+      "%s: the reference temperature is unknown at `"FORMAT_VECX". "
+      "Sampling a radiative path requires a valid reference temperature field.\n",
       func_name, SPLITX(pos));
     return RES_BAD_OP_IRRECOVERABLE;
   }
 
-  if(SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmin)
-  || SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmax)) {
+  if(Tref < 0) {
     log_err(scn->dev,
-      "%s: invalid scene temperature range. "
-      "At least one boundary is unknown.\n",
-      func_name);
+      "%s: the reference temperature is negative at `"FORMAT_VECX" (Tref = %g K). "
+      "Sampling a radiative path requires a known, positive reference "
+      "temperature field.\n",
+      func_name, SPLITX(pos), Tref);
     return RES_BAD_OP_IRRECOVERABLE;
   }
 
-  if(Tref > scn->tmax) {
+  if(Tref < scn->tmin || scn->tmax < Tref) {
     log_err(scn->dev,
-      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK' "
-      "at the position `"FORMAT_VECX"' is greater than this temperature.\n",
-      func_name, scn->tmax, Tref, SPLITX(pos));
+      "%s: invalid reference temperature at `"FORMAT_VECX"' (Tref = %g K). "
+      "It must be included in the provided temperature range "
+      "(Tmin = %g K; Tmax = %g K)\n",
+      func_name, SPLITX(pos), Tref, scn->tmin, scn->tmax);
     return RES_BAD_OP_IRRECOVERABLE;
   }
 
