@@ -32,8 +32,8 @@ radiative_env_get_temperature
   (const struct sdis_radiative_env* radenv,
    const struct sdis_radiative_ray* ray)
 {
-  ASSERT(radenv && ray && d3_is_normalized(ray->dir));
-  return radenv->shader.temperature
+  ASSERT(ray && d3_is_normalized(ray->dir));
+  return radenv && radenv->shader.temperature
     ? radenv->shader.temperature(ray, radenv->data)
     : SDIS_TEMPERATURE_NONE;
 }
@@ -43,8 +43,8 @@ radiative_env_get_reference_temperature
   (const struct sdis_radiative_env* radenv,
    const struct sdis_radiative_ray* ray)
 {
-  ASSERT(radenv && ray && d3_is_normalized(ray->dir));
-  return radenv->shader.reference_temperature
+  ASSERT(ray && d3_is_normalized(ray->dir));
+  return radenv && radenv->shader.reference_temperature
     ? radenv->shader.reference_temperature(ray, radenv->data)
     : SDIS_TEMPERATURE_NONE;
 }
