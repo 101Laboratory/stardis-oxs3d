@@ -189,6 +189,7 @@ TEST_SRC =\
  src/test_sdis_interface.c\
  src/test_sdis_medium.c\
  src/test_sdis_picard.c\
+ src/test_sdis_radiative_env.c\
  src/test_sdis_scene.c\
  src/test_sdis_solid_random_walk_robustness.c\
  src/test_sdis_solve_probe.c\
@@ -298,6 +299,7 @@ src/test_sdis_flux_with_h.d \
 src/test_sdis_interface.d \
 src/test_sdis_medium.d \
 src/test_sdis_picard.d \
+src/test_sdis_radiative_env.d \
 src/test_sdis_solve_probe.d \
 src/test_sdis_solve_probe_2d.d \
 src/test_sdis_solve_probe2_2d.d \
@@ -332,6 +334,7 @@ src/test_sdis_flux_with_h.o \
 src/test_sdis_interface.o \
 src/test_sdis_medium.o \
 src/test_sdis_picard.o \
+src/test_sdis_radiative_env.o \
 src/test_sdis_solve_probe.o \
 src/test_sdis_solve_probe_2d.o \
 src/test_sdis_solve_probe2_2d.o \
@@ -366,6 +369,7 @@ test_sdis_flux_with_h \
 test_sdis_interface \
 test_sdis_medium \
 test_sdis_picard \
+test_sdis_radiative_env \
 test_sdis_solve_probe \
 test_sdis_solve_probe_2d \
 test_sdis_solve_probe2_2d \
