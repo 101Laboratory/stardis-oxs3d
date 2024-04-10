@@ -221,11 +221,11 @@ struct sdis_scene {
   unsigned outer_enclosure_id;
 
   double fp_to_meter;
-  struct sdis_ambient_radiative_temperature trad;
   double tmin; /* Minimum temperature of the system (In Kelvin) */
   double tmax; /* Maximum temperature of the system (In Kelvin) */
 
   struct sdis_source* source; /* External source. May be NULL */
+  struct sdis_radiative_env* radenv; /* Radiative environment. May be NULL */
 
   ref_T ref;
   struct sdis_device* dev;

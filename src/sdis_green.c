@@ -20,6 +20,7 @@
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
+#include "sdis_radiative_env_c.h"
 #include "sdis_scene_c.h"
 #include "sdis_source_c.h"
 
@@ -90,6 +91,7 @@ struct green_path {
   union {
     struct sdis_rwalk_vertex vertex;
     struct sdis_interface_fragment fragment;
+    struct sdis_radiative_ray ray;
   } limit;
   unsigned limit_id; /* Identifier of the limit medium/interface */
   enum sdis_green_path_end_type end_type;
@@ -110,6 +112,7 @@ green_path_init(struct mem_allocator* allocator, struct green_path* path)
   path->external_flux_term = 0;
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
   path->limit.fragment = SDIS_INTERFACE_FRAGMENT_NULL;
+  path->limit.ray = SDIS_RADIATIVE_RAY_NULL;
   path->limit_id = UINT_MAX;
   path->end_type = SDIS_GREEN_PATH_END_TYPES_COUNT__;
   path->ilast_medium = UINT16_MAX;
@@ -405,8 +408,6 @@ green_function_solve_path
    const size_t ipath,
    double* weight)
 {
-  struct sdis_ambient_radiative_temperature trad =
-    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   const struct power_term* power_terms = NULL;
   const struct flux_term* flux_terms = NULL;
   const struct green_path* path = NULL;
@@ -415,6 +416,7 @@ green_function_solve_path
   struct sdis_scene* scn = NULL;
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
   double power;
   double flux;
   double external_flux;
@@ -466,21 +468,24 @@ green_function_solve_path
       frag = path->limit.fragment;
       end_temperature = interface_side_get_temperature(interf, &frag);
       break;
+    case SDIS_GREEN_PATH_END_AT_RADIATIVE_ENV:
+      SDIS(green_function_get_scene(green, &scn));
+      ray = path->limit.ray;
+      end_temperature = radiative_env_get_temperature(green->scn->radenv, &ray);
+      break;
     case SDIS_GREEN_PATH_END_IN_VOLUME:
       medium = green_function_fetch_medium(green, path->limit_id);
       vtx = path->limit.vertex;
       end_temperature = medium_get_temperature(medium, &vtx);
       break;
-    case SDIS_GREEN_PATH_END_RADIATIVE:
-      SDIS(green_function_get_scene(green, &scn));
-      SDIS(scene_get_ambient_radiative_temperature(scn, &trad));
-      end_temperature = trad.temperature;
-      if(end_temperature <  0) { /* Cannot be negative if used */
-        res = RES_BAD_ARG;
-        goto error;
-      }
-      break;
     default: FATAL("Unreachable code.\n"); break;
+  }
+
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(end_temperature)) {
+    log_err(green->scn->dev,
+      "%s: unknown boundary/initial condition.\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
   }
 
   /* Compute the path weight */
@@ -1149,14 +1154,15 @@ error:
 }
 
 res_T
-sdis_green_path_get_end_type
-  (struct sdis_green_path* path_handle, enum sdis_green_path_end_type* type)
+sdis_green_path_get_end
+  (struct sdis_green_path* path_handle,
+   struct sdis_green_path_end* end)
 {
   const struct green_path* path = NULL;
   struct sdis_green_function* green = NULL;
   res_T res = RES_OK;
 
-  if(!path_handle || !type) {
+  if(!path_handle || !end) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -1165,44 +1171,21 @@ sdis_green_path_get_end_type
   ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
 
   path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
-  *type = path->end_type;
-
-exit:
-  return res;
-error:
-  goto exit;
-}
-
-res_T
-sdis_green_path_get_limit_point
-  (struct sdis_green_path* path_handle, struct sdis_point* pt)
-{
-  const struct green_path* path = NULL;
-  struct sdis_green_function* green = NULL;
-  res_T res = RES_OK;
-
-  if(!path_handle || !pt) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-  green = path_handle->green__;
-  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
-
-  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+  end->type = path->end_type;
 
   switch(path->end_type) {
     case SDIS_GREEN_PATH_END_AT_INTERFACE:
-      pt->data.itfrag.intface = green_function_fetch_interf(green, path->limit_id);
-      pt->data.itfrag.fragment = path->limit.fragment;
-      pt->type = SDIS_FRAGMENT;
+      end->data.itfrag.intface = green_function_fetch_interf(green, path->limit_id);
+      end->data.itfrag.fragment = path->limit.fragment;
+      break;
+    case SDIS_GREEN_PATH_END_AT_RADIATIVE_ENV:
+      end->data.radenvray.radenv = green->scn->radenv;
+      end->data.radenvray.ray = path->limit.ray;
       break;
     case SDIS_GREEN_PATH_END_IN_VOLUME:
-      pt->data.mdmvert.medium = green_function_fetch_medium(green, path->limit_id);
-      pt->data.mdmvert.vertex = path->limit.vertex;
-      pt->type = SDIS_VERTEX;
+      end->data.mdmvert.medium = green_function_fetch_medium(green, path->limit_id);
+      end->data.mdmvert.vertex = path->limit.vertex;
       break;
-    case SDIS_GREEN_PATH_END_RADIATIVE:
     case SDIS_GREEN_PATH_END_ERROR:
       res = RES_BAD_OP;
       goto error;
@@ -1620,14 +1603,16 @@ green_path_set_limit_vertex
 }
 
 res_T
-green_path_set_limit_radiative
+green_path_set_limit_radiative_ray
   (struct green_path_handle* handle,
+   const struct sdis_radiative_ray* ray,
    const double elapsed_time)
 {
   ASSERT(handle);
   ASSERT(handle->path->end_type == SDIS_GREEN_PATH_END_TYPES_COUNT__);
   handle->path->elapsed_time = elapsed_time;
-  handle->path->end_type = SDIS_GREEN_PATH_END_RADIATIVE;
+  handle->path->limit.ray = *ray;
+  handle->path->end_type = SDIS_GREEN_PATH_END_AT_RADIATIVE_ENV;
   return RES_OK;
 }
 

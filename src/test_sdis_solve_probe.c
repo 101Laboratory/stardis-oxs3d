@@ -179,6 +179,55 @@ interface_get_reference_temperature
 }
 
 /*******************************************************************************
+ * Radiative environment
+ ******************************************************************************/
+struct radenv {
+  double temperature; /* [K] */
+  double reference; /* [K] */
+};
+
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray;
+  return ((const struct radenv*)sdis_data_cget(data))->temperature;
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray;
+  return ((const struct radenv*)sdis_data_cget(data))->reference;
+}
+
+static struct sdis_radiative_env*
+create_radenv
+  (struct sdis_device* dev,
+   const double temperature, /* [K] */
+   const double reference) /* [K] */
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+  struct sdis_data* data = NULL;
+  struct radenv* radenv_args = NULL;
+
+  OK(sdis_data_create(dev, sizeof(struct radenv), ALIGNOF(radenv), NULL, &data));
+  radenv_args = sdis_data_get(data);
+  radenv_args->temperature = temperature;
+  radenv_args->reference = reference;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(dev, &shader, data, &radenv));
+  OK(sdis_data_ref_put(data));
+  return radenv;
+}
+
+/*******************************************************************************
  * Helper functions
  ******************************************************************************/
 struct dump_path_context {
@@ -274,6 +323,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_interface* interf = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_data* data = NULL;
   struct sdis_estimator* estimator = NULL;
@@ -289,13 +339,12 @@ main(int argc, char** argv)
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
-  struct sdis_ambient_radiative_temperature trad =
-    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   struct dump_path_context dump_ctx = DUMP_PATH_CONTEXT_NULL;
   struct context ctx;
-  struct fluid* fluid_param;
-  struct solid* solid_param;
-  struct interf* interface_param;
+  struct radenv* radenv_args;
+  struct fluid* fluid_args;
+  struct solid* solid_args;
+  struct interf* interface_args;
   struct ssp_rng* rng_state = NULL;
   enum sdis_estimator_type type;
   FILE* stream = NULL;
@@ -315,8 +364,8 @@ main(int argc, char** argv)
   /* Create the fluid medium */
   OK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
-  fluid_param = sdis_data_get(data);
-  fluid_param->temperature = 300;
+  fluid_args = sdis_data_get(data);
+  fluid_args->temperature = 300;
   fluid_shader.temperature = fluid_get_temperature;
   OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
   OK(sdis_data_ref_put(data));
@@ -324,12 +373,12 @@ main(int argc, char** argv)
   /* Create the solid medium */
   OK(sdis_data_create
     (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
-  solid_param = sdis_data_get(data);
-  solid_param->cp = 1.0;
-  solid_param->lambda = 0.1;
-  solid_param->rho = 1.0;
-  solid_param->delta = 1.0/20.0;
-  solid_param->temperature = SDIS_TEMPERATURE_NONE; /* Unknown temperature */
+  solid_args = sdis_data_get(data);
+  solid_args->cp = 1.0;
+  solid_args->lambda = 0.1;
+  solid_args->rho = 1.0;
+  solid_args->delta = 1.0/20.0;
+  solid_args->temperature = SDIS_TEMPERATURE_NONE; /* Unknown temperature */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
   solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
   solid_shader.volumic_mass = solid_get_volumic_mass;
@@ -341,10 +390,10 @@ main(int argc, char** argv)
   /* Create the solid/fluid interface */
   OK(sdis_data_create(dev, sizeof(struct interf),
     ALIGNOF(struct interf), NULL, &data));
-  interface_param = sdis_data_get(data);
-  interface_param->hc = 0.5;
-  interface_param->epsilon = 0;
-  interface_param->specular_fraction = 0;
+  interface_args = sdis_data_get(data);
+  interface_args->hc = 0.5;
+  interface_args->epsilon = 0;
+  interface_args->specular_fraction = 0;
   interface_shader.convection_coef = interface_get_convection_coef;
   interface_shader.front = SDIS_INTERFACE_SIDE_SHADER_NULL;
   interface_shader.back.temperature = NULL;
@@ -359,6 +408,10 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid));
 
+  /* Create the radiative environment */
+  radenv = create_radenv(dev, SDIS_TEMPERATURE_NONE, SDIS_TEMPERATURE_NONE);
+  radenv_args = sdis_data_get(sdis_radiative_env_get_data(radenv));
+
   /* Create the scene */
   ctx.positions = box_vertices;
   ctx.indices = box_indices;
@@ -368,6 +421,7 @@ main(int argc, char** argv)
   scn_args.get_position = get_position;
   scn_args.nprimitives = box_ntriangles;
   scn_args.nvertices = box_nvertices;
+  scn_args.radenv = radenv;
   scn_args.context = &ctx;
   OK(sdis_scene_create(dev, &scn_args, &scn));
 
@@ -442,7 +496,7 @@ main(int argc, char** argv)
 
   ref = 300;
   printf("Temperature at (%g, %g, %g) with Tfluid=%g = %g ~ %g +/- %g\n",
-    SPLIT3(solve_args.position), fluid_param->temperature, ref, T.E, T.SE);
+    SPLIT3(solve_args.position), fluid_args->temperature, ref, T.E, T.SE);
   printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -457,10 +511,10 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
 
   /* The external fluid cannot have an unknown temperature */
-  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
+  fluid_args->temperature = SDIS_TEMPERATURE_NONE;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
 
-  fluid_param->temperature = 300;
+  fluid_args->temperature = 300;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
 
   BA(sdis_solve_probe_green_function(NULL, &solve_args, &green));
@@ -484,7 +538,7 @@ main(int argc, char** argv)
   printf("\n");
 
   /* Check same green used at a different temperature */
-  fluid_param->temperature = 500;
+  fluid_args->temperature = 500;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_realisation_count(estimator, &nreals));
@@ -494,7 +548,7 @@ main(int argc, char** argv)
 
   ref = 500;
   printf("Temperature at (%g, %g, %g) with Tfluid=%g = %g ~ %g +/- %g\n",
-    SPLIT3(solve_args.position), fluid_param->temperature, ref, T.E, T.SE);
+    SPLIT3(solve_args.position), fluid_args->temperature, ref, T.E, T.SE);
   printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
   printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
 
@@ -571,10 +625,10 @@ main(int argc, char** argv)
   solve_args.register_paths = SDIS_HEAT_PATH_ALL;
 
   /* Check simulation error handling when paths are registered */
-  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
+  fluid_args->temperature = SDIS_TEMPERATURE_NONE;
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
 
-  fluid_param->temperature = 300;
+  fluid_args->temperature = 300;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_estimator_get_paths_count(estimator, &n));
   CHK(n == N_dump);
@@ -595,14 +649,14 @@ main(int argc, char** argv)
 
   /* Green and ambient radiative temperature */
   solve_args.nrealisations = N;
-  trad.temperature = trad.reference = 300;
+  radenv_args->temperature = 300;
+  radenv_args->reference = 300;
   t_range[0] = 300;
   t_range[1] = 300;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
   OK(sdis_scene_set_temperature_range(scn, t_range));
 
-  interface_param->epsilon = 1;
-  interface_param->reference_temperature = 300;
+  interface_args->epsilon = 1;
+  interface_args->reference_temperature = 300;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
   OK(sdis_solve_probe_green_function(scn, &solve_args, &green));
@@ -615,10 +669,9 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator2));
 
   /* Check same green used at different ambient radiative temperature */
-  trad.temperature = 600;
+  radenv_args->temperature = 300;
   t_range[0] = 300;
   t_range[1] = 600;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
   OK(sdis_scene_set_temperature_range(scn, t_range));
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
@@ -630,6 +683,7 @@ main(int argc, char** argv)
   OK(sdis_estimator_ref_put(estimator));
   OK(sdis_estimator_ref_put(estimator2));
   OK(sdis_green_function_ref_put(green));
+  OK(sdis_radiative_env_ref_put(radenv));
 
   OK(sdis_scene_ref_put(scn));
   OK(sdis_device_ref_put(dev));

@@ -204,6 +204,39 @@ create_source(struct sdis_device* sdis)
 }
 
 /*******************************************************************************
+ * Radiative environment
+ ******************************************************************************/
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return T_RAD;
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return T_REF;
+}
+
+static struct sdis_radiative_env*
+create_radenv(struct sdis_device* sdis)
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(sdis, &shader, NULL, &radenv));
+  return radenv;
+}
+
+/*******************************************************************************
  * Scene, i.e. the system to simulate
  ******************************************************************************/
 struct scene_context {
@@ -245,7 +278,8 @@ create_scene
   (struct sdis_device* sdis,
    const struct mesh* mesh,
    struct sdis_interface* interf,
-   struct sdis_source* source)
+   struct sdis_source* source,
+   struct sdis_radiative_env* radenv)
 {
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
@@ -259,11 +293,10 @@ create_scene
   scn_args.get_position = scene_get_position;
   scn_args.nprimitives = mesh_ntriangles(mesh);
   scn_args.nvertices = mesh_nvertices(mesh);
-  scn_args.trad.temperature = T_RAD;
-  scn_args.trad.reference = T_REF;
   scn_args.t_range[0] = MMIN(T_RAD, T_REF);
   scn_args.t_range[1] = MMAX(T_RAD, T_REF);
   scn_args.source = source;
+  scn_args.radenv = radenv;
   scn_args.context = &context;
   OK(sdis_scene_create(sdis, &scn_args, &scn));
   return scn;
@@ -342,6 +375,7 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_source* source = NULL;
+  struct sdis_radiative_env* radenv = NULL;
 
   /* Miscellaneous */
   struct mesh mesh = MESH_NULL;
@@ -357,7 +391,8 @@ main(int argc, char** argv)
   fluid = create_fluid(dev);
   interf = create_interface(dev, fluid, solid);
   source = create_source(dev);
-  scn = create_scene(dev, &mesh, interf, source);
+  radenv = create_radenv(dev);
+  scn = create_scene(dev, &mesh, interf, source, radenv);
   cam = create_camera(dev);
 
   draw(scn, cam);
@@ -375,6 +410,7 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(solid));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_source_ref_put(source));
+  OK(sdis_radiative_env_ref_put(radenv));
   CHK(mem_allocated_size() == 0);
   return 0;
 }

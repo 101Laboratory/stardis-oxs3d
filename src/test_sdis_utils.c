@@ -86,19 +86,23 @@ accum_flux_terms
 static res_T
 solve_green_path(struct sdis_green_path* path, void* ctx)
 {
-  struct sdis_point pt = SDIS_POINT_NULL;
+  struct sdis_green_path_end end = SDIS_GREEN_PATH_END_NULL;
+
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
+
   struct sdis_solid_shader solid = SDIS_SOLID_SHADER_NULL;
   struct sdis_fluid_shader fluid = SDIS_FLUID_SHADER_NULL;
   struct sdis_interface_shader interf = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_radiative_env_shader radenv = SDIS_RADIATIVE_ENV_SHADER_NULL;
+
   struct sdis_green_function* green = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_source* source = NULL;
   struct green_accum* acc = NULL;
   struct sdis_data* data = NULL;
   enum sdis_medium_type type;
-  enum sdis_green_path_end_type end_type;
   double power = 0;
   double flux = 0;
   double external_flux = 0; /* [W/m^2] */
@@ -143,48 +147,41 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
     external_flux *= sdis_source_get_power(source, INF); /* [W] */
   }
 
-  BA(sdis_green_path_get_end_type(NULL, NULL));
-  BA(sdis_green_path_get_end_type(path, NULL));
-  BA(sdis_green_path_get_end_type(NULL, &end_type));
-  OK(sdis_green_path_get_end_type(path, &end_type));
-
-  BA(sdis_green_path_get_limit_point(NULL, NULL));
-  BA(sdis_green_path_get_limit_point(NULL, &pt));
-  BA(sdis_green_path_get_limit_point(path, NULL));
-  if(end_type == SDIS_GREEN_PATH_END_RADIATIVE) {
-    struct sdis_ambient_radiative_temperature trad;
-    BO(sdis_green_path_get_limit_point(path, &pt));
-
-    BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
-    BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
-    BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
-    OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-    temp = trad.temperature;
-  } else {
-    OK(sdis_green_path_get_limit_point(path, &pt));
-    switch(pt.type) {
-    case SDIS_FRAGMENT:
-      frag = pt.data.itfrag.fragment;
-      OK(sdis_interface_get_shader(pt.data.itfrag.intface, &interf));
-      data = sdis_interface_get_data(pt.data.itfrag.intface);
+  BA(sdis_green_path_get_end(NULL, NULL));
+  BA(sdis_green_path_get_end(NULL, &end));
+  BA(sdis_green_path_get_end(path, NULL));
+  OK(sdis_green_path_get_end(path, &end));
+  switch(end.type) {
+    case SDIS_GREEN_PATH_END_AT_INTERFACE:
+      frag = end.data.itfrag.fragment;
+      OK(sdis_interface_get_shader(end.data.itfrag.intface, &interf));
+      data = sdis_interface_get_data(end.data.itfrag.intface);
       temp = frag.side == SDIS_FRONT
         ? interf.front.temperature(&frag, data)
         : interf.back.temperature(&frag, data);
       break;
-    case SDIS_VERTEX:
-      vtx = pt.data.mdmvert.vertex;
-      type = sdis_medium_get_type(pt.data.mdmvert.medium);
-      data = sdis_medium_get_data(pt.data.mdmvert.medium);
+
+    case SDIS_GREEN_PATH_END_AT_RADIATIVE_ENV:
+      ray = end.data.radenvray.ray;
+      OK(sdis_radiative_env_get_shader(end.data.radenvray.radenv, &radenv));
+      data = sdis_radiative_env_get_data(end.data.radenvray.radenv);
+      temp = radenv.temperature(&ray, data);
+      break;
+
+    case SDIS_GREEN_PATH_END_IN_VOLUME:
+      vtx = end.data.mdmvert.vertex;
+      type = sdis_medium_get_type(end.data.mdmvert.medium);
+      data = sdis_medium_get_data(end.data.mdmvert.medium);
       if(type == SDIS_FLUID) {
-        OK(sdis_fluid_get_shader(pt.data.mdmvert.medium, &fluid));
+        OK(sdis_fluid_get_shader(end.data.mdmvert.medium, &fluid));
         temp = fluid.temperature(&vtx, data);
       } else {
-        OK(sdis_solid_get_shader(pt.data.mdmvert.medium, &solid));
+        OK(sdis_solid_get_shader(end.data.mdmvert.medium, &solid));
         temp = solid.temperature(&vtx, data);
       }
       break;
+
     default: FATAL("Unreachable code.\n"); break;
-    }
   }
 
   weight = temp + power + external_flux + flux;

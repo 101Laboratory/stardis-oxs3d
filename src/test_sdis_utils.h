@@ -149,7 +149,7 @@ square_get_interface
 }
 
 /*******************************************************************************
- * Medium & interface
+ * Medium, interface and ray
  ******************************************************************************/
 static INLINE double
 dummy_medium_getter
@@ -166,6 +166,14 @@ dummy_interface_getter
 {
   (void)data;
   CHK(frag != NULL);
+  return 0;
+}
+
+static INLINE double
+dummy_ray_getter(const struct sdis_radiative_ray* ray, struct sdis_data* data)
+{
+  (void)data;
+  CHK(ray != NULL);
   return 0;
 }
 
@@ -186,7 +194,6 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
   0 /* Initial time */
 };
 
-
 #define DUMMY_INTERFACE_SIDE_SHADER__ {                                        \
   dummy_interface_getter, /* Temperature */                                    \
   dummy_interface_getter, /* Flux */                                           \
@@ -201,6 +208,11 @@ static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   dummy_interface_getter, /* Thermal contact resistance */
   DUMMY_INTERFACE_SIDE_SHADER__, /* Front side */
   DUMMY_INTERFACE_SIDE_SHADER__ /* Back side */
+};
+
+static const struct sdis_radiative_env_shader DUMMY_RAY_SHADER = {
+  dummy_ray_getter,
+  dummy_ray_getter
 };
 
 /*******************************************************************************
