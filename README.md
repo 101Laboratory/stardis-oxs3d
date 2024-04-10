@@ -463,7 +463,7 @@ First version and implementation of the Stardis-Solver API.
 
 ## License
 
-Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
 
 Stardis-Solver is free software released under the GPLv3+ license: GNU
 GPL version 3 or later.  You are welcome to redistribute it under

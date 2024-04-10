@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+# Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
