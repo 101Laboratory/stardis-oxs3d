@@ -61,6 +61,7 @@ struct sdis_device {
 
   struct flist_name interfaces_names;
   struct flist_name media_names;
+  struct flist_name source_names;
 
   struct s2d_device* s2d_dev;
   struct s3d_device* s3d_dev;

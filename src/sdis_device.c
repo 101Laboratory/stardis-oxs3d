@@ -316,8 +316,10 @@ device_release(ref_T* ref)
   if(dev->logger == &dev->logger__) logger_release(&dev->logger__);
   ASSERT(flist_name_is_empty(&dev->interfaces_names));
   ASSERT(flist_name_is_empty(&dev->media_names));
+  ASSERT(flist_name_is_empty(&dev->source_names));
   flist_name_release(&dev->interfaces_names);
   flist_name_release(&dev->media_names);
+  flist_name_release(&dev->source_names);
 #ifdef SDIS_ENABLE_MPI
   if(dev->mpi_mutex) mutex_destroy(dev->mpi_mutex);
   str_release(&dev->mpi_err_str);
@@ -366,6 +368,7 @@ sdis_device_create
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
+  flist_name_init(allocator, &dev->source_names);
 #ifdef SDIS_ENABLE_MPI
   str_init(allocator, &dev->mpi_err_str);
 #endif

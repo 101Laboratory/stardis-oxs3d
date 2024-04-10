@@ -1064,6 +1064,10 @@ sdis_source_get_power
   (struct sdis_source* source,
    const double time); /* [s] */
 
+SDIS_API unsigned
+sdis_source_get_id
+  (const struct sdis_source* source);
+
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
  * support of the interface between 2 media.
