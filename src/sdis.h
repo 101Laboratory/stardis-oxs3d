@@ -249,6 +249,14 @@ typedef double
   (const struct sdis_interface_fragment* frag, /* Interface position */
    struct sdis_data* data); /* User data */
 
+/* Type of functor for obtaining the spatio temporal physical properties of an
+ * interface, as a function of the radiation source */
+typedef double
+(*sdis_radiative_interface_getter_T)
+  (const struct sdis_interface_fragment* frag, /* Interface position */
+   const unsigned source_id, /* Identifier of the radiation source */
+   struct sdis_data* data); /* User data */
+
 /* Type of functor for obtaining radiative environment properties */
 typedef double
 (*sdis_radiative_ray_getter_T)
@@ -311,8 +319,8 @@ struct sdis_interface_side_shader {
 
   /* Control the emissivity of the interface. May be NULL for solid/solid
    * interface or if the emissivity is 0 onto the whole interface. */
-  sdis_interface_getter_T emissivity; /* Overall emissivity. */
-  sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
+  sdis_radiative_interface_getter_T emissivity; /* Overall emissivity */
+  sdis_radiative_interface_getter_T specular_fraction; /* Specular part in [0,1] */
 
   /* Reference temperature used in Picard 1 */
   sdis_interface_getter_T reference_temperature;

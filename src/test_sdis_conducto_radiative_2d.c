@@ -192,10 +192,13 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interfac* interf;
   double e = -1;
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   interf = sdis_data_cget(data);
   switch(frag->side) {
@@ -208,10 +211,13 @@ interface_get_emissivity
 
 static double
 interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interfac* interf;
   double f = -1;
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   interf = sdis_data_cget(data);
   switch(frag->side) {

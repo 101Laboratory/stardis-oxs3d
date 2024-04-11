@@ -144,9 +144,11 @@ interface_get_temperature
 static double
 interface_get_emissivity
   (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
    struct sdis_data* data)
 {
-  (void)frag, (void)data;/* Avoid the "unused variable" warning */
+  /* Avoid the "unused variable" warning */
+  (void)frag, (void)source_id, (void)data;
   return EMISSIVITY;
 }
 

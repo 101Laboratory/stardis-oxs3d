@@ -170,6 +170,17 @@ dummy_interface_getter
 }
 
 static INLINE double
+dummy_radiative_interface_getter
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
+{
+  (void)data, (void)source_id;
+  CHK(frag != NULL);
+  return 0;
+}
+
+static INLINE double
 dummy_ray_getter(const struct sdis_radiative_ray* ray, struct sdis_data* data)
 {
   (void)data;
@@ -197,8 +208,8 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
 #define DUMMY_INTERFACE_SIDE_SHADER__ {                                        \
   dummy_interface_getter, /* Temperature */                                    \
   dummy_interface_getter, /* Flux */                                           \
-  dummy_interface_getter, /* Emissivity */                                     \
-  dummy_interface_getter, /* Specular fraction */                              \
+  dummy_radiative_interface_getter, /* Emissivity */                           \
+  dummy_radiative_interface_getter, /* Specular fraction */                    \
   dummy_interface_getter, /* Reference temperature */                          \
   1 /* Handle external flux */                                                 \
 }

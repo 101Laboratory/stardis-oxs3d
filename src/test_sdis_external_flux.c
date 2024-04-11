@@ -196,17 +196,28 @@ INTERF_PROP(reference_temperature, T_REF) /* [K] */
   static double                                                                \
   interface_get_##Prop                                                         \
     (const struct sdis_interface_fragment* frag,                               \
+     const unsigned source_id,                                                 \
      struct sdis_data* data)                                                   \
   {                                                                            \
     struct interface* interf_data = NULL;                                      \
-    (void)frag; /* Avoid the "unused variable" warning */                      \
+    (void)frag, (void)source_id; /* Avoid the "unused variable" warning */     \
     interf_data = sdis_data_get(data);                                         \
     return interf_data->Prop;                                                  \
   }
 INTERF_PROP(emissivity)
 INTERF_PROP(specular_fraction)
-INTERF_PROP(convection_coef) /* [W/m^2/K] */
 #undef INTERF_PROP
+
+static double /* [W/m^2/K] */
+interface_get_convection_coef
+  (const struct sdis_interface_fragment* frag,
+   struct sdis_data* data)
+{
+  struct interface* interf_data = NULL;
+  (void)frag; /* Avoid the "unused variable" warning */
+  interf_data = sdis_data_get(data);
+  return interf_data->convection_coef;
+}
 
 static struct sdis_interface*
 create_interface

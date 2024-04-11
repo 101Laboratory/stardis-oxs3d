@@ -347,9 +347,12 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interf* interf;
+  (void)source_id;
   CHK(frag && data);
   interf = sdis_data_cget(data);
   return interf->emissivity;
@@ -357,7 +360,8 @@ interface_get_emissivity
 
 static double
 interface_get_Tref
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   struct sdis_data* data)
 {
   const struct interf* interf;
   CHK(frag && data);

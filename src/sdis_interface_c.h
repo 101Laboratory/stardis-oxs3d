@@ -152,7 +152,9 @@ interface_side_get_emissivity
     case SDIS_BACK: shader = &interf->shader.back; break;
     default: FATAL("Unreachable code\n"); break;
   }
-  return shader->emissivity ? shader->emissivity(frag, interf->data) : 0;
+  return shader->emissivity
+    ? shader->emissivity(frag, SDIS_INTERN_SOURCE_ID, interf->data)
+    : 0;
 }
 
 static INLINE double
@@ -168,7 +170,8 @@ interface_side_get_specular_fraction
     default: FATAL("Unreachable code\n"); break;
   }
   return shader->specular_fraction
-    ? shader->specular_fraction(frag, interf->data) : 0;
+    ? shader->specular_fraction(frag, SDIS_INTERN_SOURCE_ID, interf->data)
+    : 0;
 }
 
 static INLINE double

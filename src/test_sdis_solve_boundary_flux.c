@@ -156,9 +156,12 @@ interface_get_temperature
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interf* interf = sdis_data_cget(data);
+  (void)source_id;
   CHK(frag && data);
   return interf->emissivity;
 }
