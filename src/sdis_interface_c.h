@@ -143,6 +143,7 @@ interface_side_get_flux
 static INLINE double
 interface_side_get_emissivity
   (const struct sdis_interface* interf,
+   const unsigned source_id,
    const struct sdis_interface_fragment* frag)
 {
   const struct sdis_interface_side_shader* shader;
@@ -153,13 +154,14 @@ interface_side_get_emissivity
     default: FATAL("Unreachable code\n"); break;
   }
   return shader->emissivity
-    ? shader->emissivity(frag, SDIS_INTERN_SOURCE_ID, interf->data)
+    ? shader->emissivity(frag, source_id, interf->data)
     : 0;
 }
 
 static INLINE double
 interface_side_get_specular_fraction
   (const struct sdis_interface* interf,
+   const unsigned source_id,
    const struct sdis_interface_fragment* frag)
 {
   const struct sdis_interface_side_shader* shader;
@@ -170,7 +172,7 @@ interface_side_get_specular_fraction
     default: FATAL("Unreachable code\n"); break;
   }
   return shader->specular_fraction
-    ? shader->specular_fraction(frag, SDIS_INTERN_SOURCE_ID, interf->data)
+    ? shader->specular_fraction(frag, source_id, interf->data)
     : 0;
 }
 

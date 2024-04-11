@@ -272,23 +272,27 @@ XD(setup_fragment)
 static INLINE res_T
 XD(setup_brdf)
   (struct sdis_device* dev,
+   const struct sdis_source* src,
    struct brdf* brdf,
    const struct sdis_interface* interf,
    const struct sdis_interface_fragment* frag)
 {
   double epsilon = 0;
   double alpha = 0;
+  unsigned src_id = 0;
   res_T res = RES_OK;
   ASSERT(brdf && frag);
   ASSERT((frag->side == SDIS_FRONT
       && sdis_medium_get_type(interf->medium_front) == SDIS_FLUID)
       || sdis_medium_get_type(interf->medium_back) == SDIS_FLUID);
 
-  epsilon = interface_side_get_emissivity(interf, frag);
+  src_id = sdis_source_get_id(src);
+
+  epsilon = interface_side_get_emissivity(interf, src_id, frag);
   res = interface_side_check_emissivity(dev, epsilon, frag->P, frag->time);
   if(res != RES_OK) goto error;
 
-  alpha = interface_side_get_specular_fraction(interf, frag);
+  alpha = interface_side_get_specular_fraction(interf, src_id, frag);
   res = interface_side_check_specular_fraction(dev, alpha, frag->P, frag->time);
   if(res != RES_OK) goto error;
 
@@ -364,7 +368,7 @@ XD(compute_incident_diffuse_flux)
     res = check_interface(interf, &frag);
     if(res != RES_OK) goto error;
 
-    XD(setup_brdf)(scn->dev, &brdf, interf, &frag);
+    XD(setup_brdf)(scn->dev, scn->source, &brdf, interf, &frag);
 
     /* Check if path is absorbed */
     if(ssp_rng_canonical(rng) < brdf.emissivity) break;
@@ -447,6 +451,7 @@ XD(handle_external_net_flux)
   double emissivity = 0; /* Emissivity */
   double Ld = 0; /* Incident radiance [W/m^2/sr] */
   double cos_theta = 0;
+  unsigned src_id = 0;
   int handle_flux = 0;
   res_T res = RES_OK;
   ASSERT(scn && args && T);
@@ -494,7 +499,8 @@ XD(handle_external_net_flux)
   incident_flux = incident_flux_direct + incident_flux_diffuse; /* [W/m^2] */
 
   /* Calculate the net flux */
-  emissivity = interface_side_get_emissivity(args->interf, &frag);
+  src_id = sdis_source_get_id(scn->source);
+  emissivity = interface_side_get_emissivity(args->interf, src_id, &frag);
   res = interface_side_check_emissivity(scn->dev, emissivity, frag.P, frag.time);
   if(res != RES_OK) goto error;
   net_flux = incident_flux * emissivity; /* [W/m^2] */

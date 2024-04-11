@@ -880,7 +880,8 @@ XD(solve_probe_boundary_flux)
     /* Compute hr and hc */
     frag_local.time = time;
     frag_local.side = fluid_side;
-    epsilon = interface_side_get_emissivity(interf, &frag_local);
+    epsilon = interface_side_get_emissivity
+      (interf, SDIS_INTERN_SOURCE_ID, &frag_local);
     Tref = interface_side_get_reference_temperature(interf, &frag_local);
     hc = interface_get_convection_coef(interf, &frag_local);
     if(epsilon <= 0) {

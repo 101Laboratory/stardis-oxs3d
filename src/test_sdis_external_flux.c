@@ -45,7 +45,7 @@
  */
 
 #define T_FLUID 300.0 /* [K] */
-#define T_REF 0 /* [K] */
+#define T_REF 300.0 /* [K] */
 
 /*******************************************************************************
  * Geometries
@@ -202,7 +202,7 @@ INTERF_PROP(reference_temperature, T_REF) /* [K] */
     struct interface* interf_data = NULL;                                      \
     (void)frag, (void)source_id; /* Avoid the "unused variable" warning */     \
     interf_data = sdis_data_get(data);                                         \
-    return interf_data->Prop;                                                  \
+    return source_id == SDIS_INTERN_SOURCE_ID ? 0 : interf_data->Prop;         \
   }
 INTERF_PROP(emissivity)
 INTERF_PROP(specular_fraction)

@@ -159,7 +159,8 @@ XD(solid_fluid_boundary_picard1_path)
   delta = solid_get_delta(solid, &rwalk->vtx);
 
   /* Fetch the boundary emissivity */
-  epsilon = interface_side_get_emissivity(interf, &frag_fluid);
+  epsilon = interface_side_get_emissivity
+    (interf, SDIS_INTERN_SOURCE_ID, &frag_fluid);
 
   if(epsilon <= 0) {
     Tref = 0;

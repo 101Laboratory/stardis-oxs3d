@@ -209,7 +209,8 @@ XD(solid_fluid_boundary_picardN_path)
   delta = solid_get_delta(solid, &rwalk->vtx);
 
   /* Fetch the boundary emissivity */
-  epsilon = interface_side_get_emissivity(interf, &frag_fluid);
+  epsilon = interface_side_get_emissivity
+    (interf, SDIS_INTERN_SOURCE_ID, &frag_fluid);
 
   /* Note that the reinjection distance is *FIXED*. It MUST ensure that the
    * orthogonal distance from the boundary to the reinjection point is at most

@@ -143,7 +143,7 @@ XD(trace_radiative_path)
     XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 
     /* Fetch the interface emissivity */
-    epsilon = interface_side_get_emissivity(interf, &frag);
+    epsilon = interface_side_get_emissivity(interf, SDIS_INTERN_SOURCE_ID, &frag);
     if(epsilon > 1 || epsilon < 0) {
       log_err(scn->dev,
         "%s: invalid overall emissivity `%g' at position `%g %g %g'.\n",
@@ -185,7 +185,7 @@ XD(trace_radiative_path)
         goto error;
       }
     }
-    alpha = interface_side_get_specular_fraction(interf, &frag);
+    alpha = interface_side_get_specular_fraction(interf, SDIS_INTERN_SOURCE_ID, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
       reflect_3d(dir, f3_minus(dir, dir), N);
