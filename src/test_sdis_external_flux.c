@@ -410,8 +410,8 @@ create_scene_2d
   scn_args.get_position = scene_get_position_2d;
   scn_args.nprimitives = nsegments;
   scn_args.nvertices = nvertices_2d;
-  scn_args.t_range[0] = 0; /* [K] */
-  scn_args.t_range[1] = 0; /* [K] */
+  scn_args.t_range[0] = T_REF; /* [K] */
+  scn_args.t_range[1] = T_REF; /* [K] */
   scn_args.source = source;
   scn_args.radenv = radenv;
   scn_args.context = &context;
