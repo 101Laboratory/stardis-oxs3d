@@ -281,17 +281,23 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interf* interf = sdis_data_cget(data);
+  (void)source_id;
   CHK(frag && interf);
   return interf->emissivity;
 }
 
 static double
 interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(frag && data);
   return 0; /* Unused */
 }
@@ -347,19 +353,53 @@ create_interface
 }
 
 /*******************************************************************************
+ * Create the radiative environment
+ ******************************************************************************/
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return 320; /* [K] */
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return 300; /* [K] */
+}
+
+static struct sdis_radiative_env*
+create_radenv(struct sdis_device* sdis)
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(sdis, &shader, NULL, &radenv));
+  return radenv;
+}
+
+/*******************************************************************************
  * Create scene
  ******************************************************************************/
 static void
 create_scene_3d
   (struct sdis_device* dev,
    struct sdis_interface* interfaces[INTERFACES_COUNT__],
+   struct sdis_radiative_env* radenv,
    struct sdis_scene** scn)
 {
   struct geometry geom;
   struct sdis_interface* prim_interfaces[32];
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
 
-  CHK(dev && interfaces && scn);
+  CHK(dev && interfaces && radenv && scn);
 
   /* Setup the per primitive interface of the solid medium */
   prim_interfaces[0] = prim_interfaces[1] = interfaces[ADIABATIC];
@@ -388,8 +428,7 @@ create_scene_3d
   scn_args.t_range[0] = 300;
   scn_args.t_range[1] = 300;
   scn_args.context = &geom;
-  scn_args.trad.temperature = 320;
-  scn_args.trad.reference = 300;
+  scn_args.radenv = radenv;
   OK(sdis_scene_create(dev, &scn_args, scn));
 }
 
@@ -430,6 +469,7 @@ int
 main(int argc, char** argv)
 {
   struct sdis_device* dev = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* scn_3d = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* dummy = NULL;
@@ -464,6 +504,8 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+
+  radenv = create_radenv(dev);
 
   /* Solid medium */
   solid_props.lambda = 1.15;
@@ -517,13 +559,14 @@ main(int argc, char** argv)
   create_interface
     (dev, solid, fluid2, &interf_props, &interfaces[SOLID_FLUID]);
 
-  create_scene_3d(dev, interfaces, &scn_3d);
+  create_scene_3d(dev, interfaces, radenv, &scn_3d);
 
   FOR_EACH(iprobe, 0, nprobes) {
     check(scn_3d, &probes[iprobe]);
   }
 
   /* Release memory */
+  OK(sdis_radiative_env_ref_put(radenv));
   OK(sdis_scene_ref_put(scn_3d));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(dummy));

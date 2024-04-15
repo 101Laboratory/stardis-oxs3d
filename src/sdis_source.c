@@ -18,6 +18,7 @@
 #include "sdis_log.h"
 #include "sdis_source_c.h"
 
+#include <rsys/free_list.h>
 #include <rsys/mem_allocator.h>
 #include <rsys/ref_count.h>
 
@@ -26,6 +27,7 @@
 struct sdis_source {
   struct sdis_spherical_source_create_args spherical;
 
+  struct fid id; /* Unique identifier of the source */
   struct sdis_device* dev;
   ref_T ref;
 };
@@ -69,6 +71,7 @@ release_source(ref_T* ref)
   ASSERT(ref);
   dev = src->dev;
   if(src->spherical.data) SDIS(data_ref_put(src->spherical.data));
+  flist_name_del(&dev->source_names, src->id);
   MEM_RM(dev->allocator, src);
   SDIS(device_ref_put(dev));
 }
@@ -100,6 +103,8 @@ sdis_spherical_source_create
   if(args->data) SDIS(data_ref_get(args->data));
   src->spherical = *args;
   src->dev = dev;
+  src->id = flist_name_add(&dev->source_names);
+  flist_name_get(&dev->source_names, src->id)->mem = src;
 
 exit:
   if(out_src) *out_src = src;
@@ -130,6 +135,13 @@ sdis_source_get_power(struct sdis_source* src, const double time /* [s] */)
 {
   ASSERT(src);
   return source_get_power(src, time);
+}
+
+unsigned
+sdis_source_get_id(const struct sdis_source* source)
+{
+  ASSERT(source);
+  return source->id.index;
 }
 
 /*******************************************************************************

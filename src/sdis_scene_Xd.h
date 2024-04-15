@@ -965,7 +965,6 @@ XD(scene_create)
   SDIS(device_ref_get(dev));
   scn->dev = dev;
   scn->fp_to_meter = args->fp_to_meter;
-  scn->trad = args->trad;
   scn->tmin = args->t_range[0];
   scn->tmax = args->t_range[1];
   scn->outer_enclosure_id = UINT_MAX;
@@ -978,6 +977,11 @@ XD(scene_create)
   if(args->source) {
     SDIS(source_ref_get(args->source));
     scn->source = args->source;
+  }
+
+  if(args->radenv) {
+    SDIS(radiative_env_ref_get(args->radenv));
+    scn->radenv = args->radenv;
   }
 
   res = XD(run_analyze)

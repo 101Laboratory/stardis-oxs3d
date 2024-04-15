@@ -784,7 +784,7 @@ XD(solve_boundary_flux)
     if(res_local!= RES_OK) { ATOMIC_SET(&res, res_local); continue; }
 
     /* Fetch interface parameters */
-    epsilon = interface_side_get_emissivity(interf, &frag);
+    epsilon = interface_side_get_emissivity(interf, SDIS_INTERN_SOURCE_ID, &frag);
     hc = interface_get_convection_coef(interf, &frag);
     Tref = interface_side_get_reference_temperature(interf, &frag);
     if(epsilon <= 0) {

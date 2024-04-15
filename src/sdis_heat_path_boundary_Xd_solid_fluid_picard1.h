@@ -18,6 +18,7 @@
 #include "sdis_interface_c.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
+#include "sdis_radiative_env_c.h"
 #include "sdis_scene_c.h"
 
 #include <star/ssp.h>
@@ -43,7 +44,11 @@ XD(rwalk_get_Tref)
      * fetches the ambient radiative temperature. We do not use the limit
      * conditions as the reference temperature to make the sampled paths
      * independant of them. */
-    Tref = scn->trad.reference;
+    struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
+    ray.dir[0] = rwalk->dir[0];
+    ray.dir[1] = rwalk->dir[1];
+    ray.dir[2] = rwalk->dir[2];
+    Tref = radiative_env_get_reference_temperature(scn->radenv, &ray);
   } else {
     struct sdis_interface_fragment frag;
     struct sdis_interface* interf = NULL;
@@ -154,7 +159,8 @@ XD(solid_fluid_boundary_picard1_path)
   delta = solid_get_delta(solid, &rwalk->vtx);
 
   /* Fetch the boundary emissivity */
-  epsilon = interface_side_get_emissivity(interf, &frag_fluid);
+  epsilon = interface_side_get_emissivity
+    (interf, SDIS_INTERN_SOURCE_ID, &frag_fluid);
 
   if(epsilon <= 0) {
     Tref = 0;

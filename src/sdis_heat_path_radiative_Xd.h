@@ -20,6 +20,7 @@
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
+#include "sdis_radiative_env_c.h"
 #include "sdis_scene_c.h"
 
 #include <star/ssp.h>
@@ -77,44 +78,52 @@ XD(trace_radiative_path)
       (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->hit));
 #endif
     if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
+      struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
+      double trad = 0; /* [K] */
+
       rwalk->hit_side = SDIS_SIDE_NULL__;
-      if(SDIS_TEMPERATURE_IS_KNOWN(scn->trad.temperature)) {
-        T->value += scn->trad.temperature;
-        T->done = 1;
+      d3_set_f3(rwalk->dir, dir);
+      d3_normalize(rwalk->dir, rwalk->dir);
+      d3_set(ray.dir, rwalk->dir);
 
-        if(ctx->green_path) {
-          res = green_path_set_limit_radiative
-            (ctx->green_path, rwalk->elapsed_time);
-          if(res != RES_OK) goto error;
-        }
-        if(ctx->heat_path) {
-          const float empirical_dst = 0.1f;
-          struct sdis_rwalk_vertex vtx;
-
-
-          vtx = rwalk->vtx;
-          vtx.P[0] += dir[0] * empirical_dst;
-          vtx.P[1] += dir[1] * empirical_dst;
-          vtx.P[2] += dir[2] * empirical_dst;
-          res = register_heat_vertex(ctx->heat_path, &vtx, T->value,
-            SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
-          if(res != RES_OK) goto error;
-        }
-        break;
-      } else {
+      trad = radiative_env_get_temperature(scn->radenv, &ray);
+      if(SDIS_TEMPERATURE_IS_UNKNOWN(trad)) {
         log_err(scn->dev,
-          "%s: the random walk reaches an invalid ambient radiative temperature "
-          "of `%gK' at position `%g %g %g'. This may be due to numerical "
-          "inaccuracies or to inconsistency in the simulated system (eg: "
-          "unclosed geometry). For systems where the random walks can reach "
-          "such temperature, one has to setup a valid ambient radiative "
-          "temperature, i.e. it must be greater or equal to 0.\n",
-          FUNC_NAME,
-          scn->trad.temperature,
-          SPLIT3(rwalk->vtx.P));
+          "%s: the random walk has reached an invalid radiative environment from "
+          "position `%g %g %g' along direction `%g %g %g': the temperature is "
+          "unknown. This may be due to numerical inaccuracies or inconsistencies "
+          "in the simulated system (e.g. non-closed geometry). For systems where "
+          "random walks can reach such a temperature, we need to define a valid "
+          "radiative temperature, i.e. one with a known temperature.\n",
+          FUNC_NAME, SPLIT3(rwalk->vtx.P), SPLIT3(rwalk->dir));
         res = RES_BAD_OP;
         goto error;
       }
+
+      T->value += trad;
+      T->done = 1;
+
+      if(ctx->green_path) {
+        res = green_path_set_limit_radiative_ray
+          (ctx->green_path, &ray, rwalk->elapsed_time);
+        if(res != RES_OK) goto error;
+      }
+
+      if(ctx->heat_path) {
+        const float empirical_dst = 0.1f * (float)scn->fp_to_meter;
+        struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+
+        vtx = rwalk->vtx;
+        vtx.P[0] += dir[0] * empirical_dst;
+        vtx.P[1] += dir[1] * empirical_dst;
+        vtx.P[2] += dir[2] * empirical_dst;
+        res = register_heat_vertex(ctx->heat_path, &vtx, T->value,
+          SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
+        if(res != RES_OK) goto error;
+      }
+
+      /* Stop the radiative path */
+      break;
     }
 
     /* Define the hit side */
@@ -134,7 +143,7 @@ XD(trace_radiative_path)
     XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
 
     /* Fetch the interface emissivity */
-    epsilon = interface_side_get_emissivity(interf, &frag);
+    epsilon = interface_side_get_emissivity(interf, SDIS_INTERN_SOURCE_ID, &frag);
     if(epsilon > 1 || epsilon < 0) {
       log_err(scn->dev,
         "%s: invalid overall emissivity `%g' at position `%g %g %g'.\n",
@@ -176,7 +185,7 @@ XD(trace_radiative_path)
         goto error;
       }
     }
-    alpha = interface_side_get_specular_fraction(interf, &frag);
+    alpha = interface_side_get_specular_fraction(interf, SDIS_INTERN_SOURCE_ID, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
       reflect_3d(dir, f3_minus(dir, dir), N);

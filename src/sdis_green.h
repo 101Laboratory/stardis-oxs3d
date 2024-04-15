@@ -84,8 +84,9 @@ green_path_set_limit_vertex
    const double elapsed_time);
 
 extern LOCAL_SYM res_T
-green_path_set_limit_radiative
+green_path_set_limit_radiative_ray
   (struct green_path_handle* handle,
+   const struct sdis_radiative_ray* ray,
    const double elapsed_time);
 
 extern LOCAL_SYM res_T

@@ -347,9 +347,12 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interf* interf;
+  (void)source_id;
   CHK(frag && data);
   interf = sdis_data_cget(data);
   return interf->emissivity;
@@ -357,12 +360,46 @@ interface_get_emissivity
 
 static double
 interface_get_Tref
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   struct sdis_data* data)
 {
   const struct interf* interf;
   CHK(frag && data);
   interf = sdis_data_cget(data);
   return interf->Tref;
+}
+
+/*******************************************************************************
+ * Radiative environment
+ ******************************************************************************/
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return TR; /* [K] */
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return TR; /* [K] */
+}
+
+static struct sdis_radiative_env*
+create_radenv(struct sdis_device* sdis)
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(sdis, &shader, NULL, &radenv));
+  return radenv;
 }
 
 /*******************************************************************************
@@ -712,6 +749,7 @@ main(int argc, char** argv)
   struct sdis_interface* interf_TG = NULL;
   struct sdis_interface* interf_P = NULL;
   struct sdis_interface* interf_TA = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
@@ -726,6 +764,8 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+
+  radenv = create_radenv(dev);
 
   /* Setup the solid shader */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -868,8 +908,7 @@ main(int argc, char** argv)
   scn_args.nprimitives = model3d_ntriangles;
   scn_args.nvertices = model3d_nvertices;
   scn_args.context = model3d_interfaces;
-  scn_args.trad.temperature = TR;
-  scn_args.trad.reference = TR;
+  scn_args.radenv = radenv;
   scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
   scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
@@ -881,8 +920,7 @@ main(int argc, char** argv)
   scn_args.nprimitives = model2d_nsegments;
   scn_args.nvertices = model2d_nvertices;
   scn_args.context = model2d_interfaces;
-  scn_args.trad.temperature = TR;
-  scn_args.trad.reference = TR;
+  scn_args.radenv = radenv;
   scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
   scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
@@ -907,6 +945,7 @@ main(int argc, char** argv)
   solve_tbound2(box_scn, rng);
   solve_tsolid(square_scn, rng);
 
+  OK(sdis_radiative_env_ref_put(radenv));
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
   OK(sdis_device_ref_put(dev));
@@ -915,4 +954,3 @@ main(int argc, char** argv)
   CHK(mem_allocated_size() == 0);
   return 0;
 }
-

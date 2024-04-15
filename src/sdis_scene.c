@@ -108,6 +108,7 @@ scene_release(ref_T * ref)
   if(scn->senc2d_scn) SENC2D(scene_ref_put(scn->senc2d_scn));
   if(scn->senc3d_scn) SENC3D(scene_ref_put(scn->senc3d_scn));
   if(scn->source) SDIS(source_ref_put(scn->source));
+  if(scn->radenv) SDIS(radiative_env_ref_put(scn->radenv));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }
@@ -190,26 +191,6 @@ sdis_scene_set_fp_to_meter
 {
   if(!scn || fp_to_meter <= 0) return RES_BAD_ARG;
   scn->fp_to_meter = fp_to_meter;
-  return RES_OK;
-}
-
-res_T
-sdis_scene_get_ambient_radiative_temperature
-  (const struct sdis_scene* scn,
-   struct sdis_ambient_radiative_temperature* trad)
-{
-  if(!scn || !trad) return RES_BAD_ARG;
-  *trad = scn->trad;
-  return RES_OK;
-}
-
-res_T
-sdis_scene_set_ambient_radiative_temperature
-  (struct sdis_scene* scn,
-   const struct sdis_ambient_radiative_temperature* trad)
-{
-  if(!scn) return RES_BAD_ARG;
-  scn->trad = *trad;
   return RES_OK;
 }
 
@@ -425,6 +406,16 @@ sdis_scene_get_source(struct sdis_scene* scn, struct sdis_source** source)
   return RES_OK;
 }
 
+res_T
+sdis_scene_get_radiative_env
+  (struct sdis_scene* scn,
+   struct sdis_radiative_env** radenv)
+{
+  if(!scn || !radenv) return RES_BAD_ARG;
+  *radenv = scn->radenv;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
@@ -463,6 +454,7 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
 {
   struct sha256_ctx sha256_ctx;
   size_t iprim, nprims;
+  int has_radenv = 0;
   res_T res = RES_OK;
   ASSERT(scn && hash);
 
@@ -476,7 +468,9 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   #define SHA256_UPD(Var, Nb) \
     sha256_ctx_update(&sha256_ctx, (const char*)(Var), sizeof(*Var)*(Nb))
 
-  SHA256_UPD(&scn->trad.reference, 1);
+  has_radenv = scn->radenv != NULL;
+
+  SHA256_UPD(&has_radenv, 1);
   SHA256_UPD(&scn->tmax, 1);
   SHA256_UPD(&scn->fp_to_meter, 1);
 

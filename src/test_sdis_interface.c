@@ -88,18 +88,18 @@ main(int argc, char** argv)
   OK(CREATE(dev, solid, solid, &shader, NULL, &interf));
   OK(sdis_interface_ref_put(interf));
 
-  shader.back.emissivity = dummy_interface_getter;
+  shader.back.emissivity = dummy_radiative_interface_getter;
   OK(CREATE(dev, solid, fluid, &shader, NULL, &interf));
   OK(sdis_interface_ref_put(interf));
-  shader.back.specular_fraction = dummy_interface_getter;
+  shader.back.specular_fraction = dummy_radiative_interface_getter;
   OK(CREATE(dev, solid, fluid, &shader, NULL, &interf));
   OK(sdis_interface_ref_put(interf));
   shader.back = SDIS_INTERFACE_SIDE_SHADER_NULL;
-  shader.front.emissivity = dummy_interface_getter;
+  shader.front.emissivity = dummy_radiative_interface_getter;
   OK(CREATE(dev, solid, fluid, &shader, NULL, &interf)); /* Warning */
   OK(sdis_interface_ref_put(interf));
   shader.front.emissivity = NULL;
-  shader.front.specular_fraction = dummy_interface_getter;
+  shader.front.specular_fraction = dummy_radiative_interface_getter;
   OK(CREATE(dev, solid, fluid, &shader, NULL, &interf)); /* Warning */
   OK(sdis_interface_ref_put(interf));
   shader.front.specular_fraction = NULL;

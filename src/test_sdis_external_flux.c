@@ -45,7 +45,7 @@
  */
 
 #define T_FLUID 300.0 /* [K] */
-#define T_REF 0 /* [K] */
+#define T_REF 300.0 /* [K] */
 
 /*******************************************************************************
  * Geometries
@@ -196,17 +196,28 @@ INTERF_PROP(reference_temperature, T_REF) /* [K] */
   static double                                                                \
   interface_get_##Prop                                                         \
     (const struct sdis_interface_fragment* frag,                               \
+     const unsigned source_id,                                                 \
      struct sdis_data* data)                                                   \
   {                                                                            \
     struct interface* interf_data = NULL;                                      \
-    (void)frag; /* Avoid the "unused variable" warning */                      \
+    (void)frag, (void)source_id; /* Avoid the "unused variable" warning */     \
     interf_data = sdis_data_get(data);                                         \
-    return interf_data->Prop;                                                  \
+    return source_id == SDIS_INTERN_SOURCE_ID ? 0 : interf_data->Prop;         \
   }
 INTERF_PROP(emissivity)
 INTERF_PROP(specular_fraction)
-INTERF_PROP(convection_coef) /* [W/m^2/K] */
 #undef INTERF_PROP
+
+static double /* [W/m^2/K] */
+interface_get_convection_coef
+  (const struct sdis_interface_fragment* frag,
+   struct sdis_data* data)
+{
+  struct interface* interf_data = NULL;
+  (void)frag; /* Avoid the "unused variable" warning */
+  interf_data = sdis_data_get(data);
+  return interf_data->convection_coef;
+}
 
 static struct sdis_interface*
 create_interface
@@ -283,6 +294,39 @@ create_source(struct sdis_device* sdis)
 }
 
 /*******************************************************************************
+ * Radiative environment
+ ******************************************************************************/
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return 0; /* [K] */
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return T_REF; /* [K] */
+}
+
+static struct sdis_radiative_env*
+create_radenv(struct sdis_device* sdis)
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(sdis, &shader, NULL, &radenv));
+  return radenv;
+}
+
+/*******************************************************************************
  * Scene
  ******************************************************************************/
 struct scene_context {
@@ -350,7 +394,8 @@ create_scene_2d
   (struct sdis_device* sdis,
    struct sdis_interface* interf_ground,
    struct sdis_interface* interf_wall,
-   struct sdis_source* source)
+   struct sdis_source* source,
+   struct sdis_radiative_env* radenv)
 {
   struct sdis_scene* scn = NULL;
   struct sdis_source* src = NULL;
@@ -365,11 +410,10 @@ create_scene_2d
   scn_args.get_position = scene_get_position_2d;
   scn_args.nprimitives = nsegments;
   scn_args.nvertices = nvertices_2d;
-  scn_args.trad.temperature = 0; /* [K] */
-  scn_args.trad.reference = T_REF; /* [K] */
-  scn_args.t_range[0] = 0; /* [K] */
-  scn_args.t_range[1] = 0; /* [K] */
+  scn_args.t_range[0] = T_REF; /* [K] */
+  scn_args.t_range[1] = T_REF; /* [K] */
   scn_args.source = source;
+  scn_args.radenv = radenv;
   scn_args.context = &context;
   OK(sdis_scene_2d_create(sdis, &scn_args, &scn));
 
@@ -386,7 +430,8 @@ create_scene_3d
   (struct sdis_device* sdis,
    struct sdis_interface* interf_ground,
    struct sdis_interface* interf_wall,
-   struct sdis_source* source)
+   struct sdis_source* source,
+   struct sdis_radiative_env* radenv)
 {
   struct sdis_scene* scn = NULL;
   struct sdis_source* src = NULL;
@@ -401,11 +446,10 @@ create_scene_3d
   scn_args.get_position = scene_get_position_3d;
   scn_args.nprimitives = ntriangles;
   scn_args.nvertices = nvertices_3d;
-  scn_args.trad.temperature = 0; /* [K] */
-  scn_args.trad.reference = T_REF; /* [K] */
   scn_args.t_range[0] = 0; /* [K] */
   scn_args.t_range[1] = 0; /* [K] */
   scn_args.source = source;
+  scn_args.radenv = radenv;
   scn_args.context = &context;
   OK(sdis_scene_create(sdis, &scn_args, &scn));
 
@@ -491,9 +535,10 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_interface* interf_ground = NULL;
   struct sdis_interface* interf_wall = NULL;
-  struct sdis_source* src = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* scn_2d = NULL;
   struct sdis_scene* scn_3d = NULL;
+  struct sdis_source* src = NULL;
 
   struct interface* ground_interf_data = NULL;
   int is_master_process = 0;
@@ -508,8 +553,9 @@ main(int argc, char** argv)
   interf_wall = create_interface
     (dev, solid, fluid, 1/*emissivity*/, 10/*h*/, NULL);
   src = create_source(dev);
-  scn_2d = create_scene_2d(dev, interf_ground, interf_wall, src);
-  scn_3d = create_scene_3d(dev, interf_ground, interf_wall, src);
+  radenv = create_radenv(dev);
+  scn_2d = create_scene_2d(dev, interf_ground, interf_wall, src, radenv);
+  scn_3d = create_scene_3d(dev, interf_ground, interf_wall, src, radenv);
 
   ground_interf_data->specular_fraction = 0; /* Lambertian */
   check(scn_2d, 10000, 375.88, is_master_process);
@@ -523,6 +569,7 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(solid));
   OK(sdis_interface_ref_put(interf_ground));
   OK(sdis_interface_ref_put(interf_wall));
+  OK(sdis_radiative_env_ref_put(radenv));
   OK(sdis_source_ref_put(src));
   OK(sdis_scene_ref_put(scn_2d));
   OK(sdis_scene_ref_put(scn_3d));

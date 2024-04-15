@@ -306,18 +306,24 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interf* interf = sdis_data_cget(data);
+  (void)source_id;
   CHK(frag && interf);
   return interf->emissivity;
 }
 
 static double
 interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interf* interf = sdis_data_cget(data);
+  (void)source_id;
   CHK(frag && interf);
   return interf->specular_fraction;
 }
@@ -367,6 +373,52 @@ create_interface
 
   OK(sdis_interface_create(dev, front, back, &shader, data, out_interf));
   OK(sdis_data_ref_put(data));
+}
+
+/*******************************************************************************
+ * Radiative environment
+ ******************************************************************************/
+struct radenv {
+  double temperature; /* [K] */
+  double reference; /* [K] */
+};
+
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray;
+  return ((const struct radenv*)sdis_data_cget(data))->temperature;
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray;
+  return ((const struct radenv*)sdis_data_cget(data))->reference;
+}
+
+static struct sdis_radiative_env*
+create_radenv(struct sdis_device* dev)
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+  struct sdis_data* data = NULL;
+  struct radenv* env = NULL;
+
+  OK(sdis_data_create(dev, sizeof(struct radenv), ALIGNOF(radenv), NULL, &data));
+  env = sdis_data_get(data);
+  env->temperature = 300;
+  env->reference = 300;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(dev, &shader, data, &radenv));
+  OK(sdis_data_ref_put(data));
+  return radenv;
 }
 
 /*******************************************************************************
@@ -482,13 +534,14 @@ static void
 create_scene_3d
   (struct sdis_device* dev,
    struct sdis_interface* interfaces[INTERFACES_COUNT__],
+   struct sdis_radiative_env* radenv,
    struct sdis_scene** scn)
 {
   struct geometry geom;
   struct sdis_interface* prim_interfaces[32];
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
 
-  CHK(dev && interfaces && scn);
+  CHK(dev && interfaces && radenv && scn);
 
   /* Setup the per primitive interface of the solid medium */
   prim_interfaces[0] = prim_interfaces[1] = interfaces[ADIABATIC];
@@ -516,6 +569,7 @@ create_scene_3d
   scn_args.nvertices = nvertices_3d;
   scn_args.t_range[0] = 280;
   scn_args.t_range[1] = 350;
+  scn_args.radenv = radenv;
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, scn));
 }
@@ -524,13 +578,14 @@ static void
 create_scene_2d
   (struct sdis_device* dev,
    struct sdis_interface* interfaces[INTERFACES_COUNT__],
+   struct sdis_radiative_env* radenv,
    struct sdis_scene** scn)
 {
   struct geometry geom;
   struct sdis_interface* prim_interfaces[10/*#segment*/];
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
 
-  CHK(dev && interfaces && scn);
+  CHK(dev && interfaces && radenv && scn);
 
   /* Setup the per primitive interface of the solid medium */
   prim_interfaces[0] = interfaces[ADIABATIC];
@@ -554,6 +609,7 @@ create_scene_2d
   scn_args.nvertices = nvertices_2d;
   scn_args.t_range[0] = 280;
   scn_args.t_range[1] = 350;
+  scn_args.radenv = radenv;
   scn_args.context = &geom;
   OK(sdis_scene_2d_create(dev, &scn_args, scn));
 }
@@ -567,14 +623,15 @@ main(int argc, char** argv)
   FILE* stream = NULL;
 
   struct sdis_device* dev = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* scn_2d = NULL;
   struct sdis_scene* scn_3d = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_medium* dummy = NULL;
   struct sdis_interface* interfaces[INTERFACES_COUNT__];
-  struct sdis_ambient_radiative_temperature amb_rad_temp;
 
+  struct radenv* radenv_props = NULL;
   struct solid solid_props;
   struct solid* psolid_props;
   struct reference_result ref = REFERENCE_RESULT_NULL;
@@ -587,6 +644,9 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+
+  radenv = create_radenv(dev);
+  radenv_props = sdis_data_get(sdis_radiative_env_get_data(radenv));
 
   /* Solid medium */
   solid_props.lambda = 1.15;
@@ -637,8 +697,8 @@ main(int argc, char** argv)
     pinterf_props[i] = sdis_data_get(sdis_interface_get_data(interfaces[i]));
   }
 
-  create_scene_2d(dev, interfaces, &scn_2d);
-  create_scene_3d(dev, interfaces, &scn_3d);
+  create_scene_2d(dev, interfaces, radenv, &scn_2d);
+  create_scene_3d(dev, interfaces, radenv, &scn_3d);
 
   CHK((stream = tmpfile()) != NULL);
 
@@ -650,10 +710,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_mX]->Tref = 300;
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
-  amb_rad_temp.temperature = 280;
-  amb_rad_temp.reference = 300;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
+  radenv_props->temperature = 280;
+  radenv_props->reference = 300;
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
@@ -666,10 +724,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_mX]->Tref = ref.T1;
   pinterf_props[SOLID_FLUID_pX]->Tref = ref.T2;
   pinterf_props[BOUNDARY_pX]->Tref = 350;
-  amb_rad_temp.temperature = 280;
-  amb_rad_temp.reference = 280;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
+  radenv_props->temperature = 280;
+  radenv_props->reference = 280;
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
@@ -682,10 +738,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_mX]->Tref = 300;
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
-  amb_rad_temp.temperature = 280;
-  amb_rad_temp.reference = 300;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
+  radenv_props->temperature = 280;
+  radenv_props->reference = 300;
   test_picard(scn_2d, 2/*Picard order*/, &ref);
   test_picard(scn_3d, 2/*Picard order*/, &ref);
   printf("\n");
@@ -705,10 +759,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_mX]->Tref = 350;
   pinterf_props[SOLID_FLUID_pX]->Tref = 450;
   pinterf_props[BOUNDARY_pX]->Tref = pinterf_props[BOUNDARY_pX]->temperature;
-  amb_rad_temp.temperature = t_range[0];
-  amb_rad_temp.reference = t_range[0];
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
+  radenv_props->temperature = t_range[0];
+  radenv_props->reference = t_range[0];
   test_picard(scn_2d, 3/*Picard order*/, &ref);
   test_picard(scn_3d, 3/*Picard order*/, &ref);
   register_heat_paths(scn_2d, 3/*Picard order*/, stream);
@@ -733,10 +785,8 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_mX]->Tref = 300;
   pinterf_props[SOLID_FLUID_pX]->Tref = 300;
   pinterf_props[BOUNDARY_pX]->Tref = 300;
-  amb_rad_temp.temperature = t_range[0];
-  amb_rad_temp.reference = 300;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
+  radenv_props->temperature = t_range[0];
+  radenv_props->reference = 300;
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
@@ -749,15 +799,14 @@ main(int argc, char** argv)
   pinterf_props[SOLID_FLUID_mX]->Tref = ref.T1;
   pinterf_props[SOLID_FLUID_pX]->Tref = ref.T2;
   pinterf_props[BOUNDARY_pX]->Tref = 350;
-  amb_rad_temp.temperature = 280;
-  amb_rad_temp.reference = 280;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_2d, &amb_rad_temp));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn_3d, &amb_rad_temp));
+  radenv_props->temperature = 280;
+  radenv_props->reference = 280;
   test_picard(scn_2d, 1/*Picard order*/, &ref);
   test_picard(scn_3d, 1/*Picard order*/, &ref);
   printf("\n");
 
   /* Release memory */
+  OK(sdis_radiative_env_ref_put(radenv));
   OK(sdis_scene_ref_put(scn_2d));
   OK(sdis_scene_ref_put(scn_3d));
   OK(sdis_interface_ref_put(interfaces[ADIABATIC]));

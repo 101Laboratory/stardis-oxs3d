@@ -22,7 +22,9 @@
 
 #include <rsys/hash.h>
 #include <rsys/rsys.h>
-#include <float.h>
+
+#include <float.h> /* DBL_MAX */
+#include <limits.h> /* UINT_MAX */
 
 /* Library symbol management */
 #if defined(SDIS_SHARED_BUILD)
@@ -55,6 +57,9 @@
 #define SDIS_TEMPERATURE_IS_KNOWN(Temp) (!IS_NaN(Temp))
 #define SDIS_TEMPERATURE_IS_UNKNOWN(Temp) (IS_NaN(Temp))
 
+/* Identifier of the internal source of radiation */
+#define SDIS_INTERN_SOURCE_ID UINT_MAX
+
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
@@ -75,6 +80,7 @@ struct sdis_estimator_buffer;
 struct sdis_green_function;
 struct sdis_interface;
 struct sdis_medium;
+struct sdis_radiative_env; /* Radiative environment */
 struct sdis_scene;
 struct sdis_source;
 
@@ -103,7 +109,7 @@ enum sdis_diffusion_algorithm {
   SDIS_DIFFUSION_NONE = SDIS_DIFFUSION_ALGORITHMS_COUNT__
 };
 
-/* Random walk vertex, i.e. a spatiotemporal position at a given step of the
+/* Random walk vertex, i.e. a spatio-temporal position at a given step of the
  * random walk. */
 struct sdis_rwalk_vertex {
   double P[3]; /* World space position */
@@ -113,7 +119,7 @@ struct sdis_rwalk_vertex {
 static const struct sdis_rwalk_vertex SDIS_RWALK_VERTEX_NULL =
   SDIS_RWALK_VERTEX_NULL__;
 
-/* Spatiotemporal position onto an interface. As a random walk vertex, it
+/* Spatio-temporal position onto an interface. As a random walk vertex, it
  * stores the position and time of the random walk, but since it lies onto an
  * interface, it has additionnal parameters as the normal of the interface and
  * the parametric coordinate of the position onto the interface */
@@ -127,6 +133,14 @@ struct sdis_interface_fragment {
 #define SDIS_INTERFACE_FRAGMENT_NULL__ {{0}, {0}, {0}, -1, SDIS_SIDE_NULL__}
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
+
+/* Ray traced in radiative environment */
+struct sdis_radiative_ray {
+  double dir[3]; /* Direction */
+};
+#define SDIS_RADIATIVE_RAY_NULL__ {{0,0,0}}
+static const struct sdis_radiative_ray SDIS_RADIATIVE_RAY_NULL=
+  SDIS_RADIATIVE_RAY_NULL__;
 
 /* Input arguments of the sdis_device_create function */
 struct sdis_device_create_args {
@@ -234,6 +248,20 @@ typedef double
   (const struct sdis_interface_fragment* frag, /* Interface position */
    struct sdis_data* data); /* User data */
 
+/* Type of functor for obtaining the spatio temporal physical properties of an
+ * interface, as a function of the radiation source */
+typedef double
+(*sdis_radiative_interface_getter_T)
+  (const struct sdis_interface_fragment* frag, /* Interface position */
+   const unsigned source_id, /* Identifier of the radiation source */
+   struct sdis_data* data); /* User data */
+
+/* Type of functor for obtaining radiative environment properties */
+typedef double
+(*sdis_radiative_ray_getter_T)
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data);
+
 /* Define the physical properties of a solid */
 struct sdis_solid_shader {
   /* Properties */
@@ -290,8 +318,8 @@ struct sdis_interface_side_shader {
 
   /* Control the emissivity of the interface. May be NULL for solid/solid
    * interface or if the emissivity is 0 onto the whole interface. */
-  sdis_interface_getter_T emissivity; /* Overall emissivity. */
-  sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
+  sdis_radiative_interface_getter_T emissivity; /* Overall emissivity */
+  sdis_radiative_interface_getter_T specular_fraction; /* Specular part in [0,1] */
 
   /* Reference temperature used in Picard 1 */
   sdis_interface_getter_T reference_temperature;
@@ -325,6 +353,14 @@ struct sdis_interface_shader {
    SDIS_INTERFACE_SIDE_SHADER_NULL__}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
+
+struct sdis_radiative_env_shader {
+  sdis_radiative_ray_getter_T temperature; /* [K] */
+  sdis_radiative_ray_getter_T reference_temperature; /* [K] */
+};
+#define SDIS_RADIATIVE_ENV_SHADER_NULL__ {NULL, NULL}
+static const struct sdis_radiative_env_shader SDIS_RADIATIVE_ENV_SHADER_NULL =
+  SDIS_RADIATIVE_ENV_SHADER_NULL__;
 
 /*******************************************************************************
  * Registered heat path data types
@@ -371,35 +407,39 @@ typedef res_T
  ******************************************************************************/
 enum sdis_green_path_end_type {
   SDIS_GREEN_PATH_END_AT_INTERFACE,
+  SDIS_GREEN_PATH_END_AT_RADIATIVE_ENV,
   SDIS_GREEN_PATH_END_IN_VOLUME,
-  SDIS_GREEN_PATH_END_RADIATIVE,
   SDIS_GREEN_PATH_END_TYPES_COUNT__,
   SDIS_GREEN_PATH_END_ERROR = SDIS_GREEN_PATH_END_TYPES_COUNT__
 };
 
-enum sdis_point_type {
-  SDIS_FRAGMENT,
-  SDIS_VERTEX,
-  SDIS_POINT_TYPES_COUNT__,
-  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
-};
-
 /* Spatio temporal point */
-struct sdis_point {
+struct sdis_green_path_end {
   union {
+    /* Path end in volume */
     struct {
       struct sdis_medium* medium;
       struct sdis_rwalk_vertex vertex;
-    } mdmvert; /* Medium and a vertex into it */
+    } mdmvert;
+    /* Path end at interface */
     struct {
       struct sdis_interface* intface;
       struct sdis_interface_fragment fragment;
-    } itfrag; /* Interface and a fragmetn onto it */
+    } itfrag;
+    /* Path end in radiative environement */
+    struct {
+      struct sdis_radiative_env* radenv;
+      struct sdis_radiative_ray ray;
+    } radenvray;
   } data;
-  enum sdis_point_type type;
+  enum sdis_green_path_end_type type;
 };
-#define SDIS_POINT_NULL__ { {{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
-static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
+#define SDIS_GREEN_PATH_END_NULL__ {                                           \
+  {{NULL, SDIS_RWALK_VERTEX_NULL__}},                                          \
+  SDIS_GREEN_PATH_END_ERROR                                                    \
+}
+static const struct sdis_green_path_end SDIS_GREEN_PATH_END_NULL =
+  SDIS_GREEN_PATH_END_NULL__;
 
 /* Functor used to process the paths registered against the green function */
 typedef res_T
@@ -450,18 +490,6 @@ typedef void
    double pos[], /* Output list of vertex coordinates */
    void* ctx);
 
-struct sdis_ambient_radiative_temperature {
-  double temperature; /* In Kelvin */
-  double reference; /* Used to linearise the radiative transfer */
-};
-#define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {                            \
-  SDIS_TEMPERATURE_NONE,                                                       \
-  SDIS_TEMPERATURE_NONE                                                        \
-}
-static const struct sdis_ambient_radiative_temperature
-SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL =
-  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__;
-
 struct sdis_scene_create_args {
   /* Functors to retrieve the geometric description */
   sdis_get_primitive_indices_T get_indices;
@@ -474,7 +502,6 @@ struct sdis_scene_create_args {
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert a float in meter */
-  struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
 
   /* Min/max temperature used to linearise the radiative temperature */
   double t_range[2];
@@ -482,6 +509,10 @@ struct sdis_scene_create_args {
   /* External source. Can be NULL <=> no external flux will be calculated on
    * scene interfaces */
   struct sdis_source* source;
+
+  /* Radiative environment. Can be NULL <=> sampled radiative trajectories
+   * cannot (in fact must not) reach the surrounding environment */
+  struct sdis_radiative_env* radenv;
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -492,9 +523,9 @@ struct sdis_scene_create_args {
   0, /* #primitives */                                                         \
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
-  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
   {SDIS_TEMPERATURE_NONE, SDIS_TEMPERATURE_NONE}, /* Temperature range */      \
-  NULL /* source */                                                            \
+  NULL, /* source */                                                           \
+  NULL /* Radiative environement */                                            \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;
@@ -1042,6 +1073,34 @@ sdis_interface_get_id
   (const struct sdis_interface* interf);
 
 /*******************************************************************************
+ * API of the radiative environment. Describes the system when the sampled
+ * radiative paths reach infinity.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_radiative_env_create
+  (struct sdis_device* dev,
+   const struct sdis_radiative_env_shader* shader,
+   struct sdis_data* data, /* Data sent to the shader. May be NULL */
+   struct sdis_radiative_env** radenv);
+
+SDIS_API res_T
+sdis_radiative_env_ref_get
+  (struct sdis_radiative_env* radenv);
+
+SDIS_API res_T
+sdis_radiative_env_ref_put
+  (struct sdis_radiative_env* radenv);
+
+SDIS_API res_T
+sdis_radiative_env_get_shader
+  (struct sdis_radiative_env* radenv,
+   struct sdis_radiative_env_shader* shader);
+
+SDIS_API struct sdis_data*
+sdis_radiative_env_get_data
+  (struct sdis_radiative_env* radenv);
+
+/*******************************************************************************
  * External source API. When a scene has external sources, an external flux
  * (in both its direct and diffuse parts) is imposed on the interfaces.
  ******************************************************************************/
@@ -1063,6 +1122,10 @@ SDIS_API double
 sdis_source_get_power
   (struct sdis_source* source,
    const double time); /* [s] */
+
+SDIS_API unsigned
+sdis_source_get_id
+  (const struct sdis_source* source);
 
 /*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
@@ -1136,19 +1199,6 @@ SDIS_API res_T
 sdis_scene_set_fp_to_meter
   (struct sdis_scene* scn,
    const double fp_to_meter);
-
-/* Get scene's ambient radiative temperature */
-SDIS_API res_T
-sdis_scene_get_ambient_radiative_temperature
-  (const struct sdis_scene* scn,
-   struct sdis_ambient_radiative_temperature* trad);
-
-/* Set scene's ambient radiative temperature. If set negative, any sample
- * ending in ambient radiative temperature will fail */
-SDIS_API res_T
-sdis_scene_set_ambient_radiative_temperature
-  (struct sdis_scene* scn,
-   const struct sdis_ambient_radiative_temperature* trad);
 
 /* Get scene's minimum/maximum temperature */
 SDIS_API res_T
@@ -1254,6 +1304,12 @@ SDIS_API res_T
 sdis_scene_get_source
   (struct sdis_scene* scn,
    struct sdis_source** src); /* The returned pointer can be NULL <=> no source */
+
+SDIS_API res_T
+sdis_scene_get_radiative_env
+  (struct sdis_scene* scn,
+   /* The returned pointer can be NULL, i.e. there is no radiative environement*/
+   struct sdis_radiative_env** radenv);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
@@ -1405,18 +1461,12 @@ sdis_green_path_get_elapsed_time
   (struct sdis_green_path* path_handle,
    double* elapsed);
 
-/* Retrieve the path's end type. */
+/* Retrieve the spatio-temporal limit of a path used to estimate the green
+ * function */
 SDIS_API res_T
-sdis_green_path_get_end_type
+sdis_green_path_get_end
   (struct sdis_green_path* path,
-   enum sdis_green_path_end_type* type);
-
-/* Retrieve the spatio-temporal end point of a path used to estimate the green
- * function. Return RES_BAD_OP for paths ending radiative. */
-SDIS_API res_T
-sdis_green_path_get_limit_point
-  (struct sdis_green_path* path,
-   struct sdis_point* pt);
+   struct sdis_green_path_end* end);
 
 /* Retrieve the green function the path belongs to */
 SDIS_API res_T

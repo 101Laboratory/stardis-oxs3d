@@ -87,7 +87,10 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 }
 
 static void
-test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
+test_scene_3d
+  (struct sdis_device* dev,
+   struct sdis_interface* interf,
+   struct sdis_radiative_env* in_radenv)
 {
   size_t duplicated_indices[] = { 0, 1, 2, 0, 2, 1 };
   size_t degenerated_indices[] = { 0, 1, 1 };
@@ -102,6 +105,7 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
     SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_device* dev2 = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   size_t ntris, npos;
   size_t iprim;
   size_t i;
@@ -266,15 +270,31 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   /* No 2D available */
   BA(sdis_scene_get_senc2d_scene(scn, &scn2d));
 
+  BA(sdis_scene_get_radiative_env(NULL, &radenv));
+  BA(sdis_scene_get_radiative_env(scn, NULL));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == NULL);
+
   BA(sdis_scene_ref_get(NULL));
   OK(sdis_scene_ref_get(scn));
   BA(sdis_scene_ref_put(NULL));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_scene_ref_put(scn));
+
+  scn_args.radenv = in_radenv;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == in_radenv);
+  CHK(radenv != NULL);
+
+  OK(sdis_scene_ref_put(scn));
 }
 
 static void
-test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
+test_scene_2d
+  (struct sdis_device* dev,
+   struct sdis_interface* interf,
+   struct sdis_radiative_env* in_radenv)
 {
   size_t duplicated_indices[] = { 0, 1, 1, 0 };
   size_t degenerated_indices[] = { 0, 0 };
@@ -283,8 +303,7 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_scene_find_closest_point_args closest_pt_args =
     SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
-  struct sdis_ambient_radiative_temperature trad =
-    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
+  struct sdis_radiative_env* radenv = NULL;
   double lower[2], upper[2];
   double t_range[2];
   double u0, u1, u2, pos[2], pos1[2];
@@ -378,30 +397,6 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_set_fp_to_meter(scn, fp));
   OK(sdis_scene_get_fp_to_meter(scn, &fp));
   CHK(fp == 2);
-
-  BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
-  BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
-  BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-  if(SDIS_TEMPERATURE_IS_KNOWN(trad.temperature)) {
-    CHK(trad.temperature == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature);
-  } else {
-    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature));
-  }
-  if(SDIS_TEMPERATURE_IS_KNOWN(trad.reference)) {
-    CHK(trad.reference == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference);
-  } else {
-    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference));
-  }
-
-  trad.temperature = 100;
-  trad.reference = 110;
-  BA(sdis_scene_set_ambient_radiative_temperature(NULL, &trad));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
-  trad = SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-  CHK(trad.temperature == 100);
-  CHK(trad.reference == 110);
 
   BA(sdis_scene_get_temperature_range(NULL, NULL));
   BA(sdis_scene_get_temperature_range(scn, NULL));
@@ -511,10 +506,24 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   /* No 3D available */
   BA(sdis_scene_get_senc3d_scene(scn, &scn3d));
 
+  BA(sdis_scene_get_radiative_env(NULL, NULL));
+  BA(sdis_scene_get_radiative_env(scn, NULL));
+  BA(sdis_scene_get_radiative_env(NULL, &radenv));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == NULL);
+
   BA(sdis_scene_ref_get(NULL));
   OK(sdis_scene_ref_get(scn));
   BA(sdis_scene_ref_put(NULL));
   OK(sdis_scene_ref_put(scn));
+  OK(sdis_scene_ref_put(scn));
+
+  scn_args.radenv = in_radenv;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == in_radenv);
+  CHK(radenv != NULL);
+
   OK(sdis_scene_ref_put(scn));
 }
 
@@ -525,9 +534,11 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_interface* interf = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_radiative_env_shader ray_shader = DUMMY_RAY_SHADER;
   (void)argc, (void)argv;
 
   interface_shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
@@ -538,15 +549,17 @@ main(int argc, char** argv)
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   OK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &interf));
+  OK(sdis_radiative_env_create(dev, &ray_shader, NULL, &radenv));
 
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid));
 
-  test_scene_3d(dev, interf);
-  test_scene_2d(dev, interf);
+  test_scene_3d(dev, interf, radenv);
+  test_scene_2d(dev, interf, radenv);
 
   OK(sdis_device_ref_put(dev));
   OK(sdis_interface_ref_put(interf));
+  OK(sdis_radiative_env_ref_put(radenv));
 
   CHK(mem_allocated_size() == 0);
   return 0;
