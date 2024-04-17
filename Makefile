@@ -183,6 +183,7 @@ TEST_SRC =\
  src/test_sdis_data.c\
  src/test_sdis_draw_external_flux.c\
  src/test_sdis_enclosure_limit_conditions.c\
+ src/test_sdis_external_flux_with_diffuse_radiance.c\
  src/test_sdis_flux.c\
  src/test_sdis_flux2.c\
  src/test_sdis_flux_with_h.c\
@@ -392,6 +393,7 @@ test_sdis_volumic_power4 \
 # Tests based on Star-3DUT
 ################################################################################
 src/test_sdis_draw_external_flux.d \
+src/test_sdis_external_flux_with_diffuse_radiance.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
 src/test_sdis_unsteady_analytic_profile.d \
@@ -399,6 +401,7 @@ src/test_sdis_unsteady_analytic_profile.d \
 	@$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis_draw_external_flux.o \
+src/test_sdis_external_flux_with_diffuse_radiance.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
 src/test_sdis_unsteady_analytic_profile.o \
@@ -406,6 +409,7 @@ src/test_sdis_unsteady_analytic_profile.o \
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
 test_sdis_draw_external_flux \
+test_sdis_external_flux_with_diffuse_radiance \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
 test_sdis_unsteady_analytic_profile \
