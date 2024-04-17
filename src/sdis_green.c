@@ -141,6 +141,7 @@ green_path_release(struct green_path* path)
   ASSERT(path);
   darray_flux_term_release(&path->flux_terms);
   darray_power_term_release(&path->power_terms);
+  darray_extflux_terms_release(&path->extflux_terms);
 }
 
 static INLINE res_T
