@@ -375,8 +375,7 @@ XD(compute_incident_diffuse_flux)
        * given instant. It must therefore be multiplied by this radiance to
        * obtain its real contribution. This trick makes it possible to manage
        * the external flux in the green function. */
-      const double Ld = source_get_diffuse_radiance(scn->source, time,  dir);
-      diffuse_flux->scattered = Ld * PI; /* [W/m^2] */
+      diffuse_flux->scattered = PI;
       diffuse_flux->dir[0] = dir[0];
       diffuse_flux->dir[1] = dir[1];
       diffuse_flux->dir[2] = dir[2];
