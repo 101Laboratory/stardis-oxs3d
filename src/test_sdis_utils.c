@@ -42,7 +42,7 @@ accum_power_terms(struct sdis_medium* mdm, const double power_term, void* ctx)
   struct sdis_solid_shader shader = SDIS_SOLID_SHADER_NULL;
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
   struct sdis_data* data = NULL;
-  double* power = ctx;
+  double* power = ctx; /* Power contribution [K] */
 
   CHK(mdm && ctx);
   CHK(sdis_medium_get_type(mdm) == SDIS_SOLID);
@@ -65,7 +65,7 @@ accum_flux_terms
   struct sdis_interface_shader shader = SDIS_INTERFACE_SHADER_NULL;
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
   struct sdis_data* data = NULL;
-  double* flux = ctx;
+  double* flux = ctx; /* Flux contribution [K] */
   double phi;
 
   CHK(interf && ctx);
@@ -80,6 +80,27 @@ accum_flux_terms
     : shader.back.flux(&frag, data);
 
   *flux += flux_term * phi;
+  return RES_OK;
+}
+
+static res_T
+accum_extflux
+  (struct sdis_source* source,
+   const struct sdis_green_external_flux_terms* terms,
+   void* ctx)
+{
+  double* extflux = ctx; /* External flux contribution [K] */
+  double power = 0; /* [W] */
+  double diffuse_radiance = 0; /* [W/m^2/sr] */
+
+  CHK(source && terms && ctx);
+
+  power = sdis_source_get_power(source, terms->time);
+  diffuse_radiance = sdis_source_get_diffuse_radiance
+    (source, terms->time, terms->dir);
+
+  *extflux += terms->term_wrt_power * power;
+  *extflux += terms->term_wrt_diffuse_radiance * diffuse_radiance;
   return RES_OK;
 }
 
@@ -99,13 +120,12 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
 
   struct sdis_green_function* green = NULL;
   struct sdis_scene* scn = NULL;
-  struct sdis_source* source = NULL;
   struct green_accum* acc = NULL;
   struct sdis_data* data = NULL;
   enum sdis_medium_type type;
   double power = 0;
   double flux = 0;
-  double external_flux = 0; /* [W/m^2] */
+  double extflux = 0;
   double time, temp = 0;
   double weight = 0;
   CHK(path && ctx);
@@ -130,22 +150,14 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
   BA(sdis_green_path_for_each_flux_term(path, NULL, &acc));
   OK(sdis_green_path_for_each_flux_term(path, accum_flux_terms, &flux));
 
+  BA(sdis_green_path_for_each_external_flux_terms(NULL, &accum_extflux, &extflux));
+  BA(sdis_green_path_for_each_external_flux_terms(path, NULL, &extflux));
+  OK(sdis_green_path_for_each_external_flux_terms(path, &accum_extflux, &extflux));
+
   BA(sdis_green_path_get_elapsed_time(NULL, NULL));
   BA(sdis_green_path_get_elapsed_time(path, NULL));
   BA(sdis_green_path_get_elapsed_time(NULL, &time));
   OK(sdis_green_path_get_elapsed_time(path, &time));
-
-  BA(sdis_green_path_get_external_flux_term(NULL, &external_flux));
-  BA(sdis_green_path_get_external_flux_term(path, NULL));
-  OK(sdis_green_path_get_external_flux_term(path, &external_flux));
-  OK(sdis_scene_get_source(scn, &source));
-  if(source == NULL) {
-    CHK(external_flux == 0);
-  } else {
-    /* NOTE: source power is assumed constant in time and is therefore retrieved
-     * at steady state*/
-    external_flux *= sdis_source_get_power(source, INF); /* [W] */
-  }
 
   BA(sdis_green_path_get_end(NULL, NULL));
   BA(sdis_green_path_get_end(NULL, &end));
@@ -184,7 +196,7 @@ solve_green_path(struct sdis_green_path* path, void* ctx)
     default: FATAL("Unreachable code.\n"); break;
   }
 
-  weight = temp + power + external_flux + flux;
+  weight = temp + power + extflux + flux;
   acc->sum += weight;
   acc->sum2 += weight*weight;
 

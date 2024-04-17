@@ -50,6 +50,19 @@ struct brdf {
 #define BRDF_NULL__ {0, 0}
 static const struct brdf BRDF_NULL = BRDF_NULL__;
 
+/* Incident diffuse flux is made up of two components. One corresponds to the
+ * diffuse flux due to the reflection of the source on surfaces. The other is
+ * the diffuse flux due to the source's radiation scattering at least once in
+ * the environment. */
+struct incident_diffuse_flux {
+  double reflected; /* [W/m^2] */
+  double scattered; /* [W/m^2] */
+  double dir[3]; /* Direction along wich the scattered part was retrieved */
+};
+#define INCIDENT_DIFFUSE_FLUX_NULL__ {0, 0, {0,0,0}}
+static const struct incident_diffuse_flux INCIDENT_DIFFUSE_FLUX_NULL =
+  INCIDENT_DIFFUSE_FLUX_NULL__;
+
 /* Reflect the V wrt the normal N. By convention V points outward the surface.
  * In fact, this function is a double-precision version of the reflect_3d
  * function. TODO Clean this "repeat" */
@@ -314,15 +327,14 @@ XD(compute_incident_diffuse_flux)
    const double in_N[DIM], /* Surface normal. (Away from the surface) */
    const double time,
    const struct sXd(hit)* in_hit, /* Current intersection */
-   double* out_flux) /* [W/m^2] */
+   struct incident_diffuse_flux* diffuse_flux) /* [W/m^2] */
 {
   struct sXd(hit) hit = SXD_HIT_NULL;
   double pos[3] = {0}; /* In 3D for ray tracing ray to the source */
   double dir[3] = {0}; /* Incident direction (toward the surface). Always 3D.*/
   double N[3] = {0}; /* Surface normal. Always 3D */
-  double incident_diffuse_flux = 0; /* [W/m^2] */
   res_T res = RES_OK;
-  ASSERT(in_pos && in_N && in_hit);
+  ASSERT(in_pos && in_N && in_hit && diffuse_flux);
 
   /* Local copy of input argument */
   dX(set)(pos, in_pos);
@@ -331,6 +343,8 @@ XD(compute_incident_diffuse_flux)
 
   /* Sample a diffusive direction in 3D */
   ssp_ran_hemisphere_cos(rng, N, dir, NULL);
+
+  *diffuse_flux = INCIDENT_DIFFUSE_FLUX_NULL;
 
   for(;;) {
     /* External sources */
@@ -345,7 +359,7 @@ XD(compute_incident_diffuse_flux)
     struct brdf_sample brdf_sample = BRDF_SAMPLE_NULL;
 
     /* Miscellaneous */
-    double L = 0; /* incident direct flux to bounce position */
+    double L = 0; /* incident flux to bounce position */
     double wi[3] = {0}; /* Incident direction (outward the surface). Always 3D */
     double vec[DIM] = {0}; /* Temporary variable */
 
@@ -353,7 +367,21 @@ XD(compute_incident_diffuse_flux)
 
     /* Find the following surface along the direction of propagation */
     XD(trace_ray)(scn, pos, dir, INF, &hit, &hit);
-    if(SXD_HIT_NONE(&hit)) break; /* No surface */
+    if(SXD_HIT_NONE(&hit)) {
+      /* No surface. Handle the radiance emitted by the source and scattered at
+       * least once in the environment. Note that the value returned is not the
+       * actual scattered component of the incident diffuse flux: it relates
+       * to the radiance of the source scattered along the input dir at the
+       * given instant. It must therefore be multiplied by this radiance to
+       * obtain its real contribution. This trick makes it possible to manage
+       * the external flux in the green function. */
+      const double Ld = source_get_diffuse_radiance(scn->source, time,  dir);
+      diffuse_flux->scattered = Ld * PI; /* [W/m^2] */
+      diffuse_flux->dir[0] = dir[0];
+      diffuse_flux->dir[1] = dir[1];
+      diffuse_flux->dir[2] = dir[2];
+      break;
+    }
 
     /* Retrieve the current position and normal */
     dX(add)(pos, pos, dX(muld)(vec, dir, hit.distance));
@@ -385,7 +413,7 @@ XD(compute_incident_diffuse_flux)
 
       if(!SOURCE_SAMPLE_NONE(&src_sample)) {
         const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
-        L = Ld; /* [W/m^2] */
+        L = Ld; /* [W/m^2/sr] */
       }
 
     /* Calculate the direct contribution of the rebound is diffuse */
@@ -401,21 +429,19 @@ XD(compute_incident_diffuse_flux)
 
       /* The source is behind the surface */
       if(cos_theta <= 0) {
-        L = 0; /* [W/m^2] */
+        L = 0; /* [W/m^2/sr] */
 
       /* The source is above the surface */
       } else {
         const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
-        L = Ld * cos_theta / (PI * src_sample.pdf); /* [W/m^2] */
+        L = Ld * cos_theta / (PI * src_sample.pdf); /* [W/m^2/sr] */
       }
     }
-    incident_diffuse_flux += L;
+    diffuse_flux->reflected += L; /* [W/m^2/sr] */
   }
-
-  incident_diffuse_flux *= PI;
+  diffuse_flux->reflected *= PI; /* [W/m^2] */
 
 exit:
-  *out_flux = incident_diffuse_flux;
   return res;
 error:
   goto exit;
@@ -431,15 +457,19 @@ XD(handle_external_net_flux)
    const struct XD(handle_external_net_flux_args)* args,
    struct XD(temperature)* T)
 {
+  /* Terms to be registered in the green function */
+  struct sdis_green_external_flux_terms green =
+    SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL;
+
   /* Sampling external sources */
   struct source_sample src_sample = SOURCE_SAMPLE_NULL;
 
   /* External flux */
+  struct incident_diffuse_flux incident_flux_diffuse = INCIDENT_DIFFUSE_FLUX_NULL;
   double incident_flux = 0; /* [W/m^2] */
-  double incident_flux_diffuse = 0; /* [W/m^2] */
   double incident_flux_direct = 0; /* [W/m^2] */
   double net_flux = 0; /* [W/m^2] */
-  double external_flux_term = 0; /* [W/m^2] */
+  double net_flux_sc = 0; /* [W/m^2] */
 
   /* Sampled path */
   double N[3] = {0}; /* Normal. Always in 3D */
@@ -448,6 +478,7 @@ XD(handle_external_net_flux)
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
 
   /* Miscellaneous */
+  double sum_h = 0;
   double emissivity = 0; /* Emissivity */
   double Ld = 0; /* Incident radiance [W/m^2/sr] */
   double cos_theta = 0;
@@ -495,27 +526,50 @@ XD(handle_external_net_flux)
     (scn, rng, frag.P, N, frag.time, args->hit, &incident_flux_diffuse);
   if(res != RES_OK) goto error;
 
-  /* Calculate the global incident flux */
-  incident_flux = incident_flux_direct + incident_flux_diffuse; /* [W/m^2] */
+  /* Calculate the incident flux without the part scattered by the environment.
+   * The latter depends on the source's diffuse radiance, not on its power. On
+   * the other hand, both the direct incident flux and the diffuse incident flux
+   * reflected by surfaces are linear with respect to the source power. This
+   * term can therefore be recorded in the green function in relation to this
+   * power, whereas the incident diffused flux coming from the scattered source
+   * radiance depends on the diffuse radiance of the source */
+  incident_flux = /* [W/m^2] */
+    incident_flux_direct + incident_flux_diffuse.reflected;
 
-  /* Calculate the net flux */
+  /* Calculate the net flux [W/m^2] */
   src_id = sdis_source_get_id(scn->source);
   emissivity = interface_side_get_emissivity(args->interf, src_id, &frag);
   res = interface_side_check_emissivity(scn->dev, emissivity, frag.P, frag.time);
   if(res != RES_OK) goto error;
   net_flux = incident_flux * emissivity; /* [W/m^2] */
 
-  /* Until now, the net flux was calculated in relation to the source power.
-   * What is calculated is the external flux term of the green function. This
-   * must be multiplied by the source power to obtain the actual external flux*/
-  external_flux_term = net_flux / (args->h_radi + args->h_conv + args->h_cond);
+  /* Calculate the net flux from the radiance source scattered at least once by
+   * the medium */
+  net_flux_sc = incident_flux_diffuse.scattered * emissivity; /* [W/m^2] */
 
-  /* Update the Monte Carlo weight */
-  T->value += external_flux_term * source_get_power(scn->source, frag.time);
+  /* Until now, net flux has been calculated on the basis of source power and
+   * source diffuse radiance. What is actually calculated are the external flux
+   * terms of the green function. These must be multiplied by the source power
+   * and the source diffuse radiance, then added together to give the actual
+   * external flux */
+  sum_h = (args->h_radi + args->h_conv + args->h_cond);
+  green.term_wrt_power = net_flux / sum_h; /* [K/W] */
+  green.term_wrt_diffuse_radiance = net_flux_sc / sum_h; /* [K/W/m^2/sr] */
+  green.time = frag.time; /* [s] */
+  green.dir[0] = incident_flux_diffuse.dir[0];
+  green.dir[1] = incident_flux_diffuse.dir[1];
+  green.dir[2] = incident_flux_diffuse.dir[2];
 
-  /* Register the external net flux term */
+  T->value += green.term_wrt_power * source_get_power(scn->source, green.time);
+  if(green.term_wrt_diffuse_radiance) {
+    T->value +=
+        green.term_wrt_diffuse_radiance
+      * source_get_diffuse_radiance(scn->source, green.time, green.dir);
+  }
+
+  /* Register the external net flux terms */
   if(args->green_path) {
-    res = green_path_add_external_flux_term(args->green_path, external_flux_term);
+    res = green_path_add_external_flux_terms(args->green_path, &green);
     if(res != RES_OK) goto error;
   }
 
