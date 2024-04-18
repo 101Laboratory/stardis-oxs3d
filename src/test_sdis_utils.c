@@ -100,7 +100,9 @@ accum_extflux
   data = sdis_source_get_data(source);
   OK(sdis_spherical_source_get_shader(source, &shader));
   power = shader.power(terms->time, data);
-  diffuse_radiance = shader.diffuse_radiance(terms->time, terms->dir, data);
+  if(shader.diffuse_radiance) {
+    diffuse_radiance = shader.diffuse_radiance(terms->time, terms->dir, data);
+  }
 
   *extflux += terms->term_wrt_power * power;
   *extflux += terms->term_wrt_diffuse_radiance * diffuse_radiance;
