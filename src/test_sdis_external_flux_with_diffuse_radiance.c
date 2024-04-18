@@ -61,6 +61,8 @@
 #define T_REF 300.0 /* [K] */
 #define T_RAD4 (T_RAD*T_RAD*T_RAD*T_RAD)
 
+#define NREALISATIONS 10000
+
 /*******************************************************************************
  * Geometry
  ******************************************************************************/
@@ -323,7 +325,6 @@ check
    const double Ldiff)
 {
   struct sdis_solve_boundary_args args = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
-  struct sdis_solve_probe_args args2 = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
   struct sdis_estimator* estimator = NULL;
   enum sdis_side* sides = NULL;
@@ -336,7 +337,7 @@ check
   args.primitives = mesh->indices;
   args.sides = sides;
   args.nprimitives = mesh->nprimitives;
-  args.nrealisations = 10000;
+  args.nrealisations = NREALISATIONS;
   OK(sdis_solve_boundary(scn, &args, &estimator));
 
   OK(sdis_estimator_get_temperature(estimator, &T));
@@ -345,6 +346,56 @@ check
   OK(sdis_estimator_ref_put(estimator));
 
   CHK(eq_eps(T.E, ref, T.SE * 3));
+
+  mem_rm(sides);
+}
+
+static void
+solve_green(struct sdis_green_function* green, const double Ldiff)
+{
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_estimator* estimator = NULL;
+  double ref = 0;
+
+  OK(sdis_green_function_solve(green, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &T));
+
+  ref = analytic_temperature(Ldiff);
+  printf("Ts = %g ~ %g +/- %g\n", ref, T.E, T.SE);
+  CHK(eq_eps(T.E, ref, T.SE * 3));
+
+  OK(sdis_estimator_ref_put(estimator));
+}
+
+static void
+check_green
+  (struct sdis_scene* scn,
+   const struct s3dut_mesh_data* mesh,
+   double* Ldiff)
+{
+  struct sdis_solve_boundary_args args = SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT;
+  struct sdis_green_function* green = NULL;
+  enum sdis_side* sides = NULL;
+  size_t i = 0;
+
+  CHK(Ldiff);
+
+  sides = mem_alloc(mesh->nprimitives*sizeof(*sides));
+  FOR_EACH(i, 0, mesh->nprimitives) sides[i] = SDIS_FRONT;
+
+  *Ldiff = 0;
+
+  args.primitives = mesh->indices;
+  args.sides = sides;
+  args.nprimitives = mesh->nprimitives;
+  args.nrealisations = NREALISATIONS;
+  OK(sdis_solve_boundary_green_function(scn, &args, &green));
+
+  solve_green(green, (*Ldiff = 50));
+  solve_green(green, (*Ldiff = 45));
+  solve_green(green, (*Ldiff = 40));
+
+  OK(sdis_green_function_ref_put(green));
 
   mem_rm(sides);
 }
@@ -385,6 +436,7 @@ main(int argc, char** argv)
   scene = create_scene(dev, &mesh, interf, source, radenv);
 
   check(scene, &mesh, (*Ldiff = 50));
+  check_green(scene, &mesh, Ldiff);
 
   OK(s3dut_mesh_ref_put(sphere));
   OK(sdis_device_ref_put(dev));
