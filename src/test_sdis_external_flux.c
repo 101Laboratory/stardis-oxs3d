@@ -282,14 +282,13 @@ source_get_power(const double time, struct sdis_data* data)
 static struct sdis_source*
 create_source(struct sdis_device* sdis)
 {
-  struct sdis_spherical_source_create_args args = SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL;
+  struct sdis_spherical_source_shader shader = SDIS_SPHERICAL_SOURCE_SHADER_NULL;
   struct sdis_source* src = NULL;
 
-  args.position = source_get_position;
-  args.power = source_get_power;
-  args.data = NULL;
-  args.radius = 6.5991756e8; /* [m] */
-  OK(sdis_spherical_source_create(sdis, &args, &src));
+  shader.position = source_get_position;
+  shader.power = source_get_power;
+  shader.radius = 6.5991756e8; /* [m] */
+  OK(sdis_spherical_source_create(sdis, &shader, NULL, &src));
   return src;
 }
 

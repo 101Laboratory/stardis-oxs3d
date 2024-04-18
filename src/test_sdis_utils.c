@@ -89,15 +89,18 @@ accum_extflux
    const struct sdis_green_external_flux_terms* terms,
    void* ctx)
 {
+  struct sdis_spherical_source_shader shader = SDIS_SPHERICAL_SOURCE_SHADER_NULL;
+  struct sdis_data* data = NULL;
   double* extflux = ctx; /* External flux contribution [K] */
   double power = 0; /* [W] */
   double diffuse_radiance = 0; /* [W/m^2/sr] */
 
   CHK(source && terms && ctx);
 
-  power = sdis_source_get_power(source, terms->time);
-  diffuse_radiance = sdis_source_get_diffuse_radiance
-    (source, terms->time, terms->dir);
+  data = sdis_source_get_data(source);
+  OK(sdis_spherical_source_get_shader(source, &shader));
+  power = shader.power(terms->time, data);
+  diffuse_radiance = shader.diffuse_radiance(terms->time, terms->dir, data);
 
   *extflux += terms->term_wrt_power * power;
   *extflux += terms->term_wrt_diffuse_radiance * diffuse_radiance;

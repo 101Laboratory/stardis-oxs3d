@@ -188,8 +188,8 @@ typedef double /* [W/perpendicular m^2/sr] */
    const double dir[3],
    struct sdis_data* data);
 
-/* Input arguments of the sdis_spherical_source_create function */
-struct sdis_spherical_source_create_args {
+/* Parameters of an external spherical source */
+struct sdis_spherical_source_shader {
   sdis_get_position_T position; /* [m/fp_to_meter] */
   sdis_get_power_T power; /* Total power [W] */
 
@@ -203,10 +203,9 @@ struct sdis_spherical_source_create_args {
   struct sdis_data* data; /* Data sent to the position functor */
   double radius; /* [m] */
 };
-#define SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__ {NULL, NULL, NULL, 0, 0}
-static const struct sdis_spherical_source_create_args
-SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL =
-  SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__;
+#define SDIS_SPHERICAL_SOURCE_SHADER_NULL__ {NULL, NULL, NULL, 0, 0}
+static const struct sdis_spherical_source_shader
+SDIS_SPHERICAL_SOURCE_SHADER_NULL = SDIS_SPHERICAL_SOURCE_SHADER_NULL__;
 
 struct sdis_scene_find_closest_point_args {
   double position[3]; /* Query position */
@@ -369,6 +368,7 @@ struct sdis_interface_shader {
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
 
+/* Parameters of a radiative environment */
 struct sdis_radiative_env_shader {
   sdis_radiative_ray_getter_T temperature; /* [K] */
   sdis_radiative_ray_getter_T reference_temperature; /* [K] */
@@ -1144,8 +1144,14 @@ sdis_radiative_env_get_data
 SDIS_API res_T
 sdis_spherical_source_create
   (struct sdis_device* dev,
-   struct sdis_spherical_source_create_args* args,
+   const struct sdis_spherical_source_shader* shader,
+   struct sdis_data* data, /* Data sent to the shader. May be NULL */
    struct sdis_source** source);
+
+SDIS_API res_T
+sdis_spherical_source_get_shader
+  (const struct sdis_source* source,
+   struct sdis_spherical_source_shader* shader);
 
 SDIS_API res_T
 sdis_source_ref_get
@@ -1155,17 +1161,9 @@ SDIS_API res_T
 sdis_source_ref_put
   (struct sdis_source* source);
 
-SDIS_API double /* [W] */
-sdis_source_get_power
-  (struct sdis_source* source,
-   const double time); /* [s] */
-
-/* Return the source radiance that is diffused in the environment */
-SDIS_API double /* [W/m^2/sr*] */
-sdis_source_get_diffuse_radiance
-  (struct sdis_source* source,
-   const double time, /* [s] */
-   const double dir[3]);
+SDIS_API struct sdis_data*
+sdis_source_get_data
+  (struct sdis_source* source);
 
 SDIS_API unsigned
 sdis_source_get_id

@@ -222,8 +222,7 @@ source_get_diffuse_radiance
 static struct sdis_source*
 create_source(struct sdis_device* sdis, double** diffuse_radiance)
 {
-  struct sdis_spherical_source_create_args args =
-    SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL;
+  struct sdis_spherical_source_shader shader = SDIS_SPHERICAL_SOURCE_SHADER_NULL;
   struct sdis_data* data = NULL;
   struct sdis_source* src = NULL;
 
@@ -231,12 +230,11 @@ create_source(struct sdis_device* sdis, double** diffuse_radiance)
   *diffuse_radiance = sdis_data_get(data);
   **diffuse_radiance = 0;
 
-  args.position = source_get_position;
-  args.power = source_get_power;
-  args.diffuse_radiance = source_get_diffuse_radiance;
-  args.data = data;
-  args.radius = SOURCE_RADIUS;
-  OK(sdis_spherical_source_create(sdis, &args, &src));
+  shader.position = source_get_position;
+  shader.power = source_get_power;
+  shader.diffuse_radiance = source_get_diffuse_radiance;
+  shader.radius = SOURCE_RADIUS;
+  OK(sdis_spherical_source_create(sdis, &shader, data, &src));
   OK(sdis_data_ref_put(data));
   return src;
 }

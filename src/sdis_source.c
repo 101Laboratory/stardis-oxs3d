@@ -25,7 +25,8 @@
 #include <star/ssp.h>
 
 struct sdis_source {
-  struct sdis_spherical_source_create_args spherical;
+  struct sdis_spherical_source_shader spherical;
+  struct sdis_data* data;
 
   struct fid id; /* Unique identifier of the source */
   struct sdis_device* dev;
@@ -36,27 +37,27 @@ struct sdis_source {
  * Helper functions
  ******************************************************************************/
 static res_T
-check_spherical_source_create_args
+check_spherical_source_shader
   (struct sdis_device* dev,
    const char* func_name,
-   struct sdis_spherical_source_create_args* args)
+   const struct sdis_spherical_source_shader* shader)
 {
   ASSERT(func_name);
-  if(!args) return RES_BAD_ARG;
+  if(!shader) return RES_BAD_ARG;
 
-  if(!args->position) {
+  if(!shader->position) {
     log_err(dev, "%s: the position functor is missing.\n", func_name);
     return RES_BAD_ARG;
   }
 
-  if(!args->power) {
+  if(!shader->power) {
     log_err(dev, "%s: the power functor is missing.\n", func_name);
     return RES_BAD_ARG;
   }
 
-  if(args->radius < 0) {
+  if(shader->radius < 0) {
     log_err(dev, "%s: invalid source radius '%g' m. It cannot be negative.\n",
-      func_name, args->radius);
+      func_name, shader->radius);
     return RES_BAD_ARG;
   }
 
@@ -70,7 +71,7 @@ release_source(ref_T* ref)
   struct sdis_source* src = CONTAINER_OF(ref, struct sdis_source, ref);
   ASSERT(ref);
   dev = src->dev;
-  if(src->spherical.data) SDIS(data_ref_put(src->spherical.data));
+  if(src->data) SDIS(data_ref_put(src->data));
   flist_name_del(&dev->source_names, src->id);
   MEM_RM(dev->allocator, src);
   SDIS(device_ref_put(dev));
@@ -82,14 +83,15 @@ release_source(ref_T* ref)
 res_T
 sdis_spherical_source_create
   (struct sdis_device* dev,
-   struct sdis_spherical_source_create_args* args,
+   const struct sdis_spherical_source_shader* shader,
+   struct sdis_data* data,
    struct sdis_source** out_src)
 {
   struct sdis_source* src = NULL;
   res_T res = RES_OK;
 
   if(!dev || !out_src) { res = RES_BAD_ARG; goto error; }
-  res = check_spherical_source_create_args(dev, FUNC_NAME, args);
+  res = check_spherical_source_shader(dev, FUNC_NAME, shader);
   if(res != RES_OK) goto error;
 
   src = MEM_CALLOC(dev->allocator, 1, sizeof(*src));
@@ -100,8 +102,9 @@ sdis_spherical_source_create
   }
   ref_init(&src->ref);
   SDIS(device_ref_get(dev));
-  if(args->data) SDIS(data_ref_get(args->data));
-  src->spherical = *args;
+  if(data) SDIS(data_ref_get(data));
+  src->spherical = *shader;
+  src->data = data;
   src->dev = dev;
   src->id = flist_name_add(&dev->source_names);
   flist_name_get(&dev->source_names, src->id)->mem = src;
@@ -112,6 +115,16 @@ exit:
 error:
   if(src) { SDIS(source_ref_put(src)); src = NULL; }
   goto exit;
+}
+
+res_T
+sdis_spherical_source_get_shader
+  (const struct sdis_source* source,
+   struct sdis_spherical_source_shader* shader)
+{
+  if(!source || !shader) return RES_BAD_ARG;
+  *shader = source->spherical;
+  return RES_OK;
 }
 
 res_T
@@ -130,19 +143,11 @@ sdis_source_ref_put(struct sdis_source* src)
   return RES_OK;
 }
 
-double
-sdis_source_get_power(struct sdis_source* src, const double time /* [s] */)
+struct sdis_data*
+sdis_source_get_data(struct sdis_source* src)
 {
-  return source_get_power(src, time);
-}
-
-double
-sdis_source_get_diffuse_radiance
-  (struct sdis_source* src,
-   const double time, /* [s] */
-   const double dir[3])
-{
-  return source_get_diffuse_radiance(src, time, dir);
+  ASSERT(src);
+  return src->data;
 }
 
 unsigned
@@ -175,8 +180,8 @@ source_sample
   ASSERT(src && rng && pos && sample);
 
   /* Retrieve current source position, radius and power */
-  src->spherical.position(time, src_pos, src->spherical.data);
-  power = src->spherical.power(time, src->spherical.data);
+  src->spherical.position(time, src_pos, src->data);
+  power = src->spherical.power(time, src->data);
   radius = src->spherical.radius;
 
   if(power < 0) {
@@ -266,8 +271,8 @@ source_trace_to
   }
 
   /* Retrieve current source position and power */
-  src->spherical.position(time, src_pos, src->spherical.data);
-  power = src->spherical.power(time, src->spherical.data);
+  src->spherical.position(time, src_pos, src->data);
+  power = src->spherical.power(time, src->data);
 
   if(power < 0) {
     log_err(src->dev, "%s: invalid source power '%g' W. It cannot be negative.\n",
@@ -326,7 +331,7 @@ double /* [W] */
 source_get_power(const struct sdis_source* src, const double time /* [s] */)
 {
   ASSERT(src);
-  return src->spherical.power(time, src->spherical.data);
+  return src->spherical.power(time, src->data);
 }
 
 double /* [W/perpendicular m^2/sr] */
@@ -339,7 +344,7 @@ source_get_diffuse_radiance
   if(src->spherical.diffuse_radiance == NULL) {
     return 0;
   } else {
-    return src->spherical.diffuse_radiance(time, dir, src->spherical.data);
+    return src->spherical.diffuse_radiance(time, dir, src->data);
   }
 }
 
