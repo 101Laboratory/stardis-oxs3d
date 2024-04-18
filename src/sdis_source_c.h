@@ -66,6 +66,12 @@ source_get_power
   (const struct sdis_source* source,
    const double time); /* [s] */
 
+extern LOCAL_SYM double /* [W/m^2/sr] */
+source_get_diffuse_radiance
+  (const struct sdis_source* source,
+   const double time, /* [s] */
+   const double dir[3]);
+
 extern LOCAL_SYM void
 source_compute_signature
   (const struct sdis_source* source,

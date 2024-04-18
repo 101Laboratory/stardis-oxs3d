@@ -191,6 +191,17 @@ source_get_power(const double time, struct sdis_data* data)
   return SOURCE_POWER; /* [W] */
 }
 
+static double
+source_get_diffuse_radiance
+  (const double time,
+   const double dir[3],
+   struct sdis_data* data)
+{
+  (void)time, (void)data; /* Avoid the "unusued variable" warning */
+  CHK(d3_is_normalized(dir));
+  return 50;
+}
+
 static struct sdis_source*
 create_source(struct sdis_device* sdis)
 {
@@ -199,6 +210,7 @@ create_source(struct sdis_device* sdis)
 
   args.position = source_get_position;
   args.power = source_get_power;
+  args.diffuse_radiance = source_get_diffuse_radiance;
   args.data = NULL;
   args.radius = 3e-1; /* [m] */
   OK(sdis_spherical_source_create(sdis, &args, &source));

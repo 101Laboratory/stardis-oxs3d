@@ -171,24 +171,39 @@ static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
 /* Type of functor used to retrieve the source's position relative to time */
 typedef void
 (*sdis_get_position_T)
-  (const double time,
+  (const double time, /* [s] */
    double pos[3],
    struct sdis_data* data);
 
 /* Type of functor used to retrieve the source's power relative to time */
 typedef double
 (*sdis_get_power_T)
-  (const double time,
+  (const double time, /* [s] */
+   struct sdis_data* data);
+
+/* Type of functor used to retrieve the diffuse part of the external radiance */
+typedef double /* [W/perpendicular m^2/sr] */
+(*sdis_get_diffuse_radiance_T)
+  (const double time, /* [s] */
+   const double dir[3],
    struct sdis_data* data);
 
 /* Input arguments of the sdis_spherical_source_create function */
 struct sdis_spherical_source_create_args {
-  sdis_get_position_T position; /* [m] */
+  sdis_get_position_T position; /* [m/fp_to_meter] */
   sdis_get_power_T power; /* Total power [W] */
+
+  /* Describes the diffuse part of the source's radiance, i.e. the radiance
+   * emitted by the source and scattered at least once in the environment. This
+   * parameter is actually used to approximate a semi-transparent medium. Its
+   * value can be NULL, meaning that the source has not been scattered by the
+   * environment, or, to put it another way, that the source is in a vacuum. */
+  sdis_get_diffuse_radiance_T diffuse_radiance; /* [W/m^2/sr] */
+
   struct sdis_data* data; /* Data sent to the position functor */
   double radius; /* [m] */
 };
-#define SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__ {NULL, NULL, 0, 0}
+#define SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__ {NULL, NULL, NULL, 0, 0}
 static const struct sdis_spherical_source_create_args
 SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL =
   SDIS_SPHERICAL_SOURCE_CREATE_ARGS_NULL__;
@@ -441,27 +456,49 @@ struct sdis_green_path_end {
 static const struct sdis_green_path_end SDIS_GREEN_PATH_END_NULL =
   SDIS_GREEN_PATH_END_NULL__;
 
-/* Functor used to process the paths registered against the green function */
+struct sdis_green_external_flux_terms {
+  /* Term relative to source power [K/W] */
+  double term_wrt_power;
+
+  /* Term relative to diffuse source radiance [K/W/m^2/sr] */
+  double term_wrt_diffuse_radiance;
+
+  double time; /* [s] */
+  double dir[3]; /* Direction on which term_wrt_diffuse_radiance depends */
+};
+#define SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL__ {0,0,0,{0,0,0}}
+static const struct sdis_green_external_flux_terms
+SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL = SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL__;
+
+/* Function profile used to process the paths stored in the green function */
 typedef res_T
 (*sdis_process_green_path_T)
   (struct sdis_green_path* path,
    void* context);
 
-/* Functor used to process the power factor registered along a green path for a
- * given medium */
+/* Function profile used to process power factors registered along a green path
+ * for a given medium */
 typedef res_T
 (*sdis_process_medium_power_term_T)
   (struct sdis_medium* medium,
-   const double power_term,
+   const double power_term, /* [K/W] */
    void* context);
 
-/* Functor used to process the flux factor registered along a green path for a
- * given interface side */
+/* Function profile used to process flux factors recorded along a green path for
+ * a given interface side */
 typedef res_T
 (*sdis_process_interface_flux_term_T)
   (struct sdis_interface* interf,
    const enum sdis_side side,
-   const double flux_term,
+   const double flux_term, /* [K/W/m^2] */
+   void* context);
+
+/* Function profile used to process external flux factors recorded along a green
+ * path */
+typedef res_T
+(*sdis_process_external_flux_terms_T)
+  (struct sdis_source* source,
+   const struct sdis_green_external_flux_terms* terms,
    void* context);
 
 /*******************************************************************************
@@ -1118,10 +1155,17 @@ SDIS_API res_T
 sdis_source_ref_put
   (struct sdis_source* source);
 
-SDIS_API double
+SDIS_API double /* [W] */
 sdis_source_get_power
   (struct sdis_source* source,
    const double time); /* [s] */
+
+/* Return the source radiance that is diffused in the environment */
+SDIS_API double /* [W/m^2/sr*] */
+sdis_source_get_diffuse_radiance
+  (struct sdis_source* source,
+   const double time, /* [s] */
+   const double dir[3]);
 
 SDIS_API unsigned
 sdis_source_get_id
@@ -1486,6 +1530,11 @@ sdis_green_function_get_flux_terms_count
   (const struct sdis_green_path* path,
    size_t* nterms);
 
+SDIS_API res_T
+sdis_green_function_get_external_flux_terms_count
+  (const struct sdis_green_path* path,
+   size_t* nterms);
+
 /* Iterate over all "power terms" associated to the path. Multiply each term
  * by the power of their associated medium, that is assumed to be constant in
  * time and space, gives the medium power registered along the path. */
@@ -1504,13 +1553,12 @@ sdis_green_path_for_each_flux_term
    sdis_process_interface_flux_term_T func,
    void* context);
 
-/* Return the external flux term, i.e. the relative net flux along the path from
- * the external source. Multiply it by the power of the source to obtain its
- * contribution to the path. */
+/* Iterate over all external flux terms associated to the path */
 SDIS_API res_T
-sdis_green_path_get_external_flux_term
+sdis_green_path_for_each_external_flux_terms
   (struct sdis_green_path* path,
-   double* external_flux_term); /* [W/m^2] */
+   sdis_process_external_flux_terms_T func,
+   void* context);
 
 /*******************************************************************************
  * Heat path API

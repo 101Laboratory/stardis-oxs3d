@@ -108,9 +108,9 @@ green_path_add_flux_term
    const double term);
 
 extern LOCAL_SYM res_T
-green_path_add_external_flux_term
+green_path_add_external_flux_terms
   (struct green_path_handle* handle,
-   const double term); /* [W/m^2/sr] */
+   const struct sdis_green_external_flux_terms* terms);
 
 #endif /* SDIS_GREEN_H */
 

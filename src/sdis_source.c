@@ -133,8 +133,16 @@ sdis_source_ref_put(struct sdis_source* src)
 double
 sdis_source_get_power(struct sdis_source* src, const double time /* [s] */)
 {
-  ASSERT(src);
   return source_get_power(src, time);
+}
+
+double
+sdis_source_get_diffuse_radiance
+  (struct sdis_source* src,
+   const double time, /* [s] */
+   const double dir[3])
+{
+  return source_get_diffuse_radiance(src, time, dir);
 }
 
 unsigned
@@ -319,6 +327,20 @@ source_get_power(const struct sdis_source* src, const double time /* [s] */)
 {
   ASSERT(src);
   return src->spherical.power(time, src->spherical.data);
+}
+
+double /* [W/perpendicular m^2/sr] */
+source_get_diffuse_radiance
+  (const struct sdis_source* src,
+   const double time /* [s] */,
+   const double dir[3])
+{
+  ASSERT(src);
+  if(src->spherical.diffuse_radiance == NULL) {
+    return 0;
+  } else {
+    return src->spherical.diffuse_radiance(time, dir, src->spherical.data);
+  }
 }
 
 void

@@ -26,6 +26,7 @@
 
 #include <star/ssp.h>
 
+#include <rsys/cstr.h>
 #include <rsys/dynamic_array.h>
 #include <rsys/hash_table.h>
 #include <rsys/mem_allocator.h>
@@ -83,9 +84,24 @@ flux_term_init(struct mem_allocator* allocator, struct flux_term* term)
 #define DARRAY_FUNCTOR_INIT flux_term_init
 #include <rsys/dynamic_array.h>
 
+static INLINE void
+extflux_terms_init
+  (struct mem_allocator* allocator,
+   struct sdis_green_external_flux_terms* terms)
+{
+  ASSERT(terms); (void)allocator;
+  *terms = SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL;
+}
+
+/* Generate the dynamic array of the external flux terms */
+#define DARRAY_NAME extflux_terms
+#define DARRAY_DATA struct sdis_green_external_flux_terms
+#define DARRAY_FUNCTOR_INIT extflux_terms_init
+#include <rsys/dynamic_array.h>
+
 struct green_path {
   double elapsed_time;
-  double external_flux_term; /* [W/m^2] */
+  struct darray_extflux_terms extflux_terms; /* List of external flux terms */
   struct darray_flux_term flux_terms; /* List of flux terms */
   struct darray_power_term power_terms; /* List of volumic power terms */
   union {
@@ -106,10 +122,10 @@ static INLINE void
 green_path_init(struct mem_allocator* allocator, struct green_path* path)
 {
   ASSERT(path);
+  darray_extflux_terms_init(allocator, &path->extflux_terms);
   darray_flux_term_init(allocator, &path->flux_terms);
   darray_power_term_init(allocator, &path->power_terms);
   path->elapsed_time = -INF;
-  path->external_flux_term = 0;
   path->limit.vertex = SDIS_RWALK_VERTEX_NULL;
   path->limit.fragment = SDIS_INTERFACE_FRAGMENT_NULL;
   path->limit.ray = SDIS_RADIATIVE_RAY_NULL;
@@ -125,6 +141,7 @@ green_path_release(struct green_path* path)
   ASSERT(path);
   darray_flux_term_release(&path->flux_terms);
   darray_power_term_release(&path->power_terms);
+  darray_extflux_terms_release(&path->extflux_terms);
 }
 
 static INLINE res_T
@@ -133,12 +150,13 @@ green_path_copy(struct green_path* dst, const struct green_path* src)
   res_T res = RES_OK;
   ASSERT(dst && src);
   dst->elapsed_time = src->elapsed_time;
-  dst->external_flux_term = src->external_flux_term;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->end_type = src->end_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
+  res = darray_extflux_terms_copy(&dst->extflux_terms, &src->extflux_terms);
+  if(res != RES_OK) return res;
   res = darray_flux_term_copy(&dst->flux_terms, &src->flux_terms);
   if(res != RES_OK) return res;
   res = darray_power_term_copy(&dst->power_terms, &src->power_terms);
@@ -152,12 +170,14 @@ green_path_copy_and_clear(struct green_path* dst, struct green_path* src)
   res_T res = RES_OK;
   ASSERT(dst && src);
   dst->elapsed_time = src->elapsed_time;
-  dst->external_flux_term = src->external_flux_term;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->end_type = src->end_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
+  res = darray_extflux_terms_copy_and_clear
+    (&dst->extflux_terms, &src->extflux_terms);
+  if(res != RES_OK) return res;
   res = darray_flux_term_copy_and_clear(&dst->flux_terms, &src->flux_terms);
   if(res != RES_OK) return res;
   res = darray_power_term_copy_and_clear(&dst->power_terms, &src->power_terms);
@@ -172,12 +192,14 @@ green_path_copy_and_release(struct green_path* dst, struct green_path* src)
   res_T res = RES_OK;
   ASSERT(dst && src);
   dst->elapsed_time = src->elapsed_time;
-  dst->external_flux_term = src->external_flux_term;
   dst->limit = src->limit;
   dst->limit_id = src->limit_id;
   dst->end_type = src->end_type;
   dst->ilast_medium = src->ilast_medium;
   dst->ilast_interf = src->ilast_interf;
+  res = darray_extflux_terms_copy_and_release
+    (&dst->extflux_terms, &src->extflux_terms);
+  if(res != RES_OK) return res;
   res = darray_flux_term_copy_and_release(&dst->flux_terms, &src->flux_terms);
   if(res != RES_OK) return res;
   res = darray_power_term_copy_and_release(&dst->power_terms, &src->power_terms);
@@ -201,7 +223,11 @@ green_path_write(const struct green_path* path, FILE* stream)
 
   /* Write elapsed time */
   WRITE(&path->elapsed_time, 1);
-  WRITE(&path->external_flux_term, 1);
+
+  /* Write the list of external flux terms */
+  sz = darray_extflux_terms_size_get(&path->extflux_terms);
+  WRITE(&sz, 1);
+  WRITE(darray_extflux_terms_cdata_get(&path->extflux_terms), sz);
 
   /* Write the list of flux terms */
   sz = darray_flux_term_size_get(&path->flux_terms);
@@ -252,7 +278,12 @@ green_path_read(struct green_path* path, FILE* stream)
 
   /* Read elapsed time */
   READ(&path->elapsed_time, 1);
-  READ(&path->external_flux_term, 1);
+
+  /* Read the list of external flux terms */
+  READ(&sz, 1);
+  res = darray_extflux_terms_resize(&path->extflux_terms, sz);
+  if(res != RES_OK) goto error;
+  READ(darray_extflux_terms_data_get(&path->extflux_terms), sz);
 
   /* Read the list of flux terms */
   READ(&sz, 1);
@@ -402,14 +433,105 @@ green_function_fetch_interf
   return *pinterf;
 }
 
+static double /* [K] */
+green_path_power_contribution
+  (struct sdis_green_function* green,
+   const struct green_path* path)
+{
+  double temperature = 0; /* [K] */
+  size_t i=0, n=0;
+
+  ASSERT(green && path);
+
+  n = darray_power_term_size_get(&path->power_terms);
+  FOR_EACH(i, 0, n) {
+    struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+    const struct power_term* power_term = NULL;
+    const struct sdis_medium* medium = NULL;
+    double power = 0; /* [W] */
+
+    power_term = darray_power_term_cdata_get(&path->power_terms) + i;
+    medium = green_function_fetch_medium(green, power_term->id);
+
+    /* Dummy argument used only to satisfy the function profile used to recover
+     * power. Its position is unused, since power is assumed to be constant in
+     * space, and its time is set to infinity, since the green function is
+     * assumed to be evaluated at steady state */
+    vtx.time = INF;
+    power = solid_get_volumic_power(medium, &vtx);
+
+    temperature += power_term->term * power; /* [K] */
+  }
+  return temperature; /* [K] */
+}
+
+static double /* [K] */
+green_path_flux_contribution
+  (struct sdis_green_function* green,
+   const struct green_path* path)
+{
+  double temperature = 0;
+  size_t i=0, n=0;
+
+  ASSERT(green && path);
+
+  n = darray_flux_term_size_get(&path->flux_terms);
+  FOR_EACH(i, 0, n) {
+    struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+    const struct flux_term* flux_term = NULL;
+    const struct sdis_interface* interf = NULL;
+    double flux = 0; /* [W/m^2] */
+
+    flux_term = darray_flux_term_cdata_get(&path->flux_terms) + i;
+    interf = green_function_fetch_interf(green, flux_term->id);
+
+    /* Interface fragment. Its position is unused, since flux is assumed to be
+     * constant in space, and its time is set to infinity, since the green
+     * function is assumed to be evaluated at steady state */
+    frag.time = INF;
+    frag.side = flux_term->side;
+    flux = interface_side_get_flux(interf, &frag);
+
+    temperature += flux_term->term * flux; /* [K] */
+  }
+  return temperature; /* [K] */
+}
+
+static double /* [K] */
+green_path_external_flux_contribution
+  (struct sdis_green_function* green,
+   const struct green_path* path)
+{
+  const struct sdis_source* extsrc = NULL;
+  double value = 0;
+  size_t i=0, n=0;
+
+  ASSERT(green && path);
+
+  if((extsrc = green->scn->source) == NULL) return 0;
+
+  n = darray_extflux_terms_size_get(&path->extflux_terms);
+  FOR_EACH(i, 0, n) {
+    const struct sdis_green_external_flux_terms* extflux = NULL;
+    double power = 0; /* [W] */
+    double diffrad = 0; /* [W/m^2/sr] */
+
+    extflux = darray_extflux_terms_cdata_get(&path->extflux_terms)+i;
+    power = source_get_power(extsrc, extflux->time);
+    diffrad = source_get_diffuse_radiance(extsrc, extflux->time, extflux->dir);
+
+    value += extflux->term_wrt_power * power; /* [K] */
+    value += extflux->term_wrt_diffuse_radiance * diffrad; /* [K] */
+  }
+  return value; /* [K] */
+}
+
 static res_T
 green_function_solve_path
   (struct sdis_green_function* green,
    const size_t ipath,
    double* weight)
 {
-  const struct power_term* power_terms = NULL;
-  const struct flux_term* flux_terms = NULL;
   const struct green_path* path = NULL;
   const struct sdis_medium* medium = NULL;
   const struct sdis_interface* interf = NULL;
@@ -421,7 +543,6 @@ green_function_solve_path
   double flux;
   double external_flux;
   double end_temperature;
-  size_t i, n;
   res_T res = RES_OK;
   ASSERT(green && ipath < darray_green_path_size_get(&green->paths) && weight);
 
@@ -431,35 +552,9 @@ green_function_solve_path
     goto error;
   }
 
-  /* Compute medium powers */
-  power = 0;
-  n = darray_power_term_size_get(&path->power_terms);
-  power_terms = darray_power_term_cdata_get(&path->power_terms);
-  FOR_EACH(i, 0, n) {
-    vtx.time = INF;
-    medium = green_function_fetch_medium(green, power_terms[i].id);
-    power += power_terms[i].term * solid_get_volumic_power(medium, &vtx);
-  }
-
-  /* Compute interface fluxes */
-  flux = 0;
-  n = darray_flux_term_size_get(&path->flux_terms);
-  flux_terms = darray_flux_term_cdata_get(&path->flux_terms);
-  FOR_EACH(i, 0, n) {
-    frag.time = INF;
-    frag.side = flux_terms[i].side;
-    interf = green_function_fetch_interf(green, flux_terms[i].id);
-    flux += flux_terms[i].term * interface_side_get_flux(interf, &frag);
-  }
-
-  /* Compute external flux */
-  external_flux = 0;
-  if(green->scn->source) {
-    /* NOTE: The power of the source is assumed to be constant over time and is
-     * therefore recovered at steady state */
-    external_flux =
-      path->external_flux_term * source_get_power(green->scn->source, INF);
-  }
+  power = green_path_power_contribution(green, path);
+  flux = green_path_flux_contribution(green, path);
+  external_flux = green_path_external_flux_contribution(green, path);
 
   /* Compute path's end temperature */
   switch(path->end_type) {
@@ -1279,6 +1374,33 @@ error:
 }
 
 res_T
+sdis_green_function_get_external_flux_terms_count
+  (const struct sdis_green_path* path_handle,
+   size_t* nterms)
+{
+  const struct green_path* path = NULL;
+  struct sdis_green_function* green = NULL;
+  res_T res = RES_OK;
+
+  if(!path_handle || !nterms) {
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  green = path_handle->green__; (void)green;
+  ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
+
+  path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
+
+  *nterms = darray_extflux_terms_size_get(&path->extflux_terms);
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+res_T
 sdis_green_path_for_each_power_term
   (struct sdis_green_path* path_handle,
    sdis_process_medium_power_term_T func,
@@ -1354,25 +1476,41 @@ error:
 }
 
 res_T
-sdis_green_path_get_external_flux_term
+sdis_green_path_for_each_external_flux_terms
   (struct sdis_green_path* path_handle,
-   double* external_flux_term)
+   sdis_process_external_flux_terms_T func,
+   void* context)
 {
   const struct green_path* path = NULL;
   struct sdis_green_function* green = NULL;
+  size_t i, n;
   res_T res = RES_OK;
 
-  if(!path_handle || !external_flux_term) {
+  if(!path_handle || !func) {
     res = RES_BAD_ARG;
     goto error;
   }
 
-  green = path_handle->green__; (void)green;
+  green = path_handle->green__;
   ASSERT(path_handle->id__ < darray_green_path_size_get(&green->paths));
 
   path = darray_green_path_cdata_get(&green->paths) + path_handle->id__;
 
-  *external_flux_term = path->external_flux_term;
+  n = darray_extflux_terms_size_get(&path->extflux_terms);
+  if(n && !green->scn->source) {
+    /* In can't have external flux terms without an external source */
+    log_err(green->scn->dev, "%s: the external source is missing\n", FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  FOR_EACH(i, 0, n) {
+    const struct sdis_green_external_flux_terms* terms = NULL;
+    terms = darray_extflux_terms_cdata_get(&path->extflux_terms) + i;
+
+    res = func(green->scn->source, terms, context);
+    if(res != RES_OK) goto error;
+  }
 
 exit:
   return res;
@@ -1743,11 +1881,23 @@ error:
 }
 
 res_T
-green_path_add_external_flux_term
+green_path_add_external_flux_terms
   (struct green_path_handle* handle,
-   const double val) /* [W/m^2/sr] */
+   const struct sdis_green_external_flux_terms* terms)
 {
-  ASSERT(handle);
-  handle->path->external_flux_term += val;
-  return RES_OK;
+  res_T res = RES_OK;
+  ASSERT(handle && terms);
+
+  res = darray_extflux_terms_push_back(&handle->path->extflux_terms, terms);
+  if(res != RES_OK) {
+    log_err(handle->green->scn->dev,
+      "%s: cannot store external flux terms -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
 }
