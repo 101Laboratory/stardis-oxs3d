@@ -22,7 +22,7 @@
 #include <star/s3dut.h>
 #include <star/ssp.h>
 
-#ifndef SDIS_ENABLE_MPI
+#ifdef SDIS_ENABLE_MPI
   #include <mpi.h>
 #endif
 
