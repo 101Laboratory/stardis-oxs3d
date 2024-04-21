@@ -546,7 +546,7 @@ XD(solve_probe_boundary_list)
 
   /* Miscellaneous */
   int32_t* progress = NULL; /* Per process progress bar */
-  int is_master_process = 0;
+  int is_master_process = 1;
   int pcent_progress = 1; /* Percentage requiring progress update */
   int64_t i = 0;
   ATOMIC nsolved_probes = 0;

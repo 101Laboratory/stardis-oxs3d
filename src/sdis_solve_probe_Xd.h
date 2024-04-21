@@ -504,7 +504,7 @@ XD(solve_probe_list)
   /* Miscellaneous */
   int32_t* progress = NULL; /* Per process progress bar */
   int pcent_progress = 1; /* Percentage requiring progress update */
-  int is_master_process = 0;
+  int is_master_process = 1;
   int64_t i = 0;
   ATOMIC nsolved_probes = 0;
   ATOMIC res = RES_OK;
