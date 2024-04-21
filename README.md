@@ -8,82 +8,20 @@ as cross-recursive "thermal paths" that explore space and time until a
 boundary condition or an initial condition is found. The key concept
 here is that heat transfer phenomena are not considered separately but
 naturally coupled via cross-recursive [Monte-Carlo
-algorithms](https://hal.archives-ouvertes.fr/hal-02419604/).
-
-The hypothesis these algorithms are based upon are the following:
-
-- *conduction*: the discretization of thermal heat transfer in solids
-  introduces the notion of a conductive path length within the
-  Monte-Carlo algorithm.  Solutions obtained using this algorithm are
-  formally exact at the limit of a null path length. In practice, this
-  path length has to be adapted for a given geometric configuration so
-  that its value is small compared to the smallest typical length of a
-  solid.
-- *convection*: fluid media are supposed to be isothermal, even if their
-  temperature may vary with time. This hypothesis relies on the
-  assumption of perfectly agitated fluids.
-- *radiation*: local radiative transfer is solved by an [iterative
-  numerical method](https://hal.archives-ouvertes.fr/tel-03266863/)
-  (Picard algorithm) that requires the knowledge of a reference
-  temperature field. At the basic level (one level of recursion), and
-  using a uniform reference temperature field, this algorithm translates
-  into the hypothesis of a linearized radiative transfer. Using a higher
-  order or recursion makes possible to converge the result closer to the
-  solution of a rigorous spectrally-integrated radiative transfer (a
-  difference of temperatures to the power 4 when integrated over the
-  whole spectrum). The higher the recursion order, the better will be
-  the convergence of the algorithm.
+algorithms](https://doi.org/10.1371/journal.pone.0283681)
 
 In Stardis-Solver the system to simulate is represented by a *scene*
 whose geometry defines the contour of the object only: in contrast to
 legacy thermal solvers *no volumetric mesh* has to be provided. Each
 geometric primitive as an associated *interface* that defines its
 physical properties (e.g. surface emissivity) and reference the *media*
-defining the thermal properties on both side of the primitive. The
-boundary and initial conditions are defined defined on the interfaces
-(convection coefficient, fixed temperature/flux, etc.) and the media
-(known temperature). Once fully and consistently described, computations
-can be invoked on the resulting scene.
-
-The main features of the solver are currently:
-
-- *probe computation*: Stardis-Solver will compute the temperature at
-  any given position (spatial and temporal). The main idea is that
-  thermal paths start from this probe position, and scatter in space
-  while going back in time, until a (spatial) boundary condition or a
-  (temporal) initial condition is met. In addition to the value of
-  temperature, using a Monte-Carlo method makes possible to compute a
-  numerical uncertainty (standard deviation of the weight distribution)
-  over each result.
-- *flux computation*: Stardis-Solver can compute the flux over any
-  surface (or group of surfaces) at any time. Alternatively, it can also
-  compute the total energy output from a solid element where a internal
-  source of power must be taken into account.
-- *green function*: the value of temperature computed at a probe
-  position is the average of the Monte-Carlo weight for every thermal
-  path. In practice: when no internal power sources have to be
-  considered, the weight of any given thermal path is the temperature of
-  the boundary or initial condition that has been reached; when internal
-  power sources or imposed fluxes are taken into account, additional
-  contributions to the weight must be continuously evaluated by the
-  thermal conduction algorithm, but these contributions are proportional
-  to the local dissipated power/imposed flux. In any case, the position
-  and date at the end of each thermal path (and also accumulation
-  coefficients) can be stored during a first complete Monte-Carlo
-  simulation.  This information, known as the Green function, can then
-  be used in (very fast) post-processing to compute all required results
-  for different boundary and initial conditions (and also different
-  internal power sources/imposed flux). Note that when using the Green
-  function, only boundary and initial conditions (as well as internal
-  power sources) can be modified: in particular, the geometry, thermal
-  properties and exchange coefficients have to remain identical.
-  Furthermore, the green function is only valid under the assumption of
-  linearized radiative transfer.
-- *path visualization*: Stardis-Solver can store the complete spatial
-  and temporal position along a set of thermal paths, for latter
-  visualization. In addition of their position and, each thermal path
-  vertex register additional data as the type of thermal phenomena it
-  simulates, the accumulated power/flux along the path, etc.
+defining the thermal properties on both side of the primitive.  The
+boundary conditions are defined on the interfaces (convection
+coefficient, fixed temperature/flux, etc.), the media (known
+temperature), the *radiative environment* (ambient radiative
+temperature) or an *external source* (incident flux).  Once fully and
+consistently described, computations can be invoked on the resulting
+scene.
 
 Stardis-Solver is currently used in two frameworks. The
 [Stardis](https://gitlab.com/meso-star/stardis.git) CLI and its
@@ -96,6 +34,105 @@ Stardis-Solver is also integrated into
 [SYRTHES](https://www.edf.fr/en/the-edf-group/world-s-largest-power-company/activities/research-and-development/scientific-communities/simulation-softwares?logiciel=10818),
 the general thermal free software developed by Electricité De France
 (EDF).
+
+The hypothesis these algorithms are based upon are the following:
+
+- *Conduction*: Stardis-Solver offers two ways of sampling unsteady
+  Brownian motion to solve for conductivity in a solid.  The delta
+  sphere algorithm is based on the discrimination of thermal heat
+  transfer in solids, which introduces the notion of conductive path
+  length. Solutions obtained using this algorithm are formally exact
+  to the limit of zero path length. In practice, this path length
+  must be adapted to a given geometrical configuration so that its
+  value is small compared to the smallest typical space-time length
+  of a solid.
+
+  As an alternative, the
+  [Walk on Sphere](https://www.jstor.org/stable/2237369)
+  algorithm samples an unbiased diffuse trajectory in a solid with
+  Dirichlet boundary conditions, unbiased with respect to what numerical
+  accuracy can account for. Its coupling with other boundary or
+  connection conditions behaves as with the delta sphere algorithm, i.e.
+  the solution is exact when the length of the trajectory used as a
+  first-order approximation tends towards 0.
+
+- *Convection*: fluid media are supposed to be isothermal, even if
+  their temperature may vary with time. This hypothesis relies on
+  the assumption of perfectly agitated fluids.
+
+- *Radiation*: local radiative transfer is solved by an [iterative
+  numerical method](https://hal.archives-ouvertes.fr/tel-03266863/)
+  (Picard algorithm) that requires the knowledge of a reference
+  temperature field.  At the basic level (one level of recursion), and
+  using a uniform reference temperature field, this algorithm translates
+  into the hypothesis of a linearised radiative transfer. Using a higher
+  order or recursion makes possible to converge the result closer to the
+  solution of a rigorous spectrally-integrated radiative transfer (a
+  difference of temperatures to the power 4 when integrated over the
+  whole spectrum).  The higher the recursion order, the better will be
+  the convergence of the algorithm.
+
+Despite its specific advantages, Stardis-Solver is not meant to fully
+replace already well established and highly validated thermal simulation
+tools.  Instead, it can be seen as an additional tool that can be useful
+for various purposes:
+
+- *Probe computation*: Stardis-Solver will *not* compute the full
+  temperature field of a system; instead, it can be used to focus on a
+  specific spatial/temporal zone of the system.  The main idea is that
+  thermal paths start from this probe position, and scatter in space
+  while going back in time, until a (spatial) boundary condition or a
+  (temporal) initial condition is met. In addition to the value of
+  temperature, using a Monte-Carlo method makes possible to compute a
+  numerical uncertainty (standard deviation of the weight distribution)
+  over each result.
+
+- *Integrated calculation*: thanks to Monte-Carlo, Stardis-Solver can
+  calculate the temperature of an entire volume or surface, over a given
+  time range, without increasing calculation time or uncertainty
+  compared with a probe-based calculation at a specific point in time.
+
+- *Flux computation*: Stardis-Solver can compute the flux over any
+  surface (or group of surfaces) at any time or time range.
+  Alternatively, it can also compute the total energy output from a
+  solid element where a internal source of power must be taken into
+  account.
+
+- *Infrared rendering*: Stardis-Solver can be used to simulate the
+  radiative temperature reaching the sensor of a camera.
+  The [image rendering](https://dx.doi.org/10.1145/3592121)
+  will take into account coupled (unsteady) phenomena and the entire
+  geometry *without* ever having to calculate the temperature field.
+
+- *Green function*: the value of temperature computed at a probe
+  position is the average of the Monte-Carlo weight for every thermal
+  path. In practice: when no internal power sources have to be
+  considered, the weight of any given thermal path is the temperature of
+  the boundary or initial condition that has been reached; when internal
+  power sources, imposed fluxes or an external source are taken into
+  account, additional contributions to the weight must be continuously
+  evaluated by the thermal conduction algorithm, but, under linear
+  assumption, these contributions are proportional to the local
+  dissipated power, imposed flux or external source radiance.
+
+  So the position and date at the end of each thermal path (and also
+  accumulation coefficients) can be stored during a first complete
+  Monte-Carlo simulation. This is actually an estimates of the Green
+  function, can then be used in (very fast)
+  [post-processing](https://doi.org/10.1016/j.cpc.2023.108911) to
+  compute all required results for different boundary and initial
+  conditions (and also different internal power density, imposed or
+  incident flux). Note that when using the Green function, only boundary
+  and initial conditions (as well as internal power sources) can be
+  modified: in particular, the geometry, thermal properties and exchange
+  coefficients have to remain identical. Furthermore, the green function
+  is only valid under the assumption of linearised radiative transfer.
+
+- *Path visualization*: Stardis-Solver can store the complete spatial
+  and temporal position along a set of thermal paths, for latter
+  visualization. In addition of their position and, each thermal path
+  vertex register additional data as the type of thermal phenomena it
+  simulates, the accumulated power/flux along the path, etc.
 
 ## Requirements
 
