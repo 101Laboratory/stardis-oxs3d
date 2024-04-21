@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,6 @@
 
 #include <rsys/math.h>
 #include <star/ssp.h>
-
-#define UNKNOWN_TEMPERATURE -1
 
 /* The scene is composed of a solid cube whose temperature is unknown. The cube
  * faces on +/-X are in contact with a fluid and their convection coefficient
@@ -134,7 +132,7 @@ static double
 temperature_unknown(const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(vtx != NULL); (void)data;
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -179,7 +177,7 @@ solid_get_temperature
   CHK(data != NULL);
   t0 = ((const struct solid*)sdis_data_cget(data))->t0;
   if(vtx->time > t0) {
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   } else {
     return ((const struct solid*)sdis_data_cget(data))->initial_temperature;
   }
@@ -214,16 +212,22 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   return ((const struct interfac*)sdis_data_cget(data))->emissivity;
 }
 
 static double
 interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   return ((const struct interfac*)sdis_data_cget(data))->specular_fraction;
 }
@@ -395,7 +399,7 @@ main(int argc, char** argv)
   OK(sdis_data_ref_put(data));
 
   /* Create the interface that forces to keep in conduction */
-  interf.temperature = UNKNOWN_TEMPERATURE;
+  interf.temperature = SDIS_TEMPERATURE_NONE;
   interf.convection_coef = -1;
   interf.emissivity = -1;
   interf.specular_fraction = -1;
@@ -403,7 +407,7 @@ main(int argc, char** argv)
   create_interface(dev, solid, solid2, &interf, interfaces+0);
 
   /* Create the interface that emits radiative heat from the solid */
-  interf.temperature = UNKNOWN_TEMPERATURE;
+  interf.temperature = SDIS_TEMPERATURE_NONE;
   interf.convection_coef = 0;
   interf.emissivity = emissivity;
   interf.specular_fraction = 1;
@@ -411,7 +415,7 @@ main(int argc, char** argv)
   create_interface(dev, solid, fluid, &interf, interfaces+1);
 
   /* Create the interface that forces the radiative heat to bounce */
-  interf.temperature = UNKNOWN_TEMPERATURE;
+  interf.temperature = SDIS_TEMPERATURE_NONE;
   interf.convection_coef = 0;
   interf.emissivity = 0;
   interf.specular_fraction = 1;
@@ -483,7 +487,7 @@ main(int argc, char** argv)
     struct sdis_estimator* estimator2;
     struct sdis_green_function* green;
     struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
-    double ref = -1;
+    double ref = SDIS_TEMPERATURE_NONE;
     size_t nreals = 0;
     size_t nfails = 0;
     const size_t N = 10000;

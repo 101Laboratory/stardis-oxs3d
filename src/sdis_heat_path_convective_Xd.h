@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@ XD(register_heat_vertex_in_fluid)
    const double weight)
 {
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
-  struct hit_filter_data filter_data;
+  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
   const float empirical_dst = 0.1f;
   const float range[2] = {0, FLT_MAX};
   float org[DIM];
@@ -119,7 +119,7 @@ XD(handle_known_fluid_temperature)
   temperature = fluid_get_temperature(rwalk->mdm, &rwalk->vtx);
 
   /* Check if the temperature is known */
-  known_temperature = temperature >= 0;
+  known_temperature = SDIS_TEMPERATURE_IS_KNOWN(temperature);
   if(!known_temperature) goto exit;
 
   T->value += temperature;
@@ -210,14 +210,15 @@ XD(fetch_fluid_enclosure)
 
   /* Fetch the enclosure data */
   enc = scene_get_enclosure(scn, enc_id);
-  if(!enc) {
-    /* The possibility for a fluid enclosure to be unregistred is that it is
-     * the external enclosure. In this situation unknown temperature is
-     * forbidden. */
+  ASSERT(enc != NULL);
+  if(enc->medium_id == ENCLOSURE_MULTI_MEDIA) {
+    /* The enclosures with multiple media are used to describe limit
+     * conditions and therefore they cannot be fetched */
     log_err(scn->dev,
-      "%s: invalid enclosure. The surrounding fluid has an unset temperature.\n",
-      FUNC_NAME);
-    res = RES_BAD_ARG;
+      "%s: enclosure with multiple media at {%g, %g, %g}. "
+      "Path should be reached a limit condition before.\n",
+      FUNC_NAME, rwalk->vtx.P[0], rwalk->vtx.P[1], DIM==3 ? rwalk->vtx.P[2]:0);
+      res = RES_BAD_ARG;
     goto error;
   }
 

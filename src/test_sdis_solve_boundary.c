@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,6 @@
  * (0,0,0) /////
  */
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 10000 /* #realisations */
 #define N_dump 10 /* #dumped paths */
 
@@ -108,7 +107,7 @@ solid_get_temperature
 {
   (void)data;
   CHK(vtx != NULL);
-  if(vtx->time > 0) return UNKNOWN_TEMPERATURE;
+  if(vtx->time > 0) return SDIS_TEMPERATURE_NONE;
   return Tf;
 }
 
@@ -237,7 +236,7 @@ main(int argc, char** argv)
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->hc = 0;
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
   OK(sdis_data_ref_put(data));
@@ -255,7 +254,7 @@ main(int argc, char** argv)
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
   interf_props->hc = H;
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_H));
   OK(sdis_data_ref_put(data));
@@ -419,7 +418,7 @@ main(int argc, char** argv)
   }
 
   /* The external fluid cannot have an unknown temperature */
-  fluid_param->temperature = UNKNOWN_TEMPERATURE;
+  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
   BA(SOLVE(box_scn, &probe_args, &estimator));
   fluid_param->temperature = Tf;
 
@@ -445,7 +444,7 @@ main(int argc, char** argv)
   }
 
   /* The external fluid cannot have an unknown temperature */
-  fluid_param->temperature = UNKNOWN_TEMPERATURE;
+  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
   BA(SOLVE(square_scn, &probe_args, &estimator));
   fluid_param->temperature = Tf;
 
@@ -606,7 +605,7 @@ main(int argc, char** argv)
   bound_args.register_paths = SDIS_HEAT_PATH_ALL;
 
   /* Check simulation error handling when paths are registered */
-  fluid_param->temperature = UNKNOWN_TEMPERATURE;
+  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
   BA(SOLVE(box_scn, &bound_args, &estimator));
 
   /* Dump path */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 #include <rsys/stretchy_array.h>
 #include <star/s3dut.h>
 
-#define UNKOWN_TEMPERATURE -1
 #define N 100000ul /* #realisations */
 #define POWER0 10
 #define POWER1 5

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,13 +45,28 @@
  * (0,0,0) /////
  */
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 10000 /* #realisations */
 
 #define T0 320
 #define LAMBDA 0.1
 #define P0 10
 #define DELTA 1.0/55.0
+
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+static const char*
+algo_cstr(const enum sdis_diffusion_algorithm diff_algo)
+{
+  const char* cstr = "none";
+
+  switch(diff_algo) {
+    case SDIS_DIFFUSION_DELTA_SPHERE: cstr = "delta sphere"; break;
+    case SDIS_DIFFUSION_WOS: cstr = "WoS"; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return cstr;
+}
 
 /*******************************************************************************
  * Media
@@ -72,7 +87,7 @@ fluid_get_temperature
 {
   (void)data;
   CHK(vtx != NULL);
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -116,7 +131,7 @@ solid_get_temperature
   CHK(data != NULL);
   t0 = ((const struct solid*)sdis_data_cget(data))->t0;
   if(vtx->time > t0) {
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   } else {
     return ((const struct solid*)sdis_data_cget(data))->initial_temperature;
   }
@@ -174,7 +189,6 @@ solve
   struct sdis_mc time = SDIS_MC_NULL;
   size_t nreals;
   size_t nfails;
-  double ref = -1;
   enum sdis_scene_dimension dim;
   const int nsimuls = 4;
   int isimul;
@@ -182,11 +196,16 @@ solve
 
   OK(sdis_scene_get_dimension(scn, &dim));
   FOR_EACH(isimul, 0, nsimuls) {
-    int steady = (isimul % 2) == 0;
+    const enum sdis_diffusion_algorithm algo = (isimul / 2) % 2
+      ? SDIS_DIFFUSION_WOS
+      : SDIS_DIFFUSION_DELTA_SPHERE;
+    const int steady = (isimul % 2) == 0;
+    double power = P0 == SDIS_VOLUMIC_POWER_NONE ? 0 : P0;
 
     /* Restore power value */
     solid->vpower = P0;
 
+    solve_args.diff_algo = algo;
     solve_args.position[0] = ssp_rng_uniform_double(rng, 0.1, 0.9);
     solve_args.position[1] = ssp_rng_uniform_double(rng, 0.1, 0.9);
     solve_args.position[2] =
@@ -210,42 +229,28 @@ solve
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-    switch(dim) {
-    case SDIS_SCENE_2D:
-      if(steady) {
-        double x = solve_args.position[0] - 0.5;
-        ref = solid->vpower / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
-        printf("Steady temperature at (%g, %g) with Power=%g = %g ~ %g +/- %g\n",
-          SPLIT2(solve_args.position), solid->vpower, ref, T.E, T.SE);
-      } else {
-        printf("Mean temperature at (%g, %g) with t in [%g %g] and Power=%g"
-          " ~ %g +/- %g\n",
-          SPLIT2(solve_args.position), SPLIT2(solve_args.time_range),
-          solid->vpower, T.E, T.SE);
-      }
-      break;
-    case SDIS_SCENE_3D:
-      if(steady) {
-        double x = solve_args.position[0] - 0.5;
-        ref = solid->vpower / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
-        printf("Steady temperature at (%g, %g, %g) with Power=%g = %g ~ %g +/- %g\n",
-          SPLIT3(solve_args.position), solid->vpower, ref, T.E, T.SE);
-      } else {
-        printf("Mean temperature at (%g, %g, %g) with t in [%g %g] and Power=%g"
-          " ~ %g +/- %g\n",
-          SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
-          solid->vpower, T.E, T.SE);
-      }
-      break;
-    default: FATAL("Unreachable code.\n"); break;
+    if(steady) {
+      const double x = solve_args.position[0] - 0.5;
+      const double ref = power / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
+      printf
+        ("Steady temperature - pos: %g, %g, %g; Power: %g algo: %s "
+         "= %g ~ %g +/- %g\n",
+        SPLIT3(solve_args.position), power, algo_cstr(algo), ref, T.E, T.SE);
+      CHK(eq_eps(T.E, ref, T.SE * 3));
+    } else {
+      printf(
+        "Mean temperature - pos: %g, %g, %g;  t in [%g %g]; power: %g; algo: %s "
+        "~ %g +/- %g\n",
+        SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+        power, algo_cstr(algo), T.E, T.SE);
     }
+
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
     printf("Elapsed time = %s\n", dump);
     printf("Time per realisation (in usec) = %g +/- %g\n\n", time.E, time.SE);
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N/1000);
-    if(steady) CHK(eq_eps(T.E, ref, T.SE * 3));
 
     /* Check green function */
     time_current(&t0);
@@ -258,37 +263,21 @@ solve
     OK(sdis_estimator_get_failure_count(estimator2, &nfails));
     OK(sdis_estimator_get_temperature(estimator2, &T));
 
-    switch(dim) {
-    case SDIS_SCENE_2D:
-      if(steady) {
-        double x = solve_args.position[0] - 0.5;
-        ref = solid->vpower / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
-        printf("Green Steady temperature at (%g, %g) with Power=%g = %g"
-          " ~ %g +/- %g\n",
-          SPLIT2(solve_args.position), solid->vpower, ref, T.E, T.SE);
-      } else {
-        printf("Green Mean temperature at (%g, %g) with t in [%g %g] and"
-          " Power=%g ~ %g +/- %g\n",
-          SPLIT2(solve_args.position), SPLIT2(solve_args.time_range),
-          solid->vpower, T.E, T.SE);
-      }
-      break;
-    case SDIS_SCENE_3D:
-      if(steady) {
-        double x = solve_args.position[0] - 0.5;
-        ref = solid->vpower / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
-        printf("Green Steady temperature at (%g, %g, %g) with Power=%g = %g"
-          " ~ %g +/- %g\n",
-          SPLIT3(solve_args.position), solid->vpower, ref, T.E, T.SE);
-      } else {
-        printf("Green Mean temperature at (%g, %g, %g) with t in [%g %g] and"
-          " Power=%g ~ %g +/- %g\n",
-          SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
-          solid->vpower, T.E, T.SE);
-      }
-      break;
-    default: FATAL("Unreachable code.\n"); break;
+    if(steady) {
+      const double x = solve_args.position[0] - 0.5;
+      const double ref = power / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
+      printf
+        ("Green steady temperature - pos: %g, %g, %g; Power: %g algo: %s"
+         "= %g ~ %g +/- %g\n",
+        SPLIT3(solve_args.position), power, algo_cstr(algo), ref, T.E, T.SE);
+    } else {
+      printf(
+        "Green mean temperature - pos: %g, %g, %g; t: [%g %g]; power: %g; algo: %s "
+        "~ %g +/- %g\n",
+        SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+        power, algo_cstr(algo), T.E, T.SE);
     }
+
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
     time_sub(&t0, &t1, &t0);
     time_dump(&t0, TIME_ALL, NULL, dump, sizeof(dump));
@@ -306,7 +295,7 @@ solve
     printf("\n");
 
     /* Check same green used at a different power level */
-    solid->vpower = 3 * P0;
+    solid->vpower = power = 3 * P0;
 
     time_current(&t0);
     OK(sdis_solve_probe(scn, &solve_args, &estimator));
@@ -318,43 +307,28 @@ solve
     OK(sdis_estimator_get_temperature(estimator, &T));
     OK(sdis_estimator_get_realisation_time(estimator, &time));
 
-    switch(dim) {
-    case SDIS_SCENE_2D:
-      if(steady) {
-        double x = solve_args.position[0] - 0.5;
-        ref = solid->vpower / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
-        printf("Steady temperature at (%g, %g) with Power=%g = %g ~ %g +/- %g\n",
-          SPLIT2(solve_args.position), solid->vpower, ref, T.E, T.SE);
-      } else {
-        printf("Mean temperature at (%g, %g) with t in [%g %g] and Power=%g"
-          " ~ %g +/- %g\n",
-          SPLIT2(solve_args.position), SPLIT2(solve_args.time_range),
-          solid->vpower, T.E, T.SE);
-      }
-      break;
-    case SDIS_SCENE_3D:
-      if(steady) {
-        double x = solve_args.position[0] - 0.5;
-        ref = solid->vpower / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
-        printf("Steady temperature at (%g, %g, %g) with Power=%g = %g"
-          " ~ %g +/- %g\n",
-          SPLIT3(solve_args.position), solid->vpower, ref, T.E, T.SE);
-      } else {
-        printf("Mean temperature at (%g, %g, %g) with t in [%g %g] and"
-          " Power=%g ~ %g +/- %g\n",
-          SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
-          solid->vpower, T.E, T.SE);
-      }
-      break;
-    default: FATAL("Unreachable code.\n"); break;
+    if(steady) {
+      const double x = solve_args.position[0] - 0.5;
+      const double ref = power / (2 * LAMBDA) * (1.0 / 4.0 - x * x) + T0;
+      printf
+        ("Steady temperature - pos: %g, %g, %g; Power: %g algo: %s "
+         "= %g ~ %g +/- %g\n",
+        SPLIT3(solve_args.position), power, algo_cstr(algo), ref, T.E, T.SE);
+      CHK(eq_eps(T.E, ref, T.SE * 3));
+    } else {
+      printf(
+        "Mean temperature - pos: %g, %g, %g;  t in [%g %g]; power: %g; algo: %s "
+        "~ %g +/- %g\n",
+        SPLIT3(solve_args.position), SPLIT2(solve_args.time_range),
+        power, algo_cstr(algo), T.E, T.SE);
     }
+
     printf("#failures = %lu/%lu\n", (unsigned long)nfails, (unsigned long)N);
     printf("Elapsed time = %s\n", dump);
     printf("Time per realisation (in usec) = %g +/- %g\n", time.E, time.SE);
 
     CHK(nfails + nreals == N);
     CHK(nfails <= N/1000);
-    if(steady) CHK(eq_eps(T.E, ref, T.SE * 3));
 
     time_current(&t0);
     OK(sdis_green_function_solve(green, &estimator2));
@@ -466,7 +440,7 @@ main(int argc, char** argv)
   /* Create the adiabatic interface */
   OK(sdis_data_create(dev, sizeof(struct interf), 16, NULL, &data));
   interf_props = sdis_data_get(data);
-  interf_props->temperature = UNKNOWN_TEMPERATURE;
+  interf_props->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_interface_create
     (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
   OK(sdis_data_ref_put(data));

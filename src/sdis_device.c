@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include <star/s2d.h>
 #include <star/s3d.h>
 #include <star/ssp.h>
+#include <star/swf.h>
 
 #include <omp.h>
 
@@ -251,6 +252,37 @@ error:
 }
 
 static INLINE res_T
+setup_starwf(struct sdis_device* dev)
+{
+  struct swf_H_tabulate_args H2d_args = SWF_H2D_TABULATE_ARGS_DEFAULT;
+  struct swf_H_tabulate_args H3d_args = SWF_H3D_TABULATE_ARGS_DEFAULT;
+  res_T res = RES_OK;
+  ASSERT(dev);
+
+  H2d_args.allocator = dev->allocator;
+  H3d_args.allocator = dev->allocator;
+
+  res = swf_H2d_tabulate(&H2d_args, &dev->H_2d);
+  if(res != RES_OK) {
+    log_err(dev, "Unable to tabulate H2d function -- %s.\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+  res = swf_H3d_tabulate(&H3d_args, &dev->H_3d);
+  if(res != RES_OK) {
+    log_err(dev, "Unable to tabulate H3d function -- %s.\n",
+      res_to_cstr(res));
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static INLINE res_T
 setup_mpi(struct sdis_device* dev, const struct sdis_device_create_args* args)
 {
   ASSERT(dev && args);
@@ -279,11 +311,15 @@ device_release(ref_T* ref)
   dev = CONTAINER_OF(ref, struct sdis_device, ref);
   if(dev->s2d_dev) S2D(device_ref_put(dev->s2d_dev));
   if(dev->s3d_dev) S3D(device_ref_put(dev->s3d_dev));
+  if(dev->H_2d) SWF(tabulation_ref_put(dev->H_2d));
+  if(dev->H_3d) SWF(tabulation_ref_put(dev->H_3d));
   if(dev->logger == &dev->logger__) logger_release(&dev->logger__);
   ASSERT(flist_name_is_empty(&dev->interfaces_names));
   ASSERT(flist_name_is_empty(&dev->media_names));
+  ASSERT(flist_name_is_empty(&dev->source_names));
   flist_name_release(&dev->interfaces_names);
   flist_name_release(&dev->media_names);
+  flist_name_release(&dev->source_names);
 #ifdef SDIS_ENABLE_MPI
   if(dev->mpi_mutex) mutex_destroy(dev->mpi_mutex);
   str_release(&dev->mpi_err_str);
@@ -332,6 +368,7 @@ sdis_device_create
   ref_init(&dev->ref);
   flist_name_init(allocator, &dev->interfaces_names);
   flist_name_init(allocator, &dev->media_names);
+  flist_name_init(allocator, &dev->source_names);
 #ifdef SDIS_ENABLE_MPI
   str_init(allocator, &dev->mpi_err_str);
 #endif
@@ -341,6 +378,8 @@ sdis_device_create
   res = setup_star2d(dev);
   if(res != RES_OK) goto error;
   res = setup_star3d(dev);
+  if(res != RES_OK) goto error;
+  res = setup_starwf(dev);
   if(res != RES_OK) goto error;
   res = setup_mpi(dev, args);
   if(res != RES_OK) goto error;
@@ -369,6 +408,18 @@ sdis_device_ref_put(struct sdis_device* dev)
 {
   if(!dev) return RES_BAD_ARG;
   ref_put(&dev->ref, device_release);
+  return RES_OK;
+}
+
+res_T
+sdis_device_is_mpi_used(struct sdis_device* dev, int* is_mpi_used)
+{
+  if(!dev || !is_mpi_used) return RES_BAD_ARG;
+#ifndef SDIS_ENABLE_MPI
+  *is_mpi_used = 0;
+#else
+  *is_mpi_used = dev->use_mpi;
+#endif
   return RES_OK;
 }
 

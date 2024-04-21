@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -107,7 +107,7 @@ solid_get_temperature
    struct sdis_data* data)
 {
   (void)data, (void)vtx;
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double

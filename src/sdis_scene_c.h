@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,17 @@ struct hit_filter_data {
   struct s2d_hit hit_2d;
   struct s3d_hit hit_3d;
   double epsilon; /* Threshold defining roughly equal intersections */
+
+  /* Bypass the regular filter function */
+  s2d_hit_filter_function_T custom_filter_2d;
+  s3d_hit_filter_function_T custom_filter_3d;
+
+  /* Custom filter query data. It is ignored if custom_filter is NULL */
+  void* custom_filter_data;
 };
+#define HIT_FILTER_DATA_NULL__ {S2D_HIT_NULL__,S3D_HIT_NULL__,0,NULL,NULL,NULL}
+static const struct hit_filter_data HIT_FILTER_DATA_NULL =
+  HIT_FILTER_DATA_NULL__;
 
 struct get_medium_info {
   /* Targeted position */
@@ -76,6 +86,8 @@ medium_init(struct mem_allocator* allocator, struct sdis_medium** medium)
   *medium = NULL;
 }
 
+#define ENCLOSURE_MULTI_MEDIA UINT_MAX
+
 struct enclosure {
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
@@ -100,7 +112,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->S_over_V = 0;
   enc->V = 0;
   enc->hc_upper_bound = 0;
-  enc->medium_id = UINT_MAX;
+  enc->medium_id = ENCLOSURE_MULTI_MEDIA;
 }
 
 static INLINE void
@@ -209,9 +221,11 @@ struct sdis_scene {
   unsigned outer_enclosure_id;
 
   double fp_to_meter;
-  struct sdis_ambient_radiative_temperature trad;
   double tmin; /* Minimum temperature of the system (In Kelvin) */
   double tmax; /* Maximum temperature of the system (In Kelvin) */
+
+  struct sdis_source* source; /* External source. May be NULL */
+  struct sdis_radiative_env* radenv; /* Radiative environment. May be NULL */
 
   ref_T ref;
   struct sdis_device* dev;
@@ -231,7 +245,7 @@ scene_get_interface
 
 extern LOCAL_SYM res_T
 scene_get_medium
-  (const struct sdis_scene* scene,
+  (struct sdis_scene* scene,
    const double position[],
    struct get_medium_info* info, /* May be NULL */
    struct sdis_medium** medium);
@@ -248,7 +262,7 @@ scene_get_medium
  * are opened to infinity). */
 extern LOCAL_SYM res_T
 scene_get_medium_in_closed_boundaries
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double position[],
    struct sdis_medium** medium);
 
@@ -274,6 +288,14 @@ scene_check_dimensionality_2d
  * returns RES_BAD_ARG */
 extern LOCAL_SYM res_T
 scene_check_dimensionality_3d
+  (const struct sdis_scene* scn);
+
+/* Check that the temperature range of the scene is well defined, i.e. that the
+ * minimum and maximum temperatures are known and that they define a valid
+ * range. If this is not the case, the function displays an error message and
+ * returns RES_BAD_ARG */
+extern LOCAL_SYM res_T
+scene_check_temperature_range
   (const struct sdis_scene* scn);
 
 static INLINE void

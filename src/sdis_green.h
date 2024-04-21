@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@
 #include <rsys/rsys.h>
 
 /* Current version the green function data structure. One should increment it
- * and perform a version management onto serialized data when the gren function
+ * and perform a version management onto serialized data when the green function
  * data structure is updated. */
-static const int SDIS_GREEN_FUNCTION_VERSION = 2;
+static const int SDIS_GREEN_FUNCTION_VERSION = 3;
 
 /* Forward declaration */
 struct accum;
@@ -84,8 +84,9 @@ green_path_set_limit_vertex
    const double elapsed_time);
 
 extern LOCAL_SYM res_T
-green_path_set_limit_radiative
+green_path_set_limit_radiative_ray
   (struct green_path_handle* handle,
+   const struct sdis_radiative_ray* ray,
    const double elapsed_time);
 
 extern LOCAL_SYM res_T
@@ -105,6 +106,11 @@ green_path_add_flux_term
    struct sdis_interface* interf,
    const struct sdis_interface_fragment* fragment,
    const double term);
+
+extern LOCAL_SYM res_T
+green_path_add_external_flux_terms
+  (struct green_path_handle* handle,
+   const struct sdis_green_external_flux_terms* terms);
 
 #endif /* SDIS_GREEN_H */
 

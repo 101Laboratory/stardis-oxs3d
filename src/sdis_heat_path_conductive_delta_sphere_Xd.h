@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,73 +13,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#include "sdis_device_c.h"
+#include "sdis_log.h"
 #include "sdis_green.h"
-#include "sdis_heat_path.h"
+#include "sdis_interface_c.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
 #include "sdis_scene_c.h"
 
-#include <star/ssp.h>
-
 #include "sdis_Xd_begin.h"
-
-/*******************************************************************************
- * Non generic helper function
- ******************************************************************************/
-#ifndef SDIS_HEAT_PATH_CONDUCTIVE_XD_H
-#define SDIS_HEAT_PATH_CONDUCTIVE_XD_H
-
-static res_T
-check_solid_constant_properties
-  (struct sdis_device* dev,
-   const int evaluate_green,
-   const struct solid_props* props_ref,
-   const struct solid_props* props)
-{
-  res_T res = RES_OK;
-  ASSERT(dev && props_ref && props);
-
-  if(props_ref->lambda != props->lambda) {
-    log_err(dev,
-      "%s: invalid thermal conductivity. One assumes a constant conductivity "
-      "for the whole solid.\n", FUNC_NAME);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-  if(props_ref->rho != props->rho) {
-    log_err(dev,
-      "%s: invalid volumic mass. One assumes a constant volumic mass for "
-      "the whole solid.\n", FUNC_NAME);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-  if(props_ref->cp != props->cp) {
-    log_err(dev,
-       "%s: invalid calorific capacity. One assumes a constant calorific "
-       "capacity for the whole solid.\n", FUNC_NAME);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-  if(evaluate_green && props_ref->power != props->power) {
-    log_err(dev,
-      "%s: invalid volumic power. When estimating the green function, a "
-      "constant volumic power is assumed for the whole solid.\n",
-      FUNC_NAME);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-exit:
-  return res;
-error:
-  goto exit;
-}
-
-#endif /* SDIS_HEAT_PATH_CONDUCTIVE_XD_H */
 
 /*******************************************************************************
  * Helper functions
@@ -250,7 +191,6 @@ error:
   goto exit;
 }
 
-
 /*******************************************************************************
  * Handle the volumic power at a given diffusive step
  ******************************************************************************/
@@ -389,7 +329,7 @@ error:
  * Local function
  ******************************************************************************/
 res_T
-XD(conductive_path)
+XD(conductive_path_delta_sphere)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
    struct XD(rwalk)* rwalk,
@@ -445,12 +385,12 @@ XD(conductive_path)
     if(res != RES_OK) goto error;
 
     res = check_solid_constant_properties
-      (scn->dev, ctx->green_path != NULL, &props_ref, &props);
+      (scn->dev, ctx->green_path != NULL, 0/*use WoS?*/, &props_ref, &props);
     if(res != RES_OK) goto error;
 
     /* Check the limit condition
      * REVIEW Rfo: This can be a bug if the random walk comes from a boundary */
-    if(props.temperature >= 0) {
+    if(SDIS_TEMPERATURE_IS_KNOWN(props.temperature)) {
       T->value += props.temperature;
       T->done = 1;
 

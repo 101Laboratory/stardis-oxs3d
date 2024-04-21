@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
 #include <rsys/double2.h>
 #include <rsys/double3.h>
 #include <rsys/math.h>
-#include<star/senc2d.h>
-#include<star/senc3d.h>
+#include <star/senc2d.h>
+#include <star/senc3d.h>
 
 struct context {
   const double* positions;
@@ -87,7 +87,10 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
 }
 
 static void
-test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
+test_scene_3d
+  (struct sdis_device* dev,
+   struct sdis_interface* interf,
+   struct sdis_radiative_env* in_radenv)
 {
   size_t duplicated_indices[] = { 0, 1, 2, 0, 2, 1 };
   size_t degenerated_indices[] = { 0, 1, 1 };
@@ -98,7 +101,11 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_scene_find_closest_point_args closest_pt_args =
+    SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
   struct sdis_scene* scn = NULL;
+  struct sdis_device* dev2 = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   size_t ntris, npos;
   size_t iprim;
   size_t i;
@@ -163,6 +170,11 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_get_dimension(scn, &dim));
   CHK(dim == SDIS_SCENE_3D);
 
+  BA(sdis_scene_get_device(NULL, &dev2));
+  BA(sdis_scene_get_device(scn, NULL));
+  OK(sdis_scene_get_device(scn, &dev2));
+  CHK(dev == dev2);
+
   BA(sdis_scene_get_aabb(NULL, lower, upper));
   BA(sdis_scene_get_aabb(scn, NULL, upper));
   BA(sdis_scene_get_aabb(scn, lower, NULL));
@@ -189,12 +201,15 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_boundary_project_position(scn, 6, pos, NULL));
   OK(sdis_scene_boundary_project_position(scn, 6, pos, uv1));
 
-  BA(sdis_scene_find_closest_point(NULL, pos, INF, &iprim, uv2));
-  BA(sdis_scene_find_closest_point(scn, NULL, INF, &iprim, uv2));
-  BA(sdis_scene_find_closest_point(scn, pos, 0, &iprim, uv2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, NULL, uv2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, &iprim, NULL));
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.position[2] = pos[2];
+  closest_pt_args.radius = INF;
+  BA(sdis_scene_find_closest_point(NULL, &closest_pt_args, &iprim, uv2));
+  BA(sdis_scene_find_closest_point(scn, NULL, &iprim, uv2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, NULL, uv2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, NULL));
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
 
   CHK(iprim == 6);
   CHK(d2_eq_eps(uv0, uv1, 1.e-6));
@@ -203,7 +218,10 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   pos[0] = 0.5;
   pos[1] = 0.1;
   pos[2] = 0.25;
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.position[2] = pos[2];
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
   CHK(iprim == 10);
 
   OK(sdis_scene_boundary_project_position(scn, 10, pos, uv0));
@@ -213,7 +231,11 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   dst = d3_len(d3_sub(pos1, pos, pos1));
   CHK(eq_eps(dst, 0.1, 1.e-6));
 
-  OK(sdis_scene_find_closest_point(scn, pos, 0.09, &iprim, uv2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.position[2] = pos[2];
+  closest_pt_args.radius = 0.09;
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
   CHK(iprim == SDIS_PRIMITIVE_NONE);
 
   FOR_EACH(i, 0, 64) {
@@ -222,7 +244,12 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
 
     OK(sdis_scene_get_boundary_position(scn, 4, uv0, pos));
     OK(sdis_scene_boundary_project_position(scn, 4, pos, uv1));
-    OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, uv2));
+
+    closest_pt_args.position[0] = pos[0];
+    closest_pt_args.position[1] = pos[1];
+    closest_pt_args.position[2] = pos[2];
+    closest_pt_args.radius = INF;
+    OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, uv2));
     CHK(d2_eq_eps(uv0, uv1, 1.e-6));
     CHK(d2_eq_eps(uv1, uv2, 1.e-6));
     CHK(iprim == 4);
@@ -243,23 +270,40 @@ test_scene_3d(struct sdis_device* dev, struct sdis_interface* interf)
   /* No 2D available */
   BA(sdis_scene_get_senc2d_scene(scn, &scn2d));
 
+  BA(sdis_scene_get_radiative_env(NULL, &radenv));
+  BA(sdis_scene_get_radiative_env(scn, NULL));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == NULL);
+
   BA(sdis_scene_ref_get(NULL));
   OK(sdis_scene_ref_get(scn));
   BA(sdis_scene_ref_put(NULL));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_scene_ref_put(scn));
+
+  scn_args.radenv = in_radenv;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == in_radenv);
+  CHK(radenv != NULL);
+
+  OK(sdis_scene_ref_put(scn));
 }
 
 static void
-test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
+test_scene_2d
+  (struct sdis_device* dev,
+   struct sdis_interface* interf,
+   struct sdis_radiative_env* in_radenv)
 {
   size_t duplicated_indices[] = { 0, 1, 1, 0 };
   size_t degenerated_indices[] = { 0, 0 };
   double duplicated_vertices[] = { 0, 0, 0, 0 };
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
-  struct sdis_ambient_radiative_temperature trad =
-    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
+  struct sdis_scene_find_closest_point_args closest_pt_args =
+    SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
+  struct sdis_radiative_env* radenv = NULL;
   double lower[2], upper[2];
   double t_range[2];
   double u0, u1, u2, pos[2], pos1[2];
@@ -354,28 +398,20 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   OK(sdis_scene_get_fp_to_meter(scn, &fp));
   CHK(fp == 2);
 
-  BA(sdis_scene_get_ambient_radiative_temperature(NULL, NULL));
-  BA(sdis_scene_get_ambient_radiative_temperature(scn, NULL));
-  BA(sdis_scene_get_ambient_radiative_temperature(NULL, &trad));
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-  CHK(trad.temperature == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.temperature);
-  CHK(trad.reference == SDIS_SCENE_CREATE_ARGS_DEFAULT.trad.reference);
-
-  trad.temperature = 100;
-  trad.reference = 110;
-  BA(sdis_scene_set_ambient_radiative_temperature(NULL, &trad));
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
-  trad = SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-  CHK(trad.temperature == 100);
-  CHK(trad.reference == 110);
-
   BA(sdis_scene_get_temperature_range(NULL, NULL));
   BA(sdis_scene_get_temperature_range(scn, NULL));
   BA(sdis_scene_get_temperature_range(NULL, t_range));
   OK(sdis_scene_get_temperature_range(scn, t_range));
-  CHK(t_range[0] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]);
-  CHK(t_range[1] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[1]);
+  if(SDIS_TEMPERATURE_IS_KNOWN(t_range[0])) {
+    CHK(t_range[0] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]);
+  } else {
+    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]));
+  }
+  if(SDIS_TEMPERATURE_IS_KNOWN(t_range[1])) {
+    CHK(t_range[1] == SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[1]);
+  } else {
+    CHK(SDIS_TEMPERATURE_IS_UNKNOWN(SDIS_SCENE_CREATE_ARGS_DEFAULT.t_range[0]));
+  }
 
   t_range[0] = 1;
   t_range[1] = 100;
@@ -383,8 +419,8 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_set_temperature_range(NULL, t_range));
   BA(sdis_scene_set_temperature_range(scn, NULL));
   OK(sdis_scene_set_temperature_range(scn, t_range));
-  t_range[0] = -1;
-  t_range[1] = -1;
+  t_range[0] = SDIS_TEMPERATURE_NONE;
+  t_range[1] = SDIS_TEMPERATURE_NONE;
   OK(sdis_scene_get_temperature_range(scn, t_range));
   CHK(t_range[0] == 1);
   CHK(t_range[1] == 100);
@@ -401,12 +437,14 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   BA(sdis_scene_boundary_project_position(scn, 1, pos, NULL));
   OK(sdis_scene_boundary_project_position(scn, 1, pos, &u1));
 
-  BA(sdis_scene_find_closest_point(NULL, pos, INF, &iprim, &u2));
-  BA(sdis_scene_find_closest_point(scn, NULL, INF, &iprim, &u2));
-  BA(sdis_scene_find_closest_point(scn, pos, 0, &iprim, &u2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, NULL, &u2));
-  BA(sdis_scene_find_closest_point(scn, pos, INF, &iprim, NULL));
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.radius = INF;
+  BA(sdis_scene_find_closest_point(NULL, &closest_pt_args, &iprim, &u2));
+  BA(sdis_scene_find_closest_point(scn, NULL, &iprim, &u2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, NULL, &u2));
+  BA(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, NULL));
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
 
   CHK(eq_eps(u0, u1, 1.e-6));
   CHK(eq_eps(u1, u2, 1.e-6));
@@ -414,7 +452,10 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 
   pos[0] = 0.5;
   pos[1] = 0.1;
-  OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.radius = INF;
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
   CHK(iprim == 0);
 
   OK(sdis_scene_boundary_project_position(scn, 0, pos, &u0));
@@ -424,7 +465,10 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   dst = d2_len(d2_sub(pos1, pos, pos1));
   CHK(eq_eps(dst, 0.1, 1.e-6));
 
-  OK(sdis_scene_find_closest_point(scn, pos, 0.09, &iprim, &u2));
+  closest_pt_args.position[0] = pos[0];
+  closest_pt_args.position[1] = pos[1];
+  closest_pt_args.radius = 0.09;
+  OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
   CHK(iprim == SDIS_PRIMITIVE_NONE);
 
   FOR_EACH(i, 0, 64) {
@@ -432,7 +476,11 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
 
     OK(sdis_scene_get_boundary_position(scn, 2, &u0, pos));
     OK(sdis_scene_boundary_project_position(scn, 2, pos, &u1));
-    OK(sdis_scene_find_closest_point(scn, pos, INF, &iprim, &u2));
+
+    closest_pt_args.position[0] = pos[0];
+    closest_pt_args.position[1] = pos[1];
+    closest_pt_args.radius = INF;
+    OK(sdis_scene_find_closest_point(scn, &closest_pt_args, &iprim, &u2));
     CHK(eq_eps(u0, u1, 1.e-6));
     CHK(eq_eps(u1, u2, 1.e-6));
     CHK(iprim == 2);
@@ -458,10 +506,24 @@ test_scene_2d(struct sdis_device* dev, struct sdis_interface* interf)
   /* No 3D available */
   BA(sdis_scene_get_senc3d_scene(scn, &scn3d));
 
+  BA(sdis_scene_get_radiative_env(NULL, NULL));
+  BA(sdis_scene_get_radiative_env(scn, NULL));
+  BA(sdis_scene_get_radiative_env(NULL, &radenv));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == NULL);
+
   BA(sdis_scene_ref_get(NULL));
   OK(sdis_scene_ref_get(scn));
   BA(sdis_scene_ref_put(NULL));
   OK(sdis_scene_ref_put(scn));
+  OK(sdis_scene_ref_put(scn));
+
+  scn_args.radenv = in_radenv;
+  OK(sdis_scene_2d_create(dev, &scn_args, &scn));
+  OK(sdis_scene_get_radiative_env(scn, &radenv));
+  CHK(radenv == in_radenv);
+  CHK(radenv != NULL);
+
   OK(sdis_scene_ref_put(scn));
 }
 
@@ -472,9 +534,11 @@ main(int argc, char** argv)
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid = NULL;
   struct sdis_interface* interf = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_radiative_env_shader ray_shader = DUMMY_RAY_SHADER;
   (void)argc, (void)argv;
 
   interface_shader.convection_coef = DUMMY_INTERFACE_SHADER.convection_coef;
@@ -485,15 +549,17 @@ main(int argc, char** argv)
   OK(sdis_solid_create(dev, &solid_shader, NULL, &solid));
   OK(sdis_interface_create
     (dev, solid, fluid, &interface_shader, NULL, &interf));
+  OK(sdis_radiative_env_create(dev, &ray_shader, NULL, &radenv));
 
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid));
 
-  test_scene_3d(dev, interf);
-  test_scene_2d(dev, interf);
+  test_scene_3d(dev, interf, radenv);
+  test_scene_2d(dev, interf, radenv);
 
   OK(sdis_device_ref_put(dev));
   OK(sdis_interface_ref_put(interf));
+  OK(sdis_radiative_env_ref_put(radenv));
 
   CHK(mem_allocated_size() == 0);
   return 0;

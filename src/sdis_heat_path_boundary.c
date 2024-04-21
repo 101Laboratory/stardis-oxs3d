@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +24,6 @@
 
 /* Generate the boundary path sub-routines */
 #define SDIS_XD_DIMENSION 2
-#include "sdis_heat_path_boundary_Xd_fixed_flux.h"
-#define SDIS_XD_DIMENSION 3
-#include "sdis_heat_path_boundary_Xd_fixed_flux.h"
-#define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_boundary_Xd_solid_fluid_picard1.h"
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_boundary_Xd_solid_fluid_picard1.h"
@@ -45,3 +41,7 @@
 #include "sdis_heat_path_boundary_Xd.h"
 #define SDIS_XD_DIMENSION 3
 #include "sdis_heat_path_boundary_Xd.h"
+#define SDIS_XD_DIMENSION 2
+#include "sdis_heat_path_boundary_Xd_handle_external_net_flux.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_heat_path_boundary_Xd_handle_external_net_flux.h"

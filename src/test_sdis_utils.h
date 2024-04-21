@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -149,7 +149,7 @@ square_get_interface
 }
 
 /*******************************************************************************
- * Medium & interface
+ * Medium, interface and ray
  ******************************************************************************/
 static INLINE double
 dummy_medium_getter
@@ -166,6 +166,25 @@ dummy_interface_getter
 {
   (void)data;
   CHK(frag != NULL);
+  return 0;
+}
+
+static INLINE double
+dummy_radiative_interface_getter
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
+{
+  (void)data, (void)source_id;
+  CHK(frag != NULL);
+  return 0;
+}
+
+static INLINE double
+dummy_ray_getter(const struct sdis_radiative_ray* ray, struct sdis_data* data)
+{
+  (void)data;
+  CHK(ray != NULL);
   return 0;
 }
 
@@ -186,13 +205,13 @@ static const struct sdis_fluid_shader DUMMY_FLUID_SHADER = {
   0 /* Initial time */
 };
 
-
 #define DUMMY_INTERFACE_SIDE_SHADER__ {                                        \
   dummy_interface_getter, /* Temperature */                                    \
   dummy_interface_getter, /* Flux */                                           \
-  dummy_interface_getter, /* Emissivity */                                     \
-  dummy_interface_getter, /* Specular fraction */                              \
-  dummy_interface_getter  /* Reference temperature */                          \
+  dummy_radiative_interface_getter, /* Emissivity */                           \
+  dummy_radiative_interface_getter, /* Specular fraction */                    \
+  dummy_interface_getter, /* Reference temperature */                          \
+  1 /* Handle external flux */                                                 \
 }
 static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   dummy_interface_getter, /* Convection coef */
@@ -200,6 +219,11 @@ static const struct sdis_interface_shader DUMMY_INTERFACE_SHADER = {
   dummy_interface_getter, /* Thermal contact resistance */
   DUMMY_INTERFACE_SIDE_SHADER__, /* Front side */
   DUMMY_INTERFACE_SIDE_SHADER__ /* Back side */
+};
+
+static const struct sdis_radiative_env_shader DUMMY_RAY_SHADER = {
+  dummy_ray_getter,
+  dummy_ray_getter
 };
 
 /*******************************************************************************
@@ -427,4 +451,3 @@ check_green_serialization
    struct sdis_scene* scn);
 
 #endif /* TEST_SDIS_UTILS_H */
-

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,10 +28,9 @@
 
 #include <string.h>
 
-#define UNKOWN_TEMPERATURE -1
 #define IMG_WIDTH 157
 #define IMG_HEIGHT 53
-#define SPP 30 /* #Samples per pixel, i.e. #realisations per pixel */
+#define SPP 32 /* #Samples per pixel, i.e. #realisations per pixel */
 
 /*
  * The scene is composed of a solid cube whose temperature is unknown. The
@@ -152,7 +151,7 @@ struct fluid {
   double rho;
   double temperature;
 };
-static const struct fluid FLUID_NULL = {0, 0, UNKOWN_TEMPERATURE};
+static const struct fluid FLUID_NULL = {0, 0, SDIS_TEMPERATURE_NONE};
 
 static double
 fluid_get_calorific_capacity
@@ -188,7 +187,7 @@ struct solid {
   double delta;
   double temperature;
 };
-static const struct solid SOLID_NULL = {0, 0, 0, 0, UNKOWN_TEMPERATURE};
+static const struct solid SOLID_NULL = {0, 0, 0, 0, SDIS_TEMPERATURE_NONE};
 
 static double
 solid_get_calorific_capacity
@@ -241,7 +240,7 @@ struct interf {
   double reference_temperature;
 };
 static const struct interf INTERF_NULL = {
-  0, 0, 0, UNKOWN_TEMPERATURE, UNKOWN_TEMPERATURE
+  0, 0, 0, SDIS_TEMPERATURE_NONE, SDIS_TEMPERATURE_NONE
 };
 
 static double
@@ -254,16 +253,22 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->epsilon;
 }
 
 static double
 interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
 }
@@ -285,6 +290,55 @@ interface_get_reference_temperature
 }
 
 /*******************************************************************************
+ * Radiative environment
+ ******************************************************************************/
+struct radenv {
+  double temperature; /* [K] */
+  double reference; /* [K] */
+};
+
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray;
+  return ((const struct radenv*)sdis_data_cget(data))->temperature;
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray;
+  return ((const struct radenv*)sdis_data_cget(data))->reference;
+}
+
+static struct sdis_radiative_env*
+create_radenv
+  (struct sdis_device* dev,
+   const double temperature,
+   const double reference)
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+  struct sdis_data* data = NULL;
+  struct radenv* env = NULL;
+
+  OK(sdis_data_create(dev, sizeof(struct radenv), ALIGNOF(radenv), NULL, &data));
+  env = sdis_data_get(data);
+  env->temperature = temperature;
+  env->reference = reference;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(dev, &shader, data, &radenv));
+  OK(sdis_data_ref_put(data));
+  return radenv;
+}
+
+/*******************************************************************************
  * Helper functions
  ******************************************************************************/
 static void
@@ -294,7 +348,7 @@ create_solid
    struct sdis_medium** solid)
 {
   struct sdis_data* data = NULL;
-  struct solid* solid_param = NULL;
+  struct solid* solid_args = NULL;
   struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
 
   CHK(param != NULL);
@@ -303,8 +357,8 @@ create_solid
   /* Copy the solid parameters into the Stardis memory space */
   OK(sdis_data_create
     (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
-  solid_param = sdis_data_get(data);
-  memcpy(solid_param, param, sizeof(struct solid));
+  solid_args = sdis_data_get(data);
+  memcpy(solid_args, param, sizeof(struct solid));
 
   /* Setup the solid shader */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -329,7 +383,7 @@ create_fluid
    struct sdis_medium** fluid)
 {
   struct sdis_data* data = NULL;
-  struct fluid* fluid_param = NULL;
+  struct fluid* fluid_args = NULL;
   struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
 
   CHK(param != NULL);
@@ -338,8 +392,8 @@ create_fluid
   /* Copy the fluid parameters into the Stardis memory space */
   OK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
-  fluid_param = sdis_data_get(data);
-  memcpy(fluid_param, param, sizeof(struct fluid));
+  fluid_args = sdis_data_get(data);
+  memcpy(fluid_args, param, sizeof(struct fluid));
 
   /* Setup the fluid shader */
   fluid_shader.calorific_capacity = fluid_get_calorific_capacity;
@@ -363,7 +417,7 @@ create_interface
    struct sdis_interface** interf)
 {
   struct sdis_data* data = NULL;
-  struct interf* interface_param = NULL;
+  struct interf* interface_args = NULL;
   struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
 
   CHK(mdm_front != NULL);
@@ -374,8 +428,8 @@ create_interface
   /* Copy the interface parameters into the Stardis memory space */
   OK(sdis_data_create
    (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data));
-  interface_param = sdis_data_get(data);
-  memcpy(interface_param, param, sizeof(struct interf));
+  interface_args = sdis_data_get(data);
+  memcpy(interface_args, param, sizeof(struct interf));
 
   /* Setup the interface shader */
   interface_shader.convection_coef = interface_get_convection_coef;
@@ -384,7 +438,7 @@ create_interface
   if(sdis_medium_get_type(mdm_front) == SDIS_FLUID) {
     interface_shader.front.emissivity = interface_get_emissivity;
     interface_shader.front.specular_fraction = interface_get_specular_fraction;
-    interface_shader.front.reference_temperature = 
+    interface_shader.front.reference_temperature =
       interface_get_reference_temperature;
   }
   if(sdis_medium_get_type(mdm_back) == SDIS_FLUID) {
@@ -556,17 +610,17 @@ main(int argc, char** argv)
   struct sdis_medium* fluid1 = NULL;
   struct sdis_interface* interf0 = NULL;
   struct sdis_interface* interf1 = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
-  struct sdis_ambient_radiative_temperature trad =
-    SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL;
   struct ssp_rng* rng = NULL;
   struct ssp_rng* rng_state = NULL;
-  struct fluid fluid_param = FLUID_NULL;
-  struct solid solid_param = SOLID_NULL;
-  struct interf interface_param = INTERF_NULL;
-  struct fluid* pfluid_param = NULL;
+  struct fluid fluid_args = FLUID_NULL;
+  struct solid solid_args = SOLID_NULL;
+  struct interf interface_args = INTERF_NULL;
+  struct fluid* pfluid_args = NULL;
+  struct radenv* pradenv_args = NULL;
   size_t ntris, npos;
   size_t nreals, nfails;
   size_t definition[2];
@@ -578,40 +632,43 @@ main(int argc, char** argv)
 
   create_default_device(&argc, &argv, &is_master_process, &dev);
 
+  radenv = create_radenv(dev, 300, 300);
+  pradenv_args = sdis_data_get(sdis_radiative_env_get_data(radenv));
+
   /* Create the fluid0 */
-  fluid_param.temperature = 350;
-  fluid_param.rho = 0;
-  fluid_param.cp = 0;
-  create_fluid(dev, &fluid_param, &fluid0);
+  fluid_args.temperature = 350;
+  fluid_args.rho = 0;
+  fluid_args.cp = 0;
+  create_fluid(dev, &fluid_args, &fluid0);
 
   /* Create the fluid1 */
-  fluid_param.temperature = 300;
-  fluid_param.rho = 0;
-  fluid_param.cp = 0;
-  create_fluid(dev, &fluid_param, &fluid1);
+  fluid_args.temperature = 300;
+  fluid_args.rho = 0;
+  fluid_args.cp = 0;
+  create_fluid(dev, &fluid_args, &fluid1);
 
   /* Create the solid medium */
-  solid_param.cp = 1.0;
-  solid_param.lambda = 0.1;
-  solid_param.rho = 1.0;
-  solid_param.delta = 1.0/20.0;
-  solid_param.temperature = UNKOWN_TEMPERATURE;
-  create_solid(dev, &solid_param, &solid);
+  solid_args.cp = 1.0;
+  solid_args.lambda = 0.1;
+  solid_args.rho = 1.0;
+  solid_args.delta = 1.0/20.0;
+  solid_args.temperature = SDIS_TEMPERATURE_NONE;
+  create_solid(dev, &solid_args, &solid);
 
   /* Create the fluid0/solid interface */
-  interface_param.hc = 1;
-  interface_param.epsilon = 0;
-  interface_param.specular_fraction = 0;
-  interface_param.temperature = UNKOWN_TEMPERATURE;
-  create_interface(dev, solid, fluid0, &interface_param, &interf0);
+  interface_args.hc = 1;
+  interface_args.epsilon = 0;
+  interface_args.specular_fraction = 0;
+  interface_args.temperature = SDIS_TEMPERATURE_NONE;
+  create_interface(dev, solid, fluid0, &interface_args, &interf0);
 
   /* Create the fluid1/solid interface */
-  interface_param.hc = 0.1;
-  interface_param.epsilon = 1;
-  interface_param.specular_fraction = 1;
-  interface_param.temperature = UNKOWN_TEMPERATURE;
-  interface_param.reference_temperature = 300;
-  create_interface(dev, fluid1, solid, &interface_param, &interf1);
+  interface_args.hc = 0.1;
+  interface_args.epsilon = 1;
+  interface_args.specular_fraction = 1;
+  interface_args.temperature = SDIS_TEMPERATURE_NONE;
+  interface_args.reference_temperature = 300;
+  create_interface(dev, fluid1, solid, &interface_args, &interf1);
 
   /* Setup the cube geometry  */
   OK(s3dut_create_cuboid(NULL, 2, 2, 2, &msh));
@@ -635,10 +692,9 @@ main(int argc, char** argv)
   scn_args.get_position = geometry_get_position;
   scn_args.nprimitives = ntris;
   scn_args.nvertices = npos;
-  scn_args.trad.temperature = 300;
-  scn_args.trad.reference = 300;
   scn_args.t_range[0] = 300;
   scn_args.t_range[1] = 350;
+  scn_args.radenv = radenv;
   scn_args.context = &geom;
   OK(sdis_scene_create(dev, &scn_args, &scn));
 
@@ -673,12 +729,9 @@ main(int argc, char** argv)
   solve_args.cam = NULL;
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   solve_args.cam = cam;
-  OK(sdis_scene_get_ambient_radiative_temperature(scn, &trad));
-  trad.temperature = -1;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
+  pradenv_args->temperature = SDIS_TEMPERATURE_NONE;
   BA(sdis_solve_camera(scn, &solve_args, &buf));
-  trad.temperature = 300;
-  OK(sdis_scene_set_ambient_radiative_temperature(scn, &trad));
+  pradenv_args->temperature = 300;
   solve_args.time_range[0] = solve_args.time_range[1] = -1;
   BA(sdis_solve_camera(scn, &solve_args, &buf));
   solve_args.time_range[0] = 1;
@@ -749,7 +802,7 @@ main(int argc, char** argv)
 
   /* Check the RNG state */
   OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
-  OK(ssp_rng_discard(rng, 31415926535)); /* Move the RNG state  */
+  OK(ssp_rng_discard(rng, 3141592653589)); /* Move the RNG state  */
   solve_args.rng_state = rng;
   solve_args.rng_type = SSP_RNG_TYPE_NULL;
   OK(sdis_solve_camera(scn, &solve_args, &buf2));
@@ -766,8 +819,8 @@ main(int argc, char** argv)
   solve_args.rng_state = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_state;
   solve_args.rng_type = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_type;
 
-  pfluid_param = sdis_data_get(sdis_medium_get_data(fluid1));
-  pfluid_param->temperature = UNKOWN_TEMPERATURE;
+  pfluid_args = sdis_data_get(sdis_medium_get_data(fluid1));
+  pfluid_args->temperature = SDIS_TEMPERATURE_NONE;
 
   /* Check simulation error handling */
   BA(sdis_solve_camera(scn, &solve_args, &buf));
@@ -778,6 +831,7 @@ main(int argc, char** argv)
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid0));
   OK(sdis_medium_ref_put(fluid1));
+  OK(sdis_radiative_env_ref_put(radenv));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_camera_ref_put(cam));
   OK(sdis_interface_ref_put(interf0));

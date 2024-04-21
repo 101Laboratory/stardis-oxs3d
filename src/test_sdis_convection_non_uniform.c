@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,6 @@
  * (0,0,0)
  */
 
-#define UNKNOWN_TEMPERATURE -1
 #define N 100000 /* #realisations */
 
 #define Tf_0 280.0
@@ -80,9 +79,9 @@ fluid_get_temperature
   CHK(vtx != NULL);
   CHK(is_stationary != NULL);
   if(*((int*)sdis_data_cget(is_stationary))) {
-    return UNKNOWN_TEMPERATURE;
+    return SDIS_TEMPERATURE_NONE;
   } else {
-    return vtx->time <= 0 ? Tf_0 : UNKNOWN_TEMPERATURE;
+    return vtx->time <= 0 ? Tf_0 : SDIS_TEMPERATURE_NONE;
   }
 }
 
@@ -132,16 +131,22 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(frag && data);
   return 0;
 }
 
 static double
 interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(frag && data);
   return 0;
 }

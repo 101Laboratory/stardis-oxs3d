@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,15 @@
 #ifndef SDIS_H
 #define SDIS_H
 
+#include <star/s2d.h>
+#include <star/s3d.h>
 #include <star/ssp.h>
 
 #include <rsys/hash.h>
 #include <rsys/rsys.h>
-#include <float.h>
+
+#include <float.h> /* DBL_MAX */
+#include <limits.h> /* UINT_MAX */
 
 /* Library symbol management */
 #if defined(SDIS_SHARED_BUILD)
@@ -48,6 +52,14 @@
 #define SDIS_FLUX_NONE DBL_MAX /* <=> No flux */
 #define SDIS_PRIMITIVE_NONE SIZE_MAX /* Invalid primitive */
 
+/* Syntactic sugar used to define whether a temperature is known or not */
+#define SDIS_TEMPERATURE_NONE NaN /* Unknown temperature */
+#define SDIS_TEMPERATURE_IS_KNOWN(Temp) (!IS_NaN(Temp))
+#define SDIS_TEMPERATURE_IS_UNKNOWN(Temp) (IS_NaN(Temp))
+
+/* Identifier of the internal source of radiation */
+#define SDIS_INTERN_SOURCE_ID UINT_MAX
+
 /* Forward declaration of external opaque data types */
 struct logger;
 struct mem_allocator;
@@ -68,7 +80,9 @@ struct sdis_estimator_buffer;
 struct sdis_green_function;
 struct sdis_interface;
 struct sdis_medium;
+struct sdis_radiative_env; /* Radiative environment */
 struct sdis_scene;
+struct sdis_source;
 
 /* Forward declaration of non ref counted types */
 struct sdis_green_path;
@@ -88,7 +102,14 @@ enum sdis_scene_dimension {
   SDIS_SCENE_3D
 };
 
-/* Random walk vertex, i.e. a spatiotemporal position at a given step of the
+enum sdis_diffusion_algorithm {
+  SDIS_DIFFUSION_DELTA_SPHERE,
+  SDIS_DIFFUSION_WOS, /* Walk on Sphere */
+  SDIS_DIFFUSION_ALGORITHMS_COUNT__,
+  SDIS_DIFFUSION_NONE = SDIS_DIFFUSION_ALGORITHMS_COUNT__
+};
+
+/* Random walk vertex, i.e. a spatio-temporal position at a given step of the
  * random walk. */
 struct sdis_rwalk_vertex {
   double P[3]; /* World space position */
@@ -98,7 +119,7 @@ struct sdis_rwalk_vertex {
 static const struct sdis_rwalk_vertex SDIS_RWALK_VERTEX_NULL =
   SDIS_RWALK_VERTEX_NULL__;
 
-/* Spatiotemporal position onto an interface. As a random walk vertex, it
+/* Spatio-temporal position onto an interface. As a random walk vertex, it
  * stores the position and time of the random walk, but since it lies onto an
  * interface, it has additionnal parameters as the normal of the interface and
  * the parametric coordinate of the position onto the interface */
@@ -113,24 +134,13 @@ struct sdis_interface_fragment {
 static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
   SDIS_INTERFACE_FRAGMENT_NULL__;
 
-/*******************************************************************************
- * Estimation data types
- ******************************************************************************/
-enum sdis_estimator_type {
-  SDIS_ESTIMATOR_TEMPERATURE, /* In Kelvin */
-  SDIS_ESTIMATOR_FLUX, /* In Watt/m^2 */
-  SDIS_ESTIMATOR_POWER, /* In Watt */
-  SDIS_ESTIMATOR_TYPES_COUNT__
+/* Ray traced in radiative environment */
+struct sdis_radiative_ray {
+  double dir[3]; /* Direction */
 };
-
-/* Monte-Carlo estimation */
-struct sdis_mc {
-  double E; /* Expected value */
-  double V; /* Variance */
-  double SE; /* Standard error */
-};
-#define SDIS_MC_NULL__ {0, 0, 0}
-static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
+#define SDIS_RADIATIVE_RAY_NULL__ {{0,0,0}}
+static const struct sdis_radiative_ray SDIS_RADIATIVE_RAY_NULL=
+  SDIS_RADIATIVE_RAY_NULL__;
 
 /* Input arguments of the sdis_device_create function */
 struct sdis_device_create_args {
@@ -158,6 +168,77 @@ struct sdis_info {
 #define SDIS_INFO_NULL__ {0}
 static const struct sdis_info SDIS_INFO_NULL = SDIS_INFO_NULL__;
 
+/* Type of functor used to retrieve the source's position relative to time */
+typedef void
+(*sdis_get_position_T)
+  (const double time, /* [s] */
+   double pos[3],
+   struct sdis_data* data);
+
+/* Type of functor used to retrieve the source's power relative to time */
+typedef double
+(*sdis_get_power_T)
+  (const double time, /* [s] */
+   struct sdis_data* data);
+
+/* Type of functor used to retrieve the diffuse part of the external radiance */
+typedef double /* [W/perpendicular m^2/sr] */
+(*sdis_get_diffuse_radiance_T)
+  (const double time, /* [s] */
+   const double dir[3],
+   struct sdis_data* data);
+
+/* Parameters of an external spherical source */
+struct sdis_spherical_source_shader {
+  sdis_get_position_T position; /* [m/fp_to_meter] */
+  sdis_get_power_T power; /* Total power [W] */
+
+  /* Describes the diffuse part of the source's radiance, i.e. the radiance
+   * emitted by the source and scattered at least once in the environment. This
+   * parameter is actually used to approximate a semi-transparent medium. Its
+   * value can be NULL, meaning that the source has not been scattered by the
+   * environment, or, to put it another way, that the source is in a vacuum. */
+  sdis_get_diffuse_radiance_T diffuse_radiance; /* [W/m^2/sr] */
+
+  struct sdis_data* data; /* Data sent to the position functor */
+  double radius; /* [m] */
+};
+#define SDIS_SPHERICAL_SOURCE_SHADER_NULL__ {NULL, NULL, NULL, 0, 0}
+static const struct sdis_spherical_source_shader
+SDIS_SPHERICAL_SOURCE_SHADER_NULL = SDIS_SPHERICAL_SOURCE_SHADER_NULL__;
+
+struct sdis_scene_find_closest_point_args {
+  double position[3]; /* Query position */
+  double radius; /* Maxium search distance around pos */
+
+  /* User defined filter function */
+  s2d_hit_filter_function_T filter_2d;
+  s3d_hit_filter_function_T filter_3d;
+  void* filter_data; /* Filter function data */
+};
+#define SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__ {{0,0,0}, 0, NULL, NULL, NULL}
+static const struct sdis_scene_find_closest_point_args
+SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL = SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__;
+
+/*******************************************************************************
+ * Estimation data types
+ ******************************************************************************/
+enum sdis_estimator_type {
+  SDIS_ESTIMATOR_TEMPERATURE, /* In Kelvin */
+  SDIS_ESTIMATOR_FLUX, /* In Watt/m^2 */
+  SDIS_ESTIMATOR_POWER, /* In Watt */
+  SDIS_ESTIMATOR_TYPES_COUNT__
+};
+
+/* Monte-Carlo estimation */
+struct sdis_mc {
+  double E; /* Expected value */
+  double V; /* Variance */
+  double SE; /* Standard error */
+};
+#define SDIS_MC_NULL__ {0, 0, 0}
+static const struct sdis_mc SDIS_MC_NULL = SDIS_MC_NULL__;
+
 /*******************************************************************************
  * Data type used to describe physical properties
  ******************************************************************************/
@@ -171,14 +252,28 @@ enum sdis_medium_type {
  * medium. */
 typedef double
 (*sdis_medium_getter_T)
-  (const struct sdis_rwalk_vertex* vert,
-   struct sdis_data* data);
+  (const struct sdis_rwalk_vertex* vert, /* Medium position */
+   struct sdis_data* data); /* User data */
 
 /* Functor type used to retrieve the spatio temporal physical properties of an
  * interface. */
 typedef double
 (*sdis_interface_getter_T)
-  (const struct sdis_interface_fragment* frag,
+  (const struct sdis_interface_fragment* frag, /* Interface position */
+   struct sdis_data* data); /* User data */
+
+/* Type of functor for obtaining the spatio temporal physical properties of an
+ * interface, as a function of the radiation source */
+typedef double
+(*sdis_radiative_interface_getter_T)
+  (const struct sdis_interface_fragment* frag, /* Interface position */
+   const unsigned source_id, /* Identifier of the radiation source */
+   struct sdis_data* data); /* User data */
+
+/* Type of functor for obtaining radiative environment properties */
+typedef double
+(*sdis_radiative_ray_getter_T)
+  (const struct sdis_radiative_ray* ray,
    struct sdis_data* data);
 
 /* Define the physical properties of a solid */
@@ -194,12 +289,14 @@ struct sdis_solid_shader {
    * submitted position and time */
   sdis_medium_getter_T volumic_power;  /* In W.m^-3 */
 
-  /* Initial/limit condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted random walk vertex.
+  /* Initial/limit condition. A temperature set to SDIS_TEMPERATURE_NONE
+   * means that the temperature is unknown for the submitted random walk vertex.
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
-  /* The time until the initial condition is maintained for this solid;
-   * can neither be negative nor infinity, default is 0. */
+
+  /* The time until the initial condition is maintained for this solid.
+   * Can be negative or set to +/- infinity to simulate a system that is always
+   * in the initial state or never reaches it, respectively. */
   double t0;
 };
 #define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, 0}
@@ -212,12 +309,14 @@ struct sdis_fluid_shader {
   sdis_medium_getter_T calorific_capacity; /* In J.K^-1.kg^-1 */
   sdis_medium_getter_T volumic_mass; /* In kg.m^-3 */
 
-  /* Initial/limit condition. A temperature < 0 means that the temperature is
-   * unknown for the submitted random walk vertex.
+  /* Initial/limit condition. A temperature set to SDIS_TEMPERATURE_NONE
+   * means that the temperature is unknown for the submitted random walk vertex.
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
-  /* The time until the initial condition is maintained for this fluid;
-   * can neither be negative nor infinity, default is 0. */
+
+  /* The time until the initial condition is maintained for this fluid.
+   * Can be negative or set to +/- infinity to simulate a system that is always
+   * in the initial state or never reaches it, respectively. */
   double t0;
 };
 #define SDIS_FLUID_SHADER_NULL__ {NULL, NULL, NULL, 0}
@@ -228,18 +327,22 @@ static const struct sdis_fluid_shader SDIS_FLUID_SHADER_NULL =
 struct sdis_interface_side_shader {
   /* Fixed temperature/flux. May be NULL if the temperature/flux is unknown
    * onto the whole interface */
-  sdis_interface_getter_T temperature;  /* In Kelvin. < 0 <=> Unknown temp */
-  sdis_interface_getter_T flux; /* In W.m^-2. SDIS_FLUX_NONE <=> no flux  */
+  sdis_interface_getter_T temperature; /* [K]. SDIS_TEMPERATURE_NONE = Unknown */
+  sdis_interface_getter_T flux; /* [W.m^-2]. SDIS_FLUX_NONE = no flux  */
 
   /* Control the emissivity of the interface. May be NULL for solid/solid
    * interface or if the emissivity is 0 onto the whole interface. */
-  sdis_interface_getter_T emissivity; /* Overall emissivity. */
-  sdis_interface_getter_T specular_fraction; /* Specular part in [0,1] */
+  sdis_radiative_interface_getter_T emissivity; /* Overall emissivity */
+  sdis_radiative_interface_getter_T specular_fraction; /* Specular part in [0,1] */
 
   /* Reference temperature used in Picard 1 */
   sdis_interface_getter_T reference_temperature;
+
+  /* Define whether external sources interact with the interface, i.e. whether
+   * external fluxes should be processed or not */
+  int handle_external_flux;
 };
-#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL }
+#define SDIS_INTERFACE_SIDE_SHADER_NULL__ { NULL, NULL, NULL, NULL, NULL, 1 }
 static const struct sdis_interface_side_shader SDIS_INTERFACE_SIDE_SHADER_NULL =
   SDIS_INTERFACE_SIDE_SHADER_NULL__;
 
@@ -264,6 +367,15 @@ struct sdis_interface_shader {
    SDIS_INTERFACE_SIDE_SHADER_NULL__}
 static const struct sdis_interface_shader SDIS_INTERFACE_SHADER_NULL =
   SDIS_INTERFACE_SHADER_NULL__;
+
+/* Parameters of a radiative environment */
+struct sdis_radiative_env_shader {
+  sdis_radiative_ray_getter_T temperature; /* [K] */
+  sdis_radiative_ray_getter_T reference_temperature; /* [K] */
+};
+#define SDIS_RADIATIVE_ENV_SHADER_NULL__ {NULL, NULL}
+static const struct sdis_radiative_env_shader SDIS_RADIATIVE_ENV_SHADER_NULL =
+  SDIS_RADIATIVE_ENV_SHADER_NULL__;
 
 /*******************************************************************************
  * Registered heat path data types
@@ -310,57 +422,83 @@ typedef res_T
  ******************************************************************************/
 enum sdis_green_path_end_type {
   SDIS_GREEN_PATH_END_AT_INTERFACE,
+  SDIS_GREEN_PATH_END_AT_RADIATIVE_ENV,
   SDIS_GREEN_PATH_END_IN_VOLUME,
-  SDIS_GREEN_PATH_END_RADIATIVE,
   SDIS_GREEN_PATH_END_TYPES_COUNT__,
   SDIS_GREEN_PATH_END_ERROR = SDIS_GREEN_PATH_END_TYPES_COUNT__
 };
 
-enum sdis_point_type {
-  SDIS_FRAGMENT,
-  SDIS_VERTEX,
-  SDIS_POINT_TYPES_COUNT__,
-  SDIS_POINT_NONE = SDIS_POINT_TYPES_COUNT__
-};
-
 /* Spatio temporal point */
-struct sdis_point {
+struct sdis_green_path_end {
   union {
+    /* Path end in volume */
     struct {
       struct sdis_medium* medium;
       struct sdis_rwalk_vertex vertex;
-    } mdmvert; /* Medium and a vertex into it */
+    } mdmvert;
+    /* Path end at interface */
     struct {
       struct sdis_interface* intface;
       struct sdis_interface_fragment fragment;
-    } itfrag; /* Interface and a fragmetn onto it */
+    } itfrag;
+    /* Path end in radiative environement */
+    struct {
+      struct sdis_radiative_env* radenv;
+      struct sdis_radiative_ray ray;
+    } radenvray;
   } data;
-  enum sdis_point_type type;
+  enum sdis_green_path_end_type type;
 };
-#define SDIS_POINT_NULL__ { {{NULL, SDIS_RWALK_VERTEX_NULL__}}, SDIS_POINT_NONE}
-static const struct sdis_point SDIS_POINT_NULL = SDIS_POINT_NULL__;
+#define SDIS_GREEN_PATH_END_NULL__ {                                           \
+  {{NULL, SDIS_RWALK_VERTEX_NULL__}},                                          \
+  SDIS_GREEN_PATH_END_ERROR                                                    \
+}
+static const struct sdis_green_path_end SDIS_GREEN_PATH_END_NULL =
+  SDIS_GREEN_PATH_END_NULL__;
 
-/* Functor used to process the paths registered against the green function */
+struct sdis_green_external_flux_terms {
+  /* Term relative to source power [K/W] */
+  double term_wrt_power;
+
+  /* Term relative to diffuse source radiance [K/W/m^2/sr] */
+  double term_wrt_diffuse_radiance;
+
+  double time; /* [s] */
+  double dir[3]; /* Direction on which term_wrt_diffuse_radiance depends */
+};
+#define SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL__ {0,0,0,{0,0,0}}
+static const struct sdis_green_external_flux_terms
+SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL = SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL__;
+
+/* Function profile used to process the paths stored in the green function */
 typedef res_T
 (*sdis_process_green_path_T)
   (struct sdis_green_path* path,
    void* context);
 
-/* Functor used to process the power factor registered along a green path for a
- * given medium */
+/* Function profile used to process power factors registered along a green path
+ * for a given medium */
 typedef res_T
 (*sdis_process_medium_power_term_T)
   (struct sdis_medium* medium,
-   const double power_term,
+   const double power_term, /* [K/W] */
    void* context);
 
-/* Functor used to process the flux factor registered along a green path for a
- * given interface side */
+/* Function profile used to process flux factors recorded along a green path for
+ * a given interface side */
 typedef res_T
 (*sdis_process_interface_flux_term_T)
   (struct sdis_interface* interf,
    const enum sdis_side side,
-   const double flux_term,
+   const double flux_term, /* [K/W/m^2] */
+   void* context);
+
+/* Function profile used to process external flux factors recorded along a green
+ * path */
+typedef res_T
+(*sdis_process_external_flux_terms_T)
+  (struct sdis_source* source,
+   const struct sdis_green_external_flux_terms* terms,
    void* context);
 
 /*******************************************************************************
@@ -389,15 +527,6 @@ typedef void
    double pos[], /* Output list of vertex coordinates */
    void* ctx);
 
-struct sdis_ambient_radiative_temperature {
-  double temperature; /* In Kelvin */
-  double reference; /* Used to linearise the radiative transfer */
-};
-#define SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__ {-1, -1}
-static const struct sdis_ambient_radiative_temperature
-SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL =
-  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__;
-
 struct sdis_scene_create_args {
   /* Functors to retrieve the geometric description */
   sdis_get_primitive_indices_T get_indices;
@@ -410,10 +539,17 @@ struct sdis_scene_create_args {
   size_t nprimitives; /* #primitives, i.e. #segments or #triangles */
   size_t nvertices; /* #vertices */
   double fp_to_meter; /* Scale factor used to convert a float in meter */
-  struct sdis_ambient_radiative_temperature trad; /* Ambient radiative temp */
 
   /* Min/max temperature used to linearise the radiative temperature */
   double t_range[2];
+
+  /* External source. Can be NULL <=> no external flux will be calculated on
+   * scene interfaces */
+  struct sdis_source* source;
+
+  /* Radiative environment. Can be NULL <=> sampled radiative trajectories
+   * cannot (in fact must not) reach the surrounding environment */
+  struct sdis_radiative_env* radenv;
 };
 
 #define SDIS_SCENE_CREATE_ARGS_DEFAULT__ {                                     \
@@ -424,8 +560,9 @@ struct sdis_scene_create_args {
   0, /* #primitives */                                                         \
   0, /* #vertices */                                                           \
   1.0, /* #Floating point to meter scale factor */                             \
-  SDIS_AMBIENT_RADIATIVE_TEMPERATURE_NULL__,/* Ambient radiative temperature */\
-  {0.0, -1.0} /* Temperature range */                                          \
+  {SDIS_TEMPERATURE_NONE, SDIS_TEMPERATURE_NONE}, /* Temperature range */      \
+  NULL, /* source */                                                           \
+  NULL /* Radiative environement */                                            \
 }
 static const struct sdis_scene_create_args SDIS_SCENE_CREATE_ARGS_DEFAULT =
   SDIS_SCENE_CREATE_ARGS_DEFAULT__;
@@ -447,6 +584,8 @@ struct sdis_solve_probe_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -461,10 +600,29 @@ struct sdis_solve_probe_args {
   SDIS_HEAT_PATH_NONE, /* Register paths mask */                               \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_probe_args SDIS_SOLVE_PROBE_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_ARGS_DEFAULT__;
+
+struct sdis_solve_probe_list_args {
+  struct sdis_solve_probe_args* probes; /* List of probes to compute */
+  size_t nprobes; /* Total number of probes */
+
+  /* State/type of the RNG to use for the list of probes to calculate.
+   * The state/type defines per probe is ignored */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+};
+#define SDIS_SOLVE_PROBE_LIST_ARGS_DEFAULT__ {                                 \
+  NULL, /* List of probes */                                                   \
+  0, /* #probes */                                                             \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
+}
+static const struct sdis_solve_probe_list_args
+SDIS_SOLVE_PROBE_LIST_ARGS_DEFAULT = SDIS_SOLVE_PROBE_LIST_ARGS_DEFAULT__;
 
 /* Arguments of a probe simulation */
 struct sdis_solve_probe_boundary_args {
@@ -483,6 +641,8 @@ struct sdis_solve_probe_boundary_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -499,11 +659,33 @@ struct sdis_solve_probe_boundary_args {
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_probe_boundary_args
 SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT =
   SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT__;
+
+/* Input arguments of the solve function that distributes the calculations of
+ * several boundary probes rather than the realizations of a probe */
+struct sdis_solve_probe_boundary_list_args {
+  struct sdis_solve_probe_boundary_args* probes; /* List of probes to compute */
+  size_t nprobes; /* Total number of probes */
+
+  /* State/type of the RNG to use for the list of probes to calculate.
+   * The state/type defines per probe is ignored */
+  struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
+  enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+};
+#define SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT__ {                        \
+  NULL, /* List of probes */                                                   \
+  0, /* #probes */                                                             \
+  NULL, /* RNG state */                                                        \
+  SSP_RNG_THREEFRY /* RNG type */                                              \
+}
+static const struct sdis_solve_probe_boundary_list_args
+SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT =
+  SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT__;
 
 struct sdis_solve_boundary_args {
   size_t nrealisations; /* #realisations */
@@ -521,6 +703,8 @@ struct sdis_solve_boundary_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -537,6 +721,7 @@ struct sdis_solve_boundary_args {
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_boundary_args SDIS_SOLVE_BOUNDARY_ARGS_DEFAULT =
@@ -556,6 +741,8 @@ struct sdis_solve_medium_args {
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
 
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
+
   /* Signature of the estimated green function. The signature is ignored in an
    * ordinary probe estimation. The signature of the green function can be
    * queried to verify that it is the expected one with respect to the caller's
@@ -570,6 +757,7 @@ struct sdis_solve_medium_args {
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE, /* Diffusion algorithm */                       \
   {0} /* Signature */                                                          \
 }
 static const struct sdis_solve_medium_args SDIS_SOLVE_MEDIUM_ARGS_DEFAULT =
@@ -588,6 +776,8 @@ struct sdis_solve_probe_boundary_flux_args {
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                        \
   10000, /* #realisations */                                                   \
@@ -596,7 +786,8 @@ struct sdis_solve_probe_boundary_flux_args {
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE /* Diffusion algorithm */                        \
 }
 static const struct sdis_solve_probe_boundary_flux_args
 SDIS_SOLVE_PROBE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -615,6 +806,8 @@ struct sdis_solve_boundary_flux_args {
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use if `rng_state' is NULL */
+
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT__ {                              \
   10000, /* #realisations */                                                   \
@@ -623,7 +816,8 @@ struct sdis_solve_boundary_flux_args {
   {DBL_MAX,DBL_MAX}, /* Time range */                                          \
   1, /* Picard order */                                                        \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE /* Diffusion algorithm */                        \
 }
 static const struct sdis_solve_boundary_flux_args
 SDIS_SOLVE_BOUNDARY_FLUX_ARGS_DEFAULT =
@@ -644,6 +838,8 @@ struct sdis_solve_camera_args {
 
   struct ssp_rng* rng_state; /* Initial RNG state. May be NULL */
   enum ssp_rng_type rng_type; /* RNG type to use */
+
+  enum sdis_diffusion_algorithm diff_algo; /* Diffusion algorithm to be used */
 };
 #define SDIS_SOLVE_CAMERA_ARGS_DEFAULT__ {                                     \
   NULL, /* Camera */                                                           \
@@ -653,7 +849,8 @@ struct sdis_solve_camera_args {
   256, /* #realisations per pixel */                                           \
   SDIS_HEAT_PATH_NONE,                                                         \
   NULL, /* RNG state */                                                        \
-  SSP_RNG_THREEFRY /* RNG type */                                              \
+  SSP_RNG_THREEFRY, /* RNG type */                                             \
+  SDIS_DIFFUSION_DELTA_SPHERE /* Diffusion algorithm */                        \
 }
 static const struct sdis_solve_camera_args SDIS_SOLVE_CAMERA_ARGS_DEFAULT =
   SDIS_SOLVE_CAMERA_ARGS_DEFAULT__;
@@ -710,6 +907,11 @@ sdis_device_ref_get
 SDIS_API res_T
 sdis_device_ref_put
   (struct sdis_device* dev);
+
+SDIS_API res_T
+sdis_device_is_mpi_used
+  (struct sdis_device* dev,
+   int* is_mpi_used);
 
 SDIS_API res_T
 sdis_device_get_mpi_rank
@@ -908,6 +1110,66 @@ sdis_interface_get_id
   (const struct sdis_interface* interf);
 
 /*******************************************************************************
+ * API of the radiative environment. Describes the system when the sampled
+ * radiative paths reach infinity.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_radiative_env_create
+  (struct sdis_device* dev,
+   const struct sdis_radiative_env_shader* shader,
+   struct sdis_data* data, /* Data sent to the shader. May be NULL */
+   struct sdis_radiative_env** radenv);
+
+SDIS_API res_T
+sdis_radiative_env_ref_get
+  (struct sdis_radiative_env* radenv);
+
+SDIS_API res_T
+sdis_radiative_env_ref_put
+  (struct sdis_radiative_env* radenv);
+
+SDIS_API res_T
+sdis_radiative_env_get_shader
+  (struct sdis_radiative_env* radenv,
+   struct sdis_radiative_env_shader* shader);
+
+SDIS_API struct sdis_data*
+sdis_radiative_env_get_data
+  (struct sdis_radiative_env* radenv);
+
+/*******************************************************************************
+ * External source API. When a scene has external sources, an external flux
+ * (in both its direct and diffuse parts) is imposed on the interfaces.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_spherical_source_create
+  (struct sdis_device* dev,
+   const struct sdis_spherical_source_shader* shader,
+   struct sdis_data* data, /* Data sent to the shader. May be NULL */
+   struct sdis_source** source);
+
+SDIS_API res_T
+sdis_spherical_source_get_shader
+  (const struct sdis_source* source,
+   struct sdis_spherical_source_shader* shader);
+
+SDIS_API res_T
+sdis_source_ref_get
+  (struct sdis_source* source);
+
+SDIS_API res_T
+sdis_source_ref_put
+  (struct sdis_source* source);
+
+SDIS_API struct sdis_data*
+sdis_source_get_data
+  (struct sdis_source* source);
+
+SDIS_API unsigned
+sdis_source_get_id
+  (const struct sdis_source* source);
+
+/*******************************************************************************
  * A scene is a collection of primitives. Each primitive is the geometric
  * support of the interface between 2 media.
  ******************************************************************************/
@@ -980,19 +1242,6 @@ sdis_scene_set_fp_to_meter
   (struct sdis_scene* scn,
    const double fp_to_meter);
 
-/* Get scene's ambient radiative temperature */
-SDIS_API res_T
-sdis_scene_get_ambient_radiative_temperature
-  (const struct sdis_scene* scn,
-   struct sdis_ambient_radiative_temperature* trad);
-
-/* Set scene's ambient radiative temperature. If set negative, any sample
- * ending in ambient radiative temperature will fail */
-SDIS_API res_T
-sdis_scene_set_ambient_radiative_temperature
-  (struct sdis_scene* scn,
-   const struct sdis_ambient_radiative_temperature* trad);
-
 /* Get scene's minimum/maximum temperature */
 SDIS_API res_T
 sdis_scene_get_temperature_range
@@ -1015,8 +1264,7 @@ sdis_scene_set_temperature_range
 SDIS_API res_T
 sdis_scene_find_closest_point
   (const struct sdis_scene* scn,
-   const double pos[], /* Query position */
-   const double radius, /* Maximum search distance around pos */
+   const struct sdis_scene_find_closest_point_args* args,
    size_t* iprim, /* Primitive index onto which the closest point lies */
    double uv[]); /* Parametric cordinate onto the primitive */
 
@@ -1088,6 +1336,22 @@ sdis_scene_get_medium_spread
   (struct sdis_scene* scn,
    const struct sdis_medium* mdm,
    double* spread);
+
+SDIS_API res_T
+sdis_scene_get_device
+  (struct sdis_scene* scn,
+   struct sdis_device** device);
+
+SDIS_API res_T
+sdis_scene_get_source
+  (struct sdis_scene* scn,
+   struct sdis_source** src); /* The returned pointer can be NULL <=> no source */
+
+SDIS_API res_T
+sdis_scene_get_radiative_env
+  (struct sdis_scene* scn,
+   /* The returned pointer can be NULL, i.e. there is no radiative environement*/
+   struct sdis_radiative_env** radenv);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
@@ -1239,18 +1503,12 @@ sdis_green_path_get_elapsed_time
   (struct sdis_green_path* path_handle,
    double* elapsed);
 
-/* Retrieve the path's end type. */
+/* Retrieve the spatio-temporal limit of a path used to estimate the green
+ * function */
 SDIS_API res_T
-sdis_green_path_get_end_type
+sdis_green_path_get_end
   (struct sdis_green_path* path,
-   enum sdis_green_path_end_type* type);
-
-/* Retrieve the spatio-temporal end point of a path used to estimate the green
- * function. Return RES_BAD_OP for paths ending radiative. */
-SDIS_API res_T
-sdis_green_path_get_limit_point
-  (struct sdis_green_path* path,
-   struct sdis_point* pt);
+   struct sdis_green_path_end* end);
 
 /* Retrieve the green function the path belongs to */
 SDIS_API res_T
@@ -1270,6 +1528,11 @@ sdis_green_function_get_flux_terms_count
   (const struct sdis_green_path* path,
    size_t* nterms);
 
+SDIS_API res_T
+sdis_green_function_get_external_flux_terms_count
+  (const struct sdis_green_path* path,
+   size_t* nterms);
+
 /* Iterate over all "power terms" associated to the path. Multiply each term
  * by the power of their associated medium, that is assumed to be constant in
  * time and space, gives the medium power registered along the path. */
@@ -1286,6 +1549,13 @@ SDIS_API res_T
 sdis_green_path_for_each_flux_term
   (struct sdis_green_path* path,
    sdis_process_interface_flux_term_T func,
+   void* context);
+
+/* Iterate over all external flux terms associated to the path */
+SDIS_API res_T
+sdis_green_path_for_each_external_flux_terms
+  (struct sdis_green_path* path,
+   sdis_process_external_flux_terms_T func,
    void* context);
 
 /*******************************************************************************
@@ -1380,6 +1650,27 @@ sdis_compute_power
    struct sdis_estimator** estimator);
 
 /*******************************************************************************
+ * Solvers of a list of probes
+ *
+ * Unlike their single-probe counterpart, this function parallelizes the list of
+ * probes, rather than calculating a single probe. Calling these functions is
+ * therefore more advantageous in terms of load distribution when the number of
+ * probes to be evaluated is large compared to the cost of calculating a single
+ * probe.
+ ******************************************************************************/
+SDIS_API res_T
+sdis_solve_probe_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_list_args* args,
+   struct sdis_estimator_buffer** buf);
+
+SDIS_API res_T
+sdis_solve_probe_boundary_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_boundary_list_args* args,
+   struct sdis_estimator_buffer** buf);
+
+/*******************************************************************************
  * Green solvers.
  *
  * Note that only the interfaces/media with flux/volumic power defined during
@@ -1390,7 +1681,7 @@ sdis_compute_power
  *
  * Also note that the green solvers assume that the interface fluxes are
  * constant in time and space. The same applies to the volumic power of the
- * solid media.
+ * solid media and the power of external sources.
  *
  * If these assumptions are not ensured by the caller, the behavior of the
  * estimated green function is undefined.

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@ temperature_unknown(const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)data;
   CHK(vtx != NULL);
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -246,6 +246,7 @@ main(int argc, char** argv)
   solve_args.position[1] = 0.5;
   solve_args.time_range[0] = INF;
   solve_args.time_range[1] = INF;
+  solve_args.diff_algo = SDIS_DIFFUSION_WOS;
 
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
 

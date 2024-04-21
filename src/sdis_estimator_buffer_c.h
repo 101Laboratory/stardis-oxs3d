@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,6 +58,26 @@ extern LOCAL_SYM res_T
 estimator_buffer_save_rng_state
   (struct sdis_estimator_buffer* buf,
    const struct ssp_rng_proxy* proxy);
+
+extern LOCAL_SYM res_T
+estimator_buffer_create_from_observable_list_probe
+  (struct sdis_device* dev,
+   struct ssp_rng_proxy* rng_proxy,
+   const struct sdis_solve_probe_args obs_list_args[],
+   const struct accum* per_obs_acc_temp,
+   const struct accum* per_obs_acc_time,
+   const size_t nobs, /* #observables */
+   struct sdis_estimator_buffer** out_estim_buffer);
+
+extern LOCAL_SYM res_T
+estimator_buffer_create_from_observable_list_probe_boundary
+  (struct sdis_device* dev,
+   struct ssp_rng_proxy* rng_proxy,
+   const struct sdis_solve_probe_boundary_args obs_list_args[],
+   const struct accum* per_obs_acc_temp,
+   const struct accum* per_obs_acc_time,
+   const size_t nobs, /* #observables */
+   struct sdis_estimator_buffer** out_estim_buffer);
 
 #endif /* SDIS_ESTIMATOR_BUFFER_C_H */
 

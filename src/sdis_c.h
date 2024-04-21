@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,11 +85,25 @@ free_process_progress
   (struct sdis_device* dev,
    int32_t progress[]);
 
-/* Compute the number of realisations for the current process */
+/* Calculate the index range of the current process. It returns the size of the
+ * range. The overall_count is the number of calculations to parallelize between
+ * processes. For example, it may be the number of realisations of one
+ * calculation, or the total number of probe calculations. */
 extern LOCAL_SYM size_t
+compute_process_index_range
+  (const struct sdis_device* dev,
+   const size_t overall_count,
+   size_t range[2]); /* [lower, upper[ */
+
+/* Return the number of realisations for the current process */
+static INLINE size_t
 compute_process_realisations_count
   (const struct sdis_device* dev,
-   const size_t overall_realisations_count);
+   const size_t overall_realisations_count)
+{
+  size_t range[2];
+  return compute_process_index_range(dev, overall_realisations_count, range);
+}
 
 /* Gather the accumulators and sum them in acc. With MPI, non master processes
  * store in acc the gathering of their per thread accumulators that are sent to
@@ -101,6 +115,21 @@ gather_accumulators
    const enum mpi_sdis_message msg,
    const struct accum* per_thread_acc,
    struct accum* acc);
+
+/* Collect accumulators evaluated over multiple processes, with each accumulator
+ * storing a complete Monte Carlo calculation. Without MPI, nothing happens
+ * since the per_probe_acc variable already stores the entire list of
+ * accumulators. With MPI, non-master processes send their list of accumulators
+ * to the master process which saves them in the per_probe_acc, after its
+ * accumulators that it has managed, sorted against the identifiers of the
+ * probes listed in process_probes. */
+extern LOCAL_SYM res_T
+gather_accumulators_list
+  (struct sdis_device* dev,
+   const enum mpi_sdis_message msg,
+   const size_t nprobes, /* Total number of probes */
+   const size_t process_probes[2], /* Ids of the probes managed by the process */
+   struct accum* per_probe_acc); /* List of per probe accumulators */
 
 /* Gather the green functions. With MPI, non master processes store in green
  * the gathering of their per thread green functions and sent the result to the

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,20 +13,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#include "sdis_scene_Xd.h"
-
-/* Generate the Generic functions of the scene */
-#define SDIS_SCENE_DIMENSION 2
-#include "sdis_scene_Xd.h"
-#define SDIS_SCENE_DIMENSION 3
-#include "sdis_scene_Xd.h"
-
 #include "sdis.h"
 #include "sdis_interface_c.h"
 #include "sdis_scene_c.h"
+#include "sdis_source_c.h"
 
 #include <float.h>
 #include <limits.h>
+
+/* Generate the Generic functions of the scene */
+#define SDIS_XD_DIMENSION 2
+#include "sdis_scene_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_scene_Xd.h"
 
 /*******************************************************************************
  * Helper function
@@ -108,6 +107,8 @@ scene_release(ref_T * ref)
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   if(scn->senc2d_scn) SENC2D(scene_ref_put(scn->senc2d_scn));
   if(scn->senc3d_scn) SENC3D(scene_ref_put(scn->senc3d_scn));
+  if(scn->source) SDIS(source_ref_put(scn->source));
+  if(scn->radenv) SDIS(radiative_env_ref_put(scn->radenv));
   MEM_RM(dev->allocator, scn);
   SDIS(device_ref_put(dev));
 }
@@ -194,26 +195,6 @@ sdis_scene_set_fp_to_meter
 }
 
 res_T
-sdis_scene_get_ambient_radiative_temperature
-  (const struct sdis_scene* scn,
-   struct sdis_ambient_radiative_temperature* trad)
-{
-  if(!scn || !trad) return RES_BAD_ARG;
-  *trad = scn->trad;
-  return RES_OK;
-}
-
-res_T
-sdis_scene_set_ambient_radiative_temperature
-  (struct sdis_scene* scn,
-   const struct sdis_ambient_radiative_temperature* trad)
-{
-  if(!scn) return RES_BAD_ARG;
-  scn->trad = *trad;
-  return RES_OK;
-}
-
-res_T
 sdis_scene_get_temperature_range
   (const struct sdis_scene* scn,
    double t_range[2])
@@ -238,16 +219,15 @@ sdis_scene_set_temperature_range
 res_T
 sdis_scene_find_closest_point
   (const struct sdis_scene* scn,
-   const double pos[],
-   const double radius,
+   const struct sdis_scene_find_closest_point_args* args,
    size_t* iprim,
    double uv[])
 {
   if(!scn) return RES_BAD_ARG;
   if(scene_is_2d(scn)) {
-    return scene_find_closest_point_2d(scn, pos, radius, iprim, uv);
+    return scene_find_closest_point_2d(scn, args, iprim, uv);
   } else {
-    return scene_find_closest_point_3d(scn, pos, radius, iprim, uv);
+    return scene_find_closest_point_3d(scn, args, iprim, uv);
   }
 }
 
@@ -410,6 +390,32 @@ error:
   goto exit;
 }
 
+res_T
+sdis_scene_get_device(struct sdis_scene* scn, struct sdis_device** device)
+{
+  if(!scn || !device) return RES_BAD_ARG;
+  *device = scn->dev;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_source(struct sdis_scene* scn, struct sdis_source** source)
+{
+  if(!scn || !source) return RES_BAD_ARG;
+  *source = scn->source;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_radiative_env
+  (struct sdis_scene* scn,
+   struct sdis_radiative_env** radenv)
+{
+  if(!scn || !radenv) return RES_BAD_ARG;
+  *radenv = scn->radenv;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
@@ -422,7 +428,7 @@ scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 
 res_T
 scene_get_medium
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double pos[],
    struct get_medium_info* info,
    struct sdis_medium** out_medium)
@@ -434,7 +440,7 @@ scene_get_medium
 
 res_T
 scene_get_medium_in_closed_boundaries
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double pos[],
    struct sdis_medium** out_medium)
 {
@@ -448,6 +454,7 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
 {
   struct sha256_ctx sha256_ctx;
   size_t iprim, nprims;
+  int has_radenv = 0;
   res_T res = RES_OK;
   ASSERT(scn && hash);
 
@@ -461,9 +468,18 @@ scene_compute_hash(const struct sdis_scene* scn, hash256_T hash)
   #define SHA256_UPD(Var, Nb) \
     sha256_ctx_update(&sha256_ctx, (const char*)(Var), sizeof(*Var)*(Nb))
 
-  SHA256_UPD(&scn->trad.reference, 1);
+  has_radenv = scn->radenv != NULL;
+
+  SHA256_UPD(&has_radenv, 1);
   SHA256_UPD(&scn->tmax, 1);
   SHA256_UPD(&scn->fp_to_meter, 1);
+
+  if(scn->source) {
+    hash256_T src_hash;
+    source_compute_signature(scn->source, src_hash);
+    sha256_ctx_update(&sha256_ctx, src_hash, sizeof(hash256_T));
+  }
+
   FOR_EACH(iprim, 0, nprims) {
     struct sdis_interface* interf = NULL;
     size_t ivert;
@@ -557,3 +573,40 @@ error:
   goto exit;
 }
 
+res_T
+scene_check_temperature_range(const struct sdis_scene* scn)
+{
+  res_T res = RES_OK;
+  ASSERT(scn);
+
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmin)) {
+    log_err(scn->dev,
+      "%s the defined minimum temperature is unknown "
+      "when it is expected to be known.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(scn->tmax)) {
+    log_err(scn->dev,
+      "%s the defined maximum temperature is unknown "
+      "when it is expected to be known.\n",
+      FUNC_NAME);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  if(scn->tmin > scn->tmax) {
+    log_err(scn->dev,
+      "%s: defined temperature range degenerated -- [%g, %g] K\n",
+      FUNC_NAME, scn->tmin, scn->tmax);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}

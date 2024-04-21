@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * The physical configuration is the following: a slab of fluid with known
  * thermophysical properties but unknown temperature is located between a
  * "ground" and a slab of solid, with also a unknown temperature profile. On
- * the other side of the solid slab, is a "atmosphere" with known temperature,
+ * the other side of the solid slab, is an "atmosphere" with known temperature,
  * and known radiative temperature.
  *
  * Solving the system means: finding the temperature of the ground, of the
@@ -35,7 +35,7 @@
  * reference)
  *
  * The reference for this system comes from a numerical method and is not
- * analytic.  Thus the compliance test MC VS reference is not the usual |MC -
+ * analytic. Thus the compliance test MC VS reference is not the usual |MC -
  * ref| <= 3*sigma but is |MC -ref| <= (Tmax -Tmin) * 0.01.
  *
  *          3D                                      2D
@@ -59,8 +59,6 @@
 
 #define T0_SOLID 300
 #define T0_FLUID 300
-
-#define UNKNOWN_TEMPERATURE -1
 
 #define N 10000 /* #realisations */
 
@@ -275,7 +273,7 @@ solid_get_temperature
   solid = ((struct solid*)sdis_data_cget(data));
   if(vtx->time <= solid->t0)
     return solid->temperature;
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 struct fluid {
@@ -294,7 +292,7 @@ fluid_get_temperature
   fluid = ((struct fluid*)sdis_data_cget(data));
   if(vtx->time <= fluid->t0)
     return fluid->temperature;
-  return UNKNOWN_TEMPERATURE;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -349,9 +347,12 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
   const struct interf* interf;
+  (void)source_id;
   CHK(frag && data);
   interf = sdis_data_cget(data);
   return interf->emissivity;
@@ -359,12 +360,46 @@ interface_get_emissivity
 
 static double
 interface_get_Tref
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   struct sdis_data* data)
 {
   const struct interf* interf;
   CHK(frag && data);
   interf = sdis_data_cget(data);
   return interf->Tref;
+}
+
+/*******************************************************************************
+ * Radiative environment
+ ******************************************************************************/
+static double
+radenv_get_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return TR; /* [K] */
+}
+
+static double
+radenv_get_reference_temperature
+  (const struct sdis_radiative_ray* ray,
+   struct sdis_data* data)
+{
+  (void)ray, (void)data;
+  return TR; /* [K] */
+}
+
+static struct sdis_radiative_env*
+create_radenv(struct sdis_device* sdis)
+{
+  struct sdis_radiative_env_shader shader = SDIS_RADIATIVE_ENV_SHADER_NULL;
+  struct sdis_radiative_env* radenv = NULL;
+
+  shader.temperature = radenv_get_temperature;
+  shader.reference_temperature = radenv_get_reference_temperature;
+  OK(sdis_radiative_env_create(sdis, &shader, NULL, &radenv));
+  return radenv;
 }
 
 /*******************************************************************************
@@ -714,6 +749,7 @@ main(int argc, char** argv)
   struct sdis_interface* interf_TG = NULL;
   struct sdis_interface* interf_P = NULL;
   struct sdis_interface* interf_TA = NULL;
+  struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* box_scn = NULL;
   struct sdis_scene* square_scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
@@ -728,6 +764,8 @@ main(int argc, char** argv)
   (void)argc, (void)argv;
 
   OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+
+  radenv = create_radenv(dev);
 
   /* Setup the solid shader */
   solid_shader.calorific_capacity = solid_get_calorific_capacity;
@@ -756,7 +794,7 @@ main(int argc, char** argv)
   solid_props->rho = 1;
   solid_props->delta = 1;
   solid_props->t0 = INF;
-  solid_props->temperature = UNKNOWN_TEMPERATURE;
+  solid_props->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &dummy_solid));
   OK(sdis_data_ref_put(data));
 
@@ -786,7 +824,7 @@ main(int argc, char** argv)
   OK(sdis_data_ref_put(data));
 
   /* Create the adiabatic interfaces */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = 0;
   interf_props.emissivity = 0;
   interf_props.Tref = TREF;
@@ -794,7 +832,7 @@ main(int argc, char** argv)
   create_interface(dev, solid, dummy_solid, &interf_props, &interf_adiabatic_2);
 
   /* Create the P interface */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = HC;
   interf_props.emissivity = 1;
   interf_props.Tref = TREF;
@@ -808,7 +846,7 @@ main(int argc, char** argv)
   create_interface(dev, fluid, dummy_solid, &interf_props, &interf_TG);
 
   /* Create the TA interface */
-  interf_props.temperature = UNKNOWN_TEMPERATURE;
+  interf_props.temperature = SDIS_TEMPERATURE_NONE;
   interf_props.h = HA;
   interf_props.emissivity = 1;
   interf_props.Tref = TREF;
@@ -870,8 +908,7 @@ main(int argc, char** argv)
   scn_args.nprimitives = model3d_ntriangles;
   scn_args.nvertices = model3d_nvertices;
   scn_args.context = model3d_interfaces;
-  scn_args.trad.temperature = TR;
-  scn_args.trad.reference = TR;
+  scn_args.radenv = radenv;
   scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
   scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_create(dev, &scn_args, &box_scn));
@@ -883,8 +920,7 @@ main(int argc, char** argv)
   scn_args.nprimitives = model2d_nsegments;
   scn_args.nvertices = model2d_nvertices;
   scn_args.context = model2d_interfaces;
-  scn_args.trad.temperature = TR;
-  scn_args.trad.reference = TR;
+  scn_args.radenv = radenv;
   scn_args.t_range[0] = MMIN(MMIN(MMIN(MMIN(T0_FLUID, T0_SOLID), TA), TG), TR);
   scn_args.t_range[1] = MMAX(MMAX(MMAX(MMAX(T0_FLUID, T0_SOLID), TA), TG), TR);
   OK(sdis_scene_2d_create(dev, &scn_args, &square_scn));
@@ -909,6 +945,7 @@ main(int argc, char** argv)
   solve_tbound2(box_scn, rng);
   solve_tsolid(square_scn, rng);
 
+  OK(sdis_radiative_env_ref_put(radenv));
   OK(sdis_scene_ref_put(box_scn));
   OK(sdis_scene_ref_put(square_scn));
   OK(sdis_device_ref_put(dev));
@@ -917,4 +954,3 @@ main(int argc, char** argv)
   CHK(mem_allocated_size() == 0);
   return 0;
 }
-

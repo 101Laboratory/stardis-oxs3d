@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,26 +23,30 @@
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-static int
+static res_T
 check_fluid_shader(const struct sdis_fluid_shader* shader)
 {
-  ASSERT(shader);
-  return shader->calorific_capacity
-      && shader->volumic_mass
-      && shader->temperature
-      && 0 <= shader->t0 && shader->t0 < INF;
+  if(!shader
+  || !shader->calorific_capacity
+  || !shader->volumic_mass
+  || !shader->temperature)
+    return RES_BAD_ARG;
+
+  return RES_OK;
 }
 
-static int
+static res_T
 check_solid_shader(const struct sdis_solid_shader* shader)
 {
-  ASSERT(shader);
-  return shader->calorific_capacity
-      && shader->thermal_conductivity
-      && shader->volumic_mass
-      && shader->delta
-      && shader->temperature
-      && 0 <= shader->t0 && shader->t0 < INF;
+  if(!shader
+  || !shader->calorific_capacity
+  || !shader->thermal_conductivity
+  || !shader->volumic_mass
+  || !shader->delta
+  || !shader->temperature)
+    return RES_BAD_ARG;
+
+  return RES_OK;
 }
 
 static res_T
@@ -108,14 +112,11 @@ sdis_fluid_create
   struct sdis_medium* medium = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !shader || !out_medium) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  if(!dev || !out_medium) { res = RES_BAD_ARG; goto error; }
 
-  if(!check_fluid_shader(shader)) {
+  res = check_fluid_shader(shader);
+  if(res != RES_OK) {
     log_err(dev, "%s: invalid fluid shader.\n", FUNC_NAME);
-    res = RES_BAD_ARG;
     goto error;
   }
 
@@ -162,14 +163,11 @@ sdis_solid_create
   struct sdis_medium* medium = NULL;
   res_T res = RES_OK;
 
-  if(!dev || !shader || !out_medium) {
-    res = RES_BAD_ARG;
-    goto error;
-  }
+  if(!dev || !out_medium) { res = RES_BAD_ARG; goto error; }
 
-  if(!check_solid_shader(shader)) {
+  res = check_solid_shader(shader);
+  if(res != RES_OK) {
     log_err(dev, "%s: invalid solid shader.\n", FUNC_NAME);
-    res = RES_BAD_ARG;
     goto error;
   }
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,11 +31,17 @@
 #undef SXD_FLOAT2
 #undef SXD_FLOAT3
 #undef SXD_FLOATX
+#undef SXD_GET_PRIMITIVE
 #undef SXD_SAMPLE
+#undef SXD_TRACE
 
 #undef dX
 #undef fX
 #undef fX_set_dX
+#undef fXX_mulfX
 #undef dX_set_fX
+
+#undef FORMAT_VECX
+#undef SPLITX
 
 #undef SDIS_XD_BEGIN_H__

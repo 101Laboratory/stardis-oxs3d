@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 #define Hcoef 1.0 /* Convection coefficient */
 #define Pw 10000.0 /* Volumetric power */
 #define Nreals 10000 /* #realisations */
-#define UNKNOWN -1
 
 /*******************************************************************************
  * Helper functions
@@ -160,7 +159,7 @@ interface_get_temperature
   interf = sdis_data_cget(data);
   switch(interf->profile) {
     case PROFILE_UNKNOWN:
-      temperature = UNKNOWN;
+      temperature = SDIS_TEMPERATURE_NONE;
       break;
     case PROFILE_VOLUMETRIC_POWER:
       temperature = volumetric_temperature(frag->P, interf->upper);
@@ -305,7 +304,7 @@ main(int argc, char** argv)
   solid_param->lambda = 10;
   solid_param->cp = 1.0;
   solid_param->rho = 1.0;
-  solid_param->temperature = -1;
+  solid_param->temperature = SDIS_TEMPERATURE_NONE;
   solid_param->power = SDIS_VOLUMIC_POWER_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));

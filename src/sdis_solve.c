@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,6 +57,20 @@ sdis_solve_probe
 }
 
 res_T
+sdis_solve_probe_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_list_args* args,
+   struct sdis_estimator_buffer** out_buf)
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return solve_probe_list_2d(scn, args, out_buf);
+  } else {
+    return solve_probe_list_3d(scn, args, out_buf);
+  }
+}
+
+res_T
 sdis_solve_probe_green_function
   (struct sdis_scene* scn,
    const struct sdis_solve_probe_args* args,
@@ -81,6 +95,20 @@ sdis_solve_probe_boundary
     return solve_probe_boundary_2d(scn, args, NULL, out_estimator);
   } else {
     return solve_probe_boundary_3d(scn, args, NULL, out_estimator);
+  }
+}
+
+res_T
+sdis_solve_probe_boundary_list
+  (struct sdis_scene* scn,
+   const struct sdis_solve_probe_boundary_list_args* args,
+   struct sdis_estimator_buffer** out_buf)
+{
+  if(!scn) return RES_BAD_ARG;
+  if(scene_is_2d(scn)) {
+    return solve_probe_boundary_list_2d(scn, args, out_buf);
+  } else {
+    return solve_probe_boundary_list_3d(scn, args, out_buf);
   }
 }
 

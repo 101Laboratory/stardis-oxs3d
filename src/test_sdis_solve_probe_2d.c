@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,7 +116,7 @@ solid_get_temperature
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   (void)vtx, (void)data;
-  return -1;
+  return SDIS_TEMPERATURE_NONE;
 }
 
 static double
@@ -234,7 +234,7 @@ main(int argc, char** argv)
   OK(sdis_green_function_ref_put(green));
 
   /* The external fluid cannot have an unknown temperature */
-  fluid_param->temperature = -1;
+  fluid_param->temperature = SDIS_TEMPERATURE_NONE;
   
   BA(sdis_solve_probe(scn, &solve_args, &estimator));
 

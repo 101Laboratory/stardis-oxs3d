@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 #include "sdis_interface_c.h"
 #include "sdis_medium_c.h"
 #include "sdis_misc.h"
+#include "sdis_radiative_env_c.h"
 #include "sdis_scene_c.h"
 
 #include <star/ssp.h>
@@ -28,48 +29,13 @@
  * Helper functions
  ******************************************************************************/
 static INLINE res_T
-XD(check_Tref)
-  (const struct sdis_scene* scn,
-   const double pos[DIM],
-   const double Tref,
-   const char* func_name)
-{
-  ASSERT(scn && pos && func_name);
-
-#if DIM == 2
-  #define STR_VECX "%g %g"
-  #define SPLITX SPLIT2
-#else
-  #define STR_VECX "%g %g %g"
-  #define SPLITX SPLIT3
-#endif
-  if(Tref < 0) {
-    log_err(scn->dev,
-      "%s: invalid reference temperature `%gK' at the position `"STR_VECX"'.\n",
-      func_name, Tref, SPLITX(pos));
-    return RES_BAD_OP_IRRECOVERABLE;
-  }
-  if(Tref > scn->tmax) {
-    log_err(scn->dev,
-      "%s: invalid maximum temperature `%gK'. The reference temperature `%gK' "
-      "at the position `"STR_VECX"' is greater than this temperature.\n",
-      func_name, scn->tmax, Tref, SPLITX(pos));
-    return RES_BAD_OP_IRRECOVERABLE;
-  }
-#undef STR_VECX
-#undef SPLITX
-
-  return RES_OK;
-}
-
-static INLINE res_T
 XD(rwalk_get_Tref)
   (const struct sdis_scene* scn,
    const struct XD(rwalk)* rwalk,
    const struct XD(temperature)* T,
    double* out_Tref)
 {
-  double Tref = -1;
+  double Tref = SDIS_TEMPERATURE_NONE;
   res_T res = RES_OK;
   ASSERT(rwalk && T && out_Tref);
 
@@ -78,7 +44,11 @@ XD(rwalk_get_Tref)
      * fetches the ambient radiative temperature. We do not use the limit
      * conditions as the reference temperature to make the sampled paths
      * independant of them. */
-    Tref = scn->trad.reference;
+    struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
+    ray.dir[0] = rwalk->dir[0];
+    ray.dir[1] = rwalk->dir[1];
+    ray.dir[2] = rwalk->dir[2];
+    Tref = radiative_env_get_reference_temperature(scn->radenv, &ray);
   } else {
     struct sdis_interface_fragment frag;
     struct sdis_interface* interf = NULL;
@@ -121,6 +91,10 @@ XD(solid_fluid_boundary_picard1_path)
 {
   /* Input argument used to handle the net flux */
   struct handle_net_flux_args handle_net_flux_args = HANDLE_NET_FLUX_ARGS_NULL;
+
+  /* Input argument used to handle the external net flux */
+  struct XD(handle_external_net_flux_args) handle_external_net_flux_args =
+    XD(HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL);
 
   /* Input/output arguments of the function used to sample a reinjection */
   struct XD(sample_reinjection_step_args) samp_reinject_step_args =
@@ -185,7 +159,8 @@ XD(solid_fluid_boundary_picard1_path)
   delta = solid_get_delta(solid, &rwalk->vtx);
 
   /* Fetch the boundary emissivity */
-  epsilon = interface_side_get_emissivity(interf, &frag_fluid);
+  epsilon = interface_side_get_emissivity
+    (interf, SDIS_INTERN_SOURCE_ID, &frag_fluid);
 
   if(epsilon <= 0) {
     Tref = 0;
@@ -218,7 +193,13 @@ XD(solid_fluid_boundary_picard1_path)
   /* Compute the convective, conductive and the upper bound radiative coef */
   h_conv = interface_get_convection_coef(interf, frag);
   h_cond = lambda / delta_m;
-  h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * ctx->That3 * epsilon;
+  if(epsilon <= 0) {
+    h_radi_hat = 0; /* No radiative transfert */
+  } else {
+    res = scene_check_temperature_range(scn);
+    if(res != RES_OK) { res = RES_BAD_OP_IRRECOVERABLE; goto error; }
+    h_radi_hat = 4.0 * BOLTZMANN_CONSTANT * ctx->That3 * epsilon;
+  }
 
   /* Compute a global upper bound coefficient */
   h_hat = h_conv + h_cond + h_radi_hat;
@@ -227,7 +208,7 @@ XD(solid_fluid_boundary_picard1_path)
   p_conv = h_conv / h_hat;
   p_cond = h_cond / h_hat;
 
-  /* Handle the net flux  if any */
+  /* Handle the net flux if any */
   handle_net_flux_args.interf = interf;
   handle_net_flux_args.frag = frag;
   handle_net_flux_args.green_path = ctx->green_path;
@@ -236,6 +217,18 @@ XD(solid_fluid_boundary_picard1_path)
   handle_net_flux_args.h_conv = h_conv;
   handle_net_flux_args.h_radi = h_radi_hat;
   res = XD(handle_net_flux)(scn, &handle_net_flux_args, T);
+  if(res != RES_OK) goto error;
+
+  /* Handle the external net flux if any */
+  handle_external_net_flux_args.interf = interf;
+  handle_external_net_flux_args.frag = frag;
+  handle_external_net_flux_args.hit = &rwalk->hit;
+  handle_external_net_flux_args.green_path = ctx->green_path;
+  handle_external_net_flux_args.picard_order = get_picard_order(ctx);
+  handle_external_net_flux_args.h_cond = h_cond;
+  handle_external_net_flux_args.h_conv = h_conv;
+  handle_external_net_flux_args.h_radi = h_radi_hat;
+  res = XD(handle_external_net_flux)(scn, rng, &handle_external_net_flux_args, T);
   if(res != RES_OK) goto error;
 
   /* Fetch the last registered heat path vertex */
@@ -297,6 +290,12 @@ XD(solid_fluid_boundary_picard1_path)
     /* Get the Tref at the end of the candidate radiative path */
     res = XD(rwalk_get_Tref)(scn, &rwalk_s, &T_s, &Tref_s);
     if(res != RES_OK) goto error;
+
+    /* The reference temperatures must be known, as this is a radiative path.
+     * If this is not the case, an error should be reported before this point.
+     * Hence these assertions to detect unexpected behavior */
+    ASSERT(SDIS_TEMPERATURE_IS_KNOWN(Tref));
+    ASSERT(SDIS_TEMPERATURE_IS_KNOWN(Tref_s));
 
     h_radi = BOLTZMANN_CONSTANT * epsilon *
       ( Tref*Tref*Tref

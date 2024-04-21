@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -273,3 +273,8 @@ estimator_buffer_save_rng_state
   return create_rng_from_rng_proxy(buf->dev, proxy, &buf->rng);
 }
 
+/* Define the functions generic to the observable type */
+#define SDIS_X_OBS probe
+#include "sdis_estimator_buffer_X_obs.h"
+#define SDIS_X_OBS probe_boundary
+#include "sdis_estimator_buffer_X_obs.h"

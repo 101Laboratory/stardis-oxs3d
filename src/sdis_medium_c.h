@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,17 +109,7 @@ static const struct solid_props SOLID_PROPS_NULL = SOLID_PROPS_NULL__;
  ******************************************************************************/
 DEFINE_MDM_CHK_PROP_FUNC(fluid, calorific_capacity, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(fluid, volumic_mass, 0, INF, 0, 1)
-DEFINE_MDM_CHK_PROP_FUNC(fluid, temperature, 0, INF, 1, 1)
-
-static INLINE res_T
-fluid_check_t0(struct sdis_device* dev, const double t0)
-{
-  if(t0 < 0) {
-    log_err(dev, "invalid negative initial time '%g'.\n", t0);
-    return RES_BAD_ARG;
-  }
-  return RES_OK;
-}
+DEFINE_MDM_CHK_PROP_FUNC(fluid, temperature, -INF, INF, 1, 1)
 
 DEFINE_MDM_GET_PROP_FUNC(fluid, calorific_capacity)
 DEFINE_MDM_GET_PROP_FUNC(fluid, volumic_mass)
@@ -151,12 +141,6 @@ fluid_check_properties
   CHK_PROP(calorific_capacity, props->cp);
   #undef CHK_PROP
 
-  /* Do not check the temperature. An invalid temperature means that the
-   * temperature is unknown */
-
-  res = fluid_check_t0(dev, props->t0);
-  if(res != RES_OK) return res;
-
   return RES_OK;
 }
 
@@ -181,17 +165,7 @@ DEFINE_MDM_CHK_PROP_FUNC(solid, thermal_conductivity, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, volumic_mass, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, delta, 0, INF, 0, 1)
 DEFINE_MDM_CHK_PROP_FUNC(solid, volumic_power, -INF, INF, 1, 1)
-DEFINE_MDM_CHK_PROP_FUNC(solid, temperature, 0, INF, 1, 1)
-
-static INLINE res_T
-solid_check_t0(struct sdis_device* dev, const double t0)
-{
-  if(t0 < 0) {
-    log_err(dev, "invalid negative initial time '%g'.\n", t0);
-    return RES_BAD_ARG;
-  }
-  return RES_OK;
-}
+DEFINE_MDM_CHK_PROP_FUNC(solid, temperature, -INF, INF, 1, 1)
 
 DEFINE_MDM_GET_PROP_FUNC(solid, calorific_capacity)
 DEFINE_MDM_GET_PROP_FUNC(solid, thermal_conductivity)
@@ -214,7 +188,6 @@ static INLINE double
 solid_get_t0(const struct sdis_medium* mdm)
 {
   ASSERT(mdm && mdm->type == SDIS_SOLID);
-  ASSERT(0 <= mdm->shader.solid.t0 && mdm->shader.solid.t0 < INF);
   return mdm->shader.solid.t0;
 }
 
@@ -241,9 +214,6 @@ solid_check_properties
 
   /* Do not check the temperature. An invalid temperature means that the
    * temperature is unknown */
-
-  res = solid_check_t0(dev, props->t0);
-  if(res != RES_OK) return res;
 
   return RES_OK;
 }

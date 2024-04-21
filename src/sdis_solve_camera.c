@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,6 +72,11 @@ check_solve_camera_args(const struct sdis_solve_camera_args* args)
     return RES_BAD_ARG;
   }
 
+  /* Check the diffusion algorithm */
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
   return RES_OK;
 }
 
@@ -87,6 +92,7 @@ solve_pixel
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
    const size_t picard_order,
+   const enum sdis_diffusion_algorithm diff_algo,
    struct sdis_estimator* estimator,
    struct pixel* pixel)
 {
@@ -134,6 +140,8 @@ solve_pixel
     realis_args.time = time;
     realis_args.picard_order = picard_order;
     realis_args.heat_path = pheat_path;
+    realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = diff_algo;
     d3_set(realis_args.position, ray_pos);
     d3_set(realis_args.direction, ray_dir);
     res_simul = ray_realisation_3d(scn, &realis_args, &w);
@@ -196,6 +204,7 @@ solve_tile
    const int register_paths, /* Combination of enum sdis_heat_path_flag */
    const double pix_sz[2], /* Pixel size in the normalized image plane */
    const size_t picard_order,
+   const enum sdis_diffusion_algorithm diff_algo,
    struct sdis_estimator_buffer* buf,
    struct tile* tile)
 {
@@ -233,7 +242,7 @@ solve_tile
     }
     res = solve_pixel
       (scn, rng, mdm, cam, time_range, ipix_image, spp, register_paths, pix_sz,
-       picard_order, estimator, pixel);
+       picard_order, diff_algo, estimator, pixel);
     if(res != RES_OK) goto error;
   }
 
@@ -494,7 +503,7 @@ sdis_solve_camera
   char buffer[128]; /* Temporary buffer used to store formated time */
 
   /* Stardis variables */
-  struct sdis_estimator_buffer* buf= NULL;
+  struct sdis_estimator_buffer* buf = NULL;
   struct sdis_medium* medium = NULL;
 
   /* Random number generators */
@@ -602,7 +611,7 @@ sdis_solve_camera
 
   /* Here we go! Launch the Monte Carlo estimation */
   omp_set_num_threads((int)scn->dev->nthreads);
-  register_paths = is_master_process 
+  register_paths = is_master_process
     ? args->register_paths : SDIS_HEAT_PATH_NONE;
   #pragma omp parallel for schedule(static, 1/*chunk size*/)
   for(mcode = mcode_1st; mcode < (int64_t)ntiles_adjusted; mcode+=mcode_incr) {
@@ -620,7 +629,7 @@ sdis_solve_camera
     tile_org[0] = morton2D_decode_u16((uint32_t)(mcode>>0));
     if(tile_org[0] >= ntiles_x) continue; /* Discard tile */
     tile_org[1] = morton2D_decode_u16((uint32_t)(mcode>>1));
-    if(tile_org[1] >= ntiles_y) continue; /* Disaard tile */
+    if(tile_org[1] >= ntiles_y) continue; /* Discard tile */
 
     res_local = tile_create(scn->dev->allocator, &tile);
     if(tile == NULL) {
@@ -650,7 +659,8 @@ sdis_solve_camera
     /* Draw the tile */
     res_local = solve_tile
       (scn, rng, medium, args->cam, args->time_range, tile_org, tile_sz,
-       args->spp, register_paths, pix_sz, args->picard_order, buf, tile);
+       args->spp, register_paths, pix_sz, args->picard_order, args->diff_algo,
+       buf, tile);
     if(res_local != RES_OK) {
       ATOMIC_SET(&res, res_local);
       continue;

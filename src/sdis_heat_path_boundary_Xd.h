@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ XD(boundary_path)
 
   /* Check if the boundary temperature is known */
   tmp = interface_side_get_temperature(interf, &frag);
-  if(tmp >= 0) {
+  if(SDIS_TEMPERATURE_IS_KNOWN(tmp)) {
     T->value += tmp;
     T->done = 1;
 

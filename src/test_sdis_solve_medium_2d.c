@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -166,16 +166,22 @@ interface_get_convection_coef
 
 static double
 interface_get_emissivity
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->epsilon;
 }
 
 static double
 interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
+  (const struct sdis_interface_fragment* frag,
+   const unsigned source_id,
+   struct sdis_data* data)
 {
+  (void)source_id;
   CHK(data != NULL && frag != NULL);
   return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
 }
@@ -256,7 +262,7 @@ main(int argc, char** argv)
   solid_param->lambda = 0.1;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid0));
   OK(sdis_data_ref_put(data));
 
@@ -268,7 +274,7 @@ main(int argc, char** argv)
   solid_param->lambda = 1.0;
   solid_param->rho = 1.0;
   solid_param->delta = 1.0/20.0;
-  solid_param->temperature = -1; /* Unknown temperature */
+  solid_param->temperature = SDIS_TEMPERATURE_NONE;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid1));
   OK(sdis_data_ref_put(data));
 
@@ -293,8 +299,8 @@ main(int argc, char** argv)
   OK(sdis_data_ref_put(data));
 
   /* Setup the square geometry */
-  sa_add(positions, square_nvertices*2);
-  sa_add(indices, square_nsegments*2);
+  (void)sa_add(positions, square_nvertices*2);
+  (void)sa_add(indices, square_nsegments*2);
   memcpy(positions, square_vertices, square_nvertices*sizeof(double[2]));
   memcpy(indices, square_indices, square_nsegments*sizeof(size_t[2]));
 

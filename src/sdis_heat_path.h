@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,22 +23,77 @@
 #include <rsys/rsys.h>
 
 /* Forward declarations */
+struct green_path_handle;
 struct rwalk_2d;
 struct rwalk_3d;
-struct rwalk_context;
 struct sdis_scene;
 struct ssp_rng;
 struct temperature_2d;
 struct temperature_3d;
 
+/*******************************************************************************
+ * Context of a random walk, i.e. its data concerning the current system and the
+ * solve parameters.
+ ******************************************************************************/
+ struct rwalk_context {
+  struct green_path_handle* green_path;
+  struct sdis_heat_path* heat_path;
+
+  double Tmin; /* Lower bound temperature */
+  double Tmin2; /* Tmin^2 */
+  double Tmin3; /* Tmin^3 */
+
+  double That; /* Upper bound temperature */
+  double That2; /* That^2 */
+  double That3; /* That^3 */
+
+  /* Maximum branchings i.e. the maximum number of times XD(sample_coupled_path)
+   * can be called. It controls the number of ramifications of the heat path and
+   * currently is correlated to the Picard order used to estimate the radiative
+   * temperature. max_branchings == picard_order-1 */
+  size_t max_branchings;
+
+  /* Number of heat path branchings */
+  size_t nbranchings;
+
+  /* Id of the realisation (for debug) */
+  size_t irealisation;
+
+  /* Algorithm used for the diffusive random walks,
+   * i.e. for sampling conductive paths */
+  enum sdis_diffusion_algorithm diff_algo;
+};
+#define RWALK_CONTEXT_NULL__ {                                                 \
+  NULL, /* Green path */                                                       \
+  NULL, /* Heat path */                                                        \
+  0, /* Tmin */                                                                \
+  0, /* Tmin^2 */                                                              \
+  0, /* Tmin^3 */                                                              \
+  0, /* That */                                                                \
+  0, /* That^2 */                                                              \
+  0, /* That^3 */                                                              \
+  0, /* Max #branchings */                                                     \
+  SIZE_MAX, /* #branchings */                                                  \
+  SIZE_MAX, /* realisation id */                                               \
+  SDIS_DIFFUSION_NONE /* Diffusion algorithm */                                \
+}
+static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
+
+static INLINE size_t
+get_picard_order(const struct rwalk_context* ctx)
+{
+  ASSERT(ctx);
+  return ctx->max_branchings + 1;
+}
+
+/*******************************************************************************
+ * Heat path data structure used to record the geometry of sampled paths
+ ******************************************************************************/
 /* Generate the dynamic array of heat vertices */
 #define DARRAY_NAME heat_vertex
 #define DARRAY_DATA struct sdis_heat_vertex
 #include <rsys/dynamic_array.h>
 
-/*******************************************************************************
- * Heat path data structure
- ******************************************************************************/
 struct sdis_heat_path {
   /* List of the path vertices */
   struct darray_heat_vertex vertices;
@@ -293,4 +348,3 @@ boundary_path_3d
    struct temperature_3d* temperature);
 
 #endif /* SDIS_HEAT_PATH_H */
-

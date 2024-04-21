@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,59 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef SDIS_XD_BEGIN_H
-#define SDIS_XD_BEGIN_H
-
+#include "sdis.h"
 #include <rsys/rsys.h>
-
-/* Forward declaration */
-struct green_path_handle;
-struct sdis_heat_path;
-
-struct rwalk_context {
-  struct green_path_handle* green_path;
-  struct sdis_heat_path* heat_path;
-
-  double Tmin; /* Lower bound temperature */
-  double Tmin2; /* Tmin^2 */
-  double Tmin3; /* Tmin^3 */
-
-  double That; /* Upper bound temperature */
-  double That2; /* That^2 */
-  double That3; /* That^3 */
-
-  /* Maximum branchings i.e. the maximum number of times
-   * XD(compute_temperature) can be called. It controls the number of
-   * ramifications of the heat path and currently is correlated to the Picard
-   * order used to estimate the radiative temperature. max_branchings ==
-   * picard_order-1 */
-  size_t max_branchings;
-
-  /* Number of heat path branchings */
-  size_t nbranchings;
-};
-#define RWALK_CONTEXT_NULL__ {                                                 \
-  NULL, /* Green path */                                                       \
-  NULL, /* Heat path */                                                        \
-  0, /* Tmin */                                                                \
-  0, /* Tmin^2 */                                                              \
-  0, /* Tmin^3 */                                                              \
-  0, /* That */                                                                \
-  0, /* That^2 */                                                              \
-  0, /* That^3 */                                                              \
-  0, /* Max #branchings */                                                     \
-  SIZE_MAX, /* #branchings */                                                  \
-}
-static const struct rwalk_context RWALK_CONTEXT_NULL = RWALK_CONTEXT_NULL__;
-
-static INLINE size_t
-get_picard_order(const struct rwalk_context* ctx)
-{
-  ASSERT(ctx);
-  return ctx->max_branchings + 1;
-}
-
-#endif /* SDIS_XD_BEGIN_H */
 
 #ifdef SDIS_XD_BEGIN_H__
   #error "This header is already included without its associated sdis_Xd_end.h file."
@@ -82,10 +31,18 @@ get_picard_order(const struct rwalk_context* ctx)
   #include <rsys/double2.h>
   #include <rsys/float2.h>
   #include <star/s2d.h>
+
+  #define FORMAT_VECX "%g, %g"
+  #define SPLITX(V) SPLIT2(V)
+
 #elif SDIS_XD_DIMENSION == 3
   #include <rsys/double3.h>
   #include <rsys/float3.h>
   #include <star/s3d.h>
+
+  #define FORMAT_VECX "%g, %g, %g"
+  #define SPLITX(V) SPLIT3(V)
+
 #else
   #error "Invalid dimension."
 #endif
@@ -105,15 +62,19 @@ get_picard_order(const struct rwalk_context* ctx)
 #define SXD_FLOAT2 CONCAT(CONCAT(S, DIM), D_FLOAT2)
 #define SXD_FLOAT3 CONCAT(CONCAT(S, DIM), D_FLOAT3)
 #define SXD_FLOATX CONCAT(CONCAT(CONCAT(S,DIM), D_FLOAT), DIM)
+#define SXD_GET_PRIMITIVE CONCAT(CONCAT(S, DIM), D_GET_PRIMITIVE)
 #define SXD_SAMPLE CONCAT(CONCAT(S, DIM), D_SAMPLE)
+#define SXD_TRACE CONCAT(CONCAT(S, DIM), D_TRACE)
+#define SXD_PRIMITIVE_EQ CONCAT(CONCAT(S, DIM), D_PRIMITIVE_EQ)
 
 /* Vector macros generic to SDIS_XD_DIMENSION */
 #define dX(Func) CONCAT(CONCAT(CONCAT(d, DIM), _), Func)
 #define fX(Func) CONCAT(CONCAT(CONCAT(f, DIM), _), Func)
 #define fX_set_dX CONCAT(CONCAT(CONCAT(f, DIM), _set_d), DIM)
+#define fXX_mulfX CONCAT(CONCAT(CONCAT(CONCAT(f, DIM), DIM), _mulf), DIM)
 #define dX_set_fX CONCAT(CONCAT(CONCAT(d, DIM), _set_f), DIM)
 
-/* Macro making generic its submitted nae to SDIS_XD_DIMENSION */
+/* Macro making generic its submitted name to SDIS_XD_DIMENSION */
 #define XD(Name) CONCAT(CONCAT(CONCAT(Name, _), DIM), d)
 
 /* Generate the generic data structures and constants */
@@ -125,16 +86,22 @@ get_picard_order(const struct rwalk_context* ctx)
     #define SDIS_3D_H
   #endif
 
+struct rwalk_context;
+
 /* Current state of the random walk */
 struct XD(rwalk) {
   struct sdis_rwalk_vertex vtx; /* Position and time of the Random walk */
   struct sdis_medium* mdm; /* Medium in which the random walk lies */
   struct sXd(hit) hit; /* Hit of the random walk */
+
+  /* Direction along which the random walk reached the radiative environment */
+  double dir[3];
+
   double elapsed_time;
   enum sdis_side hit_side;
 };
 static const struct XD(rwalk) XD(RWALK_NULL) = {
-  SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__, 0, SDIS_SIDE_NULL__
+  SDIS_RWALK_VERTEX_NULL__, NULL, SXD_HIT_NULL__, {0,0,0}, 0, SDIS_SIDE_NULL__
 };
 
 struct XD(temperature) {
@@ -150,4 +117,3 @@ struct XD(temperature) {
 static const struct XD(temperature) XD(TEMPERATURE_NULL) = { NULL, 0, 0 };
 
 #endif /* SDIX_<2|3>D_H */
-

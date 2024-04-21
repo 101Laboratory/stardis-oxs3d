@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2023 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
 *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #include "sdis_misc.h"
 #include "sdis_realisation.h"
 #include "sdis_scene_c.h"
+#include "sdis_heat_path_boundary_c.h" /* check_Tref_<2d|3d> */
 
 #include <rsys/clock_time.h>
 #include <star/ssp.h>
@@ -75,6 +76,11 @@ check_solve_boundary_args(const struct sdis_solve_boundary_args* args)
 
   /* Check RNG type */
   if(!args->rng_state && args->rng_type >= SSP_RNG_TYPES_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check the diffusion algorithm */
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
     return RES_BAD_ARG;
   }
 
@@ -404,6 +410,8 @@ XD(solve_boundary)
     realis_args.side = side;
     realis_args.green_path = pgreen_path;
     realis_args.heat_path = pheat_path;
+    realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = args->diff_algo;
     realis_args.uv[0] = uv[0];
 #if SDIS_XD_DIMENSION == 3
     realis_args.uv[1] = uv[1];
@@ -776,14 +784,21 @@ XD(solve_boundary_flux)
     if(res_local!= RES_OK) { ATOMIC_SET(&res, res_local); continue; }
 
     /* Fetch interface parameters */
-    epsilon = interface_side_get_emissivity(interf, &frag);
-    Tref = interface_side_get_reference_temperature(interf, &frag);
+    epsilon = interface_side_get_emissivity(interf, SDIS_INTERN_SOURCE_ID, &frag);
     hc = interface_get_convection_coef(interf, &frag);
-    hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
+    Tref = interface_side_get_reference_temperature(interf, &frag);
+    if(epsilon <= 0) {
+      hr = 0;
+    } else {
+      res_local = XD(check_Tref)(scn, frag.P, Tref, FUNC_NAME);
+      if(res_local != RES_OK) { ATOMIC_SET(&res, &res_local); continue; }
+      hr = 4.0 * BOLTZMANN_CONSTANT * Tref * Tref * Tref * epsilon;
+    }
+
     frag.side = solid_side;
     imposed_flux = interface_side_get_flux(interf, &frag);
     imposed_temp = interface_side_get_temperature(interf, &frag);
-    if(imposed_temp >= 0) {
+    if(SDIS_TEMPERATURE_IS_KNOWN(imposed_temp)) {
       /* Flux computation on T boundaries is not supported yet */
       log_err(scn->dev, "%s: Attempt to compute a flux at a Dirichlet boundary "
         "(not available yet).\n", FUNC_NAME);
@@ -803,6 +818,8 @@ XD(solve_boundary_flux)
     realis_args.picard_order = args->picard_order;
     realis_args.solid_side = solid_side;
     realis_args.flux_mask = flux_mask;
+    realis_args.irealisation = (size_t)irealisation;
+    realis_args.diff_algo = args->diff_algo;
     realis_args.uv[0] = uv[0];
 #if SDIS_XD_DIMENSION == 3
     realis_args.uv[1] = uv[1];
@@ -818,10 +835,9 @@ XD(solve_boundary_flux)
     } else if(res_simul == RES_OK) { /* Update accumulators */
       const double usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
       /* Convective flux from fluid to solid */
-      const double w_conv = hc * (result.Tfluid - result.Tboundary);
+      const double w_conv = hc > 0 ? hc * (result.Tfluid - result.Tboundary) : 0;
       /* Radiative flux from ambient to solid */
-      const double w_rad = (result.Tradiative < 0) ?
-        0 : hr * (result.Tradiative - result.Tboundary);
+      const double w_rad = hr > 0 ? hr * (result.Tradiative - result.Tboundary) : 0;
       /* Imposed flux that goes _into_ the solid */
       const double w_imp = (imposed_flux != SDIS_FLUX_NONE) ? imposed_flux : 0;
       const double w_total = w_conv + w_rad + w_imp;
