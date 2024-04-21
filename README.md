@@ -158,6 +158,114 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+### Version 0.15
+
+#### New conduction algorithm
+
+Addition of a new algorithm for sampling a potentially unsteady
+conductive path based on the Walk on Sphere (WoS) algorithm. Currently,
+unlike the previous delta sphere algorithm, the initial condition must
+be constant for the solid. Power density is also supported, but unlike
+the delta sphere algorithm, it too cannot vary in time and space. In all
+cases, the two algorithms coexist and can be selected via a new input
+parameter to the resolution functions. By default, the delta sphere
+algorithm is used.
+
+Note that the WoS algorithm is considered unbiased when sampling a
+diffuse trajectory in a solid with Dirichlet boundary conditions. Even
+if a numerical parameter is used to stop the algorithm when the
+trajectory is close to the boundary, this distance can be set to the
+machine's accuracy without significant impact on performance. Hence its
+unbiased nature in relation to numerical precision. Its coupling with
+other boundary or connection conditions behaves as with the delta sphere
+algorithm, i.e. the solution tends towards the exact solution when the
+delta tends towards 0.
+
+#### External spherical source
+
+An external spherical source can be added to the scene. Once defined, it
+is considered as a new boundary condition whose contribution is
+calculated at the solid/fluid interfaces in the form of an external net
+flux. A new interface parameter controls on which solid/fluid interfaces
+this external net flux is imposed. By default, when an external source
+is defined, its contribution is calculated on all solid/fluid
+interfaces. We point out that the radiative properties of the surface
+can now vary according to the radiative source, which can now be
+internal or external.
+
+The net external flux is calculated by sampling the radiative paths to
+evaluate the direct and diffuse part of the incident flux due to the
+external source. We emphasize that Stardis-Solver does not manage
+semi-traparent media, but that the external source provides the optional
+`diffuse_radiance` parameter which, once defined, corresponds to the
+radiance emitted by the external source and diffused at least once into
+the environment. In this way, the diffuse part of the flux manages not
+only the radiation from the external source that reaches the interface
+after one or more reflections, but also the external radiation scattered
+in the environment, here simply represented by the `diffuse_radiance`
+parameter.
+
+The external spherical source is defined by its position, radius, power
+and diffuse radiance (see above). While the radius is constant, the
+position and power are time-dependent, and the diffuse radiance also
+depends on the direction along which the sampled trajectory reaches the
+environment.
+
+The external spherical source is fully supported when estimating the
+green function. Only the positions of the spherical source must remain
+the same between green function estimation and use.
+
+Finally, as with net imposed fluxes and power densities, this external
+source term cannot be used when solving non-linear radiative exchanges
+using Picard iterations.
+
+#### Allow relative temperatures
+
+Allow to perform calculations relative to a given temperature T. In this
+case, the temperatures managed by Stardis would be relative to T and
+could therefore be negative, since they would express a deviation from
+T. It should be noted that reference temperatures must always be
+positive, i.e. expressed in the absolute domain. Finally, we emphasize
+that relative calculations only make sense in linear situations, i.e.
+negative temperatures are not valid for systems with non-linear
+radiative exchanges.
+
+This is a major break in the API that callers *must* take into account.
+Until now, negative temperatures were considered as unknown
+temperatures, whereas they are now valid. For example, an interface with
+a negative temperature could be considered adiabatic, whereas it is now
+a Dirichlet boundary condition. In other words, the same data could
+define totally different systems before or after this version.
+
+The macro `SDIS_TEMPERATURE_NONE` is added to define the unknown
+temperature value. The two helper macros `SDIS_TEMPERATURE_IS_KNONW` and
+`SDIS_TEMPERATURE_IS_UNKNONW`  are also provided to test whether the
+temperature is known or not.
+
+#### Parallelize multiple probe resolutions
+
+Add `sdis_solve_probe_list` and `sdis_solve_probe_boundary_list`
+functions. Unlike their single-probe counterpart, these functions
+parallelize the list of probes, rather than parallelizing Monte Carlo
+realizations. Calling these functions is therefore more advantageous in
+terms of load distribution when the number of probes to be evaluated is
+large compared to the cost of calculating a single probe.
+
+#### Miscellaneous
+
+- Updated the function profile used to define surface radiative
+  properties, i.e. surface emissivity and specular fraction. These can
+  now vary according to the source identifier (internal or external).
+- Make the radiative environment programmable. From now on, its API is
+  the same as that of other resources such as interfaces or media. Its
+  temperature and reference temperature are retrieved by functions whose
+  input argument is the direction of the radiative path.
+- Add an optional user filter function as input argument to
+  `sdis_scene_find_closest_point` function. The user can set their own
+  filter function to manage the candidate points to be closest. This
+  gives the caller a fine control during the inquiry to access the
+  geometry and traversal of the accelerating structure.
+
 ### Version 0.14
 
 - The net flux imposed can be combined with other boundary/connection
