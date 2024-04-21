@@ -143,9 +143,12 @@ for various purposes:
 - [RSys](https://gitlab.com/vaplv/rsys)
 - [Star 2D](https://gitlab.com/meso-star/star-2d)
 - [Star 3D](https://gitlab.com/meso-star/star-3d)
+- [Star 3DUT](https://gitlab.com/meso-star/star-3dut)
+  (optional for tests)
 - [Star Enclosures 2D](https://gitlab.com/meso-star/star-enclosures-2D)
 - [Star Enclosures 3D](https://gitlab.com/meso-star/star-enclosures-3D)
 - [Star SamPling](https://gitlab.com/meso-star/star-sp)
+- [Star WoS Functions](https://gitlab.com/meso-star/star-wf)
 
 ## Installation
 
