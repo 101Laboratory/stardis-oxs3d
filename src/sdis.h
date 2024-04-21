@@ -200,10 +200,9 @@ struct sdis_spherical_source_shader {
    * environment, or, to put it another way, that the source is in a vacuum. */
   sdis_get_diffuse_radiance_T diffuse_radiance; /* [W/m^2/sr] */
 
-  struct sdis_data* data; /* Data sent to the position functor */
   double radius; /* [m] */
 };
-#define SDIS_SPHERICAL_SOURCE_SHADER_NULL__ {NULL, NULL, NULL, 0, 0}
+#define SDIS_SPHERICAL_SOURCE_SHADER_NULL__ {NULL, NULL, NULL, 0}
 static const struct sdis_spherical_source_shader
 SDIS_SPHERICAL_SOURCE_SHADER_NULL = SDIS_SPHERICAL_SOURCE_SHADER_NULL__;
 
