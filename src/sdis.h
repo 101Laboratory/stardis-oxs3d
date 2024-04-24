@@ -137,8 +137,9 @@ static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
 /* Ray traced in radiative environment */
 struct sdis_radiative_ray {
   double dir[3]; /* Direction */
+  double time; /* Time */
 };
-#define SDIS_RADIATIVE_RAY_NULL__ {{0,0,0}}
+#define SDIS_RADIATIVE_RAY_NULL__ {{0,0,0}, DBL_MAX}
 static const struct sdis_radiative_ray SDIS_RADIATIVE_RAY_NULL=
   SDIS_RADIATIVE_RAY_NULL__;
 
