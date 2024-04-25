@@ -158,6 +158,12 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+### Version 0.15.1
+
+Make the radiative environment time-dependent, so that it can vary not
+only with respect to the direction along path that reaches it, but also
+as a function of time at which it is reached.
+
 ### Version 0.15
 
 #### New conduction algorithm
