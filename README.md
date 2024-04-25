@@ -158,6 +158,12 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+### Version 0.15.1
+
+Make the radiative environment time-dependent, so that it can vary not
+only with respect to the direction along path that reaches it, but also
+as a function of time at which it is reached.
+
 ### Version 0.15
 
 #### New conduction algorithm
@@ -265,6 +271,10 @@ large compared to the cost of calculating a single probe.
   filter function to manage the candidate points to be closest. This
   gives the caller a fine control during the inquiry to access the
   geometry and traversal of the accelerating structure.
+- CMake has been replaced by Makefile as the build system, and a
+  pkg-config file is provided to link the library as an external
+  dependency. Compiler and linker flags have also been updated to
+  increase the security and robustness of generated binaries.
 
 ### Version 0.14
 

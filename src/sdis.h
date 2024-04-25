@@ -137,8 +137,9 @@ static const struct sdis_interface_fragment SDIS_INTERFACE_FRAGMENT_NULL =
 /* Ray traced in radiative environment */
 struct sdis_radiative_ray {
   double dir[3]; /* Direction */
+  double time; /* Time */
 };
-#define SDIS_RADIATIVE_RAY_NULL__ {{0,0,0}}
+#define SDIS_RADIATIVE_RAY_NULL__ {{0,0,0}, DBL_MAX}
 static const struct sdis_radiative_ray SDIS_RADIATIVE_RAY_NULL=
   SDIS_RADIATIVE_RAY_NULL__;
 
@@ -200,10 +201,9 @@ struct sdis_spherical_source_shader {
    * environment, or, to put it another way, that the source is in a vacuum. */
   sdis_get_diffuse_radiance_T diffuse_radiance; /* [W/m^2/sr] */
 
-  struct sdis_data* data; /* Data sent to the position functor */
   double radius; /* [m] */
 };
-#define SDIS_SPHERICAL_SOURCE_SHADER_NULL__ {NULL, NULL, NULL, 0, 0}
+#define SDIS_SPHERICAL_SOURCE_SHADER_NULL__ {NULL, NULL, NULL, 0}
 static const struct sdis_spherical_source_shader
 SDIS_SPHERICAL_SOURCE_SHADER_NULL = SDIS_SPHERICAL_SOURCE_SHADER_NULL__;
 
