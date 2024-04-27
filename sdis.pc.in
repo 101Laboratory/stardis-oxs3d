@@ -9,7 +9,8 @@ Requires: \
  star-sp >= @SSP_VERSION@
 Requires.private:\
  senc2d >= @SENC3D_VERSION@,\
- senc3d >= @SENC3D_VERSION@ @MPI@
+ senc3d >= @SENC3D_VERSION@, \
+ swf >= @SWF_VERSION@ @MPI@
 Name: sdis
 Description: Stardis Solver
 Version: @VERSION@

@@ -158,6 +158,11 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+### Version 0.15.2
+
+Correction of pkg-config file. A missing private dependency could lead
+to link editing errors when the user statically links to the library.
+
 ### Version 0.15.1
 
 Make the radiative environment time-dependent, so that it can vary not
