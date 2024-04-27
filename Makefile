@@ -116,6 +116,7 @@ pkg:
 	    -e 's#@SENC2D_VERSION@#$(SENC2D_VERSION)#g'\
 	    -e 's#@SENC3D_VERSION@#$(SENC3D_VERSION)#g'\
 	    -e 's#@SSP_VERSION@#$(SSP_VERSION)#g'\
+	    -e 's#@SWF_VERSION@#$(SWF_VERSION)#g'\
 	    -e 's#@MPI@#$(PKG_$(DISTRIB_PARALLELISM))#g'\
 	    sdis.pc.in > sdis.pc
 
@@ -129,6 +130,7 @@ sdis-local.pc: sdis.pc.in config.mk
 	    -e 's#@SENC2D_VERSION@#$(SENC2D_VERSION)#g'\
 	    -e 's#@SENC3D_VERSION@#$(SENC3D_VERSION)#g'\
 	    -e 's#@SSP_VERSION@#$(SSP_VERSION)#g'\
+	    -e 's#@SWF_VERSION@#$(SWF_VERSION)#g'\
 	    -e 's#@MPI@#$(PKG_$(DISTRIB_PARALLELISM))#g'\
 	    sdis.pc.in > $@
 
