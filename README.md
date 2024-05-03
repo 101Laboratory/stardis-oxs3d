@@ -249,8 +249,8 @@ a Dirichlet boundary condition. In other words, the same data could
 define totally different systems before or after this version.
 
 The macro `SDIS_TEMPERATURE_NONE` is added to define the unknown
-temperature value. The two helper macros `SDIS_TEMPERATURE_IS_KNONW` and
-`SDIS_TEMPERATURE_IS_UNKNONW`  are also provided to test whether the
+temperature value. The two helper macros `SDIS_TEMPERATURE_IS_KNOWN` and
+`SDIS_TEMPERATURE_IS_UNKNOWN`  are also provided to test whether the
 temperature is known or not.
 
 #### Parallelize multiple probe resolutions
