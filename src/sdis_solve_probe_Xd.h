@@ -116,7 +116,10 @@ XD(solve_one_probe)
    struct accum* acc_temp,
    struct accum* acc_time)
 {
-  struct sdis_medium* medium = NULL; /* Medium in which the probe lies */
+  /* Enclosure in which the probe lies */
+  unsigned enc_id = ENCLOSURE_ID_NULL;
+  struct sdis_medium* mdm = NULL;
+
   size_t irealisation = 0;
   res_T res = RES_OK;
   ASSERT(scn && rng && check_solve_probe_args(args) == RES_OK);
@@ -126,7 +129,9 @@ XD(solve_one_probe)
   *acc_time = ACCUM_NULL;
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, args->position, &medium);
+  res = scene_get_enclosure_id(scn, args->position, &enc_id);
+  if(res != RES_OK) goto error;
+  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
   if(res != RES_OK) goto error;
 
   FOR_EACH(irealisation, 0, args->nrealisations) {
@@ -144,7 +149,7 @@ XD(solve_one_probe)
 
     /* Run a realisation */
     realis_args.rng = rng;
-    realis_args.medium = medium;
+    realis_args.medium = mdm;
     realis_args.time = time;
     realis_args.picard_order = args->picard_order;
     realis_args.irealisation = irealisation;
@@ -191,7 +196,7 @@ XD(solve_probe)
   size_t nthreads = 0;
 
   /* Stardis variables */
-  struct sdis_medium* medium = NULL;
+  struct sdis_medium* mdm = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_green_function* green = NULL;
   struct sdis_green_function** per_thread_green = NULL;
@@ -199,6 +204,9 @@ XD(solve_probe)
   /* Random Number generator */
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** per_thread_rng = NULL;
+
+  /* Enclosure in which the probe lies */
+  unsigned enc_id = ENCLOSURE_ID_NULL;
 
   /* Miscellaneous */
   struct accum* per_thread_acc_temp = NULL;
@@ -256,7 +264,9 @@ XD(solve_probe)
   if(!per_thread_acc_time) { res = RES_MEM_ERR; goto error; }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, args->position, &medium);
+  res = scene_get_enclosure_id(scn, args->position, &enc_id);
+  if(res != RES_OK) goto error;
+  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
   if(res != RES_OK) goto error;
 
   /* Create the per thread green function */
@@ -327,7 +337,7 @@ XD(solve_probe)
 
     /* Invoke the probe realisation */
     realis_args.rng = rng;
-    realis_args.medium = medium;
+    realis_args.medium = mdm;
     realis_args.time = time;
     realis_args.picard_order = args->picard_order;
     realis_args.green_path = pgreen_path;

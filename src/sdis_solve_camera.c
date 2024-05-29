@@ -504,11 +504,14 @@ sdis_solve_camera
 
   /* Stardis variables */
   struct sdis_estimator_buffer* buf = NULL;
-  struct sdis_medium* medium = NULL;
+  struct sdis_medium* mdm = NULL;
 
   /* Random number generators */
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** per_thread_rng = NULL;
+
+  /* Enclosure in which the probe lies */
+  unsigned enc_id = ENCLOSURE_ID_NULL;
 
   /* Miscellaneous */
   size_t ntiles_x, ntiles_y, ntiles, ntiles_adjusted;
@@ -537,10 +540,11 @@ sdis_solve_camera
   }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, args->cam->position, &medium);
+  res = scene_get_enclosure_id(scn, args->cam->position, &enc_id);
+  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
   if(res != RES_OK) goto error;
 
-  if(medium->type != SDIS_FLUID) {
+  if(mdm->type != SDIS_FLUID) {
     log_err(scn->dev,
       "%s: the camera position `%g %g %g' must be in a fluid medium.\n",
       FUNC_NAME, SPLIT3(args->cam->position));
@@ -658,7 +662,7 @@ sdis_solve_camera
 
     /* Draw the tile */
     res_local = solve_tile
-      (scn, rng, medium, args->cam, args->time_range, tile_org, tile_sz,
+      (scn, rng, mdm, args->cam, args->time_range, tile_org, tile_sz,
        args->spp, register_paths, pix_sz, args->picard_order, args->diff_algo,
        buf, tile);
     if(res_local != RES_OK) {

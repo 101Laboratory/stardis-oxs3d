@@ -30,11 +30,14 @@ XD(check_medium_consistency)
   (struct sdis_scene* scn,
    const struct XD(rwalk)* rwalk)
 {
+  unsigned enc_id = ENCLOSURE_ID_NULL;
   struct sdis_medium* mdm = NULL;
   res_T res = RES_OK;
   ASSERT(rwalk);
 
-  res = scene_get_medium_in_closed_boundaries(scn, rwalk->vtx.P, &mdm);
+  res = scene_get_enclosure_id_in_closed_boundaries(scn, rwalk->vtx.P, &enc_id);
+  if(res != RES_OK) goto error;
+  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
   if(res != RES_OK) goto error;
 
   /* Check medium consistency */

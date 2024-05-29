@@ -26,6 +26,9 @@
 
 #include <limits.h>
 
+#define ENCLOSURE_ID_NULL UINT_MAX-1
+#define ENCLOSURE_ID_MULTI_MEDIA (UINT_MAX-1)
+
 struct prim_prop {
   struct sdis_interface* interf;
   unsigned front_enclosure; /* Id of the front facing enclosure  */
@@ -71,8 +74,6 @@ medium_init(struct mem_allocator* allocator, struct sdis_medium** medium)
   *medium = NULL;
 }
 
-#define ENCLOSURE_MULTI_MEDIA UINT_MAX
-
 struct enclosure {
   struct s2d_scene_view* s2d_view;
   struct s3d_scene_view* s3d_view;
@@ -97,7 +98,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->S_over_V = 0;
   enc->V = 0;
   enc->hc_upper_bound = 0;
-  enc->medium_id = ENCLOSURE_MULTI_MEDIA;
+  enc->medium_id = ENCLOSURE_ID_MULTI_MEDIA;
 }
 
 static INLINE void
@@ -229,25 +230,31 @@ scene_get_interface
    const unsigned iprim);
 
 extern LOCAL_SYM res_T
-scene_get_medium
+scene_get_enclosure_id
   (struct sdis_scene* scene,
    const double position[],
-   struct sdis_medium** medium);
+   unsigned* enclosure_id);
 
-/* This function assumes that the tested position lies into finite enclosure.
- * The medium into which it lies is thus retrieved by tracing a random ray
- * around the current position. For possible infinite enclosure, one has to use
- * the `scene_get_medium' function instead that, in counterpart, can be more
- * time consuming.
+/* This function assumes that the position under test lies within a finite
+ * enclosure. The enclosure in which it is located is therefore retrieved by
+ * tracing a random ray around the current position. For infinite enclosures,
+ * you need to use the `scene_get_enclosure_id' function, which in turn may take
+ * longer.
  *
- * Note that actually, the function internally calls scene_get_medium if no
- * valid medium is found with the regular procedure. This may be due to
- * numerical issues or wrong assumptions on the current medium (its boundaries
- * are opened to infinity). */
+ * Note that the function actually calls scene_get_enclosure internally if no
+ * valid enclosure is found with the normal procedure. This may be due to
+ * numerical problems or incorrect assumptions about the current enclosure (its
+ * limits are open to infinity). */
 extern LOCAL_SYM res_T
-scene_get_medium_in_closed_boundaries
-  (struct sdis_scene* scn,
+scene_get_enclosure_id_in_closed_boundaries
+  (struct sdis_scene* scene,
    const double position[],
+   unsigned* enclosure_id);
+
+extern LOCAL_SYM res_T
+scene_get_enclosure_medium
+  (struct sdis_scene* scene,
+   const struct enclosure* enclosure,
    struct sdis_medium** medium);
 
 extern LOCAL_SYM res_T

@@ -334,6 +334,7 @@ XD(find_reinjection_ray)
   float org[DIM];
   const float range[2] = {0, FLT_MAX};
   enum sdis_side side;
+  unsigned enc_id = ENCLOSURE_ID_NULL;
   int iattempt = 0;
   res_T res = RES_OK;
 
@@ -358,27 +359,41 @@ XD(find_reinjection_ray)
       (scn->sXd(view), org, args->dir1, range, &filter_data, &hit1));
 
     /* Retrieve the medium at the reinjection pos along dir0 */
-    if(SXD_HIT_NONE(&hit0)) {
-      XD(move_pos)(dX(set)(tmp, ray->org), args->dir0, (float)args->distance);
-      res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm0);
-      if(res == RES_BAD_OP) { mdm0 = NULL; res = RES_OK; }
-      if(res != RES_OK) goto error;
-    } else {
+    if(!SXD_HIT_NONE(&hit0)) {
       interf = scene_get_interface(scn, hit0.prim.prim_id);
       side = fX(dot)(args->dir0, hit0.normal) < 0 ? SDIS_FRONT : SDIS_BACK;
       mdm0 = interface_get_medium(interf, side);
+    } else {
+      XD(move_pos)(dX(set)(tmp, ray->org), args->dir0, (float)args->distance);
+      res = scene_get_enclosure_id_in_closed_boundaries(scn, tmp, &enc_id);
+      if(res == RES_BAD_OP) { enc_id = ENCLOSURE_ID_NULL; res = RES_OK; }
+      if(res != RES_OK) goto error;
+
+      mdm0 = NULL;
+      if(enc_id != ENCLOSURE_ID_NULL) {
+        const struct enclosure* enc = scene_get_enclosure(scn, enc_id);
+        res = scene_get_enclosure_medium(scn, enc, &mdm0);
+        if(res != RES_OK) goto error;
+      }
     }
 
     /* Retrieve the medium at the reinjection pos along dir1 */
-    if(SXD_HIT_NONE(&hit1)) {
-      XD(move_pos)(dX(set)(tmp, ray->org), args->dir1, (float)args->distance);
-      res = scene_get_medium_in_closed_boundaries(scn, tmp, &mdm1);
-      if(res == RES_BAD_OP) { mdm1 = NULL; res = RES_OK; }
-      if(res != RES_OK) goto error;
-    } else {
+    if(!SXD_HIT_NONE(&hit1)) {
       interf = scene_get_interface(scn, hit1.prim.prim_id);
       side = fX(dot)(args->dir1, hit1.normal) < 0 ? SDIS_FRONT : SDIS_BACK;
       mdm1 = interface_get_medium(interf, side);
+    } else {
+      XD(move_pos)(dX(set)(tmp, ray->org), args->dir1, (float)args->distance);
+      res = scene_get_enclosure_id_in_closed_boundaries(scn, tmp, &enc_id);
+      if(res == RES_BAD_OP) { enc_id = ENCLOSURE_ID_NULL; res = RES_OK; }
+      if(res != RES_OK) goto error;
+
+      mdm1 = NULL;
+      if(enc_id != ENCLOSURE_ID_NULL) {
+        const struct enclosure* enc = scene_get_enclosure(scn, enc_id);
+        res = scene_get_enclosure_medium(scn, enc, &mdm1);
+        if(res != RES_OK) goto error;
+      }
     }
 
     dst0 = dst1 = -1;
@@ -514,11 +529,18 @@ XD(find_reinjection_ray_and_check_validity)
   if(res != RES_OK) goto error;
 
   if(SXD_HIT_NONE(&ray->hit)) {
-    /* Check medium consistency at the reinjection position */
-    XD(move_pos)(dX(set)(pos, ray->org), ray->dir, (float)ray->dst);
-    res = scene_get_medium_in_closed_boundaries(scn, pos, &reinject_mdm);
-    if(res != RES_OK) goto error;
+    const struct enclosure* enc = NULL;
+    unsigned enc_id = ENCLOSURE_ID_NULL;
 
+    /* Obtain the enclosure in which the reinjection position lies */
+    XD(move_pos)(dX(set)(pos, ray->org), ray->dir, (float)ray->dst);
+    res = scene_get_enclosure_id_in_closed_boundaries(scn, pos, &enc_id);
+    if(res != RES_OK) goto error;
+    enc = scene_get_enclosure(scn, enc_id);
+
+    /* Check medium consistency at the reinjection position */
+    res = scene_get_enclosure_medium(scn, enc, &reinject_mdm);
+    if(res != RES_OK) goto error;
     if(reinject_mdm != args->solid) {
       res = RES_BAD_OP;
       goto error;
@@ -630,7 +652,7 @@ XD(sample_reinjection_step_solid_fluid)
    * error */
   scene_get_enclosure_ids(scn, args->rwalk->hit.prim.prim_id, enc_ids);
   solid_enclosure = scene_get_enclosure(scn, enc_ids[args->side]);
-  if(solid_enclosure->medium_id == ENCLOSURE_MULTI_MEDIA) {
+  if(solid_enclosure->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
     step->hit = SXD_HIT_NULL;
     fX(normalize)(step->direction, args->rwalk->hit.normal);
     if(args->side == SDIS_BACK) fX(minus)(step->direction, step->direction);
@@ -763,13 +785,13 @@ XD(sample_reinjection_step_solid_solid)
   scene_get_enclosure_ids(scn, args_frt->rwalk->hit.prim.prim_id, enc_ids);
   enclosure_frt = scene_get_enclosure(scn, enc_ids[SDIS_FRONT]);
   enclosure_bck = scene_get_enclosure(scn, enc_ids[SDIS_BACK]);
-  if(enclosure_frt->medium_id == ENCLOSURE_MULTI_MEDIA) {
+  if(enclosure_frt->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
     step_frt->hit = SXD_HIT_NULL;
     fX(normalize)(step_frt->direction, args_frt->rwalk->hit.normal);
     step_frt->distance = (float)args_frt->distance;
     multiple_media_frt = 1;
   }
-  if(enclosure_bck->medium_id == ENCLOSURE_MULTI_MEDIA) {
+  if(enclosure_bck->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
     step_bck->hit = SXD_HIT_NULL;
     fX(normalize)(step_bck->direction, args_bck->rwalk->hit.normal);
     fX(minus)(step_bck->direction, step_bck->direction);

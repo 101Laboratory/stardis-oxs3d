@@ -211,7 +211,7 @@ XD(fetch_fluid_enclosure)
   /* Fetch the enclosure data */
   enc = scene_get_enclosure(scn, enc_id);
   ASSERT(enc != NULL);
-  if(enc->medium_id == ENCLOSURE_MULTI_MEDIA) {
+  if(enc->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
     /* The enclosures with multiple media are used to describe limit
      * conditions and therefore they cannot be fetched */
     log_err(scn->dev,

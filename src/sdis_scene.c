@@ -427,25 +427,57 @@ scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 }
 
 res_T
-scene_get_medium
+scene_get_enclosure_id
   (struct sdis_scene* scn,
    const double pos[],
-   struct sdis_medium** out_medium)
+   unsigned* enc_id)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_2d(scn, pos, out_medium)
-    : scene_get_medium_3d(scn, pos, out_medium);
+    ? scene_get_enclosure_id_2d(scn, pos, enc_id)
+    : scene_get_enclosure_id_3d(scn, pos, enc_id);
 }
 
 res_T
-scene_get_medium_in_closed_boundaries
+scene_get_enclosure_id_in_closed_boundaries
   (struct sdis_scene* scn,
    const double pos[],
-   struct sdis_medium** out_medium)
+   unsigned* enc_id)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_in_closed_boundaries_2d(scn, pos, out_medium)
-    : scene_get_medium_in_closed_boundaries_3d(scn, pos, out_medium);
+    ? scene_get_enclosure_id_in_closed_boundaries_2d(scn, pos, enc_id)
+    : scene_get_enclosure_id_in_closed_boundaries_3d(scn, pos, enc_id);
+}
+
+res_T
+scene_get_enclosure_medium
+  (struct sdis_scene* scn,
+   const struct enclosure* enc,
+   struct sdis_medium** out_mdm)
+{
+  struct sdis_medium* mdm = NULL;
+  res_T res = RES_OK;
+
+  ASSERT(scn && enc && out_mdm);
+
+  /* Check that the enclosure doesn't surround multiple media */
+  if(enc->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
+    log_warn(scn->dev,
+       "%s: invalid medium request. The enclosure includes several media.\n",
+       FUNC_NAME);
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  /* Obtain enclosure medium */
+  ASSERT(enc->medium_id < darray_medium_size_get(&scn->media));
+  mdm = darray_medium_data_get(&scn->media)[enc->medium_id];
+
+error:
+  *out_mdm = mdm;
+  goto exit;
+exit:
+  mdm = NULL;
+  return res;
 }
 
 res_T

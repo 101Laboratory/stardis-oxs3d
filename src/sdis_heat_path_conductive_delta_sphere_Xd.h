@@ -111,7 +111,7 @@ XD(sample_next_step)
 static res_T
 XD(sample_next_step_robust)
   (struct sdis_scene* scn,
-   struct sdis_medium* current_mdm,
+   const unsigned current_enc_id,
    struct ssp_rng* rng,
    const double pos[DIM],
    const float delta_solid,
@@ -121,13 +121,15 @@ XD(sample_next_step_robust)
    struct sXd(hit)* hit1, /* Hit used to adjust delta */
    float* out_delta)
 {
-  struct sdis_medium* mdm;
+  unsigned enc_id = ENCLOSURE_ID_NULL;
   float delta;
   float org[DIM];
   const size_t MAX_ATTEMPTS = 100;
   size_t iattempt = 0;
   res_T res = RES_OK;
-  ASSERT(scn && current_mdm && rng && pos && delta_solid > 0);
+  ASSERT(scn && rng && pos && delta_solid > 0);
+  ASSERT(current_enc_id != ENCLOSURE_ID_NULL);
+  ASSERT(current_enc_id != ENCLOSURE_ID_MULTI_MEDIA);
   ASSERT(dir0 && dir1 && hit0 && hit1 && out_delta);
 
   fX_set_dX(org, pos);
@@ -141,19 +143,17 @@ XD(sample_next_step_robust)
     /* Retrieve the medium of the next step */
     if(hit0->distance > delta) {
       XD(move_pos)(dX(set)(pos_next, pos), dir0, delta);
-      res = scene_get_medium_in_closed_boundaries(scn, pos_next, &mdm);
-      if(res == RES_BAD_OP) { mdm = NULL; res = RES_OK; }
+      res = scene_get_enclosure_id_in_closed_boundaries(scn, pos_next, &enc_id);
+      if(res == RES_BAD_OP) { enc_id = ENCLOSURE_ID_NULL; res = RES_OK; }
       if(res != RES_OK) goto error;
     } else {
-      struct sdis_interface* interf;
-      enum sdis_side side;
-      interf = scene_get_interface(scn, hit0->prim.prim_id);
-      side = fX(dot)(dir0, hit0->normal) < 0 ? SDIS_FRONT : SDIS_BACK;
-      mdm = interface_get_medium(interf, side);
+      unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
+      scene_get_enclosure_ids(scn, hit0->prim.prim_id, enc_ids);
+      enc_id = fX(dot)(dir0, hit0->normal) < 0 ? enc_ids[0] : enc_ids[1];
     }
 
     /* Check medium consistency */
-    if(current_mdm != mdm) {
+    if(current_enc_id != enc_id) {
 #if 0
 #if DIM == 2
       log_warn(scn->dev,
@@ -166,7 +166,7 @@ XD(sample_next_step_robust)
 #endif
 #endif
     }
-  } while(current_mdm != mdm && ++iattempt < MAX_ATTEMPTS);
+  } while(current_enc_id != enc_id && ++iattempt < MAX_ATTEMPTS);
 
   /* Handle error */
   if(iattempt >= MAX_ATTEMPTS) {
@@ -336,24 +336,38 @@ XD(conductive_path_delta_sphere)
    struct ssp_rng* rng,
    struct XD(temperature)* T)
 {
-  double position_start[DIM];
+  /* Enclosure/medium in which the conductive path starts */
+  struct sdis_medium* mdm = NULL;
+  unsigned enc_id = ENCLOSURE_ID_NULL;
+
+  /* Physical properties */
   struct solid_props props_ref = SOLID_PROPS_NULL;
   double green_power_term = 0;
-  struct sdis_medium* mdm;
+
+  /* Miscellaneous */
+  double position_start[DIM] = {0};
   size_t istep = 0; /* Help for debug */
   res_T res = RES_OK;
+
+  /* Check pre-conditions */
   ASSERT(scn && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_SOLID);
-  (void)ctx, (void)istep;
+
+  (void)ctx, (void)istep; /* Avoid "unsued variable" warnings */
+
+  res = scene_get_enclosure_id_in_closed_boundaries(scn, rwalk->vtx.P, &enc_id);
+  if(res != RES_OK) goto error;
+  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
+  if(res != RES_OK) goto error;
 
   /* Check the random walk consistency */
-  res = scene_get_medium_in_closed_boundaries(scn, rwalk->vtx.P, &mdm);
-  if(res != RES_OK || mdm != rwalk->mdm) {
+  if(mdm != rwalk->mdm) {
     log_err(scn->dev, "%s: invalid solid random walk. "
       "Unexpected medium at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
+
   /* Save the submitted position */
   dX(set)(position_start, rwalk->vtx.P);
 
@@ -410,7 +424,7 @@ XD(conductive_path_delta_sphere)
     fX_set_dX(org, rwalk->vtx.P);
 
     /* Sample the direction to walk toward and compute the distance to travel */
-    res = XD(sample_next_step_robust)(scn, mdm, rng, rwalk->vtx.P,
+    res = XD(sample_next_step_robust)(scn, enc_id, rng, rwalk->vtx.P,
       (float)props.delta, dir0, dir1, &hit0, &hit1, &delta);
     if(res != RES_OK) goto error;
 
