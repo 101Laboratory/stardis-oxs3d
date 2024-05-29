@@ -48,21 +48,6 @@ struct hit_filter_data {
 static const struct hit_filter_data HIT_FILTER_DATA_NULL =
   HIT_FILTER_DATA_NULL__;
 
-struct get_medium_info {
-  /* Targeted position */
-  float pos_tgt[3];
-  /* Ray trace to the targeted position in order to define the current medium */
-  float ray_org[3];
-  float ray_dir[3];
-  /* Hit encouters along the ray and used to define the current medium */
-  struct s2d_hit hit_2d;
-  struct s3d_hit hit_3d;
-};
-#define GET_MEDIUM_INFO_NULL__ \
-  {{0,0,0}, {0,0,0}, {0,0,0}, S2D_HIT_NULL__, S3D_HIT_NULL__}
-static const struct get_medium_info GET_MEDIUM_INFO_NULL =
-  GET_MEDIUM_INFO_NULL__;
-
 static INLINE void
 prim_prop_init(struct mem_allocator* allocator, struct prim_prop* prim)
 {
@@ -247,7 +232,6 @@ extern LOCAL_SYM res_T
 scene_get_medium
   (struct sdis_scene* scene,
    const double position[],
-   struct get_medium_info* info, /* May be NULL */
    struct sdis_medium** medium);
 
 /* This function assumes that the tested position lies into finite enclosure.

@@ -430,12 +430,11 @@ res_T
 scene_get_medium
   (struct sdis_scene* scn,
    const double pos[],
-   struct get_medium_info* info,
    struct sdis_medium** out_medium)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_2d(scn, pos, info, out_medium)
-    : scene_get_medium_3d(scn, pos, info, out_medium);
+    ? scene_get_medium_2d(scn, pos, out_medium)
+    : scene_get_medium_3d(scn, pos, out_medium);
 }
 
 res_T

@@ -537,7 +537,7 @@ sdis_solve_camera
   }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, args->cam->position, NULL, &medium);
+  res = scene_get_medium(scn, args->cam->position, &medium);
   if(res != RES_OK) goto error;
 
   if(medium->type != SDIS_FLUID) {

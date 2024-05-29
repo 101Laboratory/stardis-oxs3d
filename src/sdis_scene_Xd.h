@@ -1098,7 +1098,6 @@ static INLINE res_T
 XD(scene_get_medium)
   (struct sdis_scene* scn,
    const double pos[DIM],
-   struct get_medium_info* info, /* May be NULL */
    struct sdis_medium** out_medium)
 {
   struct sdis_medium* medium = NULL;
@@ -1178,32 +1177,6 @@ XD(scene_get_medium)
 
       interf = scene_get_interface(scn, hit.prim.prim_id);
       scene_get_enclosure_ids(scn, hit.prim.prim_id, enc_ids);
-
-      if(cos_N_dir < 0) {
-        medium = interface_get_medium(interf, SDIS_FRONT);
-        enclosure = scene_get_enclosure(scn, enc_ids[0]);
-      } else {
-        medium = interface_get_medium(interf, SDIS_BACK);
-        enclosure = scene_get_enclosure(scn, enc_ids[1]);
-      }
-
-      if(enclosure->medium_id == ENCLOSURE_MULTI_MEDIA) {
-        log_warn
-          (scn->dev,
-           "%s: invalid medium request at {%g, %g, %g}. "
-           "The position is located in an enclosure comprising several media.\n",
-           FUNC_NAME, P[0], P[1], DIM == 3 ? P[2] : 0);
-        res = RES_BAD_OP;
-        goto error;
-      }
-
-      /* Register the get_medium_info */
-      if(info) {
-        fX(set)(info->pos_tgt, attr.value);
-        fX(set)(info->ray_org, P);
-        fX(set)(info->ray_dir, dir);
-        info->XD(hit) = hit;
-      }
       break;
     }
   }
@@ -1287,7 +1260,7 @@ XD(scene_get_medium_in_closed_boundaries)
     }
   }
   if(idir >= 2*DIM) {
-    res = XD(scene_get_medium)(scn, pos, NULL, &medium);
+    res = XD(scene_get_medium)(scn, pos, &medium);
     if(res != RES_OK) goto error;
   }
 

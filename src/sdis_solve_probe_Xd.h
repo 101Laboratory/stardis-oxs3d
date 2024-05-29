@@ -126,7 +126,7 @@ XD(solve_one_probe)
   *acc_time = ACCUM_NULL;
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, args->position, NULL, &medium);
+  res = scene_get_medium(scn, args->position, &medium);
   if(res != RES_OK) goto error;
 
   FOR_EACH(irealisation, 0, args->nrealisations) {
@@ -256,7 +256,7 @@ XD(solve_probe)
   if(!per_thread_acc_time) { res = RES_MEM_ERR; goto error; }
 
   /* Retrieve the medium in which the submitted position lies */
-  res = scene_get_medium(scn, args->position, NULL, &medium);
+  res = scene_get_medium(scn, args->position, &medium);
   if(res != RES_OK) goto error;
 
   /* Create the per thread green function */
