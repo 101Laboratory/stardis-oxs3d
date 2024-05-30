@@ -82,15 +82,15 @@ res_T
 XD(sample_coupled_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
 #ifndef NDEBUG
   /* Stack that saves the state of each recursion steps.  */
   struct entry {
-    struct XD(temperature) temperature;
-    struct XD(rwalk) rwalk;
+    struct temperature temperature;
+    struct rwalk rwalk;
   }* stack = NULL;
   size_t istack = 0;
 #endif
@@ -109,8 +109,8 @@ XD(sample_coupled_path)
 
   while(!T->done) {
     /* Save the current random walk state */
-    const struct XD(rwalk) rwalk_bkp = *rwalk;
-    const struct XD(temperature) T_bkp = *T;
+    const struct rwalk rwalk_bkp = *rwalk;
+    const struct temperature T_bkp = *T;
     size_t nfails = 0; /* #failures */
 
 #ifndef NDEBUG
@@ -172,8 +172,8 @@ XD(probe_realisation)
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct XD(rwalk) rwalk = XD(RWALK_NULL);
-  struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  struct rwalk rwalk = RWALK_NULL;
+  struct temperature T = TEMPERATURE_NULL;
   enum sdis_heat_vertex_type type;
   double t0;
   double (*get_initial_temperature)
@@ -224,7 +224,7 @@ XD(probe_realisation)
     goto error;
   }
 
-  rwalk.hit = SXD_HIT_NULL;
+  rwalk.XD(hit) = SXD_HIT_NULL;
   rwalk.mdm = args->medium;
 
   ctx.green_path = args->green_path;
@@ -258,8 +258,8 @@ XD(boundary_realisation)
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct XD(rwalk) rwalk = XD(RWALK_NULL);
-  struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  struct rwalk rwalk = RWALK_NULL;
+  struct temperature T = TEMPERATURE_NULL;
   struct sXd(attrib) attr;
 #if SDIS_XD_DIMENSION == 2
   float st;
@@ -271,7 +271,7 @@ XD(boundary_realisation)
 
   T.func = XD(boundary_path);
   rwalk.hit_side = args->side;
-  rwalk.hit.distance = 0;
+  rwalk.XD(hit).distance = 0;
   rwalk.vtx.time = args->time;
   rwalk.mdm = NULL; /* The random walk is at an interface between 2 media */
 
@@ -283,20 +283,20 @@ XD(boundary_realisation)
 
   /* Fetch the primitive */
   SXD(scene_view_get_primitive
-    (scn->sXd(view), (unsigned int)args->iprim, &rwalk.hit.prim));
+    (scn->sXd(view), (unsigned int)args->iprim, &rwalk.XD(hit).prim));
 
   /* Retrieve the world space position of the probe onto the primitive */
-  SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_POSITION, st, &attr));
+  SXD(primitive_get_attrib(&rwalk.XD(hit).prim, SXD_POSITION, st, &attr));
   dX_set_fX(rwalk.vtx.P, attr.value);
 
   /* Retrieve the primitive normal */
-  SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_GEOMETRY_NORMAL, st, &attr));
-  fX(set)(rwalk.hit.normal, attr.value);
+  SXD(primitive_get_attrib(&rwalk.XD(hit).prim, SXD_GEOMETRY_NORMAL, st, &attr));
+  fX(set)(rwalk.XD(hit).normal, attr.value);
 
 #if SDIS_XD_DIMENSION==2
-  rwalk.hit.u = st;
+  rwalk.XD(hit).u = st;
 #else
-  f2_set(rwalk.hit.uv, st);
+  f2_set(rwalk.XD(hit).uv, st);
 #endif
 
   res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0/*weight*/,
@@ -333,8 +333,8 @@ XD(boundary_flux_realisation)
    struct bound_flux_result* result)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct XD(rwalk) rwalk;
-  struct XD(temperature) T;
+  struct rwalk rwalk;
+  struct temperature T;
   struct sXd(attrib) attr;
   struct sXd(primitive) prim;
   struct sdis_interface* interf = NULL;
@@ -387,13 +387,13 @@ XD(boundary_flux_realisation)
   fX(set)(N, attr.value);
 
   #define RESET_WALK(Side, Mdm) {                                              \
-    rwalk = XD(RWALK_NULL);                                                    \
+    rwalk = RWALK_NULL;                                                        \
     rwalk.hit_side = (Side);                                                   \
-    rwalk.hit.distance = 0;                                                    \
+    rwalk.XD(hit).distance = 0;                                                \
     rwalk.vtx.time = args->time;                                               \
     rwalk.mdm = (Mdm);                                                         \
-    rwalk.hit.prim = prim;                                                     \
-    SET_PARAM(rwalk.hit, st);                                                  \
+    rwalk.XD(hit).prim = prim;                                                 \
+    SET_PARAM(rwalk.XD(hit), st);                                              \
     ctx.Tmin  = Tmin;                                                          \
     ctx.Tmin3 = Tmin3;                                                         \
     ctx.That  = That;                                                          \
@@ -403,8 +403,8 @@ XD(boundary_flux_realisation)
     ctx.irealisation = args->irealisation;                                     \
     ctx.diff_algo = args->diff_algo;                                           \
     dX(set)(rwalk.vtx.P, P);                                                   \
-    fX(set)(rwalk.hit.normal, N);                                              \
-    T = XD(TEMPERATURE_NULL);                                                  \
+    fX(set)(rwalk.XD(hit).normal, N);                                          \
+    T = TEMPERATURE_NULL;                                                      \
   } (void)0
 
   /* Compute boundary temperature */

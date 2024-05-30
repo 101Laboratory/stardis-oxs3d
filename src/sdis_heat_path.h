@@ -24,12 +24,8 @@
 
 /* Forward declarations */
 struct green_path_handle;
-struct rwalk_2d;
-struct rwalk_3d;
 struct sdis_scene;
 struct ssp_rng;
-struct temperature_2d;
-struct temperature_3d;
 
 /*******************************************************************************
  * Context of a random walk, i.e. its data concerning the current system and the
@@ -85,6 +81,46 @@ get_picard_order(const struct rwalk_context* ctx)
   ASSERT(ctx);
   return ctx->max_branchings + 1;
 }
+
+/*******************************************************************************
+ * 2D/3D random walk and associated temperature, i.e. current state of the
+ * sampled path
+ ******************************************************************************/
+struct rwalk {
+  struct sdis_rwalk_vertex vtx; /* Position and time of the Random walk */
+  struct sdis_medium* mdm; /* Medium in which the random walk lies */
+  struct s2d_hit hit_2d;
+  struct s3d_hit hit_3d;
+
+  /* Direction along which the random walk reached the radiative environment */
+  double dir[3];
+
+  double elapsed_time;
+  enum sdis_side hit_side;
+};
+#define RWALK_NULL__ {                                                         \
+  SDIS_RWALK_VERTEX_NULL__,                                                    \
+  NULL,                                                                        \
+  S2D_HIT_NULL__,                                                              \
+  S3D_HIT_NULL__,                                                              \
+  {0,0,0},                                                                     \
+  0,                                                                           \
+  SDIS_SIDE_NULL__                                                             \
+}
+static const struct rwalk RWALK_NULL = RWALK_NULL__;
+
+struct temperature {
+  res_T (*func)/* Next function to invoke in order to compute the temperature */
+    (struct sdis_scene* scn,
+     struct rwalk_context* ctx,
+     struct rwalk* rwalk,
+     struct ssp_rng* rng,
+     struct temperature* temp);
+  double value; /* Current value of the temperature */
+  int done;
+};
+#define TEMPERATURE_NULL__ {NULL,0,0}
+static const struct temperature TEMPERATURE_NULL = TEMPERATURE_NULL__;
 
 /*******************************************************************************
  * Heat path data structure used to record the geometry of sampled paths
@@ -261,34 +297,34 @@ trace_radiative_path_2d
   (struct sdis_scene* scn,
    const float ray_dir[3],
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* temperature);
+   struct temperature* temperature);
 
 extern LOCAL_SYM res_T
 trace_radiative_path_3d
   (struct sdis_scene* scn,
    const float ray_dir[3],
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* temperature);
+   struct temperature* temperature);
 
 extern LOCAL_SYM res_T
 radiative_path_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* temperature);
+   struct temperature* temperature);
 
 extern LOCAL_SYM res_T
 radiative_path_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* temperature);
+   struct temperature* temperature);
 
 /*******************************************************************************
  * Convective path
@@ -297,17 +333,17 @@ extern LOCAL_SYM res_T
 convective_path_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* temperature);
+   struct temperature* temperature);
 
 extern LOCAL_SYM res_T
 convective_path_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* temperature);
+   struct temperature* temperature);
 
 /*******************************************************************************
  * Conductive path
@@ -316,17 +352,17 @@ extern LOCAL_SYM res_T
 conductive_path_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* temperature);
+   struct temperature* temperature);
 
 extern LOCAL_SYM res_T
 conductive_path_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* temperature);
+   struct temperature* temperature);
 
 /*******************************************************************************
  * Boundary sub-path
@@ -335,16 +371,16 @@ extern LOCAL_SYM res_T
 boundary_path_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* temperature);
+   struct temperature* temperature);
 
 extern LOCAL_SYM res_T
 boundary_path_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* temperature);
+   struct temperature* temperature);
 
 #endif /* SDIS_HEAT_PATH_H */

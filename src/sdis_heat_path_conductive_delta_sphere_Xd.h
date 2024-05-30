@@ -239,7 +239,7 @@ XD(handle_volumic_power)
   (const struct sdis_scene* scn,
    const struct XD(handle_volumic_power_args)* args,
    double* out_power_term,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   double power_term = 0;
   res_T res = RES_OK;
@@ -332,9 +332,9 @@ res_T
 XD(conductive_path_delta_sphere)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   /* Enclosure/medium in which the conductive path starts */
   struct sdis_medium* mdm = NULL;
@@ -450,16 +450,16 @@ XD(conductive_path_delta_sphere)
     /* Rewind the time */
     delta_m = delta * scn->fp_to_meter;
     mu = (2*DIM*props.lambda)/(props.rho*props.cp*delta_m*delta_m);
-    res = XD(time_rewind)(mu, props.t0, rng, rwalk, ctx, T);
+    res = time_rewind(mu, props.t0, rng, rwalk, ctx, T);
     if(res != RES_OK) goto error;
     if(T->done) break; /* Limit condition was reached */
 
    /* Define if the random walk hits something along dir0 */
     if(hit0.distance > delta) {
-      rwalk->hit = SXD_HIT_NULL;
+      rwalk->XD(hit) = SXD_HIT_NULL;
       rwalk->hit_side = SDIS_SIDE_NULL__;
     } else {
-      rwalk->hit = hit0;
+      rwalk->XD(hit) = hit0;
       rwalk->hit_side = fX(dot)(hit0.normal, dir0) < 0 ? SDIS_FRONT : SDIS_BACK;
     }
 
@@ -474,7 +474,7 @@ XD(conductive_path_delta_sphere)
     ++istep;
 
   /* Keep going while the solid random walk does not hit an interface */
-  } while(SXD_HIT_NONE(&rwalk->hit));
+  } while(SXD_HIT_NONE(&rwalk->XD(hit)));
 
   /* Register the power term for the green function */
   if(ctx->green_path && props_ref.power != SDIS_VOLUMIC_POWER_NONE) {

@@ -31,9 +31,9 @@ res_T
 XD(boundary_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
   struct sdis_interface* interf = NULL;
@@ -43,14 +43,15 @@ XD(boundary_path)
   res_T res = RES_OK;
   ASSERT(scn && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm == NULL);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
 
-  XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+  XD(setup_interface_fragment)
+    (&frag, &rwalk->vtx, &rwalk->XD(hit), rwalk->hit_side);
 
-  fX(normalize)(rwalk->hit.normal, rwalk->hit.normal);
+  fX(normalize)(rwalk->XD(hit).normal, rwalk->XD(hit).normal);
 
   /* Retrieve the current interface */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
 
   /* Check if the boundary temperature is known */
   tmp = interface_side_get_temperature(interf, &frag);
@@ -89,4 +90,3 @@ error:
 }
 
 #include "sdis_Xd_end.h"
-

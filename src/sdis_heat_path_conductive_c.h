@@ -19,15 +19,13 @@
 #include <rsys/rsys.h>
 
 /* Forward declarations */
-struct rwalk_2d;
-struct rwalk_3d;
+struct rwalk;
 struct rwalk_context;
 struct sdis_device;
 struct sdis_scene;
 struct solid_props;
 struct ssp_rng;
-struct temperature_2d;
-struct temperature_3d;
+struct temperature;
 
 extern LOCAL_SYM res_T
 check_solid_constant_properties
@@ -44,17 +42,17 @@ extern LOCAL_SYM res_T
 conductive_path_delta_sphere_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* T);
+   struct temperature* T);
 
 extern LOCAL_SYM res_T
 conductive_path_delta_sphere_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* T);
+   struct temperature* T);
 
 /*******************************************************************************
  * Conductive paths using the walk on sphere algorithm
@@ -63,16 +61,16 @@ extern LOCAL_SYM res_T
 conductive_path_wos_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* T);
+   struct temperature* T);
 
 extern LOCAL_SYM res_T
 conductive_path_wos_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* T);
+   struct temperature* T);
 
 #endif /* SDIS_HEAT_PATH_CONDUCTIVE_C_H */

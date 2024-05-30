@@ -22,11 +22,13 @@
 #include <rsys/rsys.h>
 
 /* Forward declarations */
+struct bound_flux_result;
 struct green_path_handle;
+struct rwalk;
 struct sdis_heat_path;
 struct sdis_scene;
 struct ssp_rng;
-struct bound_flux_result;
+struct temperature;
 
 enum flux_flag {
   FLUX_FLAG_CONVECTIVE = BIT(FLUX_CONVECTIVE),
@@ -41,17 +43,17 @@ extern LOCAL_SYM res_T
 sample_coupled_path_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* T);
+   struct temperature* T);
 
 extern LOCAL_SYM res_T
 sample_coupled_path_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* T);
+   struct temperature* T);
 
 /*******************************************************************************
  * Realisation at a given position and time IN a medium

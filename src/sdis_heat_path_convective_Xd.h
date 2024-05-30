@@ -69,7 +69,7 @@ static res_T
 XD(register_heat_vertex_in_fluid)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    const double weight)
 {
   struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
@@ -84,13 +84,13 @@ XD(register_heat_vertex_in_fluid)
 
   if(!ctx->heat_path) return RES_OK;
 
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
 
   fX_set_dX(org, rwalk->vtx.P);
-  fX(set)(dir, rwalk->hit.normal);
+  fX(set)(dir, rwalk->XD(hit).normal);
   if(rwalk->hit_side == SDIS_BACK) fX(minus)(dir, dir);
 
-  filter_data.XD(hit) = rwalk->hit;
+  filter_data.XD(hit) = rwalk->XD(hit);
   filter_data.epsilon = 1.e-6;
   SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, &filter_data, &hit));
   dst = SXD_HIT_NONE(&hit) ? empirical_dst : hit.distance * 0.5f;
@@ -107,8 +107,8 @@ static res_T
 XD(handle_known_fluid_temperature)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
-   struct XD(temperature)* T)
+   struct rwalk* rwalk,
+   struct temperature* T)
 {
   double temperature;
   int known_temperature;
@@ -143,7 +143,7 @@ error:
 static res_T
 XD(handle_convective_path_startup)
   (struct sdis_scene* scn,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    int* path_starts_in_fluid)
 {
   const float range[2] = {FLT_MIN, FLT_MAX};
@@ -153,7 +153,7 @@ XD(handle_convective_path_startup)
   ASSERT(scn && rwalk && path_starts_in_fluid);
   ASSERT(sdis_medium_get_type(rwalk->mdm) == SDIS_FLUID);
 
-  *path_starts_in_fluid = SXD_HIT_NONE(&rwalk->hit);
+  *path_starts_in_fluid = SXD_HIT_NONE(&rwalk->XD(hit));
   if(*path_starts_in_fluid == 0) goto exit; /* Nothing to do */
 
   dir[DIM-1] = 1;
@@ -161,8 +161,8 @@ XD(handle_convective_path_startup)
 
   /* Init the path hit field required to define the current enclosure and
    * fetch the interface data */
-  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, NULL, &rwalk->hit));
-  if(SXD_HIT_NONE(&rwalk->hit)) {
+  SXD(scene_view_trace_ray(scn->sXd(view), org, dir, range, NULL, &rwalk->XD(hit)));
+  if(SXD_HIT_NONE(&rwalk->XD(hit))) {
     log_err(scn->dev,
       "%s: the position %g %g %g lies in the surrounding fluid whose "
       "temperature must be known.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
@@ -170,7 +170,8 @@ XD(handle_convective_path_startup)
     goto error;
   }
 
-  rwalk->hit_side = fX(dot)(rwalk->hit.normal, dir) < 0 ? SDIS_FRONT : SDIS_BACK;
+  rwalk->hit_side = fX(dot)(rwalk->XD(hit).normal, dir) < 0
+    ? SDIS_FRONT : SDIS_BACK;
 
 exit:
   return res;
@@ -181,7 +182,7 @@ error:
 static res_T
 XD(fetch_fluid_enclosure)
   (struct sdis_scene* scn,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    const struct enclosure** out_enclosure)
 {
   const struct sdis_interface* interf;
@@ -191,11 +192,11 @@ XD(fetch_fluid_enclosure)
   res_T res = RES_OK;
   ASSERT(scn && rwalk && out_enclosure);
   ASSERT(sdis_medium_get_type(rwalk->mdm) == SDIS_FLUID);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
 
   /* Fetch the current interface and its associated enclosures */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-  scene_get_enclosure_ids(scn, rwalk->hit.prim.prim_id, enc_ids);
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
+  scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
 
   /* Find the enclosure identifier of the current medium */
   ASSERT(interf->medium_front != interf->medium_back);
@@ -237,14 +238,15 @@ res_T
 XD(convective_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   struct sXd(attrib) attr_P, attr_N;
   struct fluid_props props_ref = FLUID_PROPS_NULL;
-  const struct sdis_interface* interf;
-  const struct enclosure* enc;
+  const struct sdis_interface* interf = NULL;
+  const struct enclosure* enc = NULL;
+  struct sXd(hit)* rwalk_hit = NULL;
   double r;
 #if SDIS_XD_DIMENSION == 2
   float st;
@@ -256,6 +258,8 @@ XD(convective_path)
   (void)rng, (void)ctx;
   ASSERT(scn && ctx && rwalk && rng && T);
   ASSERT(rwalk->mdm->type == SDIS_FLUID);
+
+  rwalk_hit = &rwalk->XD(hit);
 
   res = XD(handle_known_fluid_temperature)(scn, ctx, rwalk, T);
   if(res != RES_OK) goto error;
@@ -308,7 +312,7 @@ XD(convective_path)
 
     /* Sample the time using the upper bound. */
     mu = enc->hc_upper_bound / (props.rho * props.cp) * enc->S_over_V;
-    res = XD(time_rewind)(mu, props.t0, rng, rwalk, ctx, T);
+    res = time_rewind(mu, props.t0, rng, rwalk, ctx, T);
     if(res != RES_OK) goto error;
     if(T->done) break; /* Limit condition was reached */
 
@@ -318,29 +322,29 @@ XD(convective_path)
       (enc->sXd(view),
        ssp_rng_canonical_float(rng),
        ssp_rng_canonical_float(rng),
-       &prim, &rwalk->hit.u));
-    st = rwalk->hit.u;
+       &prim, &rwalk_hit->u));
+    st = rwalk_hit->u;
 #else
     SXD(scene_view_sample
       (enc->sXd(view),
        ssp_rng_canonical_float(rng),
        ssp_rng_canonical_float(rng),
        ssp_rng_canonical_float(rng),
-       &prim, rwalk->hit.uv));
-    f2_set(st, rwalk->hit.uv);
+       &prim, rwalk_hit->uv));
+    f2_set(st, rwalk_hit->uv);
 #endif
     /* Map the sampled primitive id from the enclosure space to the scene
      * space. Note that the overall scene has only one shape. As a consequence
      * neither the geom_id nor the inst_id needs to be updated */
-    rwalk->hit.prim.prim_id = enclosure_local2global_prim_id(enc, prim.prim_id);
+    rwalk_hit->prim.prim_id = enclosure_local2global_prim_id(enc, prim.prim_id);
 
-    SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_POSITION, st, &attr_P));
-    SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_GEOMETRY_NORMAL, st, &attr_N));
+    SXD(primitive_get_attrib(&rwalk_hit->prim, SXD_POSITION, st, &attr_P));
+    SXD(primitive_get_attrib(&rwalk_hit->prim, SXD_GEOMETRY_NORMAL, st, &attr_N));
     dX_set_fX(rwalk->vtx.P, attr_P.value);
-    fX(set)(rwalk->hit.normal, attr_N.value);
+    fX(set)(rwalk_hit->normal, attr_N.value);
 
     /* Fetch the interface of the sampled point. */
-    interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+    interf = scene_get_interface(scn, rwalk_hit->prim.prim_id);
     if(rwalk->mdm == interf->medium_front) {
       rwalk->hit_side = SDIS_FRONT;
     } else if(rwalk->mdm == interf->medium_back) {
@@ -355,7 +359,7 @@ XD(convective_path)
     if(res != RES_OK) goto error;
 
     /* Setup the fragment of the sampled position into the enclosure. */
-    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+    XD(setup_interface_fragment)(&frag, &rwalk->vtx, rwalk_hit, rwalk->hit_side);
 
     /* Fetch the convection coefficient of the sampled position */
     hc = interface_get_convection_coef(interf, &frag);
@@ -374,7 +378,7 @@ XD(convective_path)
     }
   }
 
-  rwalk->hit.distance = 0;
+  rwalk_hit->distance = 0;
   T->func = XD(boundary_path);
   rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
 

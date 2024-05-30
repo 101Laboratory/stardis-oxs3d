@@ -47,15 +47,15 @@ ray_realisation_3d
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct rwalk_3d rwalk = RWALK_NULL_3d;
-  struct temperature_3d T = TEMPERATURE_NULL_3d;
+  struct rwalk rwalk = RWALK_NULL;
+  struct temperature T = TEMPERATURE_NULL;
   float dir[3];
   res_T res = RES_OK;
   ASSERT(scn && weight && check_ray_realisation_args(args));
 
   d3_set(rwalk.vtx.P, args->position);
   rwalk.vtx.time = args->time;
-  rwalk.hit = S3D_HIT_NULL;
+  rwalk.hit_3d = S3D_HIT_NULL;
   rwalk.hit_side = SDIS_SIDE_NULL__;
   rwalk.mdm = args->medium;
 

@@ -31,8 +31,8 @@
 static INLINE res_T
 XD(rwalk_get_Tref)
   (const struct sdis_scene* scn,
-   const struct XD(rwalk)* rwalk,
-   const struct XD(temperature)* T,
+   const struct rwalk* rwalk,
+   const struct temperature* T,
    double* out_Tref)
 {
   double Tref = SDIS_TEMPERATURE_NONE;
@@ -52,16 +52,16 @@ XD(rwalk_get_Tref)
   } else {
     struct sdis_interface_fragment frag;
     struct sdis_interface* interf = NULL;
-    ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+    ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
 
     /* Fetch the interface where the random walk ends */
-    interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+    interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
     ASSERT(rwalk->hit_side!=SDIS_FRONT || interf->medium_front->type==SDIS_FLUID);
     ASSERT(rwalk->hit_side!=SDIS_BACK || interf->medium_back->type==SDIS_FLUID);
 
     /* Fragment on the fluid side of the boundary onto which the rwalk ends */
     XD(setup_interface_fragment)
-      (&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+      (&frag, &rwalk->vtx, &rwalk->XD(hit), rwalk->hit_side);
 
     Tref = interface_side_get_reference_temperature(interf, &frag);
   }
@@ -85,26 +85,25 @@ XD(solid_fluid_boundary_picard1_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   /* Input argument used to handle the net flux */
   struct handle_net_flux_args handle_net_flux_args = HANDLE_NET_FLUX_ARGS_NULL;
 
   /* Input argument used to handle the external net flux */
-  struct XD(handle_external_net_flux_args) handle_external_net_flux_args =
-    XD(HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL);
+  struct handle_external_net_flux_args handle_external_net_flux_args =
+    HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL;
 
   /* Input/output arguments of the function used to sample a reinjection */
-  struct XD(sample_reinjection_step_args) samp_reinject_step_args =
-    XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
-  struct XD(reinjection_step) reinject_step =
-    XD(REINJECTION_STEP_NULL);
+  struct sample_reinjection_step_args samp_reinject_step_args =
+    SAMPLE_REINJECTION_STEP_ARGS_NULL;
+  struct reinjection_step reinject_step = REINJECTION_STEP_NULL;
 
   /* Temperature and random walk state of the sampled radiative path */
-  struct XD(temperature) T_s;
-  struct XD(rwalk) rwalk_s;
+  struct temperature T_s;
+  struct rwalk rwalk_s;
 
   /* Fragment on the fluid side of the boundary */
   struct sdis_interface_fragment frag_fluid;
@@ -139,7 +138,7 @@ XD(solid_fluid_boundary_picard1_path)
   ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
 
   /* Retrieve the solid and the fluid split by the boundary */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
   solid = interface_get_medium(interf, SDIS_FRONT);
   fluid = interface_get_medium(interf, SDIS_BACK);
   solid_side = SDIS_FRONT;
@@ -222,7 +221,7 @@ XD(solid_fluid_boundary_picard1_path)
   /* Handle the external net flux if any */
   handle_external_net_flux_args.interf = interf;
   handle_external_net_flux_args.frag = frag;
-  handle_external_net_flux_args.hit = &rwalk->hit;
+  handle_external_net_flux_args.XD(hit) = &rwalk->XD(hit);
   handle_external_net_flux_args.green_path = ctx->green_path;
   handle_external_net_flux_args.picard_order = get_picard_order(ctx);
   handle_external_net_flux_args.h_cond = h_cond;
@@ -255,8 +254,8 @@ XD(solid_fluid_boundary_picard1_path)
 
     /* Switch in conductive path */
     if(r < p_conv + p_cond) {
-      struct XD(solid_reinjection_args) solid_reinject_args =
-        XD(SOLID_REINJECTION_ARGS_NULL);
+      struct solid_reinjection_args solid_reinject_args =
+        SOLID_REINJECTION_ARGS_NULL;
 
       /* Perform the reinjection into the solid */
       solid_reinject_args.reinjection = &reinject_step;

@@ -27,7 +27,7 @@
 
 struct XD(find_reinjection_ray_args) {
   const struct sdis_medium* solid; /* Medium into which the reinjection occurs */
-  const struct XD(rwalk)* rwalk; /* Current random walk state */
+  const struct rwalk* rwalk; /* Current random walk state */
   float dir0[DIM]; /* Challenged ray direction */
   float dir1[DIM]; /* Challenged ray direction */
   double distance; /* Maximum reinjection distance */
@@ -69,7 +69,7 @@ XD(check_find_reinjection_ray_args)
 
 static INLINE int
 XD(check_sample_reinjection_step_args)
-  (const struct XD(sample_reinjection_step_args)* args)
+  (const struct sample_reinjection_step_args* args)
 {
   return args
       && args->rng
@@ -81,7 +81,7 @@ XD(check_sample_reinjection_step_args)
 }
 
 static INLINE int
-XD(check_reinjection_step)(const struct XD(reinjection_step)* step)
+XD(check_reinjection_step)(const struct reinjection_step* step)
 {
   return step
       && fX(is_normalized)(step->direction)
@@ -89,7 +89,7 @@ XD(check_reinjection_step)(const struct XD(reinjection_step)* step)
 }
 
 static INLINE int
-XD(check_solid_reinjection_args)(const struct XD(solid_reinjection_args)* args)
+XD(check_solid_reinjection_args)(const struct solid_reinjection_args* args)
 {
   return args
       && XD(check_reinjection_step)(args->reinjection)
@@ -104,14 +104,14 @@ XD(check_solid_reinjection_args)(const struct XD(solid_reinjection_args)* args)
  * the random walk */
 static INLINE int
 XD(check_rwalk_fragment_consistency)
-  (const struct XD(rwalk)* rwalk,
+  (const struct rwalk* rwalk,
    const struct sdis_interface_fragment* frag)
 {
   double N[DIM];
   double uv[2] = {0, 0};
   ASSERT(rwalk && frag);
-  dX(normalize)(N, dX_set_fX(N, rwalk->hit.normal));
-  if( SXD_HIT_NONE(&rwalk->hit)
+  dX(normalize)(N, dX_set_fX(N, rwalk->XD(hit).normal));
+  if( SXD_HIT_NONE(&rwalk->XD(hit))
   || !dX(eq_eps)(rwalk->vtx.P, frag->P, 1.e-6)
   || !dX(eq_eps)(N, frag->Ng, 1.e-6)
   || !(  (IS_INF(rwalk->vtx.time) && IS_INF(frag->time))
@@ -119,16 +119,16 @@ XD(check_rwalk_fragment_consistency)
     return 0;
   }
 #if (SDIS_XD_DIMENSION == 2)
-  uv[0] = rwalk->hit.u;
+  uv[0] = rwalk->XD(hit).u;
 #else
-  d2_set_f2(uv, rwalk->hit.uv);
+  d2_set_f2(uv, rwalk->XD(hit).uv);
 #endif
   return d2_eq_eps(uv, frag->uv, 1.e-6);
 }
 
 static void
 XD(sample_reinjection_dir)
-  (const struct XD(rwalk)* rwalk,
+  (const struct rwalk* rwalk,
    struct ssp_rng* rng,
    float dir[DIM])
 {
@@ -145,15 +145,15 @@ XD(sample_reinjection_dir)
    * discard the sqrt(2)/2 constant. */
   const uint64_t r = ssp_rng_uniform_uint64(rng, 0, 1);
   ASSERT(rwalk && rng && dir);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
   ASSERT(!rwalk->mdm);
 
   if(r) {
-    dir[0] = rwalk->hit.normal[0] - rwalk->hit.normal[1];
-    dir[1] = rwalk->hit.normal[0] + rwalk->hit.normal[1];
+    dir[0] = rwalk->XD(hit).normal[0] - rwalk->XD(hit).normal[1];
+    dir[1] = rwalk->XD(hit).normal[0] + rwalk->XD(hit).normal[1];
   } else {
-    dir[0] = rwalk->hit.normal[0] + rwalk->hit.normal[1];
-    dir[1] =-rwalk->hit.normal[0] + rwalk->hit.normal[1];
+    dir[0] = rwalk->XD(hit).normal[0] + rwalk->XD(hit).normal[1];
+    dir[1] =-rwalk->XD(hit).normal[0] + rwalk->XD(hit).normal[1];
   }
   f2_normalize(dir, dir);
 #else
@@ -162,17 +162,17 @@ XD(sample_reinjection_dir)
    * radius of its base is 1. */
   float frame[9];
   ASSERT(rwalk && rng && dir);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
   ASSERT(!rwalk->mdm);
-  ASSERT(fX(is_normalized)(rwalk->hit.normal));
+  ASSERT(fX(is_normalized)(rwalk->XD(hit).normal));
 
   ssp_ran_circle_uniform_float(rng, dir, NULL);
   dir[2]  = (float)(1.0/sqrt(2));
 
-  f33_basis(frame, rwalk->hit.normal);
+  f33_basis(frame, rwalk->XD(hit).normal);
   f33_mulf3(dir, frame, dir);
   f3_normalize(dir, dir);
-  ASSERT(eq_epsf(f3_dot(dir, rwalk->hit.normal), (float)(1.0/sqrt(3)), 1.e-4f));
+  ASSERT(eq_epsf(f3_dot(dir, rwalk->XD(hit).normal), (float)(1.0/sqrt(3)), 1.e-4f));
 #endif
 }
 
@@ -180,7 +180,7 @@ XD(sample_reinjection_dir)
 #if DIM == 2
 static void
 XD(move_away_primitive_boundaries)
-  (const struct XD(rwalk)* rwalk,
+  (const struct rwalk* rwalk,
    const double delta,
    double position[DIM]) /* Position to move */
 {
@@ -189,9 +189,9 @@ XD(move_away_primitive_boundaries)
   float dir[DIM];
   float len;
   const float st = 0.5f;
-  ASSERT(rwalk && !SXD_HIT_NONE(&rwalk->hit) && delta > 0);
+  ASSERT(rwalk && !SXD_HIT_NONE(&rwalk->XD(hit)) && delta > 0);
 
-  SXD(primitive_get_attrib(&rwalk->hit.prim, SXD_POSITION, st, &attr));
+  SXD(primitive_get_attrib(&rwalk->XD(hit).prim, SXD_POSITION, st, &attr));
 
   fX_set_dX(pos, position);
   fX(sub)(dir, attr.value, pos);
@@ -205,7 +205,7 @@ XD(move_away_primitive_boundaries)
  * numerical issues leading to inconsistent random walks. */
 static void
 XD(move_away_primitive_boundaries)
-  (const struct XD(rwalk)* rwalk,
+  (const struct rwalk* rwalk,
    const double delta,
    double position[DIM])
 {
@@ -222,14 +222,14 @@ XD(move_away_primitive_boundaries)
   int imin = 0;
   int imid = 0;
   int i;
-  ASSERT(rwalk && delta > 0 && !S3D_HIT_NONE(&rwalk->hit));
+  ASSERT(rwalk && delta > 0 && !S3D_HIT_NONE(&rwalk->XD(hit)));
 
   fX_set_dX(P, position);
 
   /* Fetch triangle vertices */
-  S3D(triangle_get_vertex_attrib(&rwalk->hit.prim, 0, S3D_POSITION, &v0));
-  S3D(triangle_get_vertex_attrib(&rwalk->hit.prim, 1, S3D_POSITION, &v1));
-  S3D(triangle_get_vertex_attrib(&rwalk->hit.prim, 2, S3D_POSITION, &v2));
+  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 0, S3D_POSITION, &v0));
+  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 1, S3D_POSITION, &v1));
+  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 2, S3D_POSITION, &v2));
 
   /* Compute the edge vector */
   f3_sub(E[0], v1.value, v0.value);
@@ -351,7 +351,7 @@ XD(find_reinjection_ray)
 
   do {
     fX_set_dX(org, ray->org);
-    filter_data.XD(hit) = args->rwalk->hit;
+    filter_data.XD(hit) = args->rwalk->XD(hit);
     filter_data.epsilon = args->distance * 0.01;
     SXD(scene_view_trace_ray
       (scn->sXd(view), org, args->dir0, range, &filter_data, &hit0));
@@ -557,9 +557,9 @@ static res_T
 XD(handle_volumic_power)
   (struct sdis_medium* solid,
    struct rwalk_context* rwalk_ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    const double reinject_dst_m,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   double power;
   double lambda;
@@ -614,8 +614,8 @@ error:
 res_T
 XD(sample_reinjection_step_solid_fluid)
   (struct sdis_scene* scn,
-   const struct XD(sample_reinjection_step_args)* args,
-   struct XD(reinjection_step)* step)
+   const struct sample_reinjection_step_args* args,
+   struct reinjection_step* step)
 {
   /* Input/output data of the function finding a valid reinjection ray */
   struct XD(find_reinjection_ray_args) find_reinject_ray_args =
@@ -641,7 +641,7 @@ XD(sample_reinjection_step_solid_fluid)
   ASSERT(XD(check_sample_reinjection_step_args)(args));
 
   /* Initialise the reinjection step */
-  *step = XD(REINJECTION_STEP_NULL);
+  *step = REINJECTION_STEP_NULL;
 
   /* Check whether the solid enclosure is part of the system, or whether it is
    * only there to describe boundary conditions. In the latter case, the
@@ -650,11 +650,11 @@ XD(sample_reinjection_step_solid_fluid)
    * that if the trajectory passes through the solid enclosure, it will stop,
    * i.e.  the temperature of the solid should be fixed. If it doesn't, it's an
    * error */
-  scene_get_enclosure_ids(scn, args->rwalk->hit.prim.prim_id, enc_ids);
+  scene_get_enclosure_ids(scn, args->rwalk->XD(hit).prim.prim_id, enc_ids);
   solid_enclosure = scene_get_enclosure(scn, enc_ids[args->side]);
   if(solid_enclosure->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
-    step->hit = SXD_HIT_NULL;
-    fX(normalize)(step->direction, args->rwalk->hit.normal);
+    step->XD(hit) = SXD_HIT_NULL;
+    fX(normalize)(step->direction, args->rwalk->XD(hit).normal);
     if(args->side == SDIS_BACK) fX(minus)(step->direction, step->direction);
     step->distance = (float)args->distance;
     goto exit; /* That's all folks! */
@@ -666,7 +666,7 @@ XD(sample_reinjection_step_solid_fluid)
     XD(sample_reinjection_dir)(args->rwalk, args->rng, dir0);
 
     /* Reflect the sampled direction around the normal */
-    XD(reflect)(dir1, dir0, args->rwalk->hit.normal);
+    XD(reflect)(dir1, dir0, args->rwalk->XD(hit).normal);
 
     /* Flip the sampled directions if one wants to reinject to back side */
     if(args->side == SDIS_BACK) {
@@ -698,7 +698,7 @@ XD(sample_reinjection_step_solid_fluid)
   }
 
   /* Setup the reinjection step */
-  step->hit = ray.hit;
+  step->XD(hit) = ray.hit;
   step->distance = ray.dst;
   fX(set)(step->direction, ray.dir);
 
@@ -720,10 +720,10 @@ error:
 res_T
 XD(sample_reinjection_step_solid_solid)
   (struct sdis_scene* scn,
-   const struct XD(sample_reinjection_step_args)* args_frt,
-   const struct XD(sample_reinjection_step_args)* args_bck,
-   struct XD(reinjection_step)* step_frt,
-   struct XD(reinjection_step)* step_bck)
+   const struct sample_reinjection_step_args* args_frt,
+   const struct sample_reinjection_step_args* args_bck,
+   struct reinjection_step* step_frt,
+   struct reinjection_step* step_bck)
 {
   /* Input/output data of the function finding a valid reinjection ray */
   struct XD(find_reinjection_ray_args) find_reinject_ray_frt_args =
@@ -737,7 +737,7 @@ XD(sample_reinjection_step_solid_solid)
   double rwalk_pos_backup[DIM];
 
   /* Variables shared by the two side */
-  struct XD(rwalk)* rwalk = NULL;
+  struct rwalk* rwalk = NULL;
   struct ssp_rng* rng = NULL;
 
   /* In 2D it is useless to try to resample a reinjection direction since there
@@ -764,7 +764,7 @@ XD(sample_reinjection_step_solid_solid)
   ASSERT(XD(check_sample_reinjection_step_args)(args_bck));
   ASSERT(args_frt->side == SDIS_FRONT);
   ASSERT(args_bck->side == SDIS_BACK);
-  ASSERT(SXD_PRIMITIVE_EQ(&args_frt->rwalk->hit.prim, &args_bck->rwalk->hit.prim));
+  ASSERT(SXD_PRIMITIVE_EQ(&args_frt->rwalk->XD(hit).prim, &args_bck->rwalk->XD(hit).prim));
 
   rng = args_frt->rng;
   rwalk = args_frt->rwalk;
@@ -772,8 +772,8 @@ XD(sample_reinjection_step_solid_solid)
   ASSERT(args_bck->rwalk == rwalk);
 
   /* Initialise the reinjection steps */
-  *step_frt = XD(REINJECTION_STEP_NULL);
-  *step_bck = XD(REINJECTION_STEP_NULL);
+  *step_frt = REINJECTION_STEP_NULL;
+  *step_bck = REINJECTION_STEP_NULL;
 
   /* Check whether the solid enclosure is part of the system, or whether it is
    * only there to describe boundary conditions. In the latter case, the
@@ -782,18 +782,18 @@ XD(sample_reinjection_step_solid_solid)
    * that if the trajectory passes through the solid enclosure, it will stop,
    * i.e.  the temperature of the solid should be fixed. If it doesn't, it's an
    * error */
-  scene_get_enclosure_ids(scn, args_frt->rwalk->hit.prim.prim_id, enc_ids);
+  scene_get_enclosure_ids(scn, args_frt->rwalk->XD(hit).prim.prim_id, enc_ids);
   enclosure_frt = scene_get_enclosure(scn, enc_ids[SDIS_FRONT]);
   enclosure_bck = scene_get_enclosure(scn, enc_ids[SDIS_BACK]);
   if(enclosure_frt->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
-    step_frt->hit = SXD_HIT_NULL;
-    fX(normalize)(step_frt->direction, args_frt->rwalk->hit.normal);
+    step_frt->XD(hit) = SXD_HIT_NULL;
+    fX(normalize)(step_frt->direction, args_frt->rwalk->XD(hit).normal);
     step_frt->distance = (float)args_frt->distance;
     multiple_media_frt = 1;
   }
   if(enclosure_bck->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
-    step_bck->hit = SXD_HIT_NULL;
-    fX(normalize)(step_bck->direction, args_bck->rwalk->hit.normal);
+    step_bck->XD(hit) = SXD_HIT_NULL;
+    fX(normalize)(step_bck->direction, args_bck->rwalk->XD(hit).normal);
     fX(minus)(step_bck->direction, step_bck->direction);
     step_bck->distance = (float)args_bck->distance;
     multiple_media_bck = 1;
@@ -811,7 +811,7 @@ XD(sample_reinjection_step_solid_solid)
     /* Sample a reinjection direction and reflect it around the normal. Then
      * reflect them on the back side of the interface. */
     XD(sample_reinjection_dir)(rwalk, rng, dir_frt_samp);
-    XD(reflect)(dir_frt_refl, dir_frt_samp, rwalk->hit.normal);
+    XD(reflect)(dir_frt_refl, dir_frt_samp, rwalk->XD(hit).normal);
     fX(minus)(dir_bck_samp, dir_frt_samp);
     fX(minus)(dir_bck_refl, dir_frt_refl);
 
@@ -881,13 +881,13 @@ XD(sample_reinjection_step_solid_solid)
 
   /* Setup the front and back reinjection steps */
   if(!multiple_media_frt) {
-    step_frt->hit = ray_frt.hit;
+    step_frt->XD(hit) = ray_frt.hit;
     step_frt->distance = ray_frt.dst;
     fX(set)(step_frt->direction, ray_frt.dir);
     ASSERT(XD(check_reinjection_step)(step_frt)); /* Post-condition */
   }
   if(!multiple_media_bck) {
-    step_bck->hit = ray_bck.hit;
+    step_bck->XD(hit) = ray_bck.hit;
     step_bck->distance = ray_bck.dst;
     fX(set)(step_bck->direction, ray_bck.dir);
     ASSERT(XD(check_reinjection_step)(step_bck)); /* Post-condition */
@@ -902,7 +902,7 @@ error:
 res_T
 XD(solid_reinjection)
   (struct sdis_medium* solid,
-   struct XD(solid_reinjection_args)* args)
+   struct solid_reinjection_args* args)
 {
   struct solid_props props = SOLID_PROPS_NULL;
   double reinject_dst_m; /* Reinjection distance in meters */
@@ -923,7 +923,7 @@ XD(solid_reinjection)
   /* Time rewind */
   args->rwalk->mdm = solid; /* Medium into which the time is rewind */
   mu = (2*DIM*props.lambda)/(props.rho*props.cp*reinject_dst_m*reinject_dst_m);
-  res = XD(time_rewind)
+  res = time_rewind
     (mu, props.t0, args->rng, args->rwalk, args->rwalk_ctx, args->T);
   if(res != RES_OK) goto error;
 
@@ -937,18 +937,18 @@ XD(solid_reinjection)
      args->reinjection->distance);
 
   /* The random walk is in the solid */
-  if(args->reinjection->hit.distance != args->reinjection->distance) {
+  if(args->reinjection->XD(hit).distance != args->reinjection->distance) {
     args->T->func = XD(conductive_path);
     args->rwalk->mdm = solid;
-    args->rwalk->hit = SXD_HIT_NULL;
+    args->rwalk->XD(hit) = SXD_HIT_NULL;
     args->rwalk->hit_side = SDIS_SIDE_NULL__;
 
   /* The random walk is at a boundary */
   } else {
     args->T->func = XD(boundary_path);
     args->rwalk->mdm = NULL;
-    args->rwalk->hit = args->reinjection->hit;
-    if(fX(dot)(args->reinjection->hit.normal, args->reinjection->direction) < 0) {
+    args->rwalk->XD(hit) = args->reinjection->XD(hit);
+    if(fX(dot)(args->reinjection->XD(hit).normal, args->reinjection->direction) < 0) {
       args->rwalk->hit_side = SDIS_FRONT;
     } else {
       args->rwalk->hit_side = SDIS_BACK;
@@ -974,7 +974,7 @@ res_T
 XD(handle_net_flux)
   (const struct sdis_scene* scn,
    const struct handle_net_flux_args* args,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   double flux_term;
   double phi;

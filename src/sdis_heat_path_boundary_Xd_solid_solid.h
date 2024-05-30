@@ -33,22 +33,22 @@ XD(solid_solid_boundary_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   /* Input/output arguments of the function used to sample a reinjection */
-  struct XD(sample_reinjection_step_args) samp_reinject_step_frt_args =
-    XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
-  struct XD(sample_reinjection_step_args) samp_reinject_step_bck_args =
-    XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
-  struct XD(reinjection_step) reinject_step_frt = XD(REINJECTION_STEP_NULL);
-  struct XD(reinjection_step) reinject_step_bck = XD(REINJECTION_STEP_NULL);
-  struct XD(reinjection_step)* reinject_step = NULL;
+  struct sample_reinjection_step_args samp_reinject_step_frt_args =
+    SAMPLE_REINJECTION_STEP_ARGS_NULL;
+  struct sample_reinjection_step_args samp_reinject_step_bck_args =
+    SAMPLE_REINJECTION_STEP_ARGS_NULL;
+  struct reinjection_step reinject_step_frt = REINJECTION_STEP_NULL;
+  struct reinjection_step reinject_step_bck = REINJECTION_STEP_NULL;
+  struct reinjection_step* reinject_step = NULL;
 
   /* Reinjection arguments */
-  struct XD(solid_reinjection_args) solid_reinject_args = 
-    XD(SOLID_REINJECTION_ARGS_NULL);
+  struct solid_reinjection_args solid_reinject_args =
+    SOLID_REINJECTION_ARGS_NULL;
 
   /* Data attached to the boundary */
   struct sdis_interface* interf = NULL;
@@ -71,7 +71,7 @@ XD(solid_solid_boundary_path)
   (void)frag, (void)ctx;
 
   /* Retrieve the two solids split by the boundary */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
   solid_frt = interface_get_medium(interf, SDIS_FRONT);
   solid_bck = interface_get_medium(interf, SDIS_BACK);
   ASSERT(solid_frt->type == SDIS_SOLID);
@@ -102,7 +102,7 @@ XD(solid_solid_boundary_path)
   samp_reinject_step_frt_args.side = SDIS_FRONT;
   samp_reinject_step_bck_args.side = SDIS_BACK;
   res = XD(sample_reinjection_step_solid_solid)
-    (scn, 
+    (scn,
      &samp_reinject_step_frt_args,
      &samp_reinject_step_bck_args,
      &reinject_step_frt,
