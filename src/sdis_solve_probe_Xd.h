@@ -118,7 +118,6 @@ XD(solve_one_probe)
 {
   /* Enclosure in which the probe lies */
   unsigned enc_id = ENCLOSURE_ID_NULL;
-  struct sdis_medium* mdm = NULL;
 
   size_t irealisation = 0;
   res_T res = RES_OK;
@@ -130,8 +129,6 @@ XD(solve_one_probe)
 
   /* Retrieve the medium in which the submitted position lies */
   res = scene_get_enclosure_id(scn, args->position, &enc_id);
-  if(res != RES_OK) goto error;
-  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
   if(res != RES_OK) goto error;
 
   FOR_EACH(irealisation, 0, args->nrealisations) {
@@ -149,7 +146,7 @@ XD(solve_one_probe)
 
     /* Run a realisation */
     realis_args.rng = rng;
-    realis_args.medium = mdm;
+    realis_args.enc_id = enc_id;
     realis_args.time = time;
     realis_args.picard_order = args->picard_order;
     realis_args.irealisation = irealisation;
@@ -196,7 +193,6 @@ XD(solve_probe)
   size_t nthreads = 0;
 
   /* Stardis variables */
-  struct sdis_medium* mdm = NULL;
   struct sdis_estimator* estimator = NULL;
   struct sdis_green_function* green = NULL;
   struct sdis_green_function** per_thread_green = NULL;
@@ -206,6 +202,7 @@ XD(solve_probe)
   struct ssp_rng** per_thread_rng = NULL;
 
   /* Enclosure in which the probe lies */
+  const struct enclosure* enc = NULL;
   unsigned enc_id = ENCLOSURE_ID_NULL;
 
   /* Miscellaneous */
@@ -263,11 +260,18 @@ XD(solve_probe)
   if(!per_thread_acc_temp) { res = RES_MEM_ERR; goto error; }
   if(!per_thread_acc_time) { res = RES_MEM_ERR; goto error; }
 
-  /* Retrieve the medium in which the submitted position lies */
+  /* Retrieve the enclosure in which the submitted position lies */
   res = scene_get_enclosure_id(scn, args->position, &enc_id);
   if(res != RES_OK) goto error;
-  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
-  if(res != RES_OK) goto error;
+
+  /* Check that the enclosure does not contain multiple materials */
+  enc = scene_get_enclosure(scn, enc_id);
+  if(enc->medium_id == MEDIUM_ID_MULTI) {
+    log_err(scn->dev, "%s: probe is in an enclosure with several media "
+      "-- pos=("FORMAT_VECX")\n", FUNC_NAME, SPLITX(args->position));
+    res = RES_BAD_OP;
+    goto error;
+  }
 
   /* Create the per thread green function */
   if(out_green) {
@@ -337,7 +341,7 @@ XD(solve_probe)
 
     /* Invoke the probe realisation */
     realis_args.rng = rng;
-    realis_args.medium = mdm;
+    realis_args.enc_id = enc_id;
     realis_args.time = time;
     realis_args.picard_order = args->picard_order;
     realis_args.green_path = pgreen_path;

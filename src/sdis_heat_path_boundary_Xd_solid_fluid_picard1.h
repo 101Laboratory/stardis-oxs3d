@@ -108,6 +108,9 @@ XD(solid_fluid_boundary_picard1_path)
   /* Fragment on the fluid side of the boundary */
   struct sdis_interface_fragment frag_fluid;
 
+  /* The enclosures split by the boundary */
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
+
   /* Data attached to the boundary */
   struct sdis_interface* interf = NULL;
   struct sdis_medium* solid = NULL;
@@ -135,7 +138,7 @@ XD(solid_fluid_boundary_picard1_path)
   res_T res = RES_OK;
 
   ASSERT(scn && rwalk && rng && T && ctx);
-  ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
+  ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag) == RES_OK);
 
   /* Retrieve the solid and the fluid split by the boundary */
   interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
@@ -148,6 +151,9 @@ XD(solid_fluid_boundary_picard1_path)
     SWAP(enum sdis_side, solid_side, fluid_side);
     ASSERT(fluid->type == SDIS_FLUID);
   }
+
+  /* Get the enclosures split by the boundary */
+  scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
 
   /* Setup a fragment for the fluid side */
   frag_fluid = *frag;
@@ -177,7 +183,7 @@ XD(solid_fluid_boundary_picard1_path)
 
   /* Sample a reinjection step */
   samp_reinject_step_args.rng = rng;
-  samp_reinject_step_args.solid = solid;
+  samp_reinject_step_args.solid_enc_id = enc_ids[solid_side];
   samp_reinject_step_args.rwalk = rwalk;
   samp_reinject_step_args.distance = delta_boundary;
   samp_reinject_step_args.side = solid_side;
@@ -247,7 +253,7 @@ XD(solid_fluid_boundary_picard1_path)
     /* Switch in convective path */
     if(r < p_conv) {
       T->func = XD(convective_path);
-      rwalk->mdm = fluid;
+      rwalk->enc_id = enc_ids[fluid_side];
       rwalk->hit_side = fluid_side;
       break;
     }
@@ -264,7 +270,7 @@ XD(solid_fluid_boundary_picard1_path)
       solid_reinject_args.rng = rng;
       solid_reinject_args.T = T;
       solid_reinject_args.fp_to_meter = scn->fp_to_meter;
-      res = XD(solid_reinjection)(solid, &solid_reinject_args);
+      res = XD(solid_reinjection)(scn, enc_ids[solid_side], &solid_reinject_args);
       if(res != RES_OK) goto error;
       break;
     }
@@ -281,7 +287,7 @@ XD(solid_fluid_boundary_picard1_path)
     /* Sample a radiative path and get the Tref at its end. */
     T_s = *T;
     rwalk_s = *rwalk;
-    rwalk_s.mdm = fluid;
+    rwalk_s.enc_id = enc_ids[fluid_side];
     rwalk_s.hit_side = fluid_side;
     res = XD(radiative_path)(scn, ctx, &rwalk_s, rng, &T_s);
     if(res != RES_OK) goto error;

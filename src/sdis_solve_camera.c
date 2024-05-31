@@ -84,7 +84,7 @@ static res_T
 solve_pixel
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   struct sdis_medium* mdm,
+   const unsigned enc_id,
    const struct sdis_camera* cam,
    const double time_range[2], /* Observation time */
    const size_t ipix[2], /* Pixel coordinate in the image space */
@@ -99,7 +99,7 @@ solve_pixel
   struct sdis_heat_path* pheat_path = NULL;
   size_t irealisation;
   res_T res = RES_OK;
-  ASSERT(scn && mdm && rng && cam && ipix && nrealisations);
+  ASSERT(scn && rng && cam && ipix && nrealisations);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0);
   ASSERT(pixel && time_range);
 
@@ -136,7 +136,7 @@ solve_pixel
 
     /* Launch the realisation */
     realis_args.rng = rng;
-    realis_args.medium = mdm;
+    realis_args.enc_id = enc_id;
     realis_args.time = time;
     realis_args.picard_order = picard_order;
     realis_args.heat_path = pheat_path;
@@ -195,7 +195,7 @@ static res_T
 solve_tile
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
-   struct sdis_medium* mdm,
+   const unsigned enc_id,
    const struct sdis_camera* cam,
    const double time_range[2],
    const size_t tile_org[2], /* Origin of the tile in pixel space */
@@ -211,7 +211,7 @@ solve_tile
   size_t mcode; /* Morton code of the tile pixel */
   size_t npixels;
   res_T res = RES_OK;
-  ASSERT(scn && rng && mdm && cam && spp);
+  ASSERT(scn && rng && cam && spp);
   ASSERT(tile_size && tile_size[0] && tile_size[1]);
   ASSERT(pix_sz && pix_sz[0] > 0 && pix_sz[1] > 0 && time_range);
 
@@ -241,8 +241,8 @@ solve_tile
       estimator = estimator_buffer_grab(buf, ipix_image[0], ipix_image[1]);
     }
     res = solve_pixel
-      (scn, rng, mdm, cam, time_range, ipix_image, spp, register_paths, pix_sz,
-       picard_order, diff_algo, estimator, pixel);
+      (scn, rng, enc_id, cam, time_range, ipix_image, spp, register_paths,
+       pix_sz, picard_order, diff_algo, estimator, pixel);
     if(res != RES_OK) goto error;
   }
 
@@ -504,13 +504,13 @@ sdis_solve_camera
 
   /* Stardis variables */
   struct sdis_estimator_buffer* buf = NULL;
-  struct sdis_medium* mdm = NULL;
 
   /* Random number generators */
   struct ssp_rng_proxy* rng_proxy = NULL;
   struct ssp_rng** per_thread_rng = NULL;
 
-  /* Enclosure in which the probe lies */
+  /* Enclosure & medium in which the probe lies */
+  struct sdis_medium* mdm = NULL;
   unsigned enc_id = ENCLOSURE_ID_NULL;
 
   /* Miscellaneous */
@@ -541,12 +541,13 @@ sdis_solve_camera
 
   /* Retrieve the medium in which the submitted position lies */
   res = scene_get_enclosure_id(scn, args->cam->position, &enc_id);
+  if(res != RES_OK) goto error;
   res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
   if(res != RES_OK) goto error;
 
-  if(mdm->type != SDIS_FLUID) {
+  if(sdis_medium_get_type(mdm) != SDIS_FLUID) {
     log_err(scn->dev,
-      "%s: the camera position `%g %g %g' must be in a fluid medium.\n",
+      "%s: the camera position (%g, %g, %g) must be in a fluid medium.\n",
       FUNC_NAME, SPLIT3(args->cam->position));
     res = RES_BAD_ARG;
     goto error;
@@ -662,7 +663,7 @@ sdis_solve_camera
 
     /* Draw the tile */
     res_local = solve_tile
-      (scn, rng, mdm, args->cam, args->time_range, tile_org, tile_sz,
+      (scn, rng, enc_id, args->cam, args->time_range, tile_org, tile_sz,
        args->spp, register_paths, pix_sz, args->picard_order, args->diff_algo,
        buf, tile);
     if(res_local != RES_OK) {

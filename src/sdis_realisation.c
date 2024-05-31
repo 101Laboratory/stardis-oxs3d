@@ -19,16 +19,37 @@
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-static INLINE int
-check_ray_realisation_args(const struct ray_realisation_args* args)
+static INLINE res_T
+check_ray_realisation_args
+  (struct sdis_scene* scn,
+   const struct ray_realisation_args* args)
 {
-  return args
-      && args->rng
-      && args->medium
-      && args->medium->type == SDIS_FLUID
-      && args->time >= 0
-      && args->picard_order > 0
-      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
+  const struct enclosure* enc = NULL;
+  struct sdis_medium* mdm = NULL;
+  res_T res = RES_OK;
+  ASSERT(scn);
+
+  /* Check pointers */
+  if(!args || !args->rng) return RES_BAD_ARG;
+
+  if(args->time < 0) return RES_BAD_ARG;
+  if(args->picard_order <= 0) return RES_BAD_ARG;
+
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check the enclosure id */
+  if(args->enc_id == ENCLOSURE_ID_NULL) {
+    return RES_BAD_ARG;
+  }
+  enc = scene_get_enclosure(scn, args->enc_id);
+  if((res = scene_get_enclosure_medium(scn, enc, &mdm)) != RES_OK) return res;
+  if(sdis_medium_get_type(mdm) != SDIS_FLUID) {
+    return RES_BAD_ARG;
+  }
+
+  return RES_OK;
 }
 
 /*******************************************************************************
@@ -51,13 +72,13 @@ ray_realisation_3d
   struct temperature T = TEMPERATURE_NULL;
   float dir[3];
   res_T res = RES_OK;
-  ASSERT(scn && weight && check_ray_realisation_args(args));
+  ASSERT(scn && weight && check_ray_realisation_args(scn, args) == RES_OK);
 
   d3_set(rwalk.vtx.P, args->position);
   rwalk.vtx.time = args->time;
   rwalk.hit_3d = S3D_HIT_NULL;
   rwalk.hit_side = SDIS_SIDE_NULL__;
-  rwalk.mdm = args->medium;
+  rwalk.enc_id = args->enc_id;
 
   ctx.heat_path = args->heat_path;
   ctx.Tmin  = scn->tmin;
@@ -69,7 +90,7 @@ ray_realisation_3d
   ctx.max_branchings = args->picard_order - 1;
   ctx.irealisation = args->irealisation;
   ctx.diff_algo = args->diff_algo;
-  
+
   f3_set_d3(dir, args->direction);
 
   /* Register the starting position against the heat path */

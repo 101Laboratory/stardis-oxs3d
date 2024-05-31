@@ -24,17 +24,25 @@
 
 res_T
 time_rewind
-  (const double mu,
+  (struct sdis_scene* scn,
+   const double mu,
    const double t0,
    struct ssp_rng* rng,
    struct rwalk* rwalk,
    const struct rwalk_context* ctx,
    struct temperature* T)
 {
+  const struct enclosure* enc = NULL;
+  struct sdis_medium* mdm = NULL;
   double temperature;
   double tau;
   res_T res = RES_OK;
-  ASSERT(rwalk && rng && T);
+  ASSERT(scn && rwalk && ctx && rng && T);
+
+  /* Get the current medium */
+  enc = scene_get_enclosure(scn, rwalk->enc_id);
+  res = scene_get_enclosure_medium(scn, enc, &mdm);
+  if(res != RES_OK) goto error;
 
   /* Sample the time using the upper bound. */
   tau = ssp_ran_exp(rng, mu);
@@ -52,11 +60,11 @@ time_rewind
   if(rwalk->vtx.time > t0) goto exit;
 
   /* Fetch the initial temperature */
-  temperature = medium_get_temperature(rwalk->mdm, &rwalk->vtx);
+  temperature = medium_get_temperature(mdm, &rwalk->vtx);
   if(SDIS_TEMPERATURE_IS_UNKNOWN(temperature)) {
-    log_err(rwalk->mdm->dev, "the path reaches the limit condition but the "
+    log_err(mdm->dev, "the path reaches the limit condition but the "
       "%s temperature remains unknown -- position=%g, %g, %g\n",
-      medium_type_to_string(sdis_medium_get_type(rwalk->mdm)),
+      medium_type_to_string(sdis_medium_get_type(mdm)),
       SPLIT3(rwalk->vtx.P));
     res = RES_BAD_ARG;
     goto error;
@@ -75,8 +83,8 @@ time_rewind
   }
 
   if(ctx->green_path) {
-    res = green_path_set_limit_vertex(ctx->green_path, rwalk->mdm,
-      &rwalk->vtx, rwalk->elapsed_time);
+    res = green_path_set_limit_vertex
+      (ctx->green_path, mdm, &rwalk->vtx, rwalk->elapsed_time);
     if(res != RES_OK) goto error;
   }
 

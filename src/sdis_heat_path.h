@@ -17,6 +17,7 @@
 #define SDIS_HEAT_PATH_H
 
 #include "sdis.h"
+#include "sdis_scene_c.h"
 
 #include <rsys/dynamic_array.h>
 #include <rsys/dynamic_array_size_t.h>
@@ -88,7 +89,7 @@ get_picard_order(const struct rwalk_context* ctx)
  ******************************************************************************/
 struct rwalk {
   struct sdis_rwalk_vertex vtx; /* Position and time of the Random walk */
-  struct sdis_medium* mdm; /* Medium in which the random walk lies */
+  unsigned enc_id; /* Id of the enclosure in which the random walk lies */
   struct s2d_hit hit_2d;
   struct s3d_hit hit_3d;
 
@@ -100,7 +101,7 @@ struct rwalk {
 };
 #define RWALK_NULL__ {                                                         \
   SDIS_RWALK_VERTEX_NULL__,                                                    \
-  NULL,                                                                        \
+  ENCLOSURE_ID_NULL,                                                           \
   S2D_HIT_NULL__,                                                              \
   S3D_HIT_NULL__,                                                              \
   {0,0,0},                                                                     \

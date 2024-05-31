@@ -460,7 +460,7 @@ scene_get_enclosure_medium
   ASSERT(scn && enc && out_mdm);
 
   /* Check that the enclosure doesn't surround multiple media */
-  if(enc->medium_id == ENCLOSURE_ID_MULTI_MEDIA) {
+  if(enc->medium_id == MEDIUM_ID_MULTI) {
     log_warn(scn->dev,
        "%s: invalid medium request. The enclosure includes several media.\n",
        FUNC_NAME);

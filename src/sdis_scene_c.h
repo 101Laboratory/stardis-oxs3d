@@ -26,8 +26,8 @@
 
 #include <limits.h>
 
-#define ENCLOSURE_ID_NULL UINT_MAX-1
-#define ENCLOSURE_ID_MULTI_MEDIA (UINT_MAX-1)
+#define MEDIUM_ID_MULTI UINT_MAX
+#define ENCLOSURE_ID_NULL UINT_MAX
 
 struct prim_prop {
   struct sdis_interface* interf;
@@ -98,7 +98,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->S_over_V = 0;
   enc->V = 0;
   enc->hc_upper_bound = 0;
-  enc->medium_id = ENCLOSURE_ID_MULTI_MEDIA;
+  enc->medium_id = MEDIUM_ID_MULTI;
 }
 
 static INLINE void

@@ -69,24 +69,21 @@ error:
  * Helper function
  ******************************************************************************/
 static res_T
-XD(check_medium_consistency)
+XD(check_enclosure_consistency)
   (struct sdis_scene* scn,
    const struct rwalk* rwalk)
 {
   unsigned enc_id = ENCLOSURE_ID_NULL;
-  struct sdis_medium* mdm = NULL;
   res_T res = RES_OK;
   ASSERT(rwalk);
 
   res = scene_get_enclosure_id_in_closed_boundaries(scn, rwalk->vtx.P, &enc_id);
   if(res != RES_OK) goto error;
-  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
-  if(res != RES_OK) goto error;
 
-  /* Check medium consistency */
-  if(mdm != rwalk->mdm) {
+  /* Check enclosure consistency */
+  if(enc_id != rwalk->enc_id) {
     log_err(scn->dev,
-      "%s:%s: invalid solid walk. Unexpected medium (position: "FORMAT_VECX").\n",
+      "%s:%s: invalid solid walk. Unexpected enclosure -- pos=("FORMAT_VECX")\n",
       __FILE__, FUNC_NAME, SPLITX(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -103,6 +100,7 @@ XD(time_travel)
   (struct sdis_scene* scn,
    struct rwalk* rwalk,
    struct ssp_rng* rng,
+   struct sdis_medium* mdm,
    const double alpha, /* Diffusivity, i.e. lambda/(rho*cp) */
    const double t0, /* Initial time [s] */
    double* distance, /* Displacement [m/fp_to_meter] */
@@ -166,14 +164,14 @@ XD(time_travel)
   dX(add)(rwalk->vtx.P, rwalk->vtx.P, dir);
 
   /* Fetch the initial temperature */
-  temperature = medium_get_temperature(rwalk->mdm, &rwalk->vtx);
+  temperature = medium_get_temperature(mdm, &rwalk->vtx);
   if(SDIS_TEMPERATURE_IS_UNKNOWN(temperature)) {
     log_err(scn->dev,
       "%s:%s: the path reaches the initial condition but the "
-      "%s temperature remains unknown -- position=%g, %g, %g\n",
+      "%s temperature remains unknown -- pos=("FORMAT_VECX")\n",
       __FILE__, FUNC_NAME,
-      medium_type_to_string(sdis_medium_get_type(rwalk->mdm)),
-      SPLIT3(rwalk->vtx.P));
+      medium_type_to_string(sdis_medium_get_type(mdm)),
+      SPLITX(rwalk->vtx.P));
     res = RES_BAD_ARG;
     goto error;
   }
@@ -275,16 +273,15 @@ compute_hit_side_3d
 }
 #endif
 
-/* Verify that the submitted position is in the expected medium */
+/* Verify that the submitted position is in the expected enclosure */
 static res_T
 XD(check_diffusion_position)
   (struct sdis_scene* scn,
-   const struct sdis_medium* expected_medium,
+   const unsigned expected_enc_id,
    const double pos[DIM])
 {
-  struct sdis_interface* interf = NULL;
-  struct sdis_medium* mdm = NULL;
-  enum sdis_side side;
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
+  enum sdis_side side = SDIS_SIDE_NULL__;
 
   struct sXd(hit) hit = SXD_HIT_NULL;
   float wos_pos[DIM] = {0};
@@ -292,7 +289,8 @@ XD(check_diffusion_position)
   res_T res = RES_OK;
 
   /* Check pre-conditions */
-  ASSERT(scn && expected_medium && pos);
+  ASSERT(scn && pos);
+  ASSERT(expected_enc_id != ENCLOSURE_ID_NULL);
 
   /* Look for the nearest surface within 1 mm of the position to be checked. By
    * limiting the search radius we speed up the closest point query. If no
@@ -311,11 +309,10 @@ XD(check_diffusion_position)
   SXD(scene_view_closest_point(scn->sXd(view), wos_pos, wos_radius, NULL, &hit));
   if(SXD_HIT_NONE(&hit)) goto exit;
 
-  /* Fetch interface properties and check path consistency */
-  interf = scene_get_interface(scn, hit.prim.prim_id);
+  /* Check path consistency */
+  scene_get_enclosure_ids(scn, hit.prim.prim_id, enc_ids);
   side = XD(compute_hit_side)(&hit, pos);
-  mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
-  if(mdm != expected_medium) {
+  if(enc_ids[side] != expected_enc_id) {
     res = RES_BAD_ARG;
     goto error;
   }
@@ -337,8 +334,7 @@ XD(setup_hit_wos)
   struct sXd(attrib) attr;
 
   /* Properties */
-  struct sdis_interface* interf = NULL;
-  struct sdis_medium* mdm = NULL;
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
   enum sdis_side side = SDIS_SIDE_NULL__;
 
   /* Miscellaneous */
@@ -360,13 +356,12 @@ XD(setup_hit_wos)
   dX_set_fX(tgt, attr.value);
   side = XD(compute_hit_side)(hit, rwalk->vtx.P);
 
-  /* Fetch interface properties and check path consistency */
-  interf = scene_get_interface(scn, hit->prim.prim_id);
-  mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
-  if(mdm != rwalk->mdm) {
+  /* Check path consistency */
+  scene_get_enclosure_ids(scn, hit->prim.prim_id, enc_ids);
+  if(enc_ids[side] != rwalk->enc_id) {
     log_err(scn->dev,
-      "%s:%s: the conductive path has reached an invalid interface; "
-      "unexpected medium (position: "FORMAT_VECX"; side: %s).\n",
+      "%s:%s: the conductive path has reached an invalid interface. "
+      "Unexpected enclosure -- pos=("FORMAT_VECX"), side=%s\n",
       __FILE__, FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -395,8 +390,7 @@ XD(setup_hit_rt)
    struct rwalk* rwalk)
 {
   /* Properties */
-  struct sdis_interface* interf = NULL;
-  struct sdis_medium* mdm = NULL;
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
   enum sdis_side side = SDIS_SIDE_NULL__;
 
   /* Miscellaneous */
@@ -416,12 +410,11 @@ XD(setup_hit_rt)
   side = dX(dot)(N, dir) > 0 ? SDIS_BACK : SDIS_FRONT;
 
   /* Fetch interface properties and check path consistency */
-  interf = scene_get_interface(scn, hit->prim.prim_id);
-  mdm = side == SDIS_FRONT ? interf->medium_front : interf->medium_back;
-  if(mdm != rwalk->mdm) {
+  scene_get_enclosure_ids(scn, hit->prim.prim_id, enc_ids);
+  if(enc_ids[side] != rwalk->enc_id) {
     log_err(scn->dev,
-      "%s:%s: the conductive path has reached an invalid interface; "
-      "unexpected medium (position: "FORMAT_VECX"; side: %s).\n",
+      "%s:%s: the conductive path has reached an invalid interface. "
+      "Unexpected enclosure -- pos=("FORMAT_VECX"), side=%s\n",
       __FILE__, FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
@@ -497,7 +490,7 @@ XD(sample_next_position)
      * The next diffusion step would then detect an error. This is why we use a
      * new function based on the same geometric operator used in the present
      * algorithm. */
-    res = XD(check_diffusion_position)(scn, rwalk->mdm, pos);
+    res = XD(check_diffusion_position)(scn, rwalk->enc_id, pos);
 
     /* Diffusion position is valid => move the path to the new position */
     if(res == RES_OK) {
@@ -531,8 +524,8 @@ XD(sample_next_position)
        * we don't care to save it. */
       if(SXD_HIT_NONE(&hit)) {
         log_err(scn->dev,
-          "%s:%s: unable to find the next diffusion position "
-          "(position: "FORMAT_VECX"; direction: "FORMAT_VECX"; distance: %g\n",
+          "%s:%s: unable to find the next diffusion position -- "
+          "position=("FORMAT_VECX"),  direction=("FORMAT_VECX"), distance=%g\n",
           __FILE__, FUNC_NAME, SPLITX(pos), SPLITX(dir), wos_distance);
         res = RES_BAD_OP_IRRECOVERABLE;
         goto error;
@@ -562,6 +555,7 @@ XD(conductive_path_wos)
    struct temperature* T)
 {
   /* Properties */
+  const struct enclosure* enc = NULL;
   struct sdis_medium* mdm = NULL;
   struct solid_props props_ref = SOLID_PROPS_NULL;
   struct solid_props props = SOLID_PROPS_NULL;
@@ -577,18 +571,18 @@ XD(conductive_path_wos)
 
   /* Check pre-conditions */
   ASSERT(scn && ctx && rwalk && rng && T);
-  ASSERT(sdis_medium_get_type(rwalk->mdm) == SDIS_SOLID);
 
   /* Is green evaluated evaluated */
   green = ctx->green_path != NULL;
 
-  /* Keep track of the solid. After conduction, a boundary may have been
-   * reached, so the random walk medium is NULL. However, this medium is still
-   * needed to update the green path. Hence this backup */
-  mdm = rwalk->mdm;
-
-  res = XD(check_medium_consistency)(scn, rwalk);
+  res = XD(check_enclosure_consistency)(scn, rwalk);
   if(res != RES_OK) goto error;
+
+  /* Get the enclosure medium */
+  enc = scene_get_enclosure(scn, rwalk->enc_id);
+  res = scene_get_enclosure_medium(scn, enc, &mdm);
+  if(res != RES_OK) goto error;
+  ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
 
   /* Retrieve the solid properties at the current position. Use them to verify
    * that those that are supposed to be constant by the conductive random walk
@@ -599,7 +593,7 @@ XD(conductive_path_wos)
    * position. By comparing them to the properties along the random walk, we
    * thus verify that the properties are constant throughout the random walk
    * with respect to the properties of the reinjected position. */
-  solid_get_properties(rwalk->mdm, &rwalk->vtx, &props_ref);
+  solid_get_properties(mdm, &rwalk->vtx, &props_ref);
   props = props_ref;
 
   /* The algorithm assumes that lambda, rho and cp are constants. The
@@ -631,7 +625,7 @@ XD(conductive_path_wos)
     if(res != RES_OK) goto error;
 
     /* Going back in time */
-    res = XD(time_travel)(scn, rwalk, rng, alpha, props.t0, &dst, T);
+    res = XD(time_travel)(scn, rwalk, rng, mdm, alpha, props.t0, &dst, T);
     if(res != RES_OK) goto error;
 
     /* Add the volumic power density */
@@ -652,14 +646,14 @@ XD(conductive_path_wos)
     /* The path reaches a boundary */
     if(!SXD_HIT_NONE(&rwalk->XD(hit))) {
       T->func = XD(boundary_path);
-      rwalk->mdm = NULL;
+      rwalk->enc_id = ENCLOSURE_ID_NULL;
       break;
     }
 
     #undef REGISTER_VERTEX
 
     /* Retreive and check solid properties at the new position */
-    res = solid_get_properties(rwalk->mdm, &rwalk->vtx, &props);
+    res = solid_get_properties(mdm, &rwalk->vtx, &props);
     if(res != RES_OK) goto error;
     res = check_solid_constant_properties(scn->dev, green, wos, &props_ref, &props);
     if(res != RES_OK) goto error;

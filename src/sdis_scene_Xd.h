@@ -823,7 +823,7 @@ XD(register_enclosure)(struct sdis_scene* scn, struct sencXd(enclosure)* enc)
 
   /* Setup the medium id of the enclosure */
   if(header.enclosed_media_count > 1) {
-    enc_data->medium_id = ENCLOSURE_ID_MULTI_MEDIA;
+    enc_data->medium_id = MEDIUM_ID_MULTI;
   } else {
     SENCXD(enclosure_get_medium(enc, 0, &enc_data->medium_id));
   }

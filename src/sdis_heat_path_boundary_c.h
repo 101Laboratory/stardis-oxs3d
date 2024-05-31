@@ -30,14 +30,14 @@ struct sdis_medium;
  ******************************************************************************/
 struct sample_reinjection_step_args {
   struct ssp_rng* rng; /* Random number generator to use */
-  const struct sdis_medium* solid; /* Solid in which to reinject */
   struct rwalk* rwalk; /* Current state of the random walk */
   double distance; /* Maximum Reinjection distance */
+  unsigned solid_enc_id; /* Enclosured Id of the solid in which to reinject */
   enum sdis_side side; /* Side of the boundary to re-inject */
 };
 
 #define SAMPLE_REINJECTION_STEP_ARGS_NULL__ \
-  {NULL, NULL, NULL, -1, SDIS_SIDE_NULL__}
+  {NULL, NULL, -1, ENCLOSURE_ID_NULL, SDIS_SIDE_NULL__}
 static const struct sample_reinjection_step_args
 SAMPLE_REINJECTION_STEP_ARGS_NULL = SAMPLE_REINJECTION_STEP_ARGS_NULL__;
 
@@ -98,12 +98,14 @@ static const struct solid_reinjection_args SOLID_REINJECTION_ARGS_NULL =
 
 extern LOCAL_SYM res_T
 solid_reinjection_2d
-  (struct sdis_medium* solid,
+  (struct sdis_scene* scn,
+   const unsigned solid_enc_id,
    struct solid_reinjection_args* args);
 
 extern LOCAL_SYM res_T
 solid_reinjection_3d
-  (struct sdis_medium* solid,
+  (struct sdis_scene* scn,
+   const unsigned solid_enc_id,
    struct solid_reinjection_args* args);
 
 /*******************************************************************************

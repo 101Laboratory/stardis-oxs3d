@@ -149,7 +149,8 @@ register_heat_vertex
 
 extern LOCAL_SYM res_T
 time_rewind
-  (const double mu,
+  (struct sdis_scene* scn,
+   const double mu,
    const double t0, /* Initial time */
    struct ssp_rng* rng,
    struct rwalk* rwalk,

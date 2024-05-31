@@ -60,7 +60,7 @@ sample_coupled_path_3d
  ******************************************************************************/
 struct probe_realisation_args {
   struct ssp_rng* rng;
-  struct sdis_medium* medium; /* Medium into which the realisation starts */
+  unsigned enc_id; /* Enclosure into which the realisation starts */
   double position[3]; /* Probe position */
   double time; /* Observation time */
   size_t picard_order; /* Picard order to estimate radiative temperature */
@@ -71,7 +71,7 @@ struct probe_realisation_args {
 };
 #define PROBE_REALISATION_ARGS_NULL__ {                                        \
   NULL, /* RNG */                                                              \
-  NULL, /* Medium */                                                           \
+  ENCLOSURE_ID_NULL, /* Enclosure */                                           \
   {0,0,0}, /* Position */                                                      \
   -1, /* Observation time */                                                   \
   0, /* Picard order */                                                        \
@@ -182,7 +182,7 @@ boundary_flux_realisation_3d
  ******************************************************************************/
 struct ray_realisation_args {
   struct ssp_rng* rng;
-  struct sdis_medium* medium; /* Medium into which the realisation starts */
+  unsigned enc_id; /* Enclosure into which the realisation starts */
   double position[3]; /* Ray position */
   double direction[3]; /* Ray direction */
   double time; /* Observation time */
@@ -193,7 +193,7 @@ struct ray_realisation_args {
 };
 #define RAY_REALISATION_ARGS_NULL__ {                                          \
   NULL, /* RNG */                                                              \
-  NULL, /* Medium */                                                           \
+  ENCLOSURE_ID_NULL, /* Enclosure */                                           \
   {0,0,0}, /* Position */                                                      \
   {0,0,0}, /* Direction */                                                     \
   -1, /* Observation time */                                                   \

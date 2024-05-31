@@ -58,7 +58,8 @@ XD(trace_radiative_path)
     const struct sdis_interface* interf = NULL;
     struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-    struct sdis_medium* chk_mdm = NULL;
+    unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
+    unsigned chk_enc_id = ENCLOSURE_ID_NULL;
     double alpha;
     double epsilon;
     double r;
@@ -156,35 +157,27 @@ XD(trace_radiative_path)
     r = ssp_rng_canonical(rng);
     if(r < epsilon) {
       T->func = XD(boundary_path);
-      rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
+      rwalk->enc_id = ENCLOSURE_ID_NULL; /* Interface between 2 enclosures */
       break;
     }
 
     /* Normalize the normal of the interface and ensure that it points toward the
      * current medium */
     fX(normalize)(N, rwalk->XD(hit).normal);
-    if(rwalk->hit_side == SDIS_BACK){
-      chk_mdm = interf->medium_back;
-      fX(minus)(N, N);
-    } else {
-      chk_mdm = interf->medium_front;
+    if(rwalk->hit_side == SDIS_BACK) fX(minus)(N, N);
+
+    /* Check that the radiative path still lies in the same enclosure */
+    scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
+    chk_enc_id = rwalk->hit_side == SDIS_FRONT ? enc_ids[0] : enc_ids[1];
+
+    if(chk_enc_id != rwalk->enc_id) {
+      log_warn(scn->dev,
+        "%s: the radiative path has escaped from its cavity -- pos=(%g, %g, %g)\n",
+        FUNC_NAME, SPLIT3(rwalk->vtx.P));
+      res = RES_BAD_OP;
+      goto error;
     }
 
-    if(chk_mdm != rwalk->mdm) {
-      /* To ease the setting of models, the external enclosure is allowed to be
-       * incoherent regarding media. Here a radiative path is allowed to join
-       * 2 different fluids. */
-      const int outside = scene_is_outside
-        (scn, rwalk->hit_side, rwalk->XD(hit).prim.prim_id);
-      if(outside && chk_mdm->type == SDIS_FLUID) {
-        rwalk->mdm = chk_mdm;
-      } else {
-        log_warn(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
-          FUNC_NAME, SPLIT3(rwalk->vtx.P));
-        res = RES_BAD_OP;
-        goto error;
-      }
-    }
     alpha = interface_side_get_specular_fraction(interf, SDIS_INTERN_SOURCE_ID, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */

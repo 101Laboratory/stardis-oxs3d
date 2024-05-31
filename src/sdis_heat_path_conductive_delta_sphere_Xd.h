@@ -129,7 +129,6 @@ XD(sample_next_step_robust)
   res_T res = RES_OK;
   ASSERT(scn && rng && pos && delta_solid > 0);
   ASSERT(current_enc_id != ENCLOSURE_ID_NULL);
-  ASSERT(current_enc_id != ENCLOSURE_ID_MULTI_MEDIA);
   ASSERT(dir0 && dir1 && hit0 && hit1 && out_delta);
 
   fX_set_dX(org, pos);
@@ -155,30 +154,18 @@ XD(sample_next_step_robust)
     /* Check medium consistency */
     if(current_enc_id != enc_id) {
 #if 0
-#if DIM == 2
       log_warn(scn->dev,
-        "%s: inconsistent medium during the solid random walk at {%g, %g}.\n",
-        FUNC_NAME, SPLIT2(pos));
-#else
-      log_warn(scn->dev,
-        "%s: inconsistent medium during the solid random walk at {%g, %g, %g}.\n",
-        FUNC_NAME, SPLIT3(pos));
-#endif
+        "%s: inconsistent medium during the solid random walk -- "
+        "pos=("FORMAT_VECX")\n", FUNC_NAME, SPLITX(pos));
 #endif
     }
   } while(current_enc_id != enc_id && ++iattempt < MAX_ATTEMPTS);
 
   /* Handle error */
   if(iattempt >= MAX_ATTEMPTS) {
-#if DIM == 2
     log_warn(scn->dev,
-      "%s: could not find a next valid conductive step at {%g, %g}.\n",
-      FUNC_NAME, SPLIT2(pos));
-#else
-    log_warn(scn->dev,
-      "%s: could not find a next valid conductive step at {%g, %g, %g}.\n",
-      FUNC_NAME, SPLIT3(pos));
-#endif
+      "%s: could not find a next valid conductive -- pos=("FORMAT_VECX")\n",
+      FUNC_NAME, SPLITX(pos));
     res = RES_BAD_OP;
     goto error;
   }
@@ -351,7 +338,6 @@ XD(conductive_path_delta_sphere)
 
   /* Check pre-conditions */
   ASSERT(scn && rwalk && rng && T);
-  ASSERT(rwalk->mdm->type == SDIS_SOLID);
 
   (void)ctx, (void)istep; /* Avoid "unsued variable" warnings */
 
@@ -359,11 +345,13 @@ XD(conductive_path_delta_sphere)
   if(res != RES_OK) goto error;
   res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
   if(res != RES_OK) goto error;
+  ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
 
   /* Check the random walk consistency */
-  if(mdm != rwalk->mdm) {
+  if(enc_id != rwalk->enc_id) {
     log_err(scn->dev, "%s: invalid solid random walk. "
-      "Unexpected medium at {%g, %g, %g}.\n", FUNC_NAME, SPLIT3(rwalk->vtx.P));
+      "Unexpected enclosure -- pos=("FORMAT_VECX")\n",
+      FUNC_NAME, SPLITX(rwalk->vtx.P));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
@@ -410,7 +398,7 @@ XD(conductive_path_delta_sphere)
 
       if(ctx->green_path) {
         res = green_path_set_limit_vertex
-          (ctx->green_path, rwalk->mdm, &rwalk->vtx, rwalk->elapsed_time);
+          (ctx->green_path, mdm, &rwalk->vtx, rwalk->elapsed_time);
         if(res != RES_OK) goto error;
       }
 
@@ -450,7 +438,7 @@ XD(conductive_path_delta_sphere)
     /* Rewind the time */
     delta_m = delta * scn->fp_to_meter;
     mu = (2*DIM*props.lambda)/(props.rho*props.cp*delta_m*delta_m);
-    res = time_rewind(mu, props.t0, rng, rwalk, ctx, T);
+    res = time_rewind(scn, mu, props.t0, rng, rwalk, ctx, T);
     if(res != RES_OK) goto error;
     if(T->done) break; /* Limit condition was reached */
 
@@ -479,12 +467,12 @@ XD(conductive_path_delta_sphere)
   /* Register the power term for the green function */
   if(ctx->green_path && props_ref.power != SDIS_VOLUMIC_POWER_NONE) {
     res = green_path_add_power_term
-      (ctx->green_path, rwalk->mdm, &rwalk->vtx, green_power_term);
+      (ctx->green_path, mdm, &rwalk->vtx, green_power_term);
     if(res != RES_OK) goto error;
   }
 
   T->func = XD(boundary_path);
-  rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
+  rwalk->enc_id = ENCLOSURE_ID_NULL; /* At the interface between 2 media */
 
 exit:
   return res;
