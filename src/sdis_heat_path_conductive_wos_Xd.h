@@ -29,32 +29,6 @@
 #define SDIS_HEAT_PATH_CONDUCTIVE_WOS_XD_H
 
 static res_T
-handle_volumic_power_wos
-  (struct sdis_scene* scn,
-   const struct solid_props* props,
-   const double distance, /* [m/fp_to_meter] */
-   double* power_term,
-   struct temperature* T)
-{
-  double dst = distance * scn->fp_to_meter; /* [m] */
-  double term = 0;
-  res_T res = RES_OK;
-  ASSERT(scn && props && distance >= 0 && power_term && T);
-
-  if(props->power == SDIS_VOLUMIC_POWER_NONE) goto exit;
-
-  /* No displacement => no power density */
-  if(distance == 0) goto exit;
-
-  term = dst*dst / (2*DIM*props->lambda);
-  T->value += props->power * term;
-
-exit:
-  *power_term = term;
-  return res;
-}
-
-static res_T
 update_green_path
   (struct green_path_handle* green_path,
    struct rwalk* rwalk,
@@ -212,6 +186,32 @@ exit:
   return res;
 error:
   goto exit;
+}
+
+static res_T
+XD(handle_volumic_power_wos)
+  (struct sdis_scene* scn,
+   const struct solid_props* props,
+   const double distance, /* [m/fp_to_meter] */
+   double* power_term,
+   struct temperature* T)
+{
+  double dst = distance * scn->fp_to_meter; /* [m] */
+  double term = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && props && distance >= 0 && power_term && T);
+
+  if(props->power == SDIS_VOLUMIC_POWER_NONE) goto exit;
+
+  /* No displacement => no power density */
+  if(distance == 0) goto exit;
+
+  term = dst*dst / (2*DIM*props->lambda);
+  T->value += props->power * term;
+
+exit:
+  *power_term = term;
+  return res;
 }
 
 #if DIM == 2
@@ -635,7 +635,7 @@ XD(conductive_path_wos)
     if(res != RES_OK) goto error;
 
     /* Add the volumic power density */
-    res = handle_volumic_power_wos(scn, &props, dst, &power_term, T);
+    res = XD(handle_volumic_power_wos)(scn, &props, dst, &power_term, T);
     if(res != RES_OK) goto error;
 
     REGISTER_HEAT_VERTEX;
