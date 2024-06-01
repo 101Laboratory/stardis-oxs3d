@@ -67,8 +67,7 @@ error:
  ******************************************************************************/
 static res_T
 XD(handle_known_fluid_temperature)
-  (struct sdis_scene* scn,
-   struct rwalk_context* ctx,
+  (struct rwalk_context* ctx,
    struct rwalk* rwalk,
    struct sdis_medium* mdm,
    struct temperature* T)
@@ -76,7 +75,7 @@ XD(handle_known_fluid_temperature)
   double temperature;
   int known_temperature;
   res_T res = RES_OK;
-  ASSERT(scn && ctx && rwalk && T);
+  ASSERT(ctx && rwalk && T);
   ASSERT(sdis_medium_get_type(mdm) == SDIS_FLUID);
 
   temperature = fluid_get_temperature(mdm, &rwalk->vtx);
@@ -211,7 +210,7 @@ XD(convective_path)
   if((res = scene_get_enclosure_medium(scn, enc, &mdm)) != RES_OK) goto error;
   ASSERT(sdis_medium_get_type(mdm) == SDIS_FLUID);
 
-  res = XD(handle_known_fluid_temperature)(scn, ctx, rwalk, mdm, T);
+  res = XD(handle_known_fluid_temperature)(ctx, rwalk, mdm, T);
   if(res != RES_OK) goto error;
   if(T->done) goto exit; /* The fluid temperature is known */
 
@@ -231,7 +230,7 @@ XD(convective_path)
   if(enc->hc_upper_bound == 0) {
     ASSERT(path_starts_in_fluid); /* Cannot be in the fluid without starting there. */
     rwalk->vtx.time = props_ref.t0;
-    res = XD(handle_known_fluid_temperature)(scn, ctx, rwalk, mdm, T);
+    res = XD(handle_known_fluid_temperature)(ctx, rwalk, mdm, T);
     if(res != RES_OK) goto error;
     if(T->done) {
       goto exit; /* Stop the random walk */
