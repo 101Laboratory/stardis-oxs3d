@@ -730,7 +730,6 @@ draw
 
   if(!is_master_process) {
     CHK(img0 == NULL);
-    return; /* Nothing more to do */
   } else {
     check_image(img0);
     write_image(stdout, img0);
