@@ -56,6 +56,7 @@ XD(trace_radiative_path)
   /* Launch the radiative random walk */
   for(;;) {
     const struct sdis_interface* interf = NULL;
+    struct sdis_medium* chk_mdm = NULL;
     struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
     unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
@@ -169,12 +170,31 @@ XD(trace_radiative_path)
     /* Check that the radiative path still lies in the same enclosure */
     scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
     chk_enc_id = rwalk->hit_side == SDIS_FRONT ? enc_ids[0] : enc_ids[1];
-
     if(chk_enc_id != rwalk->enc_id) {
       log_warn(scn->dev,
         "%s: the radiative path has escaped from its cavity -- pos=(%g, %g, %g)\n",
         FUNC_NAME, SPLIT3(rwalk->vtx.P));
       res = RES_BAD_OP;
+      goto error;
+    }
+
+    /* Verify that the intersection, although in the same enclosure, touches the
+     * interface of a fluid. We verify this by interface, since a radiative path
+     * can be traced in an enclosure containing several media used to describe a
+     * set of boundary conditions.
+     *
+     * If the enclosure is good but the media type is not, this means that the
+     * radiative path is sampled in the wrong media. This is not a numerical
+     * problem, but a user problem: trying to sample a radiative path in a solid
+     * when semi-transparent solids are not yet supported by Stardis. This error
+     * is therefore fatal for the calculation */
+    chk_mdm = rwalk->hit_side == SDIS_FRONT
+      ? interf->medium_front : interf->medium_back;
+    if(sdis_medium_get_type(chk_mdm)) {
+      log_err(scn->dev,
+        "%s: a radiative path cannot evolve in a solid -- pos=(%g, %g, %g)\n",
+        FUNC_NAME, SPLIT3(rwalk->vtx.P));
+      res = RES_BAD_OP_IRRECOVERABLE;
       goto error;
     }
 

@@ -20,15 +20,8 @@
  * Helper functions
  ******************************************************************************/
 static INLINE res_T
-check_ray_realisation_args
-  (struct sdis_scene* scn,
-   const struct ray_realisation_args* args)
+check_ray_realisation_args(const struct ray_realisation_args* args)
 {
-  const struct enclosure* enc = NULL;
-  struct sdis_medium* mdm = NULL;
-  res_T res = RES_OK;
-  ASSERT(scn);
-
   /* Check pointers */
   if(!args || !args->rng) return RES_BAD_ARG;
 
@@ -39,13 +32,13 @@ check_ray_realisation_args
     return RES_BAD_ARG;
   }
 
-  /* Check the enclosure id */
+  /* Check the enclosure identifier. Only its validity is checked, not the fact
+   * that the enclosure is a fluid. Even though Stardis doesn't allow you to
+   * sample a radiative path in a solid, we don't query the medium of the
+   * enclosure since it may contain several: querying the medium will therefore
+   * return an error.  The type of medium is checked later, when sampling the
+   * radiative path, when it reaches an interface whose medium must be a fluid*/
   if(args->enc_id == ENCLOSURE_ID_NULL) {
-    return RES_BAD_ARG;
-  }
-  enc = scene_get_enclosure(scn, args->enc_id);
-  if((res = scene_get_enclosure_medium(scn, enc, &mdm)) != RES_OK) return res;
-  if(sdis_medium_get_type(mdm) != SDIS_FLUID) {
     return RES_BAD_ARG;
   }
 
@@ -72,7 +65,7 @@ ray_realisation_3d
   struct temperature T = TEMPERATURE_NULL;
   float dir[3];
   res_T res = RES_OK;
-  ASSERT(scn && weight && check_ray_realisation_args(scn, args) == RES_OK);
+  ASSERT(scn && weight && check_ray_realisation_args(args) == RES_OK);
 
   d3_set(rwalk.vtx.P, args->position);
   rwalk.vtx.time = args->time;

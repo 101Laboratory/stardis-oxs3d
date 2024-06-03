@@ -510,7 +510,6 @@ sdis_solve_camera
   struct ssp_rng** per_thread_rng = NULL;
 
   /* Enclosure & medium in which the probe lies */
-  struct sdis_medium* mdm = NULL;
   unsigned enc_id = ENCLOSURE_ID_NULL;
 
   /* Miscellaneous */
@@ -542,16 +541,6 @@ sdis_solve_camera
   /* Retrieve the medium in which the submitted position lies */
   res = scene_get_enclosure_id(scn, args->cam->position, &enc_id);
   if(res != RES_OK) goto error;
-  res = scene_get_enclosure_medium(scn, scene_get_enclosure(scn, enc_id), &mdm);
-  if(res != RES_OK) goto error;
-
-  if(sdis_medium_get_type(mdm) != SDIS_FLUID) {
-    log_err(scn->dev,
-      "%s: the camera position (%g, %g, %g) must be in a fluid medium.\n",
-      FUNC_NAME, SPLIT3(args->cam->position));
-    res = RES_BAD_ARG;
-    goto error;
-  }
 
   /* Create the per thread RNGs */
   res = create_per_thread_rng
