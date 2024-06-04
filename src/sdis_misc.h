@@ -148,22 +148,14 @@ register_heat_vertex
 }
 
 extern LOCAL_SYM res_T
-time_rewind_2d
-  (const double mu,
+time_rewind
+  (struct sdis_scene* scn,
+   const double mu,
    const double t0, /* Initial time */
    struct ssp_rng* rng,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    const struct rwalk_context* ctx,
-   struct temperature_2d* T);
-
-extern LOCAL_SYM res_T
-time_rewind_3d
-  (const double mu,
-   const double t0, /* Initial time */
-   struct ssp_rng* rng,
-   struct rwalk_3d* rwalk,
-   const struct rwalk_context* ctx,
-   struct temperature_3d* T);
+   struct temperature* T);
 
 /* Check the validity of the parametric coordinate onto a 2D primitive. If it
  * is invalid, the function prints an error message and return RES_BAD_ARG. */

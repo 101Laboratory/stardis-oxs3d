@@ -19,16 +19,30 @@
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-static INLINE int
+static INLINE res_T
 check_ray_realisation_args(const struct ray_realisation_args* args)
 {
-  return args
-      && args->rng
-      && args->medium
-      && args->medium->type == SDIS_FLUID
-      && args->time >= 0
-      && args->picard_order > 0
-      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
+  /* Check pointers */
+  if(!args || !args->rng) return RES_BAD_ARG;
+
+  if(args->time < 0) return RES_BAD_ARG;
+  if(args->picard_order <= 0) return RES_BAD_ARG;
+
+  if((unsigned)args->diff_algo >= SDIS_DIFFUSION_ALGORITHMS_COUNT__) {
+    return RES_BAD_ARG;
+  }
+
+  /* Check the enclosure identifier. Only its validity is checked, not the fact
+   * that the enclosure is a fluid. Even though Stardis doesn't allow you to
+   * sample a radiative path in a solid, we don't query the medium of the
+   * enclosure since it may contain several: querying the medium will therefore
+   * return an error.  The type of medium is checked later, when sampling the
+   * radiative path, when it reaches an interface whose medium must be a fluid*/
+  if(args->enc_id == ENCLOSURE_ID_NULL) {
+    return RES_BAD_ARG;
+  }
+
+  return RES_OK;
 }
 
 /*******************************************************************************
@@ -47,17 +61,17 @@ ray_realisation_3d
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct rwalk_3d rwalk = RWALK_NULL_3d;
-  struct temperature_3d T = TEMPERATURE_NULL_3d;
+  struct rwalk rwalk = RWALK_NULL;
+  struct temperature T = TEMPERATURE_NULL;
   float dir[3];
   res_T res = RES_OK;
-  ASSERT(scn && weight && check_ray_realisation_args(args));
+  ASSERT(scn && weight && check_ray_realisation_args(args) == RES_OK);
 
   d3_set(rwalk.vtx.P, args->position);
   rwalk.vtx.time = args->time;
-  rwalk.hit = S3D_HIT_NULL;
+  rwalk.hit_3d = S3D_HIT_NULL;
   rwalk.hit_side = SDIS_SIDE_NULL__;
-  rwalk.mdm = args->medium;
+  rwalk.enc_id = args->enc_id;
 
   ctx.heat_path = args->heat_path;
   ctx.Tmin  = scn->tmin;
@@ -69,7 +83,7 @@ ray_realisation_3d
   ctx.max_branchings = args->picard_order - 1;
   ctx.irealisation = args->irealisation;
   ctx.diff_algo = args->diff_algo;
-  
+
   f3_set_d3(dir, args->direction);
 
   /* Register the starting position against the heat path */

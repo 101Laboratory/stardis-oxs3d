@@ -35,9 +35,9 @@ XD(trace_radiative_path)
   (struct sdis_scene* scn,
    const float ray_dir[3],
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   /* The radiative random walk is always performed in 3D. In 2D, the geometry
    * are assumed to be extruded to the infinity along the Z dimension. */
@@ -56,9 +56,11 @@ XD(trace_radiative_path)
   /* Launch the radiative random walk */
   for(;;) {
     const struct sdis_interface* interf = NULL;
+    struct sdis_medium* chk_mdm = NULL;
     struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-    struct sdis_medium* chk_mdm = NULL;
+    unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
+    unsigned chk_enc_id = ENCLOSURE_ID_NULL;
     double alpha;
     double epsilon;
     double r;
@@ -68,16 +70,16 @@ XD(trace_radiative_path)
     fX_set_dX(pos, rwalk->vtx.P);
 
     /* Trace the radiative ray */
-    filter_data.XD(hit) = rwalk->hit;
+    filter_data.XD(hit) = rwalk->XD(hit);
     filter_data.epsilon = 1.e-6;
 #if (SDIS_XD_DIMENSION == 2)
     SXD(scene_view_trace_ray_3d
-      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->hit));
+      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->XD(hit)));
 #else
     SXD(scene_view_trace_ray
-      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->hit));
+      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->XD(hit)));
 #endif
-    if(SXD_HIT_NONE(&rwalk->hit)) { /* Fetch the ambient radiative temperature */
+    if(SXD_HIT_NONE(&rwalk->XD(hit))) { /* Fetch the ambient radiative temperature */
       struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
       double trad = 0; /* [K] */
 
@@ -127,11 +129,11 @@ XD(trace_radiative_path)
     }
 
     /* Define the hit side */
-    rwalk->hit_side = fX(dot)(dir, rwalk->hit.normal) < 0
+    rwalk->hit_side = fX(dot)(dir, rwalk->XD(hit).normal) < 0
       ? SDIS_FRONT : SDIS_BACK;
 
     /* Move the random walk to the hit position */
-    XD(move_pos)(rwalk->vtx.P, dir, rwalk->hit.distance);
+    XD(move_pos)(rwalk->vtx.P, dir, rwalk->XD(hit).distance);
 
     /* Register the random walk vertex against the heat path */
     res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,
@@ -139,8 +141,8 @@ XD(trace_radiative_path)
     if(res != RES_OK) goto error;
 
     /* Fetch the new interface and setup the hit fragment */
-    interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
-    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+    interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
+    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->XD(hit), rwalk->hit_side);
 
     /* Fetch the interface emissivity */
     epsilon = interface_side_get_emissivity(interf, SDIS_INTERN_SOURCE_ID, &frag);
@@ -156,35 +158,46 @@ XD(trace_radiative_path)
     r = ssp_rng_canonical(rng);
     if(r < epsilon) {
       T->func = XD(boundary_path);
-      rwalk->mdm = NULL; /* The random walk is at an interface between 2 media */
+      rwalk->enc_id = ENCLOSURE_ID_NULL; /* Interface between 2 enclosures */
       break;
     }
 
     /* Normalize the normal of the interface and ensure that it points toward the
      * current medium */
-    fX(normalize)(N, rwalk->hit.normal);
-    if(rwalk->hit_side == SDIS_BACK){
-      chk_mdm = interf->medium_back;
-      fX(minus)(N, N);
-    } else {
-      chk_mdm = interf->medium_front;
+    fX(normalize)(N, rwalk->XD(hit).normal);
+    if(rwalk->hit_side == SDIS_BACK) fX(minus)(N, N);
+
+    /* Check that the radiative path still lies in the same enclosure */
+    scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
+    chk_enc_id = rwalk->hit_side == SDIS_FRONT ? enc_ids[0] : enc_ids[1];
+    if(chk_enc_id != rwalk->enc_id) {
+      log_warn(scn->dev,
+        "%s: the radiative path has escaped from its cavity -- pos=(%g, %g, %g)\n",
+        FUNC_NAME, SPLIT3(rwalk->vtx.P));
+      res = RES_BAD_OP;
+      goto error;
     }
 
-    if(chk_mdm != rwalk->mdm) {
-      /* To ease the setting of models, the external enclosure is allowed to be
-       * incoherent regarding media. Here a radiative path is allowed to join
-       * 2 different fluids. */
-      const int outside = scene_is_outside
-        (scn, rwalk->hit_side, rwalk->hit.prim.prim_id);
-      if(outside && chk_mdm->type == SDIS_FLUID) {
-        rwalk->mdm = chk_mdm;
-      } else {
-        log_warn(scn->dev, "%s: inconsistent medium definition at `%g %g %g'.\n",
-          FUNC_NAME, SPLIT3(rwalk->vtx.P));
-        res = RES_BAD_OP;
-        goto error;
-      }
+    /* Verify that the intersection, although in the same enclosure, touches the
+     * interface of a fluid. We verify this by interface, since a radiative path
+     * can be traced in an enclosure containing several media used to describe a
+     * set of boundary conditions.
+     *
+     * If the enclosure is good but the media type is not, this means that the
+     * radiative path is sampled in the wrong media. This is not a numerical
+     * problem, but a user problem: trying to sample a radiative path in a solid
+     * when semi-transparent solids are not yet supported by Stardis. This error
+     * is therefore fatal for the calculation */
+    chk_mdm = rwalk->hit_side == SDIS_FRONT
+      ? interf->medium_front : interf->medium_back;
+    if(sdis_medium_get_type(chk_mdm)) {
+      log_err(scn->dev,
+        "%s: a radiative path cannot evolve in a solid -- pos=(%g, %g, %g)\n",
+        FUNC_NAME, SPLIT3(rwalk->vtx.P));
+      res = RES_BAD_OP_IRRECOVERABLE;
+      goto error;
     }
+
     alpha = interface_side_get_specular_fraction(interf, SDIS_INTERN_SOURCE_ID, &frag);
     r = ssp_rng_canonical(rng);
     if(r < alpha) { /* Sample specular part */
@@ -204,9 +217,9 @@ res_T
 XD(radiative_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   /* The radiative random walk is always performed in 3D. In 2D, the geometry
    * are assumed to be extruded to the infinity along the Z dimension. */
@@ -215,11 +228,11 @@ XD(radiative_path)
   res_T res = RES_OK;
 
   ASSERT(scn && ctx && rwalk && rng && T);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
 
   /* Normalize the normal of the interface and ensure that it points toward the
    * current medium */
-  fX(normalize(N, rwalk->hit.normal));
+  fX(normalize(N, rwalk->XD(hit).normal));
   if(rwalk->hit_side == SDIS_BACK) {
     fX(minus(N, N));
   }

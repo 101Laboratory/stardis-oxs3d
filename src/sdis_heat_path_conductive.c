@@ -75,9 +75,9 @@ res_T
 conductive_path_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* T)
+   struct temperature* T)
 {
   res_T res = RES_OK;
   ASSERT(ctx);
@@ -98,9 +98,9 @@ res_T
 conductive_path_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* T)
+   struct temperature* T)
 {
   res_T res = RES_OK;
   ASSERT(ctx);

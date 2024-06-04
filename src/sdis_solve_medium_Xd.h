@@ -39,7 +39,7 @@
  */
 
 struct enclosure_cumul {
-  const struct enclosure* enc;
+  unsigned enc_id;
   double cumul;
 };
 
@@ -79,12 +79,13 @@ compute_medium_enclosure_cumulative
   while(!htable_enclosure_iterator_eq(&it, &end)) {
     struct enclosure_cumul enc_cumul;
     const struct enclosure* enc = htable_enclosure_iterator_data_get(&it);
+    const unsigned* enc_id = htable_enclosure_iterator_key_get(&it);
     htable_enclosure_iterator_next(&it);
 
     if(sdis_medium_get_id(mdm) != enc->medium_id) continue;
 
     accum += enc->V;
-    enc_cumul.enc = enc;
+    enc_cumul.enc_id = *enc_id;
     enc_cumul.cumul = accum;
     res = darray_enclosure_cumul_push_back(cumul, &enc_cumul);
     if(res != RES_OK) goto error;
@@ -105,7 +106,7 @@ error:
   goto exit;
 }
 
-static const struct enclosure*
+static unsigned
 sample_medium_enclosure
   (const struct darray_enclosure_cumul* cumul, struct ssp_rng* rng)
 {
@@ -137,7 +138,7 @@ sample_medium_enclosure
 
     enc_cumul_found = enc_cumuls + i;
   }
-  return enc_cumul_found->enc;
+  return enc_cumul_found->enc_id;
 }
 
 static INLINE res_T
@@ -217,17 +218,22 @@ check_compute_power_args(const struct sdis_compute_power_args* args)
  ******************************************************************************/
 static res_T
 XD(sample_enclosure_position)
-  (const struct enclosure* enc,
+  (struct sdis_scene* scn,
+   const unsigned enc_id,
    struct ssp_rng* rng,
    double pos[DIM])
 {
   const size_t MAX_NCHALLENGES = 1000;
+
+  const struct enclosure* enc = NULL;
   float lower[DIM], upper[DIM];
   size_t ichallenge;
   size_t i;
   res_T res = RES_OK;
-  ASSERT(enc && rng && pos);
+  ASSERT(scn && rng && pos);
+  ASSERT(enc_id != ENCLOSURE_ID_NULL);
 
+  enc = scene_get_enclosure(scn, enc_id);
   SXD(scene_view_get_aabb(enc->sXd(view), lower, upper));
 
   FOR_EACH(i, 0, DIM) {
@@ -396,13 +402,13 @@ XD(solve_medium)
     struct accum* acc_time = &per_thread_acc_time[ithread];
     struct green_path_handle* pgreen_path = NULL;
     struct green_path_handle green_path = GREEN_PATH_HANDLE_NULL;
-    const struct enclosure* enc = NULL;
     struct sdis_heat_path* pheat_path = NULL;
     struct sdis_heat_path heat_path;
     double weight;
     double time;
     double pos[DIM];
     size_t n;
+    unsigned enc_id = ENCLOSURE_ID_NULL;
     int pcent;
     res_T res_local = RES_OK;
     res_T res_simul = RES_OK;
@@ -425,8 +431,8 @@ XD(solve_medium)
 
     /* Uniformly Sample an enclosure that surround the submitted medium and
      * uniformly sample a position into it */
-    enc = sample_medium_enclosure(&cumul, rng);
-    res_local = XD(sample_enclosure_position)(enc, rng, pos);
+    enc_id = sample_medium_enclosure(&cumul, rng);
+    res_local = XD(sample_enclosure_position)(scn, enc_id, rng, pos);
     if(res_local != RES_OK) {
       log_err(scn->dev, "%s: could not sample a medium position.\n", FUNC_NAME);
       ATOMIC_SET(&res, res_local);
@@ -435,7 +441,7 @@ XD(solve_medium)
 
     /* Run a probe realisation */
     realis_args.rng = rng;
-    realis_args.medium = args->medium;
+    realis_args.enc_id = enc_id;
     realis_args.time = time;
     realis_args.picard_order = args->picard_order;
     realis_args.green_path = pgreen_path;
@@ -685,10 +691,10 @@ XD(compute_power)
     struct ssp_rng* rng = per_thread_rng[ithread];
     struct accum* acc_mpow = &per_thread_acc_mpow[ithread];
     struct accum* acc_time = &per_thread_acc_time[ithread];
-    const struct enclosure* enc = NULL;
     double power = 0;
     double usec = 0;
     size_t n = 0;
+    unsigned enc_id = ENCLOSURE_ID_NULL;
     int pcent = 0;
     res_T res_local = RES_OK;
 
@@ -702,8 +708,8 @@ XD(compute_power)
 
     /* Uniformly Sample an enclosure that surround the submitted medium and
      * uniformly sample a position into it */
-    enc = sample_medium_enclosure(&cumul, rng);
-    res_local = XD(sample_enclosure_position)(enc, rng, vtx.P);
+    enc_id = sample_medium_enclosure(&cumul, rng);
+    res_local = XD(sample_enclosure_position)(scn, enc_id, rng, vtx.P);
     if(res_local != RES_OK) {
       log_err(scn->dev, "%s: could not sample a medium position.\n", FUNC_NAME);
       ATOMIC_SET(&res, res_local);

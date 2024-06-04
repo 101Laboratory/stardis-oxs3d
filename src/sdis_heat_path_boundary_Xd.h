@@ -25,15 +25,67 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+/* This function checks whether the random walk is on a boundary and, if so,
+ * verifies that the temperature of the medium attached to the interface is
+ * known. This medium can be different from the medium of the enclosure. Indeed,
+ * the enclosure can contain several media used to set the temperatures of
+ * several boundary conditions. Hence this function, which queries the medium on
+ * the trajectory coming from a boundary */
+static res_T
+XD(handle_known_medium_temperature)
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk* rwalk,
+   struct temperature* T)
+{
+  struct sdis_interface* interf = NULL;
+  struct sdis_medium* mdm = NULL;
+  double temperature = SDIS_TEMPERATURE_NONE;
+  res_T res = RES_OK;
+  ASSERT(scn && ctx && rwalk && T);
+
+  /* Not at an interface */
+  if(SXD_HIT_NONE(&rwalk->XD(hit))) return RES_OK; /* Nothing to do */
+
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
+  mdm = rwalk->hit_side==SDIS_FRONT ? interf->medium_front: interf->medium_back;
+
+  temperature = medium_get_temperature(mdm, &rwalk->vtx);
+
+  /* Check if the temperature is known */
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(temperature)) goto exit;
+
+  T->value += temperature;
+  T->done = 1;
+
+  if(ctx->green_path) {
+    res = green_path_set_limit_vertex
+      (ctx->green_path, mdm, &rwalk->vtx, rwalk->elapsed_time);
+    if(res != RES_OK) goto error;
+  }
+
+  if(ctx->heat_path) {
+    heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+/*******************************************************************************
  * Local functions
  ******************************************************************************/
 res_T
 XD(boundary_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
   struct sdis_interface* interf = NULL;
@@ -42,15 +94,16 @@ XD(boundary_path)
   double tmp;
   res_T res = RES_OK;
   ASSERT(scn && ctx && rwalk && rng && T);
-  ASSERT(rwalk->mdm == NULL);
-  ASSERT(!SXD_HIT_NONE(&rwalk->hit));
+  ASSERT(rwalk->enc_id == ENCLOSURE_ID_NULL);
+  ASSERT(!SXD_HIT_NONE(&rwalk->XD(hit)));
 
-  XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->hit, rwalk->hit_side);
+  XD(setup_interface_fragment)
+    (&frag, &rwalk->vtx, &rwalk->XD(hit), rwalk->hit_side);
 
-  fX(normalize)(rwalk->hit.normal, rwalk->hit.normal);
+  fX(normalize)(rwalk->XD(hit).normal, rwalk->XD(hit).normal);
 
   /* Retrieve the current interface */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
 
   /* Check if the boundary temperature is known */
   tmp = interface_side_get_temperature(interf, &frag);
@@ -82,6 +135,32 @@ XD(boundary_path)
   }
   if(res != RES_OK) goto error;
 
+#if 1
+  if(T->done) goto exit;
+
+  /* Handling limit boundary condition, i.e. the trajectory originates from a
+   * boundary and the medium temperature is known (e.g. Robin's condition). To
+   * simplify data description, we allow in such a situation, to define several
+   * medium on the same enclosure, each with a fixed temperature, i.e. different
+   * conditions are defined for the different interfaces that detour the
+   * enclosure. As a result, no path can be sampled in this enclosure, which is
+   * beyond the system boundary. The boundary medium must therefore be
+   * interrogated from the interface.
+   *
+   * Note that we check this boundary condition with convective paths to handle
+   * Robin's boundary conditions. But we also make this check when passing
+   * through conduction when there's no reason why a solid should have a fixed
+   * temperature and not its boundary: it should be a Dirichlet condition.
+   * Although it's not physical, such systems can still be defined
+   * computationally, and in fact it's also a handy way of testing
+   * border cases */
+  if(T->func == XD(convective_path) || T->func == XD(conductive_path)) {
+    res = XD(handle_known_medium_temperature)(scn, ctx, rwalk, T);
+    if(res != RES_OK) goto error;
+    if(T->done) goto exit; /* That's all folks */
+  }
+#endif
+
 exit:
   return res;
 error:
@@ -89,4 +168,3 @@ error:
 }
 
 #include "sdis_Xd_end.h"
-

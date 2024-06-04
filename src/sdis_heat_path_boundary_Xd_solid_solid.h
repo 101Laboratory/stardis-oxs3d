@@ -33,28 +33,29 @@ XD(solid_solid_boundary_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   /* Input/output arguments of the function used to sample a reinjection */
-  struct XD(sample_reinjection_step_args) samp_reinject_step_frt_args =
-    XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
-  struct XD(sample_reinjection_step_args) samp_reinject_step_bck_args =
-    XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
-  struct XD(reinjection_step) reinject_step_frt = XD(REINJECTION_STEP_NULL);
-  struct XD(reinjection_step) reinject_step_bck = XD(REINJECTION_STEP_NULL);
-  struct XD(reinjection_step)* reinject_step = NULL;
+  struct sample_reinjection_step_args samp_reinject_step_frt_args =
+    SAMPLE_REINJECTION_STEP_ARGS_NULL;
+  struct sample_reinjection_step_args samp_reinject_step_bck_args =
+    SAMPLE_REINJECTION_STEP_ARGS_NULL;
+  struct reinjection_step reinject_step_frt = REINJECTION_STEP_NULL;
+  struct reinjection_step reinject_step_bck = REINJECTION_STEP_NULL;
+  struct reinjection_step* reinject_step = NULL;
 
   /* Reinjection arguments */
-  struct XD(solid_reinjection_args) solid_reinject_args = 
-    XD(SOLID_REINJECTION_ARGS_NULL);
+  struct solid_reinjection_args solid_reinject_args =
+    SOLID_REINJECTION_ARGS_NULL;
 
   /* Data attached to the boundary */
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
   struct sdis_interface* interf = NULL;
   struct sdis_medium* solid_frt = NULL;
   struct sdis_medium* solid_bck = NULL;
-  struct sdis_medium* solid = NULL;
+  unsigned solid_enc_id = ENCLOSURE_ID_NULL; /* Solid to re-inject */
 
   double lambda_frt;
   double lambda_bck;
@@ -67,11 +68,12 @@ XD(solid_solid_boundary_path)
 
   res_T res = RES_OK;
   ASSERT(scn && ctx && frag && rwalk && rng && T);
-  ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
+  ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag) == RES_OK);
   (void)frag, (void)ctx;
 
-  /* Retrieve the two solids split by the boundary */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  /* Retrieve the two enclosures and associated media split by the boundary */
+  scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
   solid_frt = interface_get_medium(interf, SDIS_FRONT);
   solid_bck = interface_get_medium(interf, SDIS_BACK);
   ASSERT(solid_frt->type == SDIS_SOLID);
@@ -93,8 +95,8 @@ XD(solid_solid_boundary_path)
   /* Sample a front/back reinjection steps */
   samp_reinject_step_frt_args.rng = rng;
   samp_reinject_step_bck_args.rng = rng;
-  samp_reinject_step_frt_args.solid = solid_frt;
-  samp_reinject_step_bck_args.solid = solid_bck;
+  samp_reinject_step_frt_args.solid_enc_id = enc_ids[SDIS_FRONT];
+  samp_reinject_step_bck_args.solid_enc_id = enc_ids[SDIS_BACK];
   samp_reinject_step_frt_args.rwalk = rwalk;
   samp_reinject_step_bck_args.rwalk = rwalk;
   samp_reinject_step_frt_args.distance = delta_boundary_frt;
@@ -102,7 +104,7 @@ XD(solid_solid_boundary_path)
   samp_reinject_step_frt_args.side = SDIS_FRONT;
   samp_reinject_step_bck_args.side = SDIS_BACK;
   res = XD(sample_reinjection_step_solid_solid)
-    (scn, 
+    (scn,
      &samp_reinject_step_frt_args,
      &samp_reinject_step_bck_args,
      &reinject_step_frt,
@@ -150,10 +152,10 @@ XD(solid_solid_boundary_path)
 
   if(r < proba) { /* Reinject in front */
     reinject_step = &reinject_step_frt;
-    solid = solid_frt;
+    solid_enc_id = enc_ids[SDIS_FRONT];
   } else { /* Reinject in back */
     reinject_step = &reinject_step_bck;
-    solid = solid_bck;
+    solid_enc_id = enc_ids[SDIS_BACK];
   }
 
   /* Perform the reinjection into the solid */
@@ -163,7 +165,7 @@ XD(solid_solid_boundary_path)
   solid_reinject_args.rwalk_ctx = ctx;
   solid_reinject_args.T = T;
   solid_reinject_args.fp_to_meter = scn->fp_to_meter;
-  res = XD(solid_reinjection)(solid, &solid_reinject_args);
+  res = XD(solid_reinjection)(scn, solid_enc_id, &solid_reinject_args);
   if(res != RES_OK) goto error;
 
 exit:
