@@ -190,7 +190,7 @@ XD(trace_radiative_path)
      * is therefore fatal for the calculation */
     chk_mdm = rwalk->hit_side == SDIS_FRONT
       ? interf->medium_front : interf->medium_back;
-    if(sdis_medium_get_type(chk_mdm)) {
+    if(sdis_medium_get_type(chk_mdm) == SDIS_SOLID) {
       log_err(scn->dev,
         "%s: a radiative path cannot evolve in a solid -- pos=(%g, %g, %g)\n",
         FUNC_NAME, SPLIT3(rwalk->vtx.P));
