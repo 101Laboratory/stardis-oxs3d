@@ -93,6 +93,7 @@ reflect_3d(float res[3], const float V[3], const float N[3])
   cos_V_N = f3_dot(V, N);
   f3_mulf(tmp, N, 2*cos_V_N);
   f3_sub(res, tmp, V);
+  f3_normalize(res, res); /* Handle numerical issue */
   return res;
 }
 
