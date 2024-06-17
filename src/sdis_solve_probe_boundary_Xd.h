@@ -195,19 +195,21 @@ XD(solve_one_probe_boundary)
     realis_args.uv[1] = args->uv[1];
 #endif
     res = XD(boundary_realisation)(scn, &realis_args, &w);
-    if(res != RES_OK) goto error;
+    if(res != RES_OK && res != RES_BAD_OP) goto error;
 
-    /* Stop time registration */
-    time_sub(&t0, time_current(&t1), &t0);
-    usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+    if(res == RES_OK) {
+      /* Stop time registration */
+      time_sub(&t0, time_current(&t1), &t0);
+      usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
 
-    /* Update MC weights */
-    acc_temp->sum += w;
-    acc_temp->sum2 += w*w;
-    acc_temp->count += 1;
-    acc_time->sum += usec;
-    acc_time->sum2 += usec*usec;
-    acc_time->count += 1;
+      /* Update MC weights */
+      acc_temp->sum += w;
+      acc_temp->sum2 += w*w;
+      acc_temp->count += 1;
+      acc_time->sum += usec;
+      acc_time->sum2 += usec*usec;
+      acc_time->count += 1;
+    }
   }
 exit:
   return res;
