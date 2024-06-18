@@ -197,20 +197,31 @@ XD(solve_one_probe_boundary)
     res = XD(boundary_realisation)(scn, &realis_args, &w);
     if(res != RES_OK && res != RES_BAD_OP) goto error;
 
-    if(res == RES_OK) {
-      /* Stop time registration */
-      time_sub(&t0, time_current(&t1), &t0);
-      usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+    switch(res) {
+      /* Reject the realisation */
+      case RES_BAD_OP:
+        res = RES_OK;
+        break;
 
-      /* Update MC weights */
-      acc_temp->sum += w;
-      acc_temp->sum2 += w*w;
-      acc_temp->count += 1;
-      acc_time->sum += usec;
-      acc_time->sum2 += usec*usec;
-      acc_time->count += 1;
+      /* Update the accumulators */
+      case RES_OK:
+        /* Stop time registration */
+        time_sub(&t0, time_current(&t1), &t0);
+        usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+
+        /* Update MC weights */
+        acc_temp->sum += w;
+        acc_temp->sum2 += w*w;
+        acc_temp->count += 1;
+        acc_time->sum += usec;
+        acc_time->sum2 += usec*usec;
+        acc_time->count += 1;
+        break;
+
+      default: FATAL("Unreachable code\n"); break;
     }
   }
+
 exit:
   return res;
 error:
