@@ -17,7 +17,12 @@
 #include "test_sdis_mesh.h"
 #include "test_sdis_utils.h"
 
+#include <star/s2d.h>
+#include <star/s3d.h>
 #include <star/s3dut.h>
+#include <star/ssp.h>
+
+#include <rsys/double3.h>
 
 /*
  * The system is a trilinear profile of the temperature at steady state, i.e. at
@@ -42,6 +47,8 @@
  *       o--- T(x)   /_  __  _\
  *                     \/  \/
  */
+
+#define SPHERE_RADIUS 1
 
 /*******************************************************************************
  * Helper functions
@@ -74,6 +81,74 @@ trilinear_profile(const double pos[3])
 }
 
 /*******************************************************************************
+ * Scene view
+ ******************************************************************************/
+/* Parameter for get_inidices/get_vertices functions. Although its layout is the
+ * same as that of the mesh data structure, we have deliberately defined a new
+ * data type since mesh functions cannot be invoked. This is because the form's
+ * member variables are not necessarily extensible arrays, as is the case with
+ * mesh */
+struct shape {
+  double* pos;
+  size_t* ids;
+  size_t npos;
+  size_t ntri;
+};
+#define SHAPE_NULL__ {NULL, NULL, 0, 0}
+static const struct shape SHAPE_NULL = SHAPE_NULL__;
+
+static void
+get_position(const unsigned ivert, float pos[3], void* ctx)
+{
+  const struct shape* shape = ctx;
+  CHK(shape && pos && ivert < shape->npos);
+  f3_set_d3(pos, shape->pos + ivert*3);
+}
+
+static void
+get_indices(const unsigned itri, unsigned ids[3], void* ctx)
+{
+  const struct shape* shape = ctx;
+  CHK(shape && ids && itri < shape->ntri);
+  ids[0] = (unsigned)shape->ids[itri*3+0];
+  ids[1] = (unsigned)shape->ids[itri*3+1];
+  ids[2] = (unsigned)shape->ids[itri*3+2];
+}
+
+static struct s3d_scene_view*
+create_view(struct shape* shape_data)
+{
+  /* Star3D */
+  struct s3d_vertex_data vdata = S3D_VERTEX_DATA_NULL;
+  struct s3d_device* dev = NULL;
+  struct s3d_scene* scn = NULL;
+  struct s3d_shape* shape = NULL;
+  struct s3d_scene_view* view = NULL;
+
+  OK(s3d_device_create(NULL, NULL, 0, &dev));
+
+  /* Shape */
+  vdata.usage = S3D_POSITION;
+  vdata.type = S3D_FLOAT3;
+  vdata.get = get_position;
+  OK(s3d_shape_create_mesh(dev, &shape));
+  OK(s3d_mesh_setup_indexed_vertices(shape, (unsigned)shape_data->ntri,
+    get_indices, (unsigned)shape_data->npos, &vdata, 1, shape_data));
+
+  /* Scene view */
+  OK(s3d_scene_create(dev, &scn));
+  OK(s3d_scene_attach_shape(scn, shape));
+  OK(s3d_scene_view_create(scn, S3D_TRACE|S3D_GET_PRIMITIVE, &view));
+
+  /* Clean up */
+  OK(s3d_device_ref_put(dev));
+  OK(s3d_scene_ref_put(scn));
+  OK(s3d_shape_ref_put(shape));
+
+  return view;
+}
+
+/*******************************************************************************
  * Mesh, i.e. supershape and sphere
  ******************************************************************************/
 static void
@@ -100,7 +175,7 @@ mesh_add_sphere(struct mesh* mesh)
 {
   struct s3dut_mesh* sphere = NULL;
   struct s3dut_mesh_data sphere_data;
-  const double radius = 1;
+  const double radius = SPHERE_RADIUS;
   const unsigned nslices = 128;
 
   OK(s3dut_create_sphere(NULL, radius, nslices, nslices/2, &sphere));
@@ -113,6 +188,8 @@ mesh_add_sphere(struct mesh* mesh)
 /*******************************************************************************
  * Custom conductive path
  ******************************************************************************/
+/* Implementation of a Walk on Sphere algorithm for an origin-centered spherical
+ * geometry of radius SPHERE_RADIUS */
 static res_T
 sample_steady_diffusive_path
   (struct sdis_scene* scn,
@@ -120,9 +197,66 @@ sample_steady_diffusive_path
    struct sdis_path* path,
    struct sdis_data* data)
 {
-  CHK(scn && rng && path);
-  (void)data; /* Avoid the "unused variable" warning */
-  /* TODO */
+  struct s3d_scene_view* view = NULL;
+  struct s3d_hit hit = S3D_HIT_NULL;
+
+  double pos[3];
+  const double epsilon = SPHERE_RADIUS * 1.e-6; /* Epsilon shell */
+
+  CHK(scn && rng && path && data);
+
+  view = sdis_data_get(data);
+
+  d3_set(pos, path->vtx.P);
+
+  for(;;) {
+    /* Distance from the geometry center to the current position */
+    const double dst = d3_len(path->vtx.P);
+
+    double dir[3] = {0,0,0};
+    double r = 0; /* Radius */
+
+    r = SPHERE_RADIUS - dst;
+    CHK(dst > 0);
+
+    if(r > epsilon) {
+      /* Uniformly sample a new position on the surrounding sphere */
+      ssp_ran_sphere_uniform(rng, dir, NULL);
+
+      /* Move to the new position */
+      d3_muld(dir, dir, r);
+      d3_add(pos, pos, dir);
+
+    /* The current position is in the epsilon shell:
+     * move it to the nearest interface position */
+    } else {
+      float posf[3];
+
+      d3_set(dir, pos);
+      d3_normalize(dir, dir);
+      d3_muld(pos, dir, SPHERE_RADIUS);
+
+      /* Map the position to the sphere geometry */
+      f3_set_d3(posf, pos);
+      OK(s3d_scene_view_closest_point(view, posf, (float)INF, NULL, &hit));
+      CHK(eq_eps(hit.distance, 0, epsilon));
+    }
+  }
+
+  /* The calculation is performed in steady state, so the path necessarily stops
+   * at a boundary */
+  CHK(!S3D_HIT_NONE(&hit));
+
+  /* Setup the path state */
+  d3_set(path->vtx.P, pos);
+  path->weight = 0;
+  path->at_limit = 0;
+  path->hit_2d = S2D_HIT_NULL;
+  path->hit_3d = hit; /* TODO setup the path hit */
+  path->elapsed_time = 0;
+  path->weight = 0;
+  path->at_limit = 0;
+
   return RES_OK;
 }
 
@@ -163,8 +297,7 @@ create_solid(struct sdis_device* sdis)
 static struct sdis_medium*
 create_custom
   (struct sdis_device* sdis,
-   double* positions, /* Nodes of the solid */
-   size_t* indices) /* Indices of the solid */
+   struct s3d_scene_view* view)
 {
   /* Stardis variables */
   struct sdis_solid_shader shader = SDIS_SOLID_SHADER_NULL;
@@ -172,14 +305,13 @@ create_custom
   struct sdis_data* data = NULL;
 
   /* Mesh variables */
-  struct mesh* mesh = NULL;
-  const size_t sz = sizeof(struct mesh);
-  const size_t al = ALIGNOF(struct mesh);
+  struct s3d_scene_view** pview = NULL;
+  const size_t sz = sizeof(struct s3d_scene_view*);
+  const size_t al = ALIGNOF(struct s3d_scene_view*);
 
   OK(sdis_data_create(sdis, sz, al, NULL, &data));
-  mesh = sdis_data_get(data);
-  mesh->positions = positions;
-  mesh->indices = indices;
+  pview = sdis_data_get(data);
+  *pview = view;
 
   shader.calorific_capacity = solid_get_calorific_capacity;
   shader.thermal_conductivity = solid_get_thermal_conductivity;
@@ -316,9 +448,9 @@ check_probe(struct sdis_scene* scn, const int is_master_process)
   struct sdis_estimator* estimator = NULL;
   double ref = 0;
 
-  args.position[0] = 0.125;
-  args.position[1] = 0.250;
-  args.position[2] = 0.375;
+  args.position[0] = SPHERE_RADIUS*0.125;
+  args.position[1] = SPHERE_RADIUS*0.250;
+  args.position[2] = SPHERE_RADIUS*0.375;
 
   OK(sdis_solve_probe(scn, &args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
@@ -349,6 +481,10 @@ main(int argc, char** argv)
   struct sdis_medium* dummy = NULL; /* Medium surrounding the solid */
   struct sdis_scene* scn = NULL;
 
+  /* Star3D */
+  struct shape shape = SHAPE_NULL;
+  struct s3d_scene_view* sphere_view = NULL;
+
   /* Miscellaneous */
   struct scene_context ctx = SCENE_CONTEXT_NULL;
   struct mesh mesh = MESH_NULL;
@@ -364,10 +500,18 @@ main(int argc, char** argv)
   sshape_end_id = mesh_ntriangles(&mesh);
   mesh_add_sphere(&mesh);
 
+  /* Create a view of the sphere's geometry. This will be used to couple custom
+   * solid path sampling to the solver */
+  shape.pos = mesh.positions;
+  shape.ids = mesh.indices + sshape_end_id;
+  shape.npos = mesh_nvertices(&mesh);
+  shape.ntri = mesh_ntriangles(&mesh) - sshape_end_id/3/* #sshape triangles*/;
+  sphere_view = create_view(&shape);
+
   /* Physical properties */
   dummy = create_dummy(dev);
   solid = create_solid(dev);
-  custom = create_custom(dev, mesh.positions, mesh.indices + sshape_end_id);
+  custom = create_custom(dev, sphere_view);
   solid_dummy = create_interface(dev, solid, dummy);
   custom_solid = create_interface(dev, custom, solid);
 
@@ -382,6 +526,7 @@ main(int argc, char** argv)
 
   mesh_release(&mesh);
 
+  OK(s3d_scene_view_ref_put(sphere_view));
   OK(sdis_interface_ref_put(solid_dummy));
   OK(sdis_interface_ref_put(custom_solid));
   OK(sdis_medium_ref_put(custom));
