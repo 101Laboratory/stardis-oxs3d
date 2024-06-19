@@ -193,6 +193,7 @@ TEST_SRC =\
  src/test_sdis_interface.c\
  src/test_sdis_medium.c\
  src/test_sdis_picard.c\
+ src/test_sdis_primkey.c\
  src/test_sdis_radiative_env.c\
  src/test_sdis_scene.c\
  src/test_sdis_solid_random_walk_robustness.c\
@@ -398,6 +399,7 @@ test_sdis_volumic_power4 \
 ################################################################################
 src/test_sdis_draw_external_flux.d \
 src/test_sdis_external_flux_with_diffuse_radiance.d \
+src/test_sdis_primkey.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
 src/test_sdis_unsteady_analytic_profile.d \
@@ -406,6 +408,7 @@ src/test_sdis_unsteady_analytic_profile.d \
 
 src/test_sdis_draw_external_flux.o \
 src/test_sdis_external_flux_with_diffuse_radiance.o \
+src/test_sdis_primkey.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
 src/test_sdis_unsteady_analytic_profile.o \
@@ -414,6 +417,7 @@ src/test_sdis_unsteady_analytic_profile.o \
 
 test_sdis_draw_external_flux \
 test_sdis_external_flux_with_diffuse_radiance \
+test_sdis_primkey \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
 test_sdis_unsteady_analytic_profile \
