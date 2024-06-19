@@ -254,6 +254,19 @@ typedef res_T
    struct sdis_path* path,
    struct sdis_data* data);
 
+/* Key to a geometric primitive, i.e its unique identifier. Its member variables
+ * must be treated as private variables, i.e. the caller must not access them
+ * directly but use the primkey API functions instead (see below) */
+struct sdis_primkey {
+  /* List of primitive nodes sorted in ascending order */
+  double nodes[9];
+
+  /* Overall number of coordinates (4 in 2D, 9 in 3D) */
+  unsigned ncoords;
+};
+#define SDIS_PRIMKEY_NULL__ {{0,0,0,0,0,0,0,0,0},0}
+static const struct sdis_primkey SDIS_PRIMKEY_NULL = SDIS_PRIMKEY_NULL__;
+
 /*******************************************************************************
  * Estimation data types
  ******************************************************************************/
@@ -1754,6 +1767,31 @@ sdis_solve_medium_green_function
 SDIS_API res_T
 sdis_get_info
   (struct sdis_info* info);
+
+/*******************************************************************************
+ * Primitive identifier
+ ******************************************************************************/
+SDIS_API void
+sdis_primkey_setup
+  (struct sdis_primkey* key,
+   const double node0[3],
+   const double node1[3],
+   const double node2[3]);
+
+SDIS_API void
+sdis_primkey_2d_setup
+  (struct sdis_primkey* key,
+   const double node0[2],
+   const double node1[2]);
+
+SDIS_API size_t
+sdis_primkey_hash
+  (const struct sdis_primkey* key);
+
+SDIS_API char
+sdis_primkey_eq
+  (const struct sdis_primkey* key0,
+   const struct sdis_primkey* key1);
 
 END_DECLS
 

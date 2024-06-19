@@ -43,6 +43,7 @@ SRC =\
  src/sdis_log.c\
  src/sdis_medium.c\
  src/sdis_misc.c\
+ src/sdis_primkey.c\
  src/sdis_radiative_env.c\
  src/sdis_realisation.c\
  src/sdis_scene.c\
