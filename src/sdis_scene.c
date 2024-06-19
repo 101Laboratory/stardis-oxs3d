@@ -103,6 +103,8 @@ scene_release(ref_T * ref)
   darray_prim_prop_release(&scn->prim_props);
   htable_enclosure_release(&scn->enclosures);
   htable_d_release(&scn->tmp_hc_ub);
+  htable_key2prim2d_release(&scn->key2prim2d);
+  htable_key2prim3d_release(&scn->key2prim3d);
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   if(scn->senc2d_scn) SENC2D(scene_ref_put(scn->senc2d_scn));
@@ -413,6 +415,38 @@ sdis_scene_get_radiative_env
 {
   if(!scn || !radenv) return RES_BAD_ARG;
   *radenv = scn->radenv;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_s2d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s2d_primitive* out_prim)
+{
+  struct s2d_primitive* prim = NULL;
+
+  if(!scn || !key || !out_prim || !scene_is_2d(scn)) return RES_BAD_ARG;
+
+  if((prim = htable_key2prim2d_find(&scn->key2prim2d, key)) == NULL)
+    return RES_BAD_ARG;
+  *out_prim = *prim;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_s3d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s3d_primitive* out_prim)
+{
+  struct s3d_primitive* prim = NULL;
+
+  if(!scn || !key || !out_prim || scene_is_2d(scn)) return RES_BAD_ARG;
+
+  if((prim = htable_key2prim3d_find(&scn->key2prim3d, key)) == NULL)
+    return RES_BAD_ARG;
+  *out_prim = *prim;
   return RES_OK;
 }
 

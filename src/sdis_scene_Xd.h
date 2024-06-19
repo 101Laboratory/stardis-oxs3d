@@ -938,6 +938,89 @@ error:
   goto exit;
 }
 
+#if DIM == 2
+static res_T
+setup_primitive_keys_2d(struct sdis_scene* scn, struct senc2d_scene* senc_scn)
+{
+  unsigned iprim = 0;
+  unsigned nprims = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && senc_scn);
+
+  SENC2D(scene_get_primitives_count(senc_scn, &nprims));
+
+  FOR_EACH(iprim, 0, nprims) {
+    struct s2d_primitive prim = S2D_PRIMITIVE_NULL;
+    struct sdis_primkey key = SDIS_PRIMKEY_NULL;
+    unsigned ids[2] = {0,0};
+    double v0[2] = {0,0};
+    double v1[2] = {0,0};
+
+    /* Retrieve positions from Star-Enclosre, not Star-2D. Star-Enclosure keeps
+     * the positions submitted by the user as they are, without any
+     * transformation or conversion (Star-2D converts them to float). This
+     * ensures that the caller can construct the same key from his data */
+    SENC2D(scene_get_primitive(senc_scn, iprim, ids));
+    SENC2D(scene_get_vertex(senc_scn, ids[0], v0));
+    SENC2D(scene_get_vertex(senc_scn, ids[1], v1));
+    S2D(scene_view_get_primitive(scn->s2d_view, iprim, &prim));
+
+    sdis_primkey_2d_setup(&key, v0, v1);
+
+    res = htable_key2prim2d_set(&scn->key2prim2d, &key, &prim);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  htable_key2prim2d_purge(&scn->key2prim2d);
+  goto exit;
+}
+
+#elif DIM == 3
+static res_T
+setup_primitive_keys_3d(struct sdis_scene* scn, struct senc3d_scene* senc_scn)
+{
+  unsigned iprim = 0;
+  unsigned nprims = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && senc_scn);
+
+  SENC3D(scene_get_primitives_count(senc_scn, &nprims));
+
+  FOR_EACH(iprim, 0, nprims) {
+    struct s3d_primitive prim = S3D_PRIMITIVE_NULL;
+    struct sdis_primkey key = SDIS_PRIMKEY_NULL;
+    unsigned ids[3] = {0};
+    double v0[3] = {0};
+    double v1[3] = {0};
+    double v2[3] = {0};
+
+    /* Retrieve positions from Star-Enclosre, not Star-3D. Star-Enclosure keeps
+     * the positions submitted by the user as they are, without any
+     * transformation or conversion (Star-3D converts them to float). This
+     * ensures that the caller can construct the same key from his data */
+    SENC3D(scene_get_primitive(senc_scn, iprim, ids));
+    SENC3D(scene_get_vertex(senc_scn, ids[0], v0));
+    SENC3D(scene_get_vertex(senc_scn, ids[1], v1));
+    SENC3D(scene_get_vertex(senc_scn, ids[2], v2));
+    S3D(scene_view_get_primitive(scn->s3d_view, iprim, &prim));
+
+    sdis_primkey_setup(&key, v0, v1, v2);
+
+    res = htable_key2prim3d_set(&scn->key2prim3d, &key, &prim);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  htable_key2prim3d_purge(&scn->key2prim3d);
+  goto exit;
+}
+#endif
+
 /* Create a Stardis scene */
 static res_T
 XD(scene_create)
@@ -956,8 +1039,9 @@ XD(scene_create)
 
   scn = MEM_CALLOC(dev->allocator, 1, sizeof(struct sdis_scene));
   if(!scn) {
-    log_err(dev, "%s: could not allocate the Stardis scene.\n", FUNC_NAME);
     res = RES_MEM_ERR;
+    log_err(dev, "%s: unabale to allocate the scene -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
 
@@ -973,6 +1057,8 @@ XD(scene_create)
   darray_prim_prop_init(dev->allocator, &scn->prim_props);
   htable_enclosure_init(dev->allocator, &scn->enclosures);
   htable_d_init(dev->allocator, &scn->tmp_hc_ub);
+  htable_key2prim2d_init(dev->allocator, &scn->key2prim2d);
+  htable_key2prim3d_init(dev->allocator, &scn->key2prim3d);
 
   if(args->source) {
     SDIS(source_ref_get(args->source));
@@ -994,23 +1080,32 @@ XD(scene_create)
      args->context,
      &senc_scn);
   if(res != RES_OK) {
-    log_err(dev, "%s: error during the scene analysis.\n", FUNC_NAME);
+    log_err(dev, "%s: unable to analyze the scene -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   res = XD(setup_properties)(scn, senc_scn, args->get_interface, args->context);
   if(res != RES_OK) {
-    log_err(dev, "%s: could not setup the scene interfaces and their media.\n",
-      FUNC_NAME);
+    log_err(dev, "%s: unable to configure interfaces and media -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   res = XD(setup_scene_geometry)(scn, senc_scn);
   if(res != RES_OK) {
-    log_err(dev, "%s: could not setup the scene geometry.\n", FUNC_NAME);
+    log_err(dev, "%s: unable to configure scene geometry -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   res = XD(setup_enclosures)(scn, senc_scn);
   if(res != RES_OK) {
-    log_err(dev, "%s: could not setup the enclosures.\n", FUNC_NAME);
+    log_err(dev, "%s: unable to configure enclosures -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
+    goto error;
+  }
+  res = XD(setup_primitive_keys)(scn, senc_scn);
+  if(res != RES_OK) {
+    log_err(dev, "%s: unable to configure primitive keys -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   scn->sencXd(scn) = senc_scn;

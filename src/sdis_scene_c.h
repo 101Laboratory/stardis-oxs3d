@@ -159,6 +159,16 @@ enclosure_local2global_prim_id
   return darray_uint_cdata_get(&enc->local2global)[local_prim_id];
 }
 
+static INLINE void
+primkey_init
+  (const struct mem_allocator* allocator,
+   struct sdis_primkey* key)
+{
+  ASSERT(allocator && key);
+  (void)allocator;
+  *key = SDIS_PRIMKEY_NULL;
+}
+
 /* Declare the array of interfaces */
 #define DARRAY_NAME interf
 #define DARRAY_DATA struct sdis_interface*
@@ -193,6 +203,24 @@ enclosure_local2global_prim_id
 #define HTABLE_DATA double
 #include <rsys/hash_table.h>
 
+/* Declare the hash table that maps the primitive key to its 2D primitve */
+#define HTABLE_NAME key2prim2d
+#define HTABLE_KEY struct sdis_primkey
+#define HTABLE_KEY_FUNCTOR_INIT primkey_init
+#define HTABLE_KEY_FUNCTOR_HASH sdis_primkey_hash
+#define HTABLE_KEY_FUNCTOR_EQ sdis_primkey_eq
+#define HTABLE_DATA struct s2d_primitive
+#include <rsys/hash_table.h>
+
+/* Declare the hash table that maps the primitive key to its 3D primitive */
+#define HTABLE_NAME key2prim3d
+#define HTABLE_KEY struct sdis_primkey
+#define HTABLE_KEY_FUNCTOR_INIT primkey_init
+#define HTABLE_KEY_FUNCTOR_HASH sdis_primkey_hash
+#define HTABLE_KEY_FUNCTOR_EQ sdis_primkey_eq
+#define HTABLE_DATA struct s3d_primitive
+#include <rsys/hash_table.h>
+
 struct sdis_scene {
   struct darray_interf interfaces; /* List of interfaces own by the scene */
   struct darray_medium media; /* List of media own by the scene */
@@ -205,6 +233,10 @@ struct sdis_scene {
   struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */
   unsigned outer_enclosure_id;
+
+  /* Map a primivei key to its Star-2D/Star-3D primitive */
+  struct htable_key2prim2d key2prim2d;
+  struct htable_key2prim3d key2prim3d;
 
   double fp_to_meter;
   double tmin; /* Minimum temperature of the system (In Kelvin) */

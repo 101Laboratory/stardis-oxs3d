@@ -1404,6 +1404,20 @@ sdis_scene_get_radiative_env
    /* The returned pointer can be NULL, i.e. there is no radiative environement*/
    struct sdis_radiative_env** radenv);
 
+/* Get the internal Star-2D primitive corresponding to the primitive key */
+SDIS_API res_T
+sdis_scene_get_s2d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s2d_primitive* primitive);
+
+/* Get the internal Star-3D primitive corresponding to the primitive key */
+SDIS_API res_T
+sdis_scene_get_s3d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s3d_primitive* primitive);
+
 /*******************************************************************************
  * An estimator stores the state of a simulation
  ******************************************************************************/
