@@ -220,6 +220,40 @@ struct sdis_scene_find_closest_point_args {
 static const struct sdis_scene_find_closest_point_args
 SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL = SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__;
 
+/* A sampled path */
+struct sdis_path {
+  struct sdis_rwalk_vertex vtx; /* Current position and time */
+
+   /* Surface intersection. When defined, the path is on a border */
+  struct s2d_hit hit_2d;
+  struct s3d_hit hit_3d;
+
+  double elapsed_time; /* Time elapsed along the path */
+  double weight; /* Monte Carlo weight update along the path */
+
+  /* Define whether the path has reached a boundary condition in time/space */
+  int at_limit;
+};
+#define SDIS_PATH_NULL__ {                                                     \
+  SDIS_RWALK_VERTEX_NULL__,                                                    \
+  S2D_HIT_NULL__,                                                              \
+  S3D_HIT_NULL__,                                                              \
+  0, /* Elapsed time */                                                        \
+  0, /* MC weight */                                                           \
+  0 /* At limit */                                                             \
+}
+static const struct sdis_path SDIS_PATH_NULL = SDIS_PATH_NULL__;
+
+/* Type of functor used by the user to write the way in which the path is
+ * sampled. So it's no longer Stardis that samples the path, but the user
+ * through his own function. */
+typedef res_T
+(*sdis_sample_path_T)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   struct sdis_path* path,
+   struct sdis_data* data);
+
 /*******************************************************************************
  * Estimation data types
  ******************************************************************************/
@@ -294,12 +328,16 @@ struct sdis_solid_shader {
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
 
+  /* Function to be used to sample the path through the solid. If not defined,
+   * let stardis sample a conductive path */
+  sdis_sample_path_T sample_path;
+
   /* The time until the initial condition is maintained for this solid.
    * Can be negative or set to +/- infinity to simulate a system that is always
    * in the initial state or never reaches it, respectively. */
   double t0;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, 0}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
