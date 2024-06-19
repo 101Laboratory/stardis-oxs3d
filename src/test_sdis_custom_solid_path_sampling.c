@@ -14,14 +14,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis.h"
-
-#include "test_sdis_utils.h"
 #include "test_sdis_mesh.h"
+#include "test_sdis_utils.h"
 
 #include <star/s3dut.h>
-#include <rsys/math.h>
-
-#include <math.h>
 
 /*
  * The system is a trilinear profile of the temperature at steady state, i.e. at
@@ -29,10 +25,14 @@
  * forms are immersed in this temperature field: a super shape and a sphere
  * included in the super shape. On the Monte Carlo side, the temperature is
  * unknown everywhere  except on the surface of the super shape whose
- * temperature is defined from the aformentionned trilinear profile. We will
- * estimate the temperature at the sphere boundary at several probe points. We
- * should find by Monte Carlo the temperature of the trilinear profile at the
- * position of the probe. It's the test.
+ * temperature is defined from the aformentionned trilinear profile.
+ *
+ * We will estimate the temperature at the position of a probe in solids by
+ * providing a user-side function to sample the conductive path in the sphere.
+ * We should find the temperature of the trilinear profile at the probe position
+ * by Monte Carlo, independently of this coupling with an external path sampling
+ * routine.
+ *
  *
  *                       /\ <-- T(x,y,z)
  *                   ___/  \___
@@ -73,42 +73,9 @@ trilinear_profile(const double pos[3])
   return a*x + b*y + c*z;
 }
 
-static INLINE float
-rand_canonic(void)
-{
-  return (float)rand() / (float)((unsigned)RAND_MAX+1);
-}
-
-static void
-sample_sphere(double pos[3])
-{
-  const double phi = rand_canonic() * 2 * PI;
-  const double v = rand_canonic();
-  const double cos_theta = 1 - 2 * v;
-  const double sin_theta = 2 * sqrt(v * (1 - v));
-  pos[0] = cos(phi) * sin_theta;
-  pos[1] = sin(phi) * sin_theta;
-  pos[2] = cos_theta;
-}
-
-static INLINE void
-check_intersection
-  (const double val0,
-   const double eps0,
-   const double val1,
-   const double eps1)
-{
-  double interval0[2], interval1[2];
-  double intersection[2];
-  interval0[0] = val0 - eps0;
-  interval0[1] = val0 + eps0;
-  interval1[0] = val1 - eps1;
-  interval1[1] = val1 + eps1;
-  intersection[0] = MMAX(interval0[0], interval1[0]);
-  intersection[1] = MMIN(interval0[1], interval1[1]);
-  CHK(intersection[0] <= intersection[1]);
-}
-
+/*******************************************************************************
+ * Mesh, i.e. supershape and sphere
+ ******************************************************************************/
 static void
 mesh_add_super_shape(struct mesh* mesh)
 {
@@ -144,7 +111,23 @@ mesh_add_sphere(struct mesh* mesh)
 }
 
 /*******************************************************************************
- * Solid, i.e. medium of super shape and sphere
+ * Custom conductive path
+ ******************************************************************************/
+static res_T
+sample_steady_diffusive_path
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   struct sdis_path* path,
+   struct sdis_data* data)
+{
+  CHK(scn && rng && path);
+  (void)data; /* Avoid the "unused variable" warning */
+  /* TODO */
+  return RES_OK;
+}
+
+/*******************************************************************************
+ * The solids, i.e. media of the super shape and the sphere
  ******************************************************************************/
 #define SOLID_PROP(Prop, Val)                                                  \
   static double                                                                \
@@ -172,7 +155,42 @@ create_solid(struct sdis_device* sdis)
   shader.volumic_mass = solid_get_volumic_mass;
   shader.delta = solid_get_delta;
   shader.temperature = solid_get_temperature;
+
   OK(sdis_solid_create(sdis, &shader, NULL, &solid));
+  return solid;
+}
+
+static struct sdis_medium*
+create_custom
+  (struct sdis_device* sdis,
+   double* positions, /* Nodes of the solid */
+   size_t* indices) /* Indices of the solid */
+{
+  /* Stardis variables */
+  struct sdis_solid_shader shader = SDIS_SOLID_SHADER_NULL;
+  struct sdis_medium* solid = NULL;
+  struct sdis_data* data = NULL;
+
+  /* Mesh variables */
+  struct mesh* mesh = NULL;
+  const size_t sz = sizeof(struct mesh);
+  const size_t al = ALIGNOF(struct mesh);
+
+  OK(sdis_data_create(sdis, sz, al, NULL, &data));
+  mesh = sdis_data_get(data);
+  mesh->positions = positions;
+  mesh->indices = indices;
+
+  shader.calorific_capacity = solid_get_calorific_capacity;
+  shader.thermal_conductivity = solid_get_thermal_conductivity;
+  shader.volumic_mass = solid_get_volumic_mass;
+  shader.delta = solid_get_delta;
+  shader.temperature = solid_get_temperature;
+  /*shader.sample_path = sample_steady_diffusive_path;*/
+
+  OK(sdis_solid_create(sdis, &shader, data, &solid));
+  OK(sdis_data_ref_put(data));
+
   return solid;
 }
 
@@ -195,7 +213,7 @@ create_dummy(struct sdis_device* sdis)
 }
 
 /*******************************************************************************
- * Interfaces
+ * Interface: its temperature is fixed to the trilinear profile
  ******************************************************************************/
 static double
 interface_get_temperature
@@ -291,149 +309,29 @@ create_scene(struct sdis_device* sdis, struct scene_context* ctx)
  * Validations
  ******************************************************************************/
 static void
-check_probe_boundary_list_api
-  (struct sdis_scene* scn,
-   const struct sdis_solve_probe_boundary_list_args* in_args)
+check_probe(struct sdis_scene* scn, const int is_master_process)
 {
-  struct sdis_solve_probe_boundary_list_args args = *in_args;
-  struct sdis_estimator_buffer* estim_buf = NULL;
-
-  /* Check API */
-  BA(sdis_solve_probe_boundary_list(NULL, &args, &estim_buf));
-  BA(sdis_solve_probe_boundary_list(scn, NULL, &estim_buf));
-  BA(sdis_solve_probe_boundary_list(scn, &args, NULL));
-  args.nprobes = 0;
-  BA(sdis_solve_probe_boundary_list(scn, &args, &estim_buf));
-  args.nprobes = in_args->nprobes;
-  args.probes = NULL;
-  BA(sdis_solve_probe_boundary_list(scn, &args, &estim_buf));
-}
-
-/* Check the estimators against the analytical solution */
-static void
-check_estimator_buffer
-  (const struct sdis_estimator_buffer* estim_buf,
-   struct sdis_scene* scn,
-   const struct sdis_solve_probe_boundary_list_args* args)
-{
+  struct sdis_solve_probe_args args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
   struct sdis_mc T = SDIS_MC_NULL;
-  size_t iprobe = 0;
+  struct sdis_estimator* estimator = NULL;
+  double ref = 0;
 
-  /* Variables used to check the global estimation results */
-  size_t total_nrealisations = 0;
-  size_t total_nrealisations_ref = 0;
-  size_t total_nfailures = 0;
-  size_t total_nfailures_ref = 0;
-  double sum = 0; /* Global sum of weights */
-  double sum2 = 0; /* Global sum of squared weights */
-  double N = 0; /* Number of (successful) realisations */
-  double E = 0; /* Expected value */
-  double V = 0; /* Variance */
-  double SE = 0; /* Standard Error */
+  args.position[0] = 0.125;
+  args.position[1] = 0.250;
+  args.position[2] = 0.375;
 
-  /* Check the results */
-  FOR_EACH(iprobe, 0, args->nprobes) {
-    const struct sdis_estimator* estimator = NULL;
-    size_t probe_nrealisations = 0;
-    size_t probe_nfailures = 0;
-    double pos[3] = {0,0,0};
-    double probe_sum = 0;
-    double probe_sum2 = 0;
-    double ref = 0;
+  OK(sdis_solve_probe(scn, &args, &estimator));
+  OK(sdis_estimator_get_temperature(estimator, &T));
 
-    OK(sdis_scene_get_boundary_position(scn, args->probes[iprobe].iprim,
-      args->probes[iprobe].uv, pos));
+  if(!is_master_process) return;
 
-    /* Fetch result */
-    OK(sdis_estimator_buffer_at(estim_buf, iprobe, 0, &estimator));
-    OK(sdis_estimator_get_temperature(estimator, &T));
-    OK(sdis_estimator_get_realisation_count(estimator, &probe_nrealisations));
-    OK(sdis_estimator_get_failure_count(estimator, &probe_nfailures));
+  ref = trilinear_profile(args.position);
 
-    /* Check probe estimation */
-    ref = trilinear_profile(pos);
-    printf("T(%g, %g, %g) = %g ~ %g +/- %g\n", SPLIT3(pos), ref, T.E, T.SE);
-    CHK(eq_eps(ref, T.E, 3*T.SE));
+  printf("T(%g, %g, %g) = %g ~ %g +/- %g\n",
+    SPLIT3(args.position), ref, T.E, T.SE);
 
-    /* Check miscellaneous results */
-    CHK(probe_nrealisations == args->probes[iprobe].nrealisations);
-
-    /* Compute the sum of weights and sum of squared weights of the probe */
-    probe_sum = T.E * (double)probe_nrealisations;
-    probe_sum2 = (T.V + T.E*T.E) * (double)probe_nrealisations;
-
-    /* Update the global estimation */
-    total_nrealisations_ref += probe_nrealisations;
-    total_nfailures_ref += probe_nfailures;
-    sum += probe_sum;
-    sum2 += probe_sum2;
-  }
-
-  /* Check the overall estimate of the estimate buffer. This estimate is not
-   * really a result expected by the caller since the probes are all
-   * independent. But to be consistent with the estimate buffer API, we need to
-   * provide it. And so we check its validity */
-  OK(sdis_estimator_buffer_get_temperature(estim_buf, &T));
-  OK(sdis_estimator_buffer_get_realisation_count(estim_buf, &total_nrealisations));
-  OK(sdis_estimator_buffer_get_failure_count(estim_buf, &total_nfailures));
-
-  CHK(total_nrealisations == total_nrealisations_ref);
-  CHK(total_nfailures == total_nfailures_ref);
-
-  N = (double)total_nrealisations_ref;
-  E = sum / N;
-  V = sum2 / N - E*E;
-  SE = sqrt(V/N);
-  check_intersection(E, SE, T.E, T.SE);
-}
-
-static void
-check_probe_boundary_list(struct sdis_scene* scn, const int is_master_process)
-{
-  #define NPROBES 10
-
-  /* Estimations */
-  struct sdis_estimator_buffer* estim_buf = NULL;
-
-  /* Probe variables */
-  struct sdis_solve_probe_boundary_args probes[NPROBES];
-  struct sdis_solve_probe_boundary_list_args args =
-    SDIS_SOLVE_PROBE_BOUNDARY_LIST_ARGS_DEFAULT;
-  size_t iprobe;
-
-  /* Miscellaneous */
-  struct sdis_scene_find_closest_point_args closest_pt_args =
-    SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
-
-  (void)is_master_process;
-
-  /* Setup the list of probes to calculate */
-  args.probes = probes;
-  args.nprobes = NPROBES;
-  FOR_EACH(iprobe, 0, NPROBES) {
-    sample_sphere(closest_pt_args.position);
-    closest_pt_args.radius = INF;
-
-    probes[iprobe] = SDIS_SOLVE_PROBE_BOUNDARY_ARGS_DEFAULT;
-    probes[iprobe].nrealisations = 10000;
-    probes[iprobe].side = SDIS_FRONT;
-
-    OK(sdis_scene_find_closest_point
-      (scn, &closest_pt_args, &probes[iprobe].iprim, probes[iprobe].uv));
-  }
-
-  check_probe_boundary_list_api(scn, &args);
-
-  /* Solve the probes */
-  OK(sdis_solve_probe_boundary_list(scn, &args, &estim_buf));
-  if(!is_master_process) {
-    CHK(estim_buf == NULL);
-  } else {
-    check_estimator_buffer(estim_buf, scn, &args);
-    OK(sdis_estimator_buffer_ref_put(estim_buf));
-  }
-
-  #undef NPROBES
+  CHK(eq_eps(ref, T.E, T.SE*3));
+  OK(sdis_estimator_ref_put(estimator));
 }
 
 /*******************************************************************************
@@ -444,10 +342,11 @@ main(int argc, char** argv)
 {
   /* Stardis */
   struct sdis_device* dev = NULL;
-  struct sdis_interface* solid_fluid = NULL;
-  struct sdis_interface* solid_solid = NULL;
-  struct sdis_medium* fluid = NULL;
+  struct sdis_interface* solid_dummy = NULL;
+  struct sdis_interface* custom_solid = NULL;
   struct sdis_medium* solid = NULL;
+  struct sdis_medium* custom = NULL;
+  struct sdis_medium* dummy = NULL; /* Medium surrounding the solid */
   struct sdis_scene* scn = NULL;
 
   /* Miscellaneous */
@@ -459,31 +358,34 @@ main(int argc, char** argv)
 
   create_default_device(&argc, &argv, &is_master_process, &dev);
 
-  /* Setup the mesh */
+  /* Mesh */
   mesh_init(&mesh);
   mesh_add_super_shape(&mesh);
   sshape_end_id = mesh_ntriangles(&mesh);
   mesh_add_sphere(&mesh);
 
-  /* Setup physical properties */
-  fluid = create_dummy(dev);
+  /* Physical properties */
+  dummy = create_dummy(dev);
   solid = create_solid(dev);
-  solid_fluid = create_interface(dev, solid, fluid);
-  solid_solid = create_interface(dev, solid, solid);
+  custom = create_custom(dev, mesh.positions, mesh.indices + sshape_end_id);
+  solid_dummy = create_interface(dev, solid, dummy);
+  custom_solid = create_interface(dev, custom, solid);
 
-  /* Create the scene */
+  /* Scene */
   ctx.mesh = &mesh;
   ctx.sshape_end_id = sshape_end_id;
-  ctx.sshape = solid_fluid;
-  ctx.sphere = solid_solid;
+  ctx.sshape = solid_dummy;
+  ctx.sphere = custom_solid;
   scn = create_scene(dev, &ctx);
 
-  check_probe_boundary_list(scn, is_master_process);
+  check_probe(scn, is_master_process);
 
   mesh_release(&mesh);
-  OK(sdis_interface_ref_put(solid_fluid));
-  OK(sdis_interface_ref_put(solid_solid));
-  OK(sdis_medium_ref_put(fluid));
+
+  OK(sdis_interface_ref_put(solid_dummy));
+  OK(sdis_interface_ref_put(custom_solid));
+  OK(sdis_medium_ref_put(custom));
+  OK(sdis_medium_ref_put(dummy));
   OK(sdis_medium_ref_put(solid));
   OK(sdis_scene_ref_put(scn));
 

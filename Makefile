@@ -216,6 +216,7 @@ TEST_SRC_LONG =\
 TEST_SRC_MPI =\
  src/test_sdis.c\
  src/test_sdis_compute_power.c\
+ src/test_sdis_custom_solid_path_sampling.c\
  src/test_sdis_device.c\
  src/test_sdis_external_flux.c\
  src/test_sdis_solve_camera.c\
@@ -461,6 +462,7 @@ test_sdis_solve_medium_2d \
 # Tests based on Star-3DUT with (optional) MPI support
 ################################################################################
 src/test_sdis_compute_power.d \
+src/test_sdis_custom_solid_path_sampling.d \
 src/test_sdis_solve_camera.d \
 src/test_sdis_solve_medium.d \
 src/test_sdis_solve_probe_boundary_list.d \
@@ -468,6 +470,7 @@ src/test_sdis_solve_probe_boundary_list.d \
 	@$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis_compute_power.o \
+src/test_sdis_custom_solid_path_sampling.o \
 src/test_sdis_solve_camera.o \
 src/test_sdis_solve_medium.o \
 src/test_sdis_solve_probe_boundary_list.o \
@@ -475,6 +478,7 @@ src/test_sdis_solve_probe_boundary_list.o \
 	$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
 
 test_sdis_compute_power \
+test_sdis_custom_solid_path_sampling \
 test_sdis_solve_camera \
 test_sdis_solve_medium \
 test_sdis_solve_probe_boundary_list \
