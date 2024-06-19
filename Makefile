@@ -488,33 +488,21 @@ test_sdis_solve_probe_boundary_list \
 	$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S3DUT_LIBS)
 
 ################################################################################
-# Tests based on Star-3D and Star-3DUT with (optional) MPI support
-################################################################################
-src/test_sdis_solve_probe_list.d \
-: config.mk sdis-local.pc
-	@$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
-
-src/test_sdis_solve_probe_list.o \
-: config.mk sdis-local.pc
-	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
-
-test_sdis_solve_probe_list \
-: config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
-	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S3D_LIBS) $(S3DUT_LIBS)
-
-################################################################################
 # Tests based on Star-3D, Star-3DUT and Star-SP with (optional) MPI support
 ################################################################################
 src/test_sdis_custom_solid_path_sampling.d \
+src/test_sdis_solve_probe_list.d \
 : config.mk sdis-local.pc
 	@$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) $(SSP_CFLAGS) \
 	-MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
 src/test_sdis_custom_solid_path_sampling.o \
+src/test_sdis_solve_probe_list.o \
 : config.mk sdis-local.pc
 	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) $(SSP_CFLAGS) -c $(@:.o=.c) -o $@
 
 test_sdis_custom_solid_path_sampling \
+test_sdis_solve_probe_list \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) $(SSP_CFLAGS) \
 	-o $@ src/$@.o $(TEST_LIBS_MPI) $(S3D_LIBS) $(S3DUT_LIBS) $(SSP_CFLAGS)
