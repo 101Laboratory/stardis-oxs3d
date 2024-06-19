@@ -60,6 +60,7 @@ sdis_primkey_2d_setup
     SWAP(double, v0[0], v1[0]);
     SWAP(double, v0[1], v1[1]);
   }
+  key->ncoords = 4;
 }
 
 void
@@ -85,6 +86,7 @@ sdis_primkey_setup
   if(cmp_dbl3(v1, v2) > 0) SWAP_DBL3(v1, v2);
   if(cmp_dbl3(v0, v1) > 0) SWAP_DBL3(v0, v1);
   #undef SWAP_DBL3
+  key->ncoords = 9;
 }
 
 size_t
@@ -102,6 +104,8 @@ sdis_primkey_eq
   ASSERT(key0 && key1);
 
   if(key0->ncoords != key1->ncoords) return 0;
+  if(key0->ncoords != 4 && key0->ncoords != 9) return 0;
+  if(key1->ncoords != 4 && key1->ncoords != 9) return 0;
   FOR_EACH(i, 0, key0->ncoords) {
     if(key0->nodes[i] != key1->nodes[i]) return 0;
   }
