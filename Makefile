@@ -194,6 +194,7 @@ TEST_SRC =\
  src/test_sdis_medium.c\
  src/test_sdis_picard.c\
  src/test_sdis_primkey.c\
+ src/test_sdis_primkey_2d.c\
  src/test_sdis_radiative_env.c\
  src/test_sdis_scene.c\
  src/test_sdis_solid_random_walk_robustness.c\
@@ -423,6 +424,21 @@ test_sdis_solve_probe3 \
 test_sdis_unsteady_analytic_profile \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S3DUT_LIBS)
+
+################################################################################
+# Test based on Star-2D
+################################################################################
+src/test_sdis_primkey_2d.d \
+: config.mk sdis-local.pc
+	@$(CC) $(TEST_CFLAGS) $(S2D_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
+
+src/test_sdis_primkey_2d.o \
+: config.mk sdis-local.pc
+	$(CC) $(TEST_CFLAGS) $(S2D_CFLAGS) -c $(@:.o=.c) -o $@
+
+test_sdis_primkey_2d \
+: config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
+	$(CC) $(TEST_CFLAGS) $(S2D_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S2D_LIBS)
 
 ################################################################################
 # Tests based on Star-Enclosures-<2|3>D

@@ -49,6 +49,13 @@ mesh_nvertices(const struct mesh* mesh)
   return sa_size(mesh->positions) / 3/* #coords per vertex */;
 }
 
+static INLINE size_t
+mesh_2d_nvertices(const struct mesh* mesh)
+{
+  CHK(mesh);
+  return sa_size(mesh->positions) / 2/* #coords per vertex */;
+}
+
 /* Number of triangles */
 static INLINE size_t
 mesh_ntriangles(const struct mesh* mesh)
@@ -56,6 +63,14 @@ mesh_ntriangles(const struct mesh* mesh)
   CHK(mesh);
   return sa_size(mesh->indices) / 3/* #indices per triangle */;
 }
+
+static INLINE size_t
+mesh_2d_nsegments(const struct mesh* mesh)
+{
+  CHK(mesh);
+  return sa_size(mesh->indices) / 2/* #indices per segment */;
+}
+
 
 static INLINE void
 mesh_append
