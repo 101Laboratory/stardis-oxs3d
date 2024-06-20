@@ -334,7 +334,6 @@ sdis_scene_get_senc2d_scene
 {
   if(!scn || !senc2d_scn) return RES_BAD_ARG;
   if(!scn->senc2d_scn) return RES_BAD_ARG; /* Scene is 3D */
-  SENC2D(scene_ref_get(scn->senc2d_scn));
   *senc2d_scn = scn->senc2d_scn;
   return RES_OK;
 }
@@ -346,7 +345,6 @@ sdis_scene_get_senc3d_scene
 {
   if(!scn || !senc3d_scn) return RES_BAD_ARG;
   if(!scn->senc3d_scn) return RES_BAD_ARG; /* Scene is 2D */
-  SENC3D(scene_ref_get(scn->senc3d_scn));
   *senc3d_scn = scn->senc3d_scn;
   return RES_OK;
 }
