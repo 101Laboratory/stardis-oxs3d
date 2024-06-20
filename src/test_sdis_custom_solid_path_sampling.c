@@ -48,6 +48,7 @@
  *                     \/  \/
  */
 
+#define NREALISATIONS 10000
 #define SPHERE_RADIUS 1
 
 /*******************************************************************************
@@ -188,6 +189,49 @@ mesh_add_sphere(struct mesh* mesh)
 /*******************************************************************************
  * Custom conductive path
  ******************************************************************************/
+struct custom_solid {
+  struct s3d_scene_view* view; /* Star-3D view of the shape */
+  const struct shape* shape; /* Raw data */
+};
+
+static void
+setup_solver_hit
+  (struct sdis_scene* scn,
+   const struct shape* shape,
+   const struct s3d_hit* user_hit,
+   struct s3d_hit* solver_hit)
+{
+  struct sdis_primkey key = SDIS_PRIMKEY_NULL;
+  const double *v0, *v1, *v2;
+  float v0f[3], v1f[3], v2f[3];
+  struct s3d_attrib attr0, attr1, attr2;
+
+  *solver_hit = *user_hit;
+
+  v0 = shape->pos + shape->ids[user_hit->prim.prim_id*3+0]*3;
+  v1 = shape->pos + shape->ids[user_hit->prim.prim_id*3+1]*3;
+  v2 = shape->pos + shape->ids[user_hit->prim.prim_id*3+2]*3;
+  sdis_primkey_setup(&key, v0, v1, v2);
+  OK(sdis_scene_get_s3d_primitive(scn, &key, &solver_hit->prim));
+
+  /* Check that the primitive on the solver side is the same as that on the
+   * user side. On the solver side, vertices are stored in simple precision in
+   * Star-3D view. We therefore need to take care of this conversion to check
+   * that the vertices are the same */
+  OK(s3d_triangle_get_vertex_attrib(&solver_hit->prim, 0, S3D_POSITION, &attr0));
+  OK(s3d_triangle_get_vertex_attrib(&solver_hit->prim, 1, S3D_POSITION, &attr1));
+  OK(s3d_triangle_get_vertex_attrib(&solver_hit->prim, 2, S3D_POSITION, &attr2));
+  f3_set_d3(v0f, v0);
+  f3_set_d3(v1f, v1);
+  f3_set_d3(v2f, v2);
+
+  /* The vertices have been inverted on the user's side to reverse the normal
+   * orientation. Below it is taken into account */
+  CHK(f3_eq(v0f, attr0.value));
+  CHK(f3_eq(v1f, attr1.value));
+  CHK(f3_eq(v2f, attr2.value));
+}
+
 /* Implementation of a Walk on Sphere algorithm for an origin-centered spherical
  * geometry of radius SPHERE_RADIUS */
 static res_T
@@ -197,7 +241,7 @@ sample_steady_diffusive_path
    struct sdis_path* path,
    struct sdis_data* data)
 {
-  struct s3d_scene_view* view = NULL;
+  struct custom_solid* solid = NULL;
   struct s3d_hit hit = S3D_HIT_NULL;
 
   double pos[3];
@@ -205,13 +249,13 @@ sample_steady_diffusive_path
 
   CHK(scn && rng && path && data);
 
-  view = sdis_data_get(data);
+  solid = sdis_data_get(data);
 
   d3_set(pos, path->vtx.P);
 
-  for(;;) {
+  do {
     /* Distance from the geometry center to the current position */
-    const double dst = d3_len(path->vtx.P);
+    const double dst = d3_len(pos);
 
     double dir[3] = {0,0,0};
     double r = 0; /* Radius */
@@ -238,24 +282,23 @@ sample_steady_diffusive_path
 
       /* Map the position to the sphere geometry */
       f3_set_d3(posf, pos);
-      OK(s3d_scene_view_closest_point(view, posf, (float)INF, NULL, &hit));
-      CHK(eq_eps(hit.distance, 0, epsilon));
+      OK(s3d_scene_view_closest_point(solid->view, posf, (float)INF, NULL, &hit));
+      CHK(eq_eps(hit.distance, 0, 1.e-3));
     }
-  }
 
   /* The calculation is performed in steady state, so the path necessarily stops
    * at a boundary */
-  CHK(!S3D_HIT_NONE(&hit));
+  } while(S3D_HIT_NONE(&hit));
 
   /* Setup the path state */
   d3_set(path->vtx.P, pos);
   path->weight = 0;
   path->at_limit = 0;
   path->hit_2d = S2D_HIT_NULL;
-  path->hit_3d = hit; /* TODO setup the path hit */
   path->elapsed_time = 0;
   path->weight = 0;
   path->at_limit = 0;
+  setup_solver_hit(scn, solid->shape, &hit, &path->hit_3d);
 
   return RES_OK;
 }
@@ -276,7 +319,7 @@ SOLID_PROP(calorific_capacity, 500.0) /* [J/K/Kg] */
 SOLID_PROP(thermal_conductivity, 25.0) /* [W/m/K] */
 SOLID_PROP(volumic_mass, 7500.0) /* [kg/m^3] */
 SOLID_PROP(temperature, SDIS_TEMPERATURE_NONE/*<=> unknown*/) /* [K] */
-SOLID_PROP(delta, 1.0/20.0) /* [m] */
+SOLID_PROP(delta, 1.0/40.0) /* [m] */
 
 static struct sdis_medium*
 create_solid(struct sdis_device* sdis)
@@ -297,7 +340,8 @@ create_solid(struct sdis_device* sdis)
 static struct sdis_medium*
 create_custom
   (struct sdis_device* sdis,
-   struct s3d_scene_view* view)
+   struct s3d_scene_view* view,
+   const struct shape* shape)
 {
   /* Stardis variables */
   struct sdis_solid_shader shader = SDIS_SOLID_SHADER_NULL;
@@ -305,20 +349,21 @@ create_custom
   struct sdis_data* data = NULL;
 
   /* Mesh variables */
-  struct s3d_scene_view** pview = NULL;
-  const size_t sz = sizeof(struct s3d_scene_view*);
-  const size_t al = ALIGNOF(struct s3d_scene_view*);
+  struct custom_solid* custom_solid = NULL;
+  const size_t sz = sizeof(struct custom_solid);
+  const size_t al = ALIGNOF(struct custom_solid);
 
   OK(sdis_data_create(sdis, sz, al, NULL, &data));
-  pview = sdis_data_get(data);
-  *pview = view;
+  custom_solid = sdis_data_get(data);
+  custom_solid->view = view;
+  custom_solid->shape = shape;
 
   shader.calorific_capacity = solid_get_calorific_capacity;
   shader.thermal_conductivity = solid_get_thermal_conductivity;
   shader.volumic_mass = solid_get_volumic_mass;
   shader.delta = solid_get_delta;
   shader.temperature = solid_get_temperature;
-  /*shader.sample_path = sample_steady_diffusive_path;*/
+  shader.sample_path = sample_steady_diffusive_path;
 
   OK(sdis_solid_create(sdis, &shader, data, &solid));
   OK(sdis_data_ref_put(data));
@@ -392,10 +437,9 @@ scene_get_indices(const size_t itri, size_t ids[3], void* ctx)
 {
   struct scene_context* context = ctx;
   CHK(ids && context && itri < mesh_ntriangles(context->mesh));
-  /* Flip the indices to ensure that the normal points into the super shape */
   ids[0] = (unsigned)context->mesh->indices[itri*3+0];
-  ids[1] = (unsigned)context->mesh->indices[itri*3+2];
-  ids[2] = (unsigned)context->mesh->indices[itri*3+1];
+  ids[1] = (unsigned)context->mesh->indices[itri*3+1];
+  ids[2] = (unsigned)context->mesh->indices[itri*3+2];
 }
 
 static void
@@ -451,6 +495,7 @@ check_probe(struct sdis_scene* scn, const int is_master_process)
   args.position[0] = SPHERE_RADIUS*0.125;
   args.position[1] = SPHERE_RADIUS*0.250;
   args.position[2] = SPHERE_RADIUS*0.375;
+  args.nrealisations = NREALISATIONS;
 
   OK(sdis_solve_probe(scn, &args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &T));
@@ -500,20 +545,24 @@ main(int argc, char** argv)
   sshape_end_id = mesh_ntriangles(&mesh);
   mesh_add_sphere(&mesh);
 
+ /* dump_mesh(stdout, mesh.positions, mesh_nvertices(&mesh),
+            mesh.indices+sshape_end_id*3, mesh_ntriangles(&mesh)-sshape_end_id);
+  exit(1);*/
+
   /* Create a view of the sphere's geometry. This will be used to couple custom
    * solid path sampling to the solver */
   shape.pos = mesh.positions;
-  shape.ids = mesh.indices + sshape_end_id;
+  shape.ids = mesh.indices + sshape_end_id*3;
   shape.npos = mesh_nvertices(&mesh);
-  shape.ntri = mesh_ntriangles(&mesh) - sshape_end_id/3/* #sshape triangles*/;
+  shape.ntri = mesh_ntriangles(&mesh) - sshape_end_id/* #sshape triangles*/;
   sphere_view = create_view(&shape);
 
   /* Physical properties */
   dummy = create_dummy(dev);
   solid = create_solid(dev);
-  custom = create_custom(dev, sphere_view);
-  solid_dummy = create_interface(dev, solid, dummy);
-  custom_solid = create_interface(dev, custom, solid);
+  custom = create_custom(dev, sphere_view, &shape);
+  solid_dummy = create_interface(dev, dummy, solid);
+  custom_solid = create_interface(dev, solid, custom);
 
   /* Scene */
   ctx.mesh = &mesh;
