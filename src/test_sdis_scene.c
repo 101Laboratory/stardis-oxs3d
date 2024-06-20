@@ -100,6 +100,8 @@ test_scene_3d
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
+  struct s2d_scene_view* view2d;
+  struct s3d_scene_view* view3d;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
   struct sdis_scene_find_closest_point_args closest_pt_args =
     SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL;
@@ -268,6 +270,12 @@ test_scene_3d
   OK(sdis_scene_get_senc3d_scene(scn, &scn3d));
   BA(sdis_scene_get_senc2d_scene(scn, &scn2d)); /* No 2D available */
 
+  BA(sdis_scene_get_s3d_scene_view(NULL, NULL));
+  BA(sdis_scene_get_s3d_scene_view(NULL, &view3d));
+  BA(sdis_scene_get_s3d_scene_view(scn, NULL));
+  OK(sdis_scene_get_s3d_scene_view(scn, &view3d));
+  BA(sdis_scene_get_s2d_scene_view(scn, &view2d)); /* No 2D available */
+
   BA(sdis_scene_get_radiative_env(NULL, &radenv));
   BA(sdis_scene_get_radiative_env(scn, NULL));
   OK(sdis_scene_get_radiative_env(scn, &radenv));
@@ -309,6 +317,8 @@ test_scene_2d
   struct context ctx;
   struct senc2d_scene* scn2d;
   struct senc3d_scene* scn3d;
+  struct s2d_scene_view* view2d;
+  struct s3d_scene_view* view3d;
   size_t nsegs, npos;
   size_t i;
   size_t iprim;
@@ -501,6 +511,12 @@ test_scene_2d
   BA(sdis_scene_get_senc2d_scene(NULL, &scn2d));
   OK(sdis_scene_get_senc2d_scene(scn, &scn2d));
   BA(sdis_scene_get_senc3d_scene(scn, &scn3d)); /* No 3D available */
+
+  BA(sdis_scene_get_s2d_scene_view(NULL, NULL));
+  BA(sdis_scene_get_s2d_scene_view(NULL, &view2d));
+  BA(sdis_scene_get_s2d_scene_view(scn, NULL));
+  OK(sdis_scene_get_s2d_scene_view(scn, &view2d));
+  BA(sdis_scene_get_s3d_scene_view(scn, &view3d)); /* No 3D available */
 
   BA(sdis_scene_get_radiative_env(NULL, NULL));
   BA(sdis_scene_get_radiative_env(scn, NULL));

@@ -1362,17 +1362,29 @@ sdis_scene_boundary_project_position
    const double pos[],
    double uv[]);
 
-/* Get the 2D scene's enclosures. Only defined for a 2D scene. */
+/* Get Star-Enclosure-2D scene. Defined on 2D scene only */
 SDIS_API res_T
 sdis_scene_get_senc2d_scene
   (struct sdis_scene* scn,
    struct senc2d_scene** senc2d_scn);
 
-/* Get the 3D scene's enclosures. Only defined for a 3D scene. */
+/* Get Star-Enclosure-3D scene. Defined on 3D scene only */
 SDIS_API res_T
 sdis_scene_get_senc3d_scene
   (struct sdis_scene* scn,
    struct senc3d_scene** senc3d_scn);
+
+/* Get Star-2D scene view. Defined on 2D scene only */
+SDIS_API res_T
+sdis_scene_get_s2d_scene_view
+  (struct sdis_scene* scn,
+   struct s2d_scene_view** s2d_view);
+
+/* Get Star-3D scene view. Defined on 3D scene only */
+SDIS_API res_T
+sdis_scene_get_s3d_scene_view
+  (struct sdis_scene* scn,
+   struct s3d_scene_view** s3d_view);
 
 SDIS_API res_T
 sdis_scene_get_dimension

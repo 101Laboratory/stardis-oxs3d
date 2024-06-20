@@ -350,6 +350,28 @@ sdis_scene_get_senc3d_scene
 }
 
 res_T
+sdis_scene_get_s2d_scene_view
+  (struct sdis_scene* scn,
+   struct s2d_scene_view** s2d_view)
+{
+  if(!scn || !s2d_view) return RES_BAD_ARG;
+  if(!scn->s2d_view) return RES_BAD_ARG; /* Scene is 3D */
+  *s2d_view = scn->s2d_view;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_s3d_scene_view
+  (struct sdis_scene* scn,
+   struct s3d_scene_view** s3d_view)
+{
+  if(!scn || !s3d_view) return RES_BAD_ARG;
+  if(!scn->s3d_view) return RES_BAD_ARG; /* Scene is 2D */
+  *s3d_view = scn->s3d_view;
+  return RES_OK;
+}
+
+res_T
 sdis_scene_get_dimension
   (const struct sdis_scene* scn, enum sdis_scene_dimension* dim)
 {
