@@ -17,6 +17,7 @@
 #include "test_sdis_utils.h"
 
 #include <star/s3dut.h>
+#include <rsys/float3.h>
 
 /*
  * The system is a solid supershape whose boundary temperature is set to a
@@ -212,13 +213,33 @@ check(struct sdis_scene* scn, const struct s3dut_mesh* mesh)
 
   FOR_EACH(iprim, 0, mesh_data.nprimitives) {
     const double *v0, *v1, *v2;
+    float v0f[3], v1f[3], v2f[3];
+    struct s3d_attrib attr0, attr1, attr2;
 
+    /* Check that a primitive can be obtained from the key constructed on the
+     * user side */
     v0 = mesh_data.positions + mesh_data.indices[iprim*3 + 0]*3;
     v1 = mesh_data.positions + mesh_data.indices[iprim*3 + 1]*3;
     v2 = mesh_data.positions + mesh_data.indices[iprim*3 + 2]*3;
     sdis_primkey_setup(&key, v0, v1, v2);
-
     OK(sdis_scene_get_s3d_primitive(scn, &key, &prim));
+
+    /* Check that the primitive on the solver side is the same as that on the
+     * user side. On the solver side, vertices are stored in simple precision in
+     * Star-3D view. We therefore need to take care of this conversion to check
+     * that the vertices are the same */
+    OK(s3d_triangle_get_vertex_attrib(&prim, 0, S3D_POSITION, &attr0));
+    OK(s3d_triangle_get_vertex_attrib(&prim, 1, S3D_POSITION, &attr1));
+    OK(s3d_triangle_get_vertex_attrib(&prim, 2, S3D_POSITION, &attr2));
+    f3_set_d3(v0f, v0);
+    f3_set_d3(v1f, v1);
+    f3_set_d3(v2f, v2);
+
+    /* The vertices have been inverted on the user's side to reverse the normal
+     * orientation. Below it is taken into account */
+    CHK(f3_eq(v0f, attr0.value));
+    CHK(f3_eq(v1f, attr2.value));
+    CHK(f3_eq(v2f, attr1.value));
   }
 }
 
