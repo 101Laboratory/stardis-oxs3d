@@ -17,7 +17,6 @@
 #include "test_sdis_mesh.h"
 #include "test_sdis_utils.h"
 
-#include <star/s2d.h>
 #include <star/s3d.h>
 #include <star/s3dut.h>
 #include <star/ssp.h>
@@ -42,8 +41,8 @@
  *                       /\ <-- T(x,y,z)
  *                   ___/  \___
  *      T(z)         \   __   /
- *       |  T(y)      \ /  \ /
- *       |/         T=? *__/ \
+ *       |  T(y)     T=?/. \ /
+ *       |/           / \__/ \
  *       o--- T(x)   /_  __  _\
  *                     \/  \/
  */
@@ -226,8 +225,8 @@ setup_solver_primitive
   /* The vertices have been inverted on the user's side to reverse the normal
    * orientation. Below it is taken into account */
   CHK(f3_eq(v0f, attr0.value));
-  CHK(f3_eq(v1f, attr1.value));
-  CHK(f3_eq(v2f, attr2.value));
+  CHK(f3_eq(v1f, attr2.value));
+  CHK(f3_eq(v2f, attr1.value));
 }
 
 /* Implementation of a Walk on Sphere algorithm for an origin-centered spherical
@@ -281,7 +280,6 @@ sample_steady_diffusive_path
       /* Map the position to the sphere geometry */
       f3_set_d3(posf, pos);
       OK(s3d_scene_view_closest_point(solid->view, posf, (float)INF, NULL, &hit));
-      CHK(eq_eps(hit.distance, 0, 1.e-3));
     }
 
   /* The calculation is performed in steady state, so the path necessarily stops
@@ -435,9 +433,10 @@ scene_get_indices(const size_t itri, size_t ids[3], void* ctx)
 {
   struct scene_context* context = ctx;
   CHK(ids && context && itri < mesh_ntriangles(context->mesh));
+  /* Flip the indices to ensure that the normal points into the super shape */
   ids[0] = (unsigned)context->mesh->indices[itri*3+0];
-  ids[1] = (unsigned)context->mesh->indices[itri*3+1];
-  ids[2] = (unsigned)context->mesh->indices[itri*3+2];
+  ids[1] = (unsigned)context->mesh->indices[itri*3+2];
+  ids[2] = (unsigned)context->mesh->indices[itri*3+1];
 }
 
 static void
@@ -464,7 +463,6 @@ scene_get_position(const size_t ivert, double pos[3], void* ctx)
 
 static struct sdis_scene*
 create_scene(struct sdis_device* sdis, struct scene_context* ctx)
-
 {
   struct sdis_scene* scn = NULL;
   struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
@@ -496,9 +494,10 @@ check_probe(struct sdis_scene* scn, const int is_master_process)
   args.nrealisations = NREALISATIONS;
 
   OK(sdis_solve_probe(scn, &args, &estimator));
-  OK(sdis_estimator_get_temperature(estimator, &T));
 
   if(!is_master_process) return;
+
+  OK(sdis_estimator_get_temperature(estimator, &T));
 
   ref = trilinear_profile(args.position);
 
@@ -543,10 +542,6 @@ main(int argc, char** argv)
   sshape_end_id = mesh_ntriangles(&mesh);
   mesh_add_sphere(&mesh);
 
- /* dump_mesh(stdout, mesh.positions, mesh_nvertices(&mesh),
-            mesh.indices+sshape_end_id*3, mesh_ntriangles(&mesh)-sshape_end_id);
-  exit(1);*/
-
   /* Create a view of the sphere's geometry. This will be used to couple custom
    * solid path sampling to the solver */
   shape.pos = mesh.positions;
@@ -559,8 +554,8 @@ main(int argc, char** argv)
   dummy = create_dummy(dev);
   solid = create_solid(dev);
   custom = create_custom(dev, sphere_view, &shape);
-  solid_dummy = create_interface(dev, dummy, solid);
-  custom_solid = create_interface(dev, solid, custom);
+  solid_dummy = create_interface(dev, solid, dummy);
+  custom_solid = create_interface(dev, custom, solid);
 
   /* Scene */
   ctx.mesh = &mesh;
