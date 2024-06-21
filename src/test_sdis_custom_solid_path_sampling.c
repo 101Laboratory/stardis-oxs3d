@@ -195,32 +195,30 @@ struct custom_solid {
 };
 
 static void
-setup_solver_hit
+setup_solver_primitive
   (struct sdis_scene* scn,
    const struct shape* shape,
    const struct s3d_hit* user_hit,
-   struct s3d_hit* solver_hit)
+   struct s3d_primitive* prim)
 {
   struct sdis_primkey key = SDIS_PRIMKEY_NULL;
   const double *v0, *v1, *v2;
   float v0f[3], v1f[3], v2f[3];
   struct s3d_attrib attr0, attr1, attr2;
 
-  *solver_hit = *user_hit;
-
   v0 = shape->pos + shape->ids[user_hit->prim.prim_id*3+0]*3;
   v1 = shape->pos + shape->ids[user_hit->prim.prim_id*3+1]*3;
   v2 = shape->pos + shape->ids[user_hit->prim.prim_id*3+2]*3;
   sdis_primkey_setup(&key, v0, v1, v2);
-  OK(sdis_scene_get_s3d_primitive(scn, &key, &solver_hit->prim));
+  OK(sdis_scene_get_s3d_primitive(scn, &key, prim));
 
   /* Check that the primitive on the solver side is the same as that on the
    * user side. On the solver side, vertices are stored in simple precision in
    * Star-3D view. We therefore need to take care of this conversion to check
    * that the vertices are the same */
-  OK(s3d_triangle_get_vertex_attrib(&solver_hit->prim, 0, S3D_POSITION, &attr0));
-  OK(s3d_triangle_get_vertex_attrib(&solver_hit->prim, 1, S3D_POSITION, &attr1));
-  OK(s3d_triangle_get_vertex_attrib(&solver_hit->prim, 2, S3D_POSITION, &attr2));
+  OK(s3d_triangle_get_vertex_attrib(prim, 0, S3D_POSITION, &attr0));
+  OK(s3d_triangle_get_vertex_attrib(prim, 1, S3D_POSITION, &attr1));
+  OK(s3d_triangle_get_vertex_attrib(prim, 2, S3D_POSITION, &attr2));
   f3_set_d3(v0f, v0);
   f3_set_d3(v1f, v1);
   f3_set_d3(v2f, v2);
@@ -294,11 +292,11 @@ sample_steady_diffusive_path
   d3_set(path->vtx.P, pos);
   path->weight = 0;
   path->at_limit = 0;
-  path->hit_2d = S2D_HIT_NULL;
+  path->prim_2d = S2D_PRIMITIVE_NULL;
   path->elapsed_time = 0;
   path->weight = 0;
   path->at_limit = 0;
-  setup_solver_hit(scn, solid->shape, &hit, &path->hit_3d);
+  setup_solver_primitive(scn, solid->shape, &hit, &path->prim_3d);
 
   return RES_OK;
 }

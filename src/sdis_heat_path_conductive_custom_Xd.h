@@ -30,14 +30,14 @@ XD(check_sampled_path)
   (struct sdis_scene* scn,
    const struct sdis_path* path)
 {
-  const struct sXd(hit)* hit = NULL;
+  int null_prim = 0;
   res_T res = RES_OK;
   ASSERT(scn && path);
 
-  hit = &path->XD(hit);
+  null_prim = SXD_PRIMITIVE_EQ(&path->XD(prim), &SXD_PRIMITIVE_NULL);
 
   /* Check end of path */
-  if(!path->at_limit && SXD_HIT_NONE(hit)) {
+  if(!path->at_limit && null_prim) {
     log_err(scn->dev,
       "%s: the sampled path should have reached a limit condition or a boundary"
       " -- pos=("FORMAT_VECX")\n",
@@ -46,36 +46,75 @@ XD(check_sampled_path)
     goto error;
   }
 
-  if(!SXD_HIT_NONE(&path->XD(hit))) {
-    struct sXd(attrib) attr;
+  if(!null_prim) {
     struct sXd(primitive) prim;
-    const unsigned iprim = hit->prim.prim_id;
-    float N[3] = {0,0,0};
+    const unsigned iprim = path->XD(prim).prim_id;
 
     /* Check intersected primitive */
     res = sXd(scene_view_get_primitive)(scn->sXd(view), iprim, &prim);
-    if(res != RES_OK) {
+    if(res != RES_OK || !SXD_PRIMITIVE_EQ(&path->XD(prim), &prim)) {
       log_err(scn->dev,
         "%s: invalid intersected primitive on sampled path -- %s\n",
         FUNC_NAME, res_to_cstr(res));
       goto error;
     }
+  }
 
-    /* Check normal */
-#if DIM == 2
-    SXD(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, hit->u, &attr));
-#else
-    SXD(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, hit->uv, &attr));
-#endif
-    fX(normalize)(attr.value, attr.value);
-    fX(normalize)(N, hit->normal);
-    if(!fX(eq)(attr.value, N)) {
-      log_err(scn->dev,
-        "%s: invalid normal on the intersected primitive\n",
-        FUNC_NAME);
-      res = RES_BAD_ARG;
-      goto error;
-    }
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+static int
+XD(keep_only_one_primitive)
+  (const struct sXd(hit)* hit,
+   const float org[DIM],
+   const float dir[DIM],
+   const float range[2],
+   void* query_data,
+   void* filter_data)
+{
+  const struct sXd(primitive)* prim = query_data;
+  (void)org, (void)dir, (void)range, (void)filter_data;
+  return !SXD_PRIMITIVE_EQ(prim, &hit->prim);
+}
+
+static res_T
+XD(get_path_hit)
+  (struct sdis_scene* scn,
+   struct sdis_path* path,
+   const struct sdis_medium* mdm,
+   struct sXd(hit)* hit)
+{
+  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
+  float query_radius = 0;
+  float query_pos[DIM] = {0};
+  double delta = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && path && hit);
+
+  filter_data.XD(custom_filter) = XD(keep_only_one_primitive);
+  filter_data.custom_filter_data = &path->XD(prim);
+
+  /* Search for the hit corresponding to the path position on a primitive. Search
+   * at a maximum distance from the delta of the medium, as this hit should be
+   * very close to the submitted position, since it should represent the same
+   * point. */
+  delta = solid_get_delta(mdm, &path->vtx);
+  fX_set_dX(query_pos, path->vtx.P);
+  query_radius = (float)delta;
+  SXD(scene_view_closest_point(scn->sXd(view), query_pos, query_radius,
+      &filter_data, hit));
+  ASSERT(SXD_PRIMITIVE_EQ(&hit->prim, &path->XD(prim)));
+
+  if(SXD_HIT_NONE(hit)) {
+    log_warn(scn->dev,
+      "%s: the position returned by custom sampling of the conductive path "
+      "is too far from the primitive it should be on -- search distance=%g\n",
+      FUNC_NAME, delta);
+    res = RES_BAD_OP;
+    goto error;
   }
 
 exit:
@@ -98,7 +137,11 @@ XD(conductive_path_custom)
 {
   struct sdis_path path = SDIS_PATH_NULL;
   res_T res = RES_OK;
+
+  /* Check pre-conditions */
   ASSERT(scn && rwalk && rng && T);
+  ASSERT(sdis_medium_get_type(mdm) == SDIS_SOLID);
+  ASSERT(mdm->shader.solid.sample_path);
 
   /* Sample a conductive path */
   path.vtx = rwalk->vtx;
@@ -112,11 +155,13 @@ XD(conductive_path_custom)
   }
 
   res = XD(check_sampled_path)(scn, &path);
+  if(res!= RES_OK) goto error;
+
+  res = XD(get_path_hit)(scn, &path, mdm, &rwalk->XD(hit));
   if(res != RES_OK) goto error;
 
   /* Update random walk position and time from sampled path */
   rwalk->vtx = path.vtx;
-  rwalk->XD(hit) = path.XD(hit);
   rwalk->elapsed_time += path.elapsed_time;
 
   /* The path reached a boundary */

@@ -225,8 +225,8 @@ struct sdis_path {
   struct sdis_rwalk_vertex vtx; /* Current position and time */
 
    /* Surface intersection. When defined, the path is on a border */
-  struct s2d_hit hit_2d;
-  struct s3d_hit hit_3d;
+  struct s2d_primitive prim_2d;
+  struct s3d_primitive prim_3d;
 
   double elapsed_time; /* Time elapsed along the path */
   double weight; /* Monte Carlo weight update along the path */
@@ -236,8 +236,8 @@ struct sdis_path {
 };
 #define SDIS_PATH_NULL__ {                                                     \
   SDIS_RWALK_VERTEX_NULL__,                                                    \
-  S2D_HIT_NULL__,                                                              \
-  S3D_HIT_NULL__,                                                              \
+  S2D_PRIMITIVE_NULL__,                                                        \
+  S3D_PRIMITIVE_NULL__,                                                        \
   0, /* Elapsed time */                                                        \
   0, /* MC weight */                                                           \
   0 /* At limit */                                                             \
