@@ -71,7 +71,6 @@ mesh_2d_nsegments(const struct mesh* mesh)
   return sa_size(mesh->indices) / 2/* #indices per segment */;
 }
 
-
 static INLINE void
 mesh_append
   (struct mesh* mesh,
@@ -112,6 +111,42 @@ mesh_append
 }
 
 static INLINE void
+mesh_2d_append
+  (struct mesh* mesh,
+   const double* in_positions,
+   const size_t in_nvertices,
+   const size_t* in_indices,
+   const size_t in_nsegments,
+   const double in_translate[2]) /* May be NULL */
+{
+  double translate[2] = {0, 0};
+  double* positions = NULL;
+  size_t* indices = NULL;
+  size_t ivert = 0;
+  size_t i = 0;
+  CHK(mesh != NULL);
+
+  ivert = mesh_2d_nvertices(mesh);
+  positions = sa_add(mesh->positions, in_nvertices*2);
+  indices = sa_add(mesh->indices, in_nsegments*2);
+
+  if(in_translate) {
+    translate[0] = in_translate[0];
+    translate[1] = in_translate[1];
+  }
+
+  FOR_EACH(i, 0, in_nvertices) {
+    positions[i*2 + 0] = in_positions[i*2 + 0] + translate[0];
+    positions[i*2 + 1] = in_positions[i*2 + 1] + translate[1];
+  }
+
+  FOR_EACH(i, 0, in_nsegments) {
+    indices[i*2 + 0] = in_indices[i*2 + 0] + ivert;
+    indices[i*2 + 1] = in_indices[i*2 + 1] + ivert;
+  }
+}
+
+static INLINE void
 mesh_dump(const struct mesh* mesh, FILE* stream)
 {
   size_t i, n;
@@ -128,6 +163,26 @@ mesh_dump(const struct mesh* mesh, FILE* stream)
       (unsigned long)(mesh->indices[i*3+0] + 1),
       (unsigned long)(mesh->indices[i*3+1] + 1),
       (unsigned long)(mesh->indices[i*3+2] + 1));
+  }
+  fflush(stream);
+}
+
+static INLINE void
+mesh_2d_dump(const struct mesh* mesh, FILE* stream)
+{
+  size_t i, n;
+  CHK(mesh != NULL);
+
+  n = mesh_2d_nvertices(mesh);
+  FOR_EACH(i, 0, n) {
+    fprintf(stream, "v %g %g\n", SPLIT2(mesh->positions+i*2));
+  }
+
+  n = mesh_2d_nsegments(mesh);
+  FOR_EACH(i, 0, n) {
+    fprintf(stream, "l %lu %lu\n",
+      (unsigned long)(mesh->indices[i*2+0] + 1),
+      (unsigned long)(mesh->indices[i*2+1] + 1));
   }
   fflush(stream);
 }

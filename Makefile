@@ -220,6 +220,7 @@ TEST_SRC_MPI =\
  src/test_sdis.c\
  src/test_sdis_compute_power.c\
  src/test_sdis_custom_solid_path_sampling.c\
+ src/test_sdis_custom_solid_path_sampling_2d.c\
  src/test_sdis_device.c\
  src/test_sdis_external_flux.c\
  src/test_sdis_solve_camera.c\
@@ -439,6 +440,21 @@ src/test_sdis_primkey_2d.o \
 test_sdis_primkey_2d \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS) $(S2D_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S2D_LIBS)
+
+################################################################################
+# Test based on Star-2D with (optional) MPI support
+################################################################################
+src/test_sdis_custom_solid_path_sampling_2d.d \
+: config.mk sdis-local.pc
+	@$(CC) $(TEST_CFLAGS_MPI) $(S2D_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
+
+src/test_sdis_custom_solid_path_sampling_2d.o \
+: config.mk sdis-local.pc
+	$(CC) $(TEST_CFLAGS_MPI) $(S2D_CFLAGS) -c $(@:.o=.c) -o $@
+
+test_sdis_custom_solid_path_sampling_2d \
+: config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
+	$(CC) $(TEST_CFLAGS_MPI) $(S2D_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S2D_LIBS)
 
 ################################################################################
 # Tests based on Star-Enclosures-<2|3>D
