@@ -22,6 +22,7 @@
 struct rwalk;
 struct rwalk_context;
 struct sdis_device;
+struct sdis_medium;
 struct sdis_scene;
 struct solid_props;
 struct ssp_rng;
@@ -34,6 +35,27 @@ check_solid_constant_properties
    const int use_wos_diffusion,
    const struct solid_props* props_ref,
    const struct solid_props* props);
+
+/*******************************************************************************
+ * Conductive paths using custom user algorithm
+ ******************************************************************************/
+extern LOCAL_SYM res_T
+conductive_path_custom_2d
+  (struct sdis_scene* scn,
+   const unsigned enc_id, /* Enclosure in which path is sampled */
+   const struct sdis_medium* mdm, /* Medium in which path is sampled */
+   struct rwalk* rwalk,
+   struct ssp_rng* rng,
+   struct temperature* T);
+
+extern LOCAL_SYM res_T
+conductive_path_custom_3d
+  (struct sdis_scene* scn,
+   const unsigned enc_id, /* Enclosure in which path is sampled */
+   const struct sdis_medium* mdm, /* Medium in which path is sampled */
+   struct rwalk* rwalk,
+   struct ssp_rng* rng,
+   struct temperature* T);
 
 /*******************************************************************************
  * Conductive paths using the delta sphere algorithm

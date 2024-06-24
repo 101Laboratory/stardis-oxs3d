@@ -34,6 +34,8 @@
 #undef SXD_GET_PRIMITIVE
 #undef SXD_SAMPLE
 #undef SXD_TRACE
+#undef SXD_PRIMITIVE_NULL
+#undef SXD_PRIMITIVE_EQ
 
 #undef dX
 #undef fX
