@@ -291,7 +291,6 @@ sample_steady_diffusive_path
   path->weight = 0;
   path->at_limit = 0;
   path->prim_2d = S2D_PRIMITIVE_NULL;
-  path->elapsed_time = 0;
   path->weight = 0;
   path->at_limit = 0;
   setup_solver_primitive(scn, solid->shape, &hit, &path->prim_3d);

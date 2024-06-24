@@ -28,6 +28,7 @@
 static res_T
 XD(check_sampled_path)
   (struct sdis_scene* scn,
+   const struct rwalk* rwalk,
    const struct sdis_path* path)
 {
   int null_prim = 0;
@@ -42,6 +43,16 @@ XD(check_sampled_path)
       "%s: the sampled path should have reached a limit condition or a boundary"
       " -- pos=("FORMAT_VECX")\n",
       FUNC_NAME, SPLITX(path->vtx.P));
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Check path time */
+  if(path->vtx.time > rwalk->vtx.time) {
+    log_err(scn->dev,
+      "%s: the sampled trajectory cannot be in the future. "
+      "It can only go back in time -- starting time=%g s; current time=%g s\n",
+      FUNC_NAME, rwalk->vtx.time, path->vtx.time);
     res = RES_BAD_ARG;
     goto error;
   }
@@ -154,15 +165,15 @@ XD(conductive_path_custom)
     goto error;
   }
 
-  res = XD(check_sampled_path)(scn, &path);
+  res = XD(check_sampled_path)(scn, rwalk, &path);
   if(res!= RES_OK) goto error;
 
   res = XD(get_path_hit)(scn, &path, mdm, &rwalk->XD(hit));
   if(res != RES_OK) goto error;
 
   /* Update random walk position and time from sampled path */
+  rwalk->elapsed_time += rwalk->vtx.time - path.vtx.time;
   rwalk->vtx = path.vtx;
-  rwalk->elapsed_time += path.elapsed_time;
 
   /* The path reached a boundary */
   if(!SXD_HIT_NONE(&rwalk->XD(hit))) {

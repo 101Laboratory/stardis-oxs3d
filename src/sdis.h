@@ -224,11 +224,10 @@ SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL = SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NUL
 struct sdis_path {
   struct sdis_rwalk_vertex vtx; /* Current position and time */
 
-   /* Surface intersection. When defined, the path is on a border */
+  /* Surface intersected by the path. When defined, the path is on a border */
   struct s2d_primitive prim_2d;
   struct s3d_primitive prim_3d;
 
-  double elapsed_time; /* Time elapsed along the path */
   double weight; /* Monte Carlo weight update along the path */
 
   /* Define whether the path has reached a boundary condition in time/space */
@@ -238,7 +237,6 @@ struct sdis_path {
   SDIS_RWALK_VERTEX_NULL__,                                                    \
   S2D_PRIMITIVE_NULL__,                                                        \
   S3D_PRIMITIVE_NULL__,                                                        \
-  0, /* Elapsed time */                                                        \
   0, /* MC weight */                                                           \
   0 /* At limit */                                                             \
 }
