@@ -120,7 +120,7 @@ XD(time_travel)
   ASSERT(dst >= 0);
 
   /* No displacement => no time travel */
-  if(distance == 0) goto exit;
+  if(dst == 0) goto exit;
 
   /* Sample x = tau*alpha/distance^2 */
   r = ssp_rng_canonical(rng);
@@ -151,17 +151,18 @@ XD(time_travel)
   r = ssp_rng_canonical(rng);
   x = swf_tabulation_inverse(XD(scn->dev->H), SWF_QUADRATIC, r);
   dst = sqrt(alpha * time / x);
-  *distance = dst; /* Update travel distance */
+  *distance = dst / scn->fp_to_meter; /* Update travel distance */
 
   /* Uniformly sample a direction and move along it of the distance that
-   * separate the current position ot its initial condition */
+   * separate the path position before diffusion position to its initial
+   * condition */
 #if DIM == 2
   ssp_ran_circle_uniform(rng, dir, NULL);
 #else
   ssp_ran_sphere_uniform(rng, dir, NULL);
 #endif
-  dX(muld)(dir, dir, dst);
-  dX(add)(rwalk->vtx.P, rwalk->vtx.P, dir);
+  dX(muld)(dir, dir, *distance);
+  dX(add)(rwalk->vtx.P, pos, dir);
 
   /* Fetch the initial temperature */
   temperature = medium_get_temperature(mdm, &rwalk->vtx);
