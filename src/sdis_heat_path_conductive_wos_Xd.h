@@ -103,6 +103,7 @@ XD(time_travel)
    struct sdis_medium* mdm,
    const double alpha, /* Diffusivity, i.e. lambda/(rho*cp) */
    const double t0, /* Initial time [s] */
+   const double pos[3], /* Position before the diffusive step */
    double* distance, /* Displacement [m/fp_to_meter] */
    struct temperature* T)
 {
@@ -114,7 +115,7 @@ XD(time_travel)
   double temperature = 0; /* [k] */
   double time = 0; /* [s] */
   res_T res = RES_OK;
-  ASSERT(scn && rwalk && rng && alpha > 0 && distance && T);
+  ASSERT(scn && rwalk && rng && alpha > 0 && pos && distance && T);
 
   dst = *distance * scn->fp_to_meter;
   ASSERT(dst >= 0);
@@ -604,6 +605,7 @@ XD(conductive_path_wos)
   /* Sample a diffusive path */
   for(;;) {
     double power_term = 0; /* */
+    double pos[3] = {0,0,0}; /* Position before diffusive step */
     double dst = 0; /* [m/fp_to_meter] */
 
     /* Register the new vertex against the heat path */
@@ -621,12 +623,14 @@ XD(conductive_path_wos)
       break;
     }
 
+    d3_set(pos, rwalk->vtx.P);
+
     /* Find the next position of the conductive path */
     res = XD(sample_next_position)(scn, rwalk, rng, &dst);
     if(res != RES_OK) goto error;
 
     /* Going back in time */
-    res = XD(time_travel)(scn, rwalk, rng, mdm, alpha, props.t0, &dst, T);
+    res = XD(time_travel)(scn, rwalk, rng, mdm, alpha, props.t0, pos, &dst, T);
     if(res != RES_OK) goto error;
 
     /* Add the volumic power density */
