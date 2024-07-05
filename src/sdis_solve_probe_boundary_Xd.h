@@ -626,6 +626,7 @@ XD(solve_probe_boundary_list)
   time_current(&time0);
 
   /* Calculation of probe list */
+  omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(i = 0; i < (int64_t)process_nprobes; ++i) {
     /* Thread */
