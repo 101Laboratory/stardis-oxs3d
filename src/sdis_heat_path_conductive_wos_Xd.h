@@ -280,6 +280,7 @@ static res_T
 XD(check_diffusion_position)
   (struct sdis_scene* scn,
    const unsigned expected_enc_id,
+   const double delta, /* Used to adjust thresholds */
    const double pos[DIM])
 {
   unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
@@ -294,19 +295,19 @@ XD(check_diffusion_position)
   ASSERT(scn && pos);
   ASSERT(expected_enc_id != ENCLOSURE_ID_NULL);
 
-  /* Look for the nearest surface within 1 mm of the position to be checked. By
-   * limiting the search radius we speed up the closest point query. If no
-   * surface is found, we assume that the position is in the intended medium.
-   * We rely on this assumption because this function is used to verify
-   * positions during diffusive random walks. Diffusion algorithms ensure that
-   * positions are in the current medium. This function is only concerned with
-   * numerical problems which, once the new position has been calculated,
-   * position the random walk beyond the medium. In other words, the path jumps
-   * a boundary that lies within the numerical imprecision of the calculation,
-   * i.e. very close to the position to be verified. So, if no surface is found
-   * close to this position, it means that there is no nearby boundary and,
-   * consequently, no numerical problem of this kind could have arisen. */
-  wos_radius = (float)(scn->fp_to_meter * 1.0e-3);
+  /* Look for the nearest surface of the position to be checked. By limiting the
+   * search radius to delta we speed up the closest point query. If no surface
+   * is found, we assume that the position is in the intended medium.  We rely
+   * on this assumption because this function is used to verify positions during
+   * diffusive random walks. Diffusion algorithms ensure that positions are in
+   * the current medium. This function is only concerned with numerical problems
+   * which, once the new position has been calculated, position the random walk
+   * beyond the medium. In other words, the path jumps a boundary that lies
+   * within the numerical imprecision of the calculation, i.e. very close to the
+   * position to be verified. So, if no surface is found close to this position,
+   * it means that there is no nearby boundary and, consequently, no numerical
+   * problem of this kind could have arisen. */
+  wos_radius = (float)delta;
   fX_set_dX(wos_pos, pos);
   SXD(scene_view_closest_point(scn->sXd(view), wos_pos, wos_radius, NULL, &hit));
   if(SXD_HIT_NONE(&hit)) goto exit;
@@ -441,6 +442,7 @@ XD(sample_next_position)
   (struct sdis_scene* scn,
    struct rwalk* rwalk,
    struct ssp_rng* rng,
+   const double delta, /* Used to adjust thresholds */
    double* distance) /* Displacement distance */
 {
   /* Intersection */
@@ -463,9 +465,9 @@ XD(sample_next_position)
   CHK(!SXD_HIT_NONE(&hit));
   wos_distance = hit.distance;
 
-  /* The current position is in the epsilon shell:
+  /* The current position is in the epsilon shell, i.e. 1% of delta:
    * move it to the nearest interface position */
-  wos_epsilon = scn->fp_to_meter*1.e-6;
+  wos_epsilon = delta*1.e-2;
   if(wos_distance <= wos_epsilon) {
     res = XD(setup_hit_wos)(scn, &hit, rwalk);
     if(res != RES_OK) goto error;
@@ -492,7 +494,7 @@ XD(sample_next_position)
      * The next diffusion step would then detect an error. This is why we use a
      * new function based on the same geometric operator used in the present
      * algorithm. */
-    res = XD(check_diffusion_position)(scn, rwalk->enc_id, pos);
+    res = XD(check_diffusion_position)(scn, rwalk->enc_id, delta, pos);
 
     /* Diffusion position is valid => move the path to the new position */
     if(res == RES_OK) {
@@ -626,7 +628,7 @@ XD(conductive_path_wos)
     d3_set(pos, rwalk->vtx.P);
 
     /* Find the next position of the conductive path */
-    res = XD(sample_next_position)(scn, rwalk, rng, &dst);
+    res = XD(sample_next_position)(scn, rwalk, rng, props.delta, &dst);
     if(res != RES_OK) goto error;
 
     /* Going back in time */
