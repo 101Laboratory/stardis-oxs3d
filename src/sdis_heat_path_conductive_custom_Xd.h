@@ -122,8 +122,9 @@ XD(get_path_hit)
   if(SXD_HIT_NONE(hit)) {
     log_warn(scn->dev,
       "%s: the position returned by custom sampling of the conductive path "
-      "is too far from the primitive it should be on -- search distance=%g\n",
-      FUNC_NAME, delta);
+      "is too far from the primitive it should be on -- "
+      "query position=("FORMAT_VECX"); search distance=%g\n",
+      FUNC_NAME, SPLITX(path->vtx.P), delta);
     res = RES_BAD_OP;
     goto error;
   }
@@ -168,12 +169,17 @@ XD(conductive_path_custom)
   res = XD(check_sampled_path)(scn, rwalk, &path);
   if(res!= RES_OK) goto error;
 
-  res = XD(get_path_hit)(scn, &path, mdm, &rwalk->XD(hit));
-  if(res != RES_OK) goto error;
-
   /* Update random walk position and time from sampled path */
   rwalk->elapsed_time += rwalk->vtx.time - path.vtx.time;
   rwalk->vtx = path.vtx;
+
+  /* Calculate path intersection with geometry if it hasn't already reached a
+   * boundary condition */
+  if(!path.at_limit) {
+    res = XD(get_path_hit)(scn, &path, mdm, &rwalk->XD(hit));
+    if(res != RES_OK) goto error;
+  }
+
 
   /* The path reached a boundary */
   if(!SXD_HIT_NONE(&rwalk->XD(hit))) {
