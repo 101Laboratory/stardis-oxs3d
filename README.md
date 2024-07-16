@@ -158,6 +158,66 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+### Version 0.16
+
+#### Add support for custom sampling of solid paths
+
+Add the `sample_path` functor as a member variable of the
+`sdis_solid_shader` data structure which, once defined, is called to
+sample a trajectory in this solid, instead of relying on the internal
+sampling procedures for unsteady conductive paths (i.e. walk on
+delta sphere or walk on sphere).
+
+Coupling takes place as usual, i.e. at the boundary. Only path sampling
+is delegated to the caller. In other words, the connection physics
+remain the same, and the user only has control over the physical model
+of the custom solid.
+
+Note that to help the user map the sampled path to the solver limits
+(i.e. the geometry reached by the path), we added the `sdis_primkey` API
+which constructs a unique key from the vertices of a segment/triangle.
+We can then use this key as input to the new functions
+`sdis_scene_get_s<2|3>d_primitive` to find the solver primitive which
+corresponds to this segment/triangle. It is therefore sufficient to know
+the *exact* coordinates of the boundary mesh to geometrically couple the
+paths sampled by the user with the boundaries of the geometries managed
+by the solver.
+
+#### Correcting the sampling of radiative paths
+
+Allows sampling of radiative paths in enclosures with multiple media.
+Multiple media are often used to define a set of Robin boundary
+conditions. And although sampling a convective path in such an enclosure
+is an error (since it is outside the space of convective paths), it is
+still possible to sample radiative paths in this enclosure (it is
+perfectly defined in the space of radiative paths).
+
+For example, it is now possible to render an infrared image of a system
+with a set of Robin boundary conditions defined from a set of fluids
+with fixed temperatures.
+
+#### Bug fixes
+
+- Fixes the `sdis_solve_probe_boundary_list` function. The calculation
+  did not use the expected number of threads, which could lead to an
+  invalid memory access.
+- Updated error handling when resolving temperatures for several probes.
+  The calculation of a probe no longer stops as soon as a realisation is
+  rejected. As with the calculation of a single probe, if a result is
+  rejected, it is simply not taken into account in the estimate.
+- Corrects numerical problems when sampling a conductive path with WoS.
+  The thresholds used to detect/manage numerical problems were
+  calculated from absolute distances in metres. This method was not
+  numerically robust when these distances were very small. They
+  are now calculated in relation to the delta of the solid, which must
+  be able to take account of spatio-temporal temperature gradients while
+  being large enough to allow numerical estimation.
+- Corrects the position of the path when the initial condition is
+  reached during the sampling of a conductive path with WoS. The unit
+  used to update the position was wrong when the `fp_to_meter`
+  variable was not set to 1. In addition, the position at which the
+  initial condition was reached could be outside the solid.
+
 ### Version 0.15.2
 
 Correction of pkg-config file. A missing private dependency could lead
