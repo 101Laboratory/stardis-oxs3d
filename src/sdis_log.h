@@ -28,6 +28,8 @@
 #define MSG_ERROR_PREFIX_PLAIN_TEXT "stardis-solver (error): "
 #define MSG_WARNING_PREFIX_PLAIN_TEXT "stardis-solver (warning): "
 
+struct sdis_device;
+
 extern LOCAL_SYM res_T
 setup_log_default
   (struct sdis_device* dev);

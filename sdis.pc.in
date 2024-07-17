@@ -8,8 +8,8 @@ Requires: \
  s3d >= @S3D_VERSION@,\
  star-sp >= @SSP_VERSION@
 Requires.private:\
- senc2d >= @SENC3D_VERSION@,\
- senc3d >= @SENC3D_VERSION@, \
+ senc2d >= @SENC2D_VERSION@,\
+ senc3d >= @SENC3D_VERSION@,\
  swf >= @SWF_VERSION@ @MPI@
 Name: sdis
 Description: Stardis Solver

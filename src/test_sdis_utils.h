@@ -195,6 +195,7 @@ static const struct sdis_solid_shader DUMMY_SOLID_SHADER = {
   dummy_medium_getter, /* Delta */
   dummy_medium_getter, /* Volumic power */
   dummy_medium_getter, /* Temperature */
+  NULL, /* sample path */
   0 /* Initial time */
 };
 

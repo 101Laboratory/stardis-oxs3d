@@ -43,6 +43,7 @@ SRC =\
  src/sdis_log.c\
  src/sdis_medium.c\
  src/sdis_misc.c\
+ src/sdis_primkey.c\
  src/sdis_radiative_env.c\
  src/sdis_realisation.c\
  src/sdis_scene.c\
@@ -192,6 +193,8 @@ TEST_SRC =\
  src/test_sdis_interface.c\
  src/test_sdis_medium.c\
  src/test_sdis_picard.c\
+ src/test_sdis_primkey.c\
+ src/test_sdis_primkey_2d.c\
  src/test_sdis_radiative_env.c\
  src/test_sdis_scene.c\
  src/test_sdis_solid_random_walk_robustness.c\
@@ -216,6 +219,8 @@ TEST_SRC_LONG =\
 TEST_SRC_MPI =\
  src/test_sdis.c\
  src/test_sdis_compute_power.c\
+ src/test_sdis_custom_solid_path_sampling.c\
+ src/test_sdis_custom_solid_path_sampling_2d.c\
  src/test_sdis_device.c\
  src/test_sdis_external_flux.c\
  src/test_sdis_solve_camera.c\
@@ -396,6 +401,7 @@ test_sdis_volumic_power4 \
 ################################################################################
 src/test_sdis_draw_external_flux.d \
 src/test_sdis_external_flux_with_diffuse_radiance.d \
+src/test_sdis_primkey.d \
 src/test_sdis_solid_random_walk_robustness.d \
 src/test_sdis_solve_probe3.d \
 src/test_sdis_unsteady_analytic_profile.d \
@@ -404,6 +410,7 @@ src/test_sdis_unsteady_analytic_profile.d \
 
 src/test_sdis_draw_external_flux.o \
 src/test_sdis_external_flux_with_diffuse_radiance.o \
+src/test_sdis_primkey.o \
 src/test_sdis_solid_random_walk_robustness.o \
 src/test_sdis_solve_probe3.o \
 src/test_sdis_unsteady_analytic_profile.o \
@@ -412,11 +419,42 @@ src/test_sdis_unsteady_analytic_profile.o \
 
 test_sdis_draw_external_flux \
 test_sdis_external_flux_with_diffuse_radiance \
+test_sdis_primkey \
 test_sdis_solid_random_walk_robustness \
 test_sdis_solve_probe3 \
 test_sdis_unsteady_analytic_profile \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
 	$(CC) $(TEST_CFLAGS) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S3DUT_LIBS)
+
+################################################################################
+# Test based on Star-2D
+################################################################################
+src/test_sdis_primkey_2d.d \
+: config.mk sdis-local.pc
+	@$(CC) $(TEST_CFLAGS) $(S2D_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
+
+src/test_sdis_primkey_2d.o \
+: config.mk sdis-local.pc
+	$(CC) $(TEST_CFLAGS) $(S2D_CFLAGS) -c $(@:.o=.c) -o $@
+
+test_sdis_primkey_2d \
+: config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
+	$(CC) $(TEST_CFLAGS) $(S2D_CFLAGS) -o $@ src/$@.o $(TEST_LIBS) $(S2D_LIBS)
+
+################################################################################
+# Test based on Star-2D with (optional) MPI support
+################################################################################
+src/test_sdis_custom_solid_path_sampling_2d.d \
+: config.mk sdis-local.pc
+	@$(CC) $(TEST_CFLAGS_MPI) $(S2D_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
+
+src/test_sdis_custom_solid_path_sampling_2d.o \
+: config.mk sdis-local.pc
+	$(CC) $(TEST_CFLAGS_MPI) $(S2D_CFLAGS) -c $(@:.o=.c) -o $@
+
+test_sdis_custom_solid_path_sampling_2d \
+: config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
+	$(CC) $(TEST_CFLAGS_MPI) $(S2D_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S2D_LIBS)
 
 ################################################################################
 # Tests based on Star-Enclosures-<2|3>D
@@ -482,19 +520,24 @@ test_sdis_solve_probe_boundary_list \
 	$(CC) $(TEST_CFLAGS_MPI) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S3DUT_LIBS)
 
 ################################################################################
-# Tests based on Star-3D and Star-3DUT with (optional) MPI support
+# Tests based on Star-3D, Star-3DUT and Star-SP with (optional) MPI support
 ################################################################################
+src/test_sdis_custom_solid_path_sampling.d \
 src/test_sdis_solve_probe_list.d \
 : config.mk sdis-local.pc
-	@$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) -MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
+	@$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) $(SSP_CFLAGS) \
+	-MM -MT "$(@:.d=.o) $@" $(@:.d=.c) -MF $@
 
+src/test_sdis_custom_solid_path_sampling.o \
 src/test_sdis_solve_probe_list.o \
 : config.mk sdis-local.pc
-	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) -c $(@:.o=.c) -o $@
+	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) $(SSP_CFLAGS) -c $(@:.o=.c) -o $@
 
+test_sdis_custom_solid_path_sampling \
 test_sdis_solve_probe_list \
 : config.mk sdis-local.pc $(LIBNAME) src/test_sdis_utils.o
-	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) -o $@ src/$@.o $(TEST_LIBS_MPI) $(S3D_LIBS) $(S3DUT_LIBS)
+	$(CC) $(TEST_CFLAGS_MPI) $(S3D_CFLAGS) $(S3DUT_CFLAGS) $(SSP_CFLAGS) \
+	-o $@ src/$@.o $(TEST_LIBS_MPI) $(S3D_LIBS) $(S3DUT_LIBS) $(SSP_CFLAGS)
 
 ################################################################################
 # Tests based on Star-SP with (optional) MPI support

@@ -14,12 +14,85 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "sdis.h"
+#include "sdis_heat_path.h"
+#include "sdis_log.h"
+#include "sdis_medium_c.h"
+#include "sdis_misc.h"
+#include "sdis_green.h"
 
-/* Generate the generic functions */
-#define SDIS_XD_DIMENSION 2
-#include "sdis_misc_Xd.h"
-#define SDIS_XD_DIMENSION 3
-#include "sdis_misc_Xd.h"
+#include <star/ssp.h>
+
+res_T
+time_rewind
+  (struct sdis_scene* scn,
+   const double mu,
+   const double t0,
+   struct ssp_rng* rng,
+   struct rwalk* rwalk,
+   const struct rwalk_context* ctx,
+   struct temperature* T)
+{
+  const struct enclosure* enc = NULL;
+  struct sdis_medium* mdm = NULL;
+  double temperature;
+  double tau;
+  res_T res = RES_OK;
+  ASSERT(scn && rwalk && ctx && rng && T);
+
+  /* Get the current medium */
+  enc = scene_get_enclosure(scn, rwalk->enc_id);
+  res = scene_get_enclosure_medium(scn, enc, &mdm);
+  if(res != RES_OK) goto error;
+
+  /* Sample the time using the upper bound. */
+  tau = ssp_ran_exp(rng, mu);
+
+  /* Increment the elapsed time */
+  ASSERT(rwalk->vtx.time >= t0);
+  rwalk->elapsed_time += MMIN(tau, rwalk->vtx.time - t0);
+
+  if(IS_INF(rwalk->vtx.time)) goto exit; /* Steady computation */
+
+  /* Time rewind */
+  rwalk->vtx.time = MMAX(rwalk->vtx.time - tau, t0); /* Time rewind */
+
+  /* The path does not reach the limit condition */
+  if(rwalk->vtx.time > t0) goto exit;
+
+  /* Fetch the initial temperature */
+  temperature = medium_get_temperature(mdm, &rwalk->vtx);
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(temperature)) {
+    log_err(mdm->dev, "the path reaches the limit condition but the "
+      "%s temperature remains unknown -- position=%g, %g, %g\n",
+      medium_type_to_string(sdis_medium_get_type(mdm)),
+      SPLIT3(rwalk->vtx.P));
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  /* Update temperature */
+  T->value += temperature;
+  T->done = 1;
+
+  if(ctx->heat_path) {
+    /* Update the registered vertex data */
+    struct sdis_heat_vertex* vtx;
+    vtx = heat_path_get_last_vertex(ctx->heat_path);
+    vtx->time = rwalk->vtx.time;
+    vtx->weight = T->value;
+  }
+
+  if(ctx->green_path) {
+    res = green_path_set_limit_vertex
+      (ctx->green_path, mdm, &rwalk->vtx, rwalk->elapsed_time);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
 
 res_T
 check_primitive_uv_2d(struct sdis_device* dev, const double param_coord[])

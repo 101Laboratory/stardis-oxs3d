@@ -195,20 +195,33 @@ XD(solve_one_probe_boundary)
     realis_args.uv[1] = args->uv[1];
 #endif
     res = XD(boundary_realisation)(scn, &realis_args, &w);
-    if(res != RES_OK) goto error;
+    if(res != RES_OK && res != RES_BAD_OP) goto error;
 
-    /* Stop time registration */
-    time_sub(&t0, time_current(&t1), &t0);
-    usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+    switch(res) {
+      /* Reject the realisation */
+      case RES_BAD_OP:
+        res = RES_OK;
+        break;
 
-    /* Update MC weights */
-    acc_temp->sum += w;
-    acc_temp->sum2 += w*w;
-    acc_temp->count += 1;
-    acc_time->sum += usec;
-    acc_time->sum2 += usec*usec;
-    acc_time->count += 1;
+      /* Update the accumulators */
+      case RES_OK:
+        /* Stop time registration */
+        time_sub(&t0, time_current(&t1), &t0);
+        usec = (double)time_val(&t0, TIME_NSEC) * 0.001;
+
+        /* Update MC weights */
+        acc_temp->sum += w;
+        acc_temp->sum2 += w*w;
+        acc_temp->count += 1;
+        acc_time->sum += usec;
+        acc_time->sum2 += usec*usec;
+        acc_time->count += 1;
+        break;
+
+      default: FATAL("Unreachable code\n"); break;
+    }
   }
+
 exit:
   return res;
 error:
@@ -613,6 +626,7 @@ XD(solve_probe_boundary_list)
   time_current(&time0);
 
   /* Calculation of probe list */
+  omp_set_num_threads((int)scn->dev->nthreads);
   #pragma omp parallel for schedule(static)
   for(i = 0; i < (int64_t)process_nprobes; ++i) {
     /* Thread */

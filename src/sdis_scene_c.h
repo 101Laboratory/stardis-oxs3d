@@ -26,6 +26,9 @@
 
 #include <limits.h>
 
+#define MEDIUM_ID_MULTI UINT_MAX
+#define ENCLOSURE_ID_NULL UINT_MAX
+
 struct prim_prop {
   struct sdis_interface* interf;
   unsigned front_enclosure; /* Id of the front facing enclosure  */
@@ -47,21 +50,6 @@ struct hit_filter_data {
 #define HIT_FILTER_DATA_NULL__ {S2D_HIT_NULL__,S3D_HIT_NULL__,0,NULL,NULL,NULL}
 static const struct hit_filter_data HIT_FILTER_DATA_NULL =
   HIT_FILTER_DATA_NULL__;
-
-struct get_medium_info {
-  /* Targeted position */
-  float pos_tgt[3];
-  /* Ray trace to the targeted position in order to define the current medium */
-  float ray_org[3];
-  float ray_dir[3];
-  /* Hit encouters along the ray and used to define the current medium */
-  struct s2d_hit hit_2d;
-  struct s3d_hit hit_3d;
-};
-#define GET_MEDIUM_INFO_NULL__ \
-  {{0,0,0}, {0,0,0}, {0,0,0}, S2D_HIT_NULL__, S3D_HIT_NULL__}
-static const struct get_medium_info GET_MEDIUM_INFO_NULL =
-  GET_MEDIUM_INFO_NULL__;
 
 static INLINE void
 prim_prop_init(struct mem_allocator* allocator, struct prim_prop* prim)
@@ -85,8 +73,6 @@ medium_init(struct mem_allocator* allocator, struct sdis_medium** medium)
   (void)allocator;
   *medium = NULL;
 }
-
-#define ENCLOSURE_MULTI_MEDIA UINT_MAX
 
 struct enclosure {
   struct s2d_scene_view* s2d_view;
@@ -112,7 +98,7 @@ enclosure_init(struct mem_allocator* allocator, struct enclosure* enc)
   enc->S_over_V = 0;
   enc->V = 0;
   enc->hc_upper_bound = 0;
-  enc->medium_id = ENCLOSURE_MULTI_MEDIA;
+  enc->medium_id = MEDIUM_ID_MULTI;
 }
 
 static INLINE void
@@ -173,6 +159,16 @@ enclosure_local2global_prim_id
   return darray_uint_cdata_get(&enc->local2global)[local_prim_id];
 }
 
+static INLINE void
+primkey_init
+  (const struct mem_allocator* allocator,
+   struct sdis_primkey* key)
+{
+  ASSERT(allocator && key);
+  (void)allocator;
+  *key = SDIS_PRIMKEY_NULL;
+}
+
 /* Declare the array of interfaces */
 #define DARRAY_NAME interf
 #define DARRAY_DATA struct sdis_interface*
@@ -207,6 +203,24 @@ enclosure_local2global_prim_id
 #define HTABLE_DATA double
 #include <rsys/hash_table.h>
 
+/* Declare the hash table that maps the primitive key to its 2D primitve */
+#define HTABLE_NAME key2prim2d
+#define HTABLE_KEY struct sdis_primkey
+#define HTABLE_KEY_FUNCTOR_INIT primkey_init
+#define HTABLE_KEY_FUNCTOR_HASH sdis_primkey_hash
+#define HTABLE_KEY_FUNCTOR_EQ sdis_primkey_eq
+#define HTABLE_DATA struct s2d_primitive
+#include <rsys/hash_table.h>
+
+/* Declare the hash table that maps the primitive key to its 3D primitive */
+#define HTABLE_NAME key2prim3d
+#define HTABLE_KEY struct sdis_primkey
+#define HTABLE_KEY_FUNCTOR_INIT primkey_init
+#define HTABLE_KEY_FUNCTOR_HASH sdis_primkey_hash
+#define HTABLE_KEY_FUNCTOR_EQ sdis_primkey_eq
+#define HTABLE_DATA struct s3d_primitive
+#include <rsys/hash_table.h>
+
 struct sdis_scene {
   struct darray_interf interfaces; /* List of interfaces own by the scene */
   struct darray_medium media; /* List of media own by the scene */
@@ -219,6 +233,10 @@ struct sdis_scene {
   struct htable_d tmp_hc_ub; /* Map an enclosure id to its hc upper bound */
   struct htable_enclosure enclosures; /* Map an enclosure id to its data */
   unsigned outer_enclosure_id;
+
+  /* Map a primivei key to its Star-2D/Star-3D primitive */
+  struct htable_key2prim2d key2prim2d;
+  struct htable_key2prim3d key2prim3d;
 
   double fp_to_meter;
   double tmin; /* Minimum temperature of the system (In Kelvin) */
@@ -244,26 +262,31 @@ scene_get_interface
    const unsigned iprim);
 
 extern LOCAL_SYM res_T
-scene_get_medium
+scene_get_enclosure_id
   (struct sdis_scene* scene,
    const double position[],
-   struct get_medium_info* info, /* May be NULL */
-   struct sdis_medium** medium);
+   unsigned* enclosure_id);
 
-/* This function assumes that the tested position lies into finite enclosure.
- * The medium into which it lies is thus retrieved by tracing a random ray
- * around the current position. For possible infinite enclosure, one has to use
- * the `scene_get_medium' function instead that, in counterpart, can be more
- * time consuming.
+/* This function assumes that the position under test lies within a finite
+ * enclosure. The enclosure in which it is located is therefore retrieved by
+ * tracing a random ray around the current position. For infinite enclosures,
+ * you need to use the `scene_get_enclosure_id' function, which in turn may take
+ * longer.
  *
- * Note that actually, the function internally calls scene_get_medium if no
- * valid medium is found with the regular procedure. This may be due to
- * numerical issues or wrong assumptions on the current medium (its boundaries
- * are opened to infinity). */
+ * Note that the function actually calls scene_get_enclosure internally if no
+ * valid enclosure is found with the normal procedure. This may be due to
+ * numerical problems or incorrect assumptions about the current enclosure (its
+ * limits are open to infinity). */
 extern LOCAL_SYM res_T
-scene_get_medium_in_closed_boundaries
-  (struct sdis_scene* scn,
+scene_get_enclosure_id_in_closed_boundaries
+  (struct sdis_scene* scene,
    const double position[],
+   unsigned* enclosure_id);
+
+extern LOCAL_SYM res_T
+scene_get_enclosure_medium
+  (struct sdis_scene* scene,
+   const struct enclosure* enclosure,
    struct sdis_medium** medium);
 
 extern LOCAL_SYM res_T

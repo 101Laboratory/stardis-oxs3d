@@ -13,10 +13,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-#include "sdis_heat_path.h"
-#include "sdis_heat_path_conductive_c.h"
 #include "sdis_log.h"
+#include "sdis_heat_path_conductive_c.h"
 #include "sdis_medium_c.h"
+#include "sdis_scene_c.h"
 
 /*******************************************************************************
  * Local function
@@ -71,53 +71,15 @@ error:
   goto exit;
 }
 
-res_T
-conductive_path_2d
-  (struct sdis_scene* scn,
-   struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
-   struct ssp_rng* rng,
-   struct temperature_2d* T)
-{
-  res_T res = RES_OK;
-  ASSERT(ctx);
-
-  switch(ctx->diff_algo) {
-    case SDIS_DIFFUSION_DELTA_SPHERE:
-      res = conductive_path_delta_sphere_2d(scn, ctx, rwalk, rng, T);
-      break;
-    case SDIS_DIFFUSION_WOS:
-      res = conductive_path_wos_2d(scn, ctx, rwalk, rng, T);
-      break;
-    default: FATAL("Unreachable code.\n"); break;
-  }
-  return res;
-}
-
-res_T
-conductive_path_3d
-  (struct sdis_scene* scn,
-   struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
-   struct ssp_rng* rng,
-   struct temperature_3d* T)
-{
-  res_T res = RES_OK;
-  ASSERT(ctx);
-
-  switch(ctx->diff_algo) {
-    case SDIS_DIFFUSION_DELTA_SPHERE:
-      res = conductive_path_delta_sphere_3d(scn, ctx, rwalk, rng, T);
-      break;
-    case SDIS_DIFFUSION_WOS:
-      res = conductive_path_wos_3d(scn, ctx, rwalk, rng, T);
-      break;
-    default: FATAL("Unreachable code.\n"); break;
-  }
-  return res;
-}
-
 /* Generate the conductive path functions */
+#define SDIS_XD_DIMENSION 2
+#include "sdis_heat_path_conductive_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_heat_path_conductive_Xd.h"
+#define SDIS_XD_DIMENSION 2
+#include "sdis_heat_path_conductive_custom_Xd.h"
+#define SDIS_XD_DIMENSION 3
+#include "sdis_heat_path_conductive_custom_Xd.h"
 #define SDIS_XD_DIMENSION 2
 #include "sdis_heat_path_conductive_delta_sphere_Xd.h"
 #define SDIS_XD_DIMENSION 3

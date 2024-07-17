@@ -173,7 +173,7 @@ static INLINE res_T
 XD(check_handle_external_net_flux_args)
   (const struct sdis_scene* scn,
    const char* func_name,
-   const struct XD(handle_external_net_flux_args)* args)
+   const struct handle_external_net_flux_args* args)
 {
   int net_flux = 0;
   res_T res = RES_OK;
@@ -181,7 +181,7 @@ XD(check_handle_external_net_flux_args)
   /* Handle bugs */
   ASSERT(scn && func_name && args);
   ASSERT(args->interf && args->frag);
-  ASSERT(!SXD_HIT_NONE(args->hit));
+  ASSERT(!SXD_HIT_NONE(args->XD(hit)));
   ASSERT(args->h_cond >= 0 && args->h_conv >= 0 && args->h_radi >= 0);
   ASSERT(args->h_cond + args->h_conv + args->h_radi > 0);
 
@@ -453,8 +453,8 @@ res_T
 XD(handle_external_net_flux)
   (const struct sdis_scene* scn,
    struct ssp_rng* rng,
-   const struct XD(handle_external_net_flux_args)* args,
-   struct XD(temperature)* T)
+   const struct handle_external_net_flux_args* args,
+   struct temperature* T)
 {
   /* Terms to be registered in the green function */
   struct sdis_green_external_flux_terms green =
@@ -516,13 +516,13 @@ XD(handle_external_net_flux)
    * interface side */
   cos_theta = d3_dot(N, src_sample.dir);
   if(cos_theta > 0) {
-    Ld = XD(direct_contribution)(scn, &src_sample, frag.P, args->hit);
+    Ld = XD(direct_contribution)(scn, &src_sample, frag.P, args->XD(hit));
     incident_flux_direct = cos_theta * Ld / src_sample.pdf; /* [W/m^2] */
   }
 
   /* Calculate the incident diffuse flux [W/m^2] */
   res = XD(compute_incident_diffuse_flux)
-    (scn, rng, frag.P, N, frag.time, args->hit, &incident_flux_diffuse);
+    (scn, rng, frag.P, N, frag.time, args->XD(hit), &incident_flux_diffuse);
   if(res != RES_OK) goto error;
 
   /* Calculate the incident flux without the part scattered by the environment.

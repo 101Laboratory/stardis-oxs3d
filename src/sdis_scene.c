@@ -103,6 +103,8 @@ scene_release(ref_T * ref)
   darray_prim_prop_release(&scn->prim_props);
   htable_enclosure_release(&scn->enclosures);
   htable_d_release(&scn->tmp_hc_ub);
+  htable_key2prim2d_release(&scn->key2prim2d);
+  htable_key2prim3d_release(&scn->key2prim3d);
   if(scn->s2d_view) S2D(scene_view_ref_put(scn->s2d_view));
   if(scn->s3d_view) S3D(scene_view_ref_put(scn->s3d_view));
   if(scn->senc2d_scn) SENC2D(scene_ref_put(scn->senc2d_scn));
@@ -332,7 +334,6 @@ sdis_scene_get_senc2d_scene
 {
   if(!scn || !senc2d_scn) return RES_BAD_ARG;
   if(!scn->senc2d_scn) return RES_BAD_ARG; /* Scene is 3D */
-  SENC2D(scene_ref_get(scn->senc2d_scn));
   *senc2d_scn = scn->senc2d_scn;
   return RES_OK;
 }
@@ -344,8 +345,29 @@ sdis_scene_get_senc3d_scene
 {
   if(!scn || !senc3d_scn) return RES_BAD_ARG;
   if(!scn->senc3d_scn) return RES_BAD_ARG; /* Scene is 2D */
-  SENC3D(scene_ref_get(scn->senc3d_scn));
   *senc3d_scn = scn->senc3d_scn;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_s2d_scene_view
+  (struct sdis_scene* scn,
+   struct s2d_scene_view** s2d_view)
+{
+  if(!scn || !s2d_view) return RES_BAD_ARG;
+  if(!scn->s2d_view) return RES_BAD_ARG; /* Scene is 3D */
+  *s2d_view = scn->s2d_view;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_s3d_scene_view
+  (struct sdis_scene* scn,
+   struct s3d_scene_view** s3d_view)
+{
+  if(!scn || !s3d_view) return RES_BAD_ARG;
+  if(!scn->s3d_view) return RES_BAD_ARG; /* Scene is 2D */
+  *s3d_view = scn->s3d_view;
   return RES_OK;
 }
 
@@ -416,6 +438,38 @@ sdis_scene_get_radiative_env
   return RES_OK;
 }
 
+res_T
+sdis_scene_get_s2d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s2d_primitive* out_prim)
+{
+  struct s2d_primitive* prim = NULL;
+
+  if(!scn || !key || !out_prim || !scene_is_2d(scn)) return RES_BAD_ARG;
+
+  if((prim = htable_key2prim2d_find(&scn->key2prim2d, key)) == NULL)
+    return RES_BAD_ARG;
+  *out_prim = *prim;
+  return RES_OK;
+}
+
+res_T
+sdis_scene_get_s3d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s3d_primitive* out_prim)
+{
+  struct s3d_primitive* prim = NULL;
+
+  if(!scn || !key || !out_prim || scene_is_2d(scn)) return RES_BAD_ARG;
+
+  if((prim = htable_key2prim3d_find(&scn->key2prim3d, key)) == NULL)
+    return RES_BAD_ARG;
+  *out_prim = *prim;
+  return RES_OK;
+}
+
 /*******************************************************************************
  * Local miscellaneous function
  ******************************************************************************/
@@ -427,26 +481,57 @@ scene_get_interface(const struct sdis_scene* scn, const unsigned iprim)
 }
 
 res_T
-scene_get_medium
+scene_get_enclosure_id
   (struct sdis_scene* scn,
    const double pos[],
-   struct get_medium_info* info,
-   struct sdis_medium** out_medium)
+   unsigned* enc_id)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_2d(scn, pos, info, out_medium)
-    : scene_get_medium_3d(scn, pos, info, out_medium);
+    ? scene_get_enclosure_id_2d(scn, pos, enc_id)
+    : scene_get_enclosure_id_3d(scn, pos, enc_id);
 }
 
 res_T
-scene_get_medium_in_closed_boundaries
+scene_get_enclosure_id_in_closed_boundaries
   (struct sdis_scene* scn,
    const double pos[],
-   struct sdis_medium** out_medium)
+   unsigned* enc_id)
 {
   return scene_is_2d(scn)
-    ? scene_get_medium_in_closed_boundaries_2d(scn, pos, out_medium)
-    : scene_get_medium_in_closed_boundaries_3d(scn, pos, out_medium);
+    ? scene_get_enclosure_id_in_closed_boundaries_2d(scn, pos, enc_id)
+    : scene_get_enclosure_id_in_closed_boundaries_3d(scn, pos, enc_id);
+}
+
+res_T
+scene_get_enclosure_medium
+  (struct sdis_scene* scn,
+   const struct enclosure* enc,
+   struct sdis_medium** out_mdm)
+{
+  struct sdis_medium* mdm = NULL;
+  res_T res = RES_OK;
+
+  ASSERT(scn && enc && out_mdm);
+
+  /* Check that the enclosure doesn't surround multiple media */
+  if(enc->medium_id == MEDIUM_ID_MULTI) {
+    log_warn(scn->dev,
+       "%s: invalid medium request. The enclosure includes several media.\n",
+       FUNC_NAME);
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  /* Obtain enclosure medium */
+  ASSERT(enc->medium_id < darray_medium_size_get(&scn->media));
+  mdm = darray_medium_data_get(&scn->media)[enc->medium_id];
+
+error:
+  *out_mdm = mdm;
+  goto exit;
+exit:
+  mdm = NULL;
+  return res;
 }
 
 res_T

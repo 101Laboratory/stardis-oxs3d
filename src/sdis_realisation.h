@@ -22,11 +22,13 @@
 #include <rsys/rsys.h>
 
 /* Forward declarations */
+struct bound_flux_result;
 struct green_path_handle;
+struct rwalk;
 struct sdis_heat_path;
 struct sdis_scene;
 struct ssp_rng;
-struct bound_flux_result;
+struct temperature;
 
 enum flux_flag {
   FLUX_FLAG_CONVECTIVE = BIT(FLUX_CONVECTIVE),
@@ -41,24 +43,24 @@ extern LOCAL_SYM res_T
 sample_coupled_path_2d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_2d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_2d* T);
+   struct temperature* T);
 
 extern LOCAL_SYM res_T
 sample_coupled_path_3d
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct rwalk_3d* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct temperature_3d* T);
+   struct temperature* T);
 
 /*******************************************************************************
  * Realisation at a given position and time IN a medium
  ******************************************************************************/
 struct probe_realisation_args {
   struct ssp_rng* rng;
-  struct sdis_medium* medium; /* Medium into which the realisation starts */
+  unsigned enc_id; /* Enclosure into which the realisation starts */
   double position[3]; /* Probe position */
   double time; /* Observation time */
   size_t picard_order; /* Picard order to estimate radiative temperature */
@@ -69,7 +71,7 @@ struct probe_realisation_args {
 };
 #define PROBE_REALISATION_ARGS_NULL__ {                                        \
   NULL, /* RNG */                                                              \
-  NULL, /* Medium */                                                           \
+  ENCLOSURE_ID_NULL, /* Enclosure */                                           \
   {0,0,0}, /* Position */                                                      \
   -1, /* Observation time */                                                   \
   0, /* Picard order */                                                        \
@@ -180,7 +182,7 @@ boundary_flux_realisation_3d
  ******************************************************************************/
 struct ray_realisation_args {
   struct ssp_rng* rng;
-  struct sdis_medium* medium; /* Medium into which the realisation starts */
+  unsigned enc_id; /* Enclosure into which the realisation starts */
   double position[3]; /* Ray position */
   double direction[3]; /* Ray direction */
   double time; /* Observation time */
@@ -191,7 +193,7 @@ struct ray_realisation_args {
 };
 #define RAY_REALISATION_ARGS_NULL__ {                                          \
   NULL, /* RNG */                                                              \
-  NULL, /* Medium */                                                           \
+  ENCLOSURE_ID_NULL, /* Enclosure */                                           \
   {0,0,0}, /* Position */                                                      \
   {0,0,0}, /* Direction */                                                     \
   -1, /* Observation time */                                                   \

@@ -220,6 +220,51 @@ struct sdis_scene_find_closest_point_args {
 static const struct sdis_scene_find_closest_point_args
 SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL = SDIS_SCENE_FIND_CLOSEST_POINT_ARGS_NULL__;
 
+/* A sampled path */
+struct sdis_path {
+  struct sdis_rwalk_vertex vtx; /* Current position and time */
+
+  /* Surface intersected by the path. When defined, the path is on a border */
+  struct s2d_primitive prim_2d;
+  struct s3d_primitive prim_3d;
+
+  double weight; /* Monte Carlo weight update along the path */
+
+  /* Define whether the path has reached a boundary condition in time/space */
+  int at_limit;
+};
+#define SDIS_PATH_NULL__ {                                                     \
+  SDIS_RWALK_VERTEX_NULL__,                                                    \
+  S2D_PRIMITIVE_NULL__,                                                        \
+  S3D_PRIMITIVE_NULL__,                                                        \
+  0, /* MC weight */                                                           \
+  0 /* At limit */                                                             \
+}
+static const struct sdis_path SDIS_PATH_NULL = SDIS_PATH_NULL__;
+
+/* Type of functor used by the user to write the way in which the path is
+ * sampled. So it's no longer Stardis that samples the path, but the user
+ * through his own function. */
+typedef res_T
+(*sdis_sample_path_T)
+  (struct sdis_scene* scn,
+   struct ssp_rng* rng,
+   struct sdis_path* path,
+   struct sdis_data* data);
+
+/* Key to a geometric primitive, i.e its unique identifier. Its member variables
+ * must be treated as private variables, i.e. the caller must not access them
+ * directly but use the primkey API functions instead (see below) */
+struct sdis_primkey {
+  /* List of primitive nodes sorted in ascending order */
+  double nodes[9];
+
+  /* Overall number of coordinates (4 in 2D, 9 in 3D) */
+  unsigned ncoords;
+};
+#define SDIS_PRIMKEY_NULL__ {{0,0,0,0,0,0,0,0,0},0}
+static const struct sdis_primkey SDIS_PRIMKEY_NULL = SDIS_PRIMKEY_NULL__;
+
 /*******************************************************************************
  * Estimation data types
  ******************************************************************************/
@@ -294,12 +339,16 @@ struct sdis_solid_shader {
    * This getter is always called at time >= t0 (see below). */
   sdis_medium_getter_T temperature;
 
+  /* Function to be used to sample the path through the solid. If not defined,
+   * let stardis sample a conductive path */
+  sdis_sample_path_T sample_path;
+
   /* The time until the initial condition is maintained for this solid.
    * Can be negative or set to +/- infinity to simulate a system that is always
    * in the initial state or never reaches it, respectively. */
   double t0;
 };
-#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, 0}
+#define SDIS_SOLID_SHADER_NULL__ {NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0}
 static const struct sdis_solid_shader SDIS_SOLID_SHADER_NULL =
   SDIS_SOLID_SHADER_NULL__;
 
@@ -1311,17 +1360,29 @@ sdis_scene_boundary_project_position
    const double pos[],
    double uv[]);
 
-/* Get the 2D scene's enclosures. Only defined for a 2D scene. */
+/* Get Star-Enclosure-2D scene. Defined on 2D scene only */
 SDIS_API res_T
 sdis_scene_get_senc2d_scene
   (struct sdis_scene* scn,
    struct senc2d_scene** senc2d_scn);
 
-/* Get the 3D scene's enclosures. Only defined for a 3D scene. */
+/* Get Star-Enclosure-3D scene. Defined on 3D scene only */
 SDIS_API res_T
 sdis_scene_get_senc3d_scene
   (struct sdis_scene* scn,
    struct senc3d_scene** senc3d_scn);
+
+/* Get Star-2D scene view. Defined on 2D scene only */
+SDIS_API res_T
+sdis_scene_get_s2d_scene_view
+  (struct sdis_scene* scn,
+   struct s2d_scene_view** s2d_view);
+
+/* Get Star-3D scene view. Defined on 3D scene only */
+SDIS_API res_T
+sdis_scene_get_s3d_scene_view
+  (struct sdis_scene* scn,
+   struct s3d_scene_view** s3d_view);
 
 SDIS_API res_T
 sdis_scene_get_dimension
@@ -1352,6 +1413,20 @@ sdis_scene_get_radiative_env
   (struct sdis_scene* scn,
    /* The returned pointer can be NULL, i.e. there is no radiative environement*/
    struct sdis_radiative_env** radenv);
+
+/* Get the internal Star-2D primitive corresponding to the primitive key */
+SDIS_API res_T
+sdis_scene_get_s2d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s2d_primitive* primitive);
+
+/* Get the internal Star-3D primitive corresponding to the primitive key */
+SDIS_API res_T
+sdis_scene_get_s3d_primitive
+  (struct sdis_scene* scn,
+   const struct sdis_primkey* key,
+   struct s3d_primitive* primitive);
 
 /*******************************************************************************
  * An estimator stores the state of a simulation
@@ -1716,6 +1791,31 @@ sdis_solve_medium_green_function
 SDIS_API res_T
 sdis_get_info
   (struct sdis_info* info);
+
+/*******************************************************************************
+ * Primitive identifier
+ ******************************************************************************/
+SDIS_API void
+sdis_primkey_setup
+  (struct sdis_primkey* key,
+   const double node0[3],
+   const double node1[3],
+   const double node2[3]);
+
+SDIS_API void
+sdis_primkey_2d_setup
+  (struct sdis_primkey* key,
+   const double node0[2],
+   const double node1[2]);
+
+SDIS_API size_t
+sdis_primkey_hash
+  (const struct sdis_primkey* key);
+
+SDIS_API char
+sdis_primkey_eq
+  (const struct sdis_primkey* key0,
+   const struct sdis_primkey* key1);
 
 END_DECLS
 

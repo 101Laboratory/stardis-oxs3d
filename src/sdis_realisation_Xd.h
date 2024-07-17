@@ -32,18 +32,19 @@
 #ifndef SDIS_REALISATION_XD_H
 #define SDIS_REALISATION_XD_H
 
-static INLINE int
+static INLINE res_T
 check_probe_realisation_args(const struct probe_realisation_args* args)
 {
   return args
       && args->rng
-      && args->medium
+      && args->enc_id != ENCLOSURE_ID_NULL
       && args->time >= 0
       && args->picard_order > 0
-      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
+      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__
+      ? RES_OK : RES_BAD_ARG;
 }
 
-static INLINE int
+static INLINE res_T
 check_boundary_realisation_args(const struct boundary_realisation_args* args)
 {
   return args
@@ -55,10 +56,11 @@ check_boundary_realisation_args(const struct boundary_realisation_args* args)
       && args->time >= 0
       && args->picard_order > 0
       && (args->side == SDIS_FRONT || args->side == SDIS_BACK)
-      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
+      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__
+      ? RES_OK : RES_BAD_ARG;
 }
 
-static INLINE int
+static INLINE res_T
 check_boundary_flux_realisation_args
   (const struct boundary_flux_realisation_args* args)
 {
@@ -71,7 +73,8 @@ check_boundary_flux_realisation_args
       && args->time >= 0
       && args->picard_order > 0
       && (args->solid_side == SDIS_FRONT || args->solid_side == SDIS_BACK)
-      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__;
+      && (unsigned)args->diff_algo < SDIS_DIFFUSION_ALGORITHMS_COUNT__
+      ? RES_OK : RES_BAD_ARG;
 }
 #endif /* SDIS_REALISATION_XD_H */
 
@@ -82,15 +85,15 @@ res_T
 XD(sample_coupled_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
 #ifndef NDEBUG
   /* Stack that saves the state of each recursion steps.  */
   struct entry {
-    struct XD(temperature) temperature;
-    struct XD(rwalk) rwalk;
+    struct temperature temperature;
+    struct rwalk rwalk;
   }* stack = NULL;
   size_t istack = 0;
 #endif
@@ -109,8 +112,8 @@ XD(sample_coupled_path)
 
   while(!T->done) {
     /* Save the current random walk state */
-    const struct XD(rwalk) rwalk_bkp = *rwalk;
-    const struct XD(temperature) T_bkp = *T;
+    const struct rwalk rwalk_bkp = *rwalk;
+    const struct temperature T_bkp = *T;
     size_t nfails = 0; /* #failures */
 
 #ifndef NDEBUG
@@ -171,27 +174,39 @@ XD(probe_realisation)
    struct probe_realisation_args* args,
    double* weight)
 {
+  /* Starting enclosure/medium */
+  const struct enclosure* enc = NULL;
+  struct sdis_medium* mdm = NULL;
+
+  /* Random walk */
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct XD(rwalk) rwalk = XD(RWALK_NULL);
-  struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  struct rwalk rwalk = RWALK_NULL;
+  struct temperature T = TEMPERATURE_NULL;
+
+  /* Miscellaneous */
   enum sdis_heat_vertex_type type;
   double t0;
   double (*get_initial_temperature)
     (const struct sdis_medium* mdm,
      const struct sdis_rwalk_vertex* vtx);
   res_T res = RES_OK;
-  ASSERT(scn && weight && check_probe_realisation_args(args));
+  ASSERT(scn && weight && check_probe_realisation_args(args) == RES_OK);
 
-  switch(args->medium->type) {
+  /* Get the enclosure medium */
+  enc = scene_get_enclosure(scn, args->enc_id);
+  res = scene_get_enclosure_medium(scn, enc, &mdm);
+  if(res != RES_OK) goto error;
+
+  switch(sdis_medium_get_type(mdm)) {
     case SDIS_FLUID:
       T.func = XD(convective_path);
       get_initial_temperature = fluid_get_temperature;
-      t0 = fluid_get_t0(args->medium);
+      t0 = fluid_get_t0(mdm);
       break;
     case SDIS_SOLID:
       T.func = XD(conductive_path);
       get_initial_temperature = solid_get_temperature;
-      t0 = solid_get_t0(args->medium);
+      t0 = solid_get_t0(mdm);
       break;
     default: FATAL("Unreachable code\n"); break;
   }
@@ -200,7 +215,7 @@ XD(probe_realisation)
   rwalk.vtx.time = args->time;
 
   /* Register the starting position against the heat path */
-  type = args->medium->type == SDIS_SOLID
+  type = sdis_medium_get_type(mdm) == SDIS_SOLID
     ? SDIS_HEAT_VERTEX_CONDUCTION
     : SDIS_HEAT_VERTEX_CONVECTION;
   res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0, type, 0);
@@ -210,7 +225,7 @@ XD(probe_realisation)
     double tmp;
     /* Check the initial condition. */
     rwalk.vtx.time = t0;
-    tmp = get_initial_temperature(args->medium, &rwalk.vtx);
+    tmp = get_initial_temperature(mdm, &rwalk.vtx);
     if(SDIS_TEMPERATURE_IS_KNOWN(tmp)) {
       *weight = tmp;
       goto exit;
@@ -224,8 +239,8 @@ XD(probe_realisation)
     goto error;
   }
 
-  rwalk.hit = SXD_HIT_NULL;
-  rwalk.mdm = args->medium;
+  rwalk.XD(hit) = SXD_HIT_NULL;
+  rwalk.enc_id = args->enc_id;
 
   ctx.green_path = args->green_path;
   ctx.heat_path = args->heat_path;
@@ -258,8 +273,8 @@ XD(boundary_realisation)
    double* weight)
 {
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct XD(rwalk) rwalk = XD(RWALK_NULL);
-  struct XD(temperature) T = XD(TEMPERATURE_NULL);
+  struct rwalk rwalk = RWALK_NULL;
+  struct temperature T = TEMPERATURE_NULL;
   struct sXd(attrib) attr;
 #if SDIS_XD_DIMENSION == 2
   float st;
@@ -267,13 +282,13 @@ XD(boundary_realisation)
   float st[2];
 #endif
   res_T res = RES_OK;
-  ASSERT(scn && weight && check_boundary_realisation_args(args));
+  ASSERT(scn && weight && check_boundary_realisation_args(args) == RES_OK);
 
   T.func = XD(boundary_path);
   rwalk.hit_side = args->side;
-  rwalk.hit.distance = 0;
+  rwalk.XD(hit).distance = 0;
   rwalk.vtx.time = args->time;
-  rwalk.mdm = NULL; /* The random walk is at an interface between 2 media */
+  rwalk.enc_id = ENCLOSURE_ID_NULL; /* At an interface between 2 enclosures */
 
 #if SDIS_XD_DIMENSION == 2
   st = (float)args->uv[0];
@@ -283,20 +298,20 @@ XD(boundary_realisation)
 
   /* Fetch the primitive */
   SXD(scene_view_get_primitive
-    (scn->sXd(view), (unsigned int)args->iprim, &rwalk.hit.prim));
+    (scn->sXd(view), (unsigned int)args->iprim, &rwalk.XD(hit).prim));
 
   /* Retrieve the world space position of the probe onto the primitive */
-  SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_POSITION, st, &attr));
+  SXD(primitive_get_attrib(&rwalk.XD(hit).prim, SXD_POSITION, st, &attr));
   dX_set_fX(rwalk.vtx.P, attr.value);
 
   /* Retrieve the primitive normal */
-  SXD(primitive_get_attrib(&rwalk.hit.prim, SXD_GEOMETRY_NORMAL, st, &attr));
-  fX(set)(rwalk.hit.normal, attr.value);
+  SXD(primitive_get_attrib(&rwalk.XD(hit).prim, SXD_GEOMETRY_NORMAL, st, &attr));
+  fX(set)(rwalk.XD(hit).normal, attr.value);
 
 #if SDIS_XD_DIMENSION==2
-  rwalk.hit.u = st;
+  rwalk.XD(hit).u = st;
 #else
-  f2_set(rwalk.hit.uv, st);
+  f2_set(rwalk.XD(hit).uv, st);
 #endif
 
   res = register_heat_vertex(args->heat_path, &rwalk.vtx, 0/*weight*/,
@@ -332,14 +347,14 @@ XD(boundary_flux_realisation)
    struct boundary_flux_realisation_args* args,
    struct bound_flux_result* result)
 {
+  /* Random walk */
   struct rwalk_context ctx = RWALK_CONTEXT_NULL;
-  struct XD(rwalk) rwalk;
-  struct XD(temperature) T;
+  struct rwalk rwalk = RWALK_NULL;
+  struct temperature T = TEMPERATURE_NULL;
+
+  /* Boundary */
   struct sXd(attrib) attr;
   struct sXd(primitive) prim;
-  struct sdis_interface* interf = NULL;
-  struct sdis_medium* fluid_mdm = NULL;
-
 #if SDIS_XD_DIMENSION == 2
   float st;
 #else
@@ -347,13 +362,17 @@ XD(boundary_flux_realisation)
 #endif
   double P[SDIS_XD_DIMENSION];
   float N[SDIS_XD_DIMENSION];
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
+  enum sdis_side fluid_side;
+
+  /* Miscellaneous */
   double Tmin, Tmin2, Tmin3;
   double That, That2, That3;
-  enum sdis_side fluid_side;
   res_T res = RES_OK;
   char compute_radiative;
   char compute_convective;
-  ASSERT(scn && result && check_boundary_flux_realisation_args(args));
+
+  ASSERT(scn && result && check_boundary_flux_realisation_args(args) == RES_OK);
 
 #if SDIS_XD_DIMENSION == 2
   #define SET_PARAM(Dest, Src) (Dest).u = (Src);
@@ -386,14 +405,14 @@ XD(boundary_flux_realisation)
   SXD(primitive_get_attrib(&prim, SXD_GEOMETRY_NORMAL, st, &attr));
   fX(set)(N, attr.value);
 
-  #define RESET_WALK(Side, Mdm) {                                              \
-    rwalk = XD(RWALK_NULL);                                                    \
+  #define RESET_WALK(Side, EncId) {                                            \
+    rwalk = RWALK_NULL;                                                        \
     rwalk.hit_side = (Side);                                                   \
-    rwalk.hit.distance = 0;                                                    \
+    rwalk.XD(hit).distance = 0;                                                \
     rwalk.vtx.time = args->time;                                               \
-    rwalk.mdm = (Mdm);                                                         \
-    rwalk.hit.prim = prim;                                                     \
-    SET_PARAM(rwalk.hit, st);                                                  \
+    rwalk.enc_id = (EncId);                                                    \
+    rwalk.XD(hit).prim = prim;                                                 \
+    SET_PARAM(rwalk.XD(hit), st);                                              \
     ctx.Tmin  = Tmin;                                                          \
     ctx.Tmin3 = Tmin3;                                                         \
     ctx.That  = That;                                                          \
@@ -403,24 +422,23 @@ XD(boundary_flux_realisation)
     ctx.irealisation = args->irealisation;                                     \
     ctx.diff_algo = args->diff_algo;                                           \
     dX(set)(rwalk.vtx.P, P);                                                   \
-    fX(set)(rwalk.hit.normal, N);                                              \
-    T = XD(TEMPERATURE_NULL);                                                  \
+    fX(set)(rwalk.XD(hit).normal, N);                                          \
+    T = TEMPERATURE_NULL;                                                      \
   } (void)0
 
   /* Compute boundary temperature */
-  RESET_WALK(args->solid_side, NULL);
+  RESET_WALK(args->solid_side, ENCLOSURE_ID_NULL);
   T.func = XD(boundary_path);
   res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
   if(res != RES_OK) return res;
   result->Tboundary = T.value;
 
-  /* Fetch the fluid medium */
-  interf = scene_get_interface(scn, (unsigned)args->iprim);
-  fluid_mdm = interface_get_medium(interf, fluid_side);
+  /* Get the enclosures */
+  scene_get_enclosure_ids(scn, (unsigned)args->iprim, enc_ids);
 
   /* Compute radiative temperature */
   if(compute_radiative) {
-    RESET_WALK(fluid_side, fluid_mdm);
+    RESET_WALK(fluid_side, enc_ids[fluid_side]);
     T.func = XD(radiative_path);
     res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) return res;
@@ -430,7 +448,7 @@ XD(boundary_flux_realisation)
 
   /* Compute fluid temperature */
   if(compute_convective) {
-    RESET_WALK(fluid_side, fluid_mdm);
+    RESET_WALK(fluid_side, enc_ids[fluid_side]);
     T.func = XD(convective_path);
     res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
     if(res != RES_OK) return res;

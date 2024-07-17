@@ -33,27 +33,38 @@
 #define SPP 32 /* #Samples per pixel, i.e. #realisations per pixel */
 
 /*
- * The scene is composed of a solid cube whose temperature is unknown. The
- * emissivity of the cube is 1 and its convection coefficient with the
- * surrounding fluid at 300K is 0.1. At the center of the cube there is a spherical
- * fluid cavity whose temperature is 350K. The convection coefficient between
- * the solid and the cavity is 1 and the emissivity of this interface is null.
- * The ambient radiative temperature of the system is 300K.
+ * The scene consists of a solid cube whose temperature is unknown. The
+ * emissivity of the cube is 1 and the convection coefficient with the
+ * surrounding fluid at 300 K is 0.1. At the center of the cube is a spherical
+ * cavity of fluid with a temperature of 350 K. The convection coefficient
+ * between the solid and the cavity is 1, and the emissivity of this interface
+ * is zero. The ambient radiative temperature of the system is 300 K.
  *
- * In this test, we compute the radiative temperature that reaches a camera
- * that looks the cube and we `dump' a normalized image of the result.
+ * Finally, a parallelepiped below the cube symbolizes the ground. The
+ * temperature of its Robin condition is 280 K. This geometry verifies that a
+ * camera can draw a scene in an enclosure containing several media, such as
+ * those used to define several boundary conditions.
  *
- *                      (1,1,1)
- *       +----------------+
- *      /'     #  #      /|
- *     +----*--------*--+ |
- *     | ' #          # | |
- *     | ' #   350K   # | |
- *     | '  #        #  | |
- *     | +.....#..#.....|.+
- *     |/               |/
- *     +----------------+
- * (-1,-1,-1)
+ * In this test, we calculate the radiative temperature that reaches a camera
+ * looking at the cube and produce an image of the result written to the
+ * standard output in htrdr-image(5) format.
+ *
+ *
+ *                +----------------+
+ *               /'     #  #      /|
+ *              +----*--------*--+ |   __\  300 K
+ *              | ' #          # | |  /  /
+ *              | ' #   350K   # | |  \__/
+ *              | '  #        #  | |
+ *              | +.....#..#.....|.+
+ *              |/               |/
+ *              +----------------+     280K
+ *    +---------------------------------__\------+
+ *   /                                 /  /     /|
+ *  /                                  \__/    / +
+ * +------------------------------------------+ /
+ * |                                          |/
+ * +------------------------------------------+
  */
 
 /*******************************************************************************
@@ -80,6 +91,52 @@ struct geometry {
   struct map_interf* interfaces;
 };
 static const struct geometry GEOMETRY_NULL = {NULL, NULL, NULL};
+
+static void
+geometry_add_shape
+  (struct geometry* geom,
+   const double* positions,
+   const size_t nverts,
+   const size_t* indices,
+   const size_t nprims,
+   const double transform[12], /* May be NULL <=> no transformation */
+   struct sdis_interface* interf)
+{
+  struct map_interf* geom_interf = NULL;
+  size_t nverts_prev = 0;
+  size_t i;
+
+  CHK(geom != NULL);
+  CHK(positions != NULL);
+  CHK(indices != NULL);
+  CHK(nverts != 0);
+  CHK(nprims != 0);
+  CHK(interf != NULL);
+
+  /* Save the previous number of vertices/primitives of the geometry */
+  nverts_prev = sa_size(geom->positions) / 3;
+
+  /* Add the vertices */
+  FOR_EACH(i, 0, nverts) {
+    double* pos = sa_add(geom->positions, 3);
+    d3_set(pos, positions + i*3);
+    if(transform) {
+      d33_muld3(pos, transform, pos);
+      d3_add(pos, transform+9, pos);
+    }
+  }
+
+  /* Add the indices */
+  FOR_EACH(i, 0, nprims) {
+    sa_push(geom->indices, indices[i*3+0] + nverts_prev);
+    sa_push(geom->indices, indices[i*3+1] + nverts_prev);
+    sa_push(geom->indices, indices[i*3+2] + nverts_prev);
+  }
+
+  geom_interf = sa_add(geom->interfaces, 1);
+  geom_interf->key = sa_size(geom->indices) / 3 - 1;
+  geom_interf->interf = interf;
+}
 
 static void
 geometry_release(struct geometry* geom)
@@ -143,8 +200,51 @@ geometry_get_interface
   *bound = interf->interf;
 }
 
+static void
+add_cube(struct geometry* geom, struct sdis_interface* interf)
+{
+  struct s3dut_mesh_data msh_data;
+  struct s3dut_mesh* msh = NULL;
+  CHK(geom);
+
+  OK(s3dut_create_cuboid(NULL, 2, 2, 2, &msh));
+  OK(s3dut_mesh_get_data(msh, &msh_data));
+  geometry_add_shape(geom, msh_data.positions, msh_data.nvertices,
+    msh_data.indices, msh_data.nprimitives, NULL, interf);
+  OK(s3dut_mesh_ref_put(msh));
+}
+
+static void
+add_sphere(struct geometry* geom, struct sdis_interface* interf)
+{
+  struct s3dut_mesh_data msh_data;
+  struct s3dut_mesh* msh = NULL;
+  CHK(geom);
+
+  OK(s3dut_create_sphere(NULL, 0.5, 32, 16, &msh));
+  OK(s3dut_mesh_get_data(msh, &msh_data));
+  geometry_add_shape(geom, msh_data.positions, msh_data.nvertices,
+    msh_data.indices, msh_data.nprimitives, NULL, interf);
+  OK(s3dut_mesh_ref_put(msh));
+}
+
+static void
+add_ground(struct geometry* geom, struct sdis_interface* interf)
+{
+  struct s3dut_mesh_data msh_data;
+  struct s3dut_mesh* msh = NULL;
+  const double transform[12] = {1,0,0, 0,1,0, 0,0,1, 0,0,-4};
+  CHK(geom);
+
+  OK(s3dut_create_cuboid(NULL, 10, 10, 2, &msh));
+  OK(s3dut_mesh_get_data(msh, &msh_data));
+  geometry_add_shape(geom, msh_data.positions, msh_data.nvertices,
+    msh_data.indices, msh_data.nprimitives, transform, interf);
+  OK(s3dut_mesh_ref_put(msh));
+}
+
 /*******************************************************************************
- * Fluid medium
+ * Media
  ******************************************************************************/
 struct fluid {
   double cp;
@@ -153,33 +253,6 @@ struct fluid {
 };
 static const struct fluid FLUID_NULL = {0, 0, SDIS_TEMPERATURE_NONE};
 
-static double
-fluid_get_calorific_capacity
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct fluid*)sdis_data_cget(data))->cp;
-}
-
-static double
-fluid_get_volumic_mass
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct fluid*)sdis_data_cget(data))->rho;
-}
-
-static double
-fluid_get_temperature
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct fluid*)sdis_data_cget(data))->temperature;
-}
-
-/*******************************************************************************
- * Solid medium
- ******************************************************************************/
 struct solid {
   double cp;
   double lambda;
@@ -189,48 +262,87 @@ struct solid {
 };
 static const struct solid SOLID_NULL = {0, 0, 0, 0, SDIS_TEMPERATURE_NONE};
 
-static double
-solid_get_calorific_capacity
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
+#define MEDIUM_GETTER(Type, Prop)                                              \
+  static double                                                                \
+  Type##_get_##Prop                                                            \
+    (const struct sdis_rwalk_vertex* vtx,                                      \
+     struct sdis_data* data)                                                   \
+  {                                                                            \
+    CHK(data && vtx);                                                          \
+    return ((const struct Type*)sdis_data_cget(data))->Prop;                   \
+  }
+/* Fluid getters */
+MEDIUM_GETTER(fluid, cp)
+MEDIUM_GETTER(fluid, rho)
+MEDIUM_GETTER(fluid, temperature)
+/* Solid getters */
+MEDIUM_GETTER(solid, cp)
+MEDIUM_GETTER(solid, lambda)
+MEDIUM_GETTER(solid, rho)
+MEDIUM_GETTER(solid, delta)
+MEDIUM_GETTER(solid, temperature)
+#undef MEDIUM_GETTER
+
+static struct sdis_medium*
+create_fluid
+  (struct sdis_device* dev,
+   const struct fluid* param)
 {
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->cp;
+  struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
+  struct sdis_data* data = NULL;
+  struct sdis_medium* fluid = NULL;
+
+  CHK(param != NULL);
+
+  /* Copy the fluid parameters into the Stardis memory space */
+  OK(sdis_data_create
+    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
+  memcpy(sdis_data_get(data), param, sizeof(struct fluid));
+
+  /* Setup the fluid shader */
+  fluid_shader.calorific_capacity = fluid_get_cp;
+  fluid_shader.volumic_mass = fluid_get_rho;
+  fluid_shader.temperature = fluid_get_temperature;
+
+  /* Create the fluid medium */
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
+  OK(sdis_data_ref_put(data));
+
+  return fluid;
 }
 
-static double
-solid_get_thermal_conductivity
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
+static struct sdis_medium*
+create_solid
+  (struct sdis_device* dev,
+   const struct solid* param)
 {
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->lambda;
-}
+  struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
+  struct sdis_data* data = NULL;
+  struct sdis_medium* solid = NULL;
 
-static double
-solid_get_volumic_mass
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->rho;
-}
+  CHK(param != NULL);
 
-static double
-solid_get_delta
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->delta;
-}
+  /* Copy the solid parameters into the Stardis memory space */
+  OK(sdis_data_create
+    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
+  memcpy(sdis_data_get(data), param, sizeof(struct solid));
 
-static double
-solid_get_temperature
-  (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
-{
-  CHK(data != NULL && vtx != NULL);
-  return ((const struct solid*)sdis_data_cget(data))->temperature;
+  /* Setup the solid shader */
+  solid_shader.calorific_capacity = solid_get_cp;
+  solid_shader.thermal_conductivity = solid_get_lambda;
+  solid_shader.volumic_mass = solid_get_rho;
+  solid_shader.delta = solid_get_delta;
+  solid_shader.temperature = solid_get_temperature;
+
+  /* Create the solid medium */
+  OK(sdis_solid_create(dev, &solid_shader, data, &solid));
+  OK(sdis_data_ref_put(data));
+
+  return solid;
 }
 
 /*******************************************************************************
- * Interface
+ * Interfaces
  ******************************************************************************/
 struct interf {
   double hc;
@@ -243,50 +355,76 @@ static const struct interf INTERF_NULL = {
   0, 0, 0, SDIS_TEMPERATURE_NONE, SDIS_TEMPERATURE_NONE
 };
 
-static double
-interface_get_convection_coef
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  CHK(data != NULL && frag != NULL);
-  return ((const struct interf*)sdis_data_cget(data))->hc;
-}
+#define INTERFACE_GETTER(Prop)                                                 \
+  static double                                                                \
+  interface_get_##Prop                                                         \
+    (const struct sdis_interface_fragment* frag,                               \
+     struct sdis_data* data)                                                   \
+  {                                                                            \
+    CHK(data && frag);                                                         \
+    return ((const struct interf*)sdis_data_cget(data))->Prop;                 \
+  }
+INTERFACE_GETTER(hc)
+INTERFACE_GETTER(temperature)
+INTERFACE_GETTER(reference_temperature)
+#undef INTERFACE_GETTER
 
-static double
-interface_get_emissivity
-  (const struct sdis_interface_fragment* frag,
-   const unsigned source_id,
-   struct sdis_data* data)
-{
-  (void)source_id;
-  CHK(data != NULL && frag != NULL);
-  return ((const struct interf*)sdis_data_cget(data))->epsilon;
-}
+#define INTERFACE_GETTER(Prop)                                                 \
+  static double                                                                \
+  interface_get_##Prop                                                         \
+    (const struct sdis_interface_fragment* frag,                               \
+     const unsigned source_id,                                                 \
+     struct sdis_data* data)                                                   \
+  {                                                                            \
+    CHK(data && frag);                                                         \
+    (void)source_id;                                                           \
+    return ((const struct interf*)sdis_data_cget(data))->Prop;                 \
+  }
+INTERFACE_GETTER(epsilon)
+INTERFACE_GETTER(specular_fraction)
+#undef INTERFACE_GETTER
 
-static double
-interface_get_specular_fraction
-  (const struct sdis_interface_fragment* frag,
-   const unsigned source_id,
-   struct sdis_data* data)
+static struct sdis_interface*
+create_interface
+  (struct sdis_device* dev,
+   struct sdis_medium* mdm_front,
+   struct sdis_medium* mdm_back,
+   const struct interf* param)
 {
-  (void)source_id;
-  CHK(data != NULL && frag != NULL);
-  return ((const struct interf*)sdis_data_cget(data))->specular_fraction;
-}
+  struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_data* data = NULL;
+  struct sdis_interface* interf = NULL;
 
-static double
-interface_get_temperature
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  CHK(data != NULL && frag != NULL);
-  return ((const struct interf*)sdis_data_cget(data))->temperature;
-}
+  CHK(mdm_front != NULL);
+  CHK(mdm_back != NULL);
 
-static double
-interface_get_reference_temperature
-  (const struct sdis_interface_fragment* frag, struct sdis_data* data)
-{
-  CHK(data != NULL && frag != NULL);
-  return ((const struct interf*)sdis_data_cget(data))->reference_temperature;
+  /* Copy the interface parameters into the Stardis memory space */
+  OK(sdis_data_create
+   (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data));
+  memcpy(sdis_data_get(data), param, sizeof(struct interf));
+
+  /* Setup the interface shader */
+  interface_shader.convection_coef = interface_get_hc;
+  interface_shader.front.temperature = interface_get_temperature;
+  interface_shader.back.temperature = interface_get_temperature;
+  if(sdis_medium_get_type(mdm_front) == SDIS_FLUID) {
+    interface_shader.front.emissivity = interface_get_epsilon;
+    interface_shader.front.specular_fraction = interface_get_specular_fraction;
+    interface_shader.front.reference_temperature =
+      interface_get_reference_temperature;
+  }
+  if(sdis_medium_get_type(mdm_back) == SDIS_FLUID) {
+    interface_shader.back.emissivity = interface_get_epsilon;
+    interface_shader.back.specular_fraction = interface_get_specular_fraction;
+    interface_shader.back.reference_temperature =
+      interface_get_reference_temperature;
+  }
+  /* Create the interface */
+  OK(sdis_interface_create
+    (dev, mdm_front, mdm_back, &interface_shader, data, &interf));
+  OK(sdis_data_ref_put(data));
+
+  return interf;
 }
 
 /*******************************************************************************
@@ -339,254 +477,289 @@ create_radenv
 }
 
 /*******************************************************************************
- * Helper functions
+ * Scene
+ ******************************************************************************/
+static struct sdis_scene*
+create_scene
+  (struct sdis_device* dev,
+   struct sdis_radiative_env* radenv,
+   struct geometry* geom)
+{
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_scene* scn = NULL;
+  size_t ntris = 0;
+  size_t npos = 0;
+  CHK(geom);
+
+  ntris = sa_size(geom->indices) / 3; /* #primitives */
+  npos = sa_size(geom->positions) / 3; /* #positions */
+
+  scn_args.get_indices = geometry_get_indices;
+  scn_args.get_interface = geometry_get_interface;
+  scn_args.get_position = geometry_get_position;
+  scn_args.nprimitives = ntris;
+  scn_args.nvertices = npos;
+  scn_args.t_range[0] = 300;
+  scn_args.t_range[1] = 350;
+  scn_args.radenv = radenv;
+  scn_args.context = geom;
+
+  OK(sdis_scene_create(dev, &scn_args, &scn));
+  return scn;
+}
+
+/*******************************************************************************
+ * Rendering point of view
+ ******************************************************************************/
+static struct sdis_camera*
+create_camera(struct sdis_device* dev)
+{
+  const double pos[3] = {3, 3, 3};
+  const double tgt[3] = {0, 0, 0};
+  const double up[3] = {0, 0, 1};
+  struct sdis_camera* cam = NULL;
+
+  OK(sdis_camera_create(dev, &cam));
+  OK(sdis_camera_set_proj_ratio(cam, (double)IMG_WIDTH/(double)IMG_HEIGHT));
+  OK(sdis_camera_set_fov(cam, MDEG2RAD(70)));
+  OK(sdis_camera_look_at(cam, pos, tgt, up));
+  return cam;
+}
+
+/*******************************************************************************
+ * Draw the scene
  ******************************************************************************/
 static void
-create_solid
-  (struct sdis_device* dev,
-   const struct solid* param,
-   struct sdis_medium** solid)
+check_pixel(const struct sdis_estimator* pixel)
 {
-  struct sdis_data* data = NULL;
-  struct solid* solid_args = NULL;
-  struct sdis_solid_shader solid_shader = DUMMY_SOLID_SHADER;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
+  size_t nfails = 0;
+  size_t nreals = 0;
 
-  CHK(param != NULL);
-  CHK(solid != NULL);
+  OK(sdis_estimator_get_realisation_count(pixel, &nreals));
+  OK(sdis_estimator_get_failure_count(pixel, &nfails));
+  OK(sdis_estimator_get_temperature(pixel, &T));
+  OK(sdis_estimator_get_realisation_time(pixel, &time));
 
-  /* Copy the solid parameters into the Stardis memory space */
-  OK(sdis_data_create
-    (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
-  solid_args = sdis_data_get(data);
-  memcpy(solid_args, param, sizeof(struct solid));
-
-  /* Setup the solid shader */
-  solid_shader.calorific_capacity = solid_get_calorific_capacity;
-  solid_shader.calorific_capacity = solid_get_calorific_capacity;
-  solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
-  solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta = solid_get_delta;
-  solid_shader.temperature = solid_get_temperature;
-
-  /* Create the solid medium */
-  OK(sdis_solid_create(dev, &solid_shader, data, solid));
-
-  /* Release the ownership onto the Stardis memory space storing the solid
-   * parameters */
-  OK(sdis_data_ref_put(data));
+  CHK(nreals + nfails == SPP);
+  CHK(T.E > 0);
+  CHK(time.E > 0);
 }
 
 static void
-create_fluid
-  (struct sdis_device* dev,
-   const struct fluid* param,
-   struct sdis_medium** fluid)
+check_image(const struct sdis_estimator_buffer* img)
 {
-  struct sdis_data* data = NULL;
-  struct fluid* fluid_args = NULL;
-  struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
-
-  CHK(param != NULL);
-  CHK(fluid != NULL);
-
-  /* Copy the fluid parameters into the Stardis memory space */
-  OK(sdis_data_create
-    (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
-  fluid_args = sdis_data_get(data);
-  memcpy(fluid_args, param, sizeof(struct fluid));
-
-  /* Setup the fluid shader */
-  fluid_shader.calorific_capacity = fluid_get_calorific_capacity;
-  fluid_shader.volumic_mass = fluid_get_volumic_mass;
-  fluid_shader.temperature = fluid_get_temperature;
-
-  /* Create the fluid medium */
-  OK(sdis_fluid_create(dev, &fluid_shader, data, fluid));
-
-  /* Release the ownership onto the Stardis memory space storing the fluid
-   * parameters */
-  OK(sdis_data_ref_put(data));
-}
-
-static void
-create_interface
-  (struct sdis_device* dev,
-   struct sdis_medium* mdm_front,
-   struct sdis_medium* mdm_back,
-   const struct interf* param,
-   struct sdis_interface** interf)
-{
-  struct sdis_data* data = NULL;
-  struct interf* interface_args = NULL;
-  struct sdis_interface_shader interface_shader = SDIS_INTERFACE_SHADER_NULL;
-
-  CHK(mdm_front != NULL);
-  CHK(mdm_back != NULL);
-  CHK(param != NULL);
-  CHK(interf != NULL);
-
-  /* Copy the interface parameters into the Stardis memory space */
-  OK(sdis_data_create
-   (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data));
-  interface_args = sdis_data_get(data);
-  memcpy(interface_args, param, sizeof(struct interf));
-
-  /* Setup the interface shader */
-  interface_shader.convection_coef = interface_get_convection_coef;
-  interface_shader.front.temperature = interface_get_temperature;
-  interface_shader.back.temperature = interface_get_temperature;
-  if(sdis_medium_get_type(mdm_front) == SDIS_FLUID) {
-    interface_shader.front.emissivity = interface_get_emissivity;
-    interface_shader.front.specular_fraction = interface_get_specular_fraction;
-    interface_shader.front.reference_temperature =
-      interface_get_reference_temperature;
-  }
-  if(sdis_medium_get_type(mdm_back) == SDIS_FLUID) {
-    interface_shader.back.emissivity = interface_get_emissivity;
-    interface_shader.back.specular_fraction = interface_get_specular_fraction;
-    interface_shader.back.reference_temperature =
-      interface_get_reference_temperature;
-  }
-  /* Create the interface */
-  OK(sdis_interface_create
-    (dev, mdm_front, mdm_back, &interface_shader, data, interf));
-
-  /* Release the ownership onto the Stardis memory space storing the interface
-   * parameters */
-  OK(sdis_data_ref_put(data));
-}
-
-static void
-geometry_add_shape
-  (struct geometry* geom,
-   const double* positions,
-   const size_t nverts,
-   const size_t* indices,
-   const size_t nprims,
-   const double transform[12], /* May be NULL <=> no transformation */
-   struct sdis_interface* interf)
-{
-  struct map_interf* geom_interf = NULL;
-  size_t nverts_prev = 0;
-  size_t i;
-
-  CHK(geom != NULL);
-  CHK(positions != NULL);
-  CHK(indices != NULL);
-  CHK(nverts != 0);
-  CHK(nprims != 0);
-  CHK(interf != NULL);
-
-  /* Save the previous number of vertices/primitives of the geometry */
-  nverts_prev = sa_size(geom->positions) / 3;
-
-  /* Add the vertices */
-  FOR_EACH(i, 0, nverts) {
-    double* pos = sa_add(geom->positions, 3);
-    d3_set(pos, positions + i*3);
-    if(transform) {
-      d33_muld3(pos, transform, pos);
-      d3_add(pos, transform+9, pos);
-    }
-  }
-
-  /* Add the indices */
-  FOR_EACH(i, 0, nprims) {
-    sa_push(geom->indices, indices[i*3+0] + nverts_prev);
-    sa_push(geom->indices, indices[i*3+1] + nverts_prev);
-    sa_push(geom->indices, indices[i*3+2] + nverts_prev);
-  }
-
-  geom_interf = sa_add(geom->interfaces, 1);
-  geom_interf->key = sa_size(geom->indices) / 3 - 1;
-  geom_interf->interf = interf;
-}
-
-static void
-dump_image(const struct sdis_estimator_buffer* buf)
-{
-  struct image img;
-  double* temps = NULL;
-  double Tmax = -DBL_MAX;
-  double Tmin =  DBL_MAX;
-  double norm;
+  struct sdis_mc T = SDIS_MC_NULL;
+  struct sdis_mc time = SDIS_MC_NULL;
+  const struct sdis_estimator* pixel = NULL;
+  struct ssp_rng* rng_state = NULL;
   size_t definition[2];
-  size_t ix, iy;
+  size_t nreals, nfails;
+  size_t x, y;
 
-  CHK(buf != NULL);
-  OK(sdis_estimator_buffer_get_definition(buf, definition));
+  BA(sdis_estimator_buffer_get_realisation_count(NULL, &nreals));
+  BA(sdis_estimator_buffer_get_realisation_count(img, NULL));
+  OK(sdis_estimator_buffer_get_realisation_count(img, &nreals));
 
-  temps = mem_alloc(definition[0]*definition[1]*sizeof(double));
-  CHK(temps != NULL);
+  BA(sdis_estimator_buffer_get_failure_count(NULL, &nfails));
+  BA(sdis_estimator_buffer_get_failure_count(img, NULL));
+  OK(sdis_estimator_buffer_get_failure_count(img, &nfails));
 
-  /* Check the results validity */
-  FOR_EACH(iy, 0, definition[1]) {
-    FOR_EACH(ix, 0, definition[0]) {
-      const struct sdis_estimator* estimator;
-      struct sdis_mc T;
-      struct sdis_mc time;
-      size_t nreals;
-      size_t nfails;
+  BA(sdis_estimator_buffer_get_temperature(NULL, &T));
+  BA(sdis_estimator_buffer_get_temperature(img, NULL));
+  OK(sdis_estimator_buffer_get_temperature(img, &T));
 
-      BA(sdis_estimator_buffer_at(NULL, ix, iy, &estimator));
-      BA(sdis_estimator_buffer_at(buf, definition[0]+1, iy, &estimator));
-      BA(sdis_estimator_buffer_at(buf, ix, definition[1]+1, &estimator));
-      BA(sdis_estimator_buffer_at(buf, ix, iy, NULL));
-      OK(sdis_estimator_buffer_at(buf, ix, iy, &estimator));
+  BA(sdis_estimator_buffer_get_realisation_time(NULL, &time));
+  BA(sdis_estimator_buffer_get_realisation_time(img, NULL));
+  OK(sdis_estimator_buffer_get_realisation_time(img, &time));
 
-      OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-      OK(sdis_estimator_get_failure_count(estimator, &nfails));
-      OK(sdis_estimator_get_temperature(estimator, &T));
-      OK(sdis_estimator_get_realisation_time(estimator, &time));
+  BA(sdis_estimator_buffer_get_rng_state(NULL, &rng_state));
+  BA(sdis_estimator_buffer_get_rng_state(img, NULL));
+  OK(sdis_estimator_buffer_get_rng_state(img, &rng_state));
 
-      CHK(nreals + nfails == SPP);
-      CHK(T.E > 0);
-      CHK(time.E > 0);
+  CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
+
+  fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
+  fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
+  fprintf(stderr, "#failures = %lu/%lu\n",
+    (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
+
+  BA(sdis_estimator_buffer_get_definition(NULL, definition));
+  BA(sdis_estimator_buffer_get_definition(img, NULL));
+  OK(sdis_estimator_buffer_get_definition(img, definition));
+  CHK(definition[0] == IMG_WIDTH);
+  CHK(definition[1] == IMG_HEIGHT);
+
+  BA(sdis_estimator_buffer_at(NULL, 0, 0, &pixel));
+  BA(sdis_estimator_buffer_at(img, IMG_WIDTH+1,0 , &pixel));
+  BA(sdis_estimator_buffer_at(img, 0, IMG_HEIGHT+1, &pixel));
+  BA(sdis_estimator_buffer_at(img, 0, 0, NULL));
+
+  /* Pixels ordered by row */
+  FOR_EACH(y, 0, IMG_HEIGHT) {
+    FOR_EACH(x, 0, IMG_WIDTH) {
+      OK(sdis_estimator_buffer_at(img, x, y, &pixel));
+      check_pixel(pixel);
     }
   }
+}
 
-  /* Compute the per pixel temperature */
-  FOR_EACH(iy, 0, definition[1]) {
-    double* row = temps + iy * definition[0];
-    FOR_EACH(ix, 0, definition[0]) {
-      const struct sdis_estimator* estimator;
-      struct sdis_mc T;
+/* Check that the images, although compatible from an estimation point of view,
+ * are not the same. This should be the case if different random sequences are
+ * used for each image */
+static void
+check_image_difference
+  (const struct sdis_estimator_buffer* img0,
+   const struct sdis_estimator_buffer* img1)
+{
+  struct sdis_mc T0 = SDIS_MC_NULL;
+  struct sdis_mc T1 = SDIS_MC_NULL;
+  size_t definition0[2];
+  size_t definition1[2];
+  size_t nreals0, nfails0;
+  size_t nreals1, nfails1;
 
-      OK(sdis_estimator_buffer_at(buf, ix, iy, &estimator));
-      OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_buffer_get_realisation_count(img0, &nreals0));
+  OK(sdis_estimator_buffer_get_realisation_count(img1, &nreals1));
 
-      row[ix] = T.E;
-      Tmax = MMAX(row[ix], Tmax);
-      Tmin = MMIN(row[ix], Tmin);
+  OK(sdis_estimator_buffer_get_failure_count(img0, &nfails0));
+  OK(sdis_estimator_buffer_get_failure_count(img1, &nfails1));
+  CHK(nreals0 + nfails0 == nreals1 + nfails1);
+
+  OK(sdis_estimator_buffer_get_definition(img0, definition0));
+  OK(sdis_estimator_buffer_get_definition(img1, definition1));
+  CHK(definition0[0] == definition1[0]);
+  CHK(definition0[1] == definition1[1]);
+
+  OK(sdis_estimator_buffer_get_temperature(img0, &T0));
+  OK(sdis_estimator_buffer_get_temperature(img1, &T1));
+  CHK(T0.E != T1.E || (T0.SE == 0 && T1.SE == 0));
+  CHK(T0.E + 3*T0.SE >= T1.E - 3*T1.SE);
+  CHK(T0.E - 3*T0.SE <= T1.E + 3*T1.SE);
+}
+
+/* Write an image in htrdr-image(5) format */
+static void
+write_image(FILE* stream, struct sdis_estimator_buffer* img)
+{
+  size_t x, y;
+
+  /* Header */
+  fprintf(stream, "%d %d\n", IMG_WIDTH, IMG_HEIGHT);
+
+  /* Pixels ordered by row */
+  FOR_EACH(y, 0, IMG_HEIGHT) {
+    FOR_EACH(x, 0, IMG_WIDTH) {
+      struct sdis_mc T = SDIS_MC_NULL;
+      const struct sdis_estimator* pixel = NULL;
+
+      OK(sdis_estimator_buffer_at(img, x, y, &pixel));
+      OK(sdis_estimator_get_temperature(pixel, &T));
+      fprintf(stream, "%g %g 0 0 0 0 0 0\n", T.E, T.SE);
     }
   }
-  if(Tmax != Tmin) {
-    norm = Tmax - Tmin;
+}
+
+static void
+invalid_draw(struct sdis_scene* scn, struct sdis_camera* cam)
+{
+  struct sdis_solve_camera_args args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
+  struct sdis_estimator_buffer* img = NULL;
+
+  CHK(cam && scn);
+
+  args.cam = cam;
+  args.time_range[0] = INF;
+  args.time_range[1] = INF;
+  args.image_definition[0] = IMG_WIDTH;
+  args.image_definition[1] = IMG_HEIGHT;
+  args.spp = SPP;
+
+  BA(sdis_solve_camera(NULL, &args, &img));
+  BA(sdis_solve_camera(scn, NULL, &img));
+  BA(sdis_solve_camera(scn, &args, NULL));
+
+  /* Invalid camera */
+  args.cam = NULL;
+  BA(sdis_solve_camera(scn, &args, &img));
+  args.cam = cam;
+
+  /* Invald time range */
+  args.time_range[0] = args.time_range[1] = -1;
+  BA(sdis_solve_camera(scn, &args, &img));
+  args.time_range[0] = 1;
+  BA(sdis_solve_camera(scn, &args, &img));
+  args.time_range[1] = 0;
+  BA(sdis_solve_camera(scn, &args, &img));
+  args.time_range[0] = args.time_range[1] = INF;
+
+  /* Invalid image definition */
+  args.image_definition[0] = 0;
+  BA(sdis_solve_camera(scn, &args, &img));
+  args.image_definition[0] = IMG_WIDTH;
+  args.image_definition[1] = 0;
+  BA(sdis_solve_camera(scn, &args, &img));
+  args.image_definition[1] = IMG_HEIGHT;
+
+  /* Invalid number of samples per pixel */
+  args.spp = 0;
+  BA(sdis_solve_camera(scn, &args, &img));
+  args.spp = SPP;
+}
+
+static void
+draw
+  (struct sdis_scene* scn,
+   struct sdis_camera* cam,
+   const int is_master_process)
+{
+  struct sdis_solve_camera_args args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
+  struct sdis_estimator_buffer* img0 = NULL;
+  struct sdis_estimator_buffer* img1 = NULL;
+  struct ssp_rng* rng = NULL;
+
+  args.cam = cam;
+  args.time_range[0] = INF;
+  args.time_range[1] = INF;
+  args.image_definition[0] = IMG_WIDTH;
+  args.image_definition[1] = IMG_HEIGHT;
+  args.spp = SPP;
+
+  OK(sdis_solve_camera(scn, &args, &img0));
+
+  if(!is_master_process) {
+    CHK(img0 == NULL);
   } else {
-    Tmin = 0;
-    norm = 1;
+    check_image(img0);
+    write_image(stdout, img0);
   }
 
-  /* Allocate the image memory space */
-  OK(image_init(NULL, &img));
-  OK(image_setup(&img, IMG_WIDTH, IMG_HEIGHT, IMG_WIDTH*3, IMAGE_RGB8, NULL));
-
-  FOR_EACH(iy, 0, definition[1]) {
-    const double* src_row = temps + iy*definition[0];
-    char* dst_row = img.pixels + iy*img.pitch;
-    FOR_EACH(ix, 0, definition[0]) {
-      unsigned char* pixels = (unsigned char*)
-        (dst_row + ix * sizeof_image_format(img.format));
-      const unsigned char T = (unsigned char)
-        ((src_row[ix] - Tmin)/ norm * 255.0);
-      pixels[0] = T;
-      pixels[1] = T;
-      pixels[2] = T;
-    }
+  /* Provide a RNG state and check that the results, although compatible, are
+   * not the same */
+  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
+  OK(ssp_rng_discard(rng, 3141592653589)); /* Move the RNG state  */
+  args.rng_state = rng;
+  args.rng_type = SSP_RNG_TYPE_NULL;
+  OK(sdis_solve_camera(scn, &args, &img1));
+  if(is_master_process) {
+    check_image_difference(img0, img1);
+    OK(sdis_estimator_buffer_ref_put(img1));
   }
-  OK(image_write_ppm_stream(&img, 0/*binary?*/, stdout));
-  image_release(&img);
-  mem_rm(temps);
+  OK(ssp_rng_ref_put(rng));
+
+  /* Change the RNG type and check that the results, although compatible, are
+   * not the same */
+  args.rng_state = NULL;
+  args.rng_type = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
+    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
+  OK(sdis_solve_camera(scn, &args, &img1));
+  if(is_master_process) {
+    check_image_difference(img0, img1);
+    OK(sdis_estimator_buffer_ref_put(img1));
+  }
+
+  if(is_master_process) OK(sdis_estimator_buffer_ref_put(img0));
 }
 
 /*******************************************************************************
@@ -596,56 +769,44 @@ int
 main(int argc, char** argv)
 {
   struct geometry geom = GEOMETRY_NULL;
-  struct s3dut_mesh* msh = NULL;
-  struct s3dut_mesh_data msh_data;
-  struct sdis_mc T = SDIS_MC_NULL;
-  struct sdis_mc T2 = SDIS_MC_NULL;
-  struct sdis_mc time = SDIS_MC_NULL;
   struct sdis_camera* cam = NULL;
   struct sdis_device* dev = NULL;
-  struct sdis_estimator_buffer* buf = NULL;
-  struct sdis_estimator_buffer* buf2 = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_medium* fluid0 = NULL;
   struct sdis_medium* fluid1 = NULL;
+  struct sdis_medium* fluid2 = NULL;
   struct sdis_interface* interf0 = NULL;
   struct sdis_interface* interf1 = NULL;
+  struct sdis_interface* interf2 = NULL;
   struct sdis_radiative_env* radenv = NULL;
   struct sdis_scene* scn = NULL;
-  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
-  struct sdis_solve_camera_args solve_args = SDIS_SOLVE_CAMERA_ARGS_DEFAULT;
-  struct ssp_rng* rng = NULL;
-  struct ssp_rng* rng_state = NULL;
   struct fluid fluid_args = FLUID_NULL;
   struct solid solid_args = SOLID_NULL;
   struct interf interface_args = INTERF_NULL;
-  struct fluid* pfluid_args = NULL;
-  struct radenv* pradenv_args = NULL;
-  size_t ntris, npos;
-  size_t nreals, nfails;
-  size_t definition[2];
-  double pos[3];
-  double tgt[3];
-  double up[3];
   int is_master_process;
   (void)argc, (void)argv;
 
   create_default_device(&argc, &argv, &is_master_process, &dev);
 
   radenv = create_radenv(dev, 300, 300);
-  pradenv_args = sdis_data_get(sdis_radiative_env_get_data(radenv));
 
   /* Create the fluid0 */
   fluid_args.temperature = 350;
   fluid_args.rho = 0;
   fluid_args.cp = 0;
-  create_fluid(dev, &fluid_args, &fluid0);
+  fluid0 = create_fluid(dev, &fluid_args);
 
   /* Create the fluid1 */
   fluid_args.temperature = 300;
   fluid_args.rho = 0;
   fluid_args.cp = 0;
-  create_fluid(dev, &fluid_args, &fluid1);
+  fluid1 = create_fluid(dev, &fluid_args);
+
+  /* Create the fluid2 */
+  fluid_args.temperature = 280;
+  fluid_args.rho = 0;
+  fluid_args.cp = 0;
+  fluid2 = create_fluid(dev, &fluid_args);
 
   /* Create the solid medium */
   solid_args.cp = 1.0;
@@ -653,14 +814,14 @@ main(int argc, char** argv)
   solid_args.rho = 1.0;
   solid_args.delta = 1.0/20.0;
   solid_args.temperature = SDIS_TEMPERATURE_NONE;
-  create_solid(dev, &solid_args, &solid);
+  solid = create_solid(dev, &solid_args);
 
   /* Create the fluid0/solid interface */
   interface_args.hc = 1;
   interface_args.epsilon = 0;
   interface_args.specular_fraction = 0;
   interface_args.temperature = SDIS_TEMPERATURE_NONE;
-  create_interface(dev, solid, fluid0, &interface_args, &interf0);
+  interf0 = create_interface(dev, solid, fluid0, &interface_args);
 
   /* Create the fluid1/solid interface */
   interface_args.hc = 0.1;
@@ -668,178 +829,45 @@ main(int argc, char** argv)
   interface_args.specular_fraction = 1;
   interface_args.temperature = SDIS_TEMPERATURE_NONE;
   interface_args.reference_temperature = 300;
-  create_interface(dev, fluid1, solid, &interface_args, &interf1);
+  interf1 = create_interface(dev, fluid1, solid, &interface_args);
 
-  /* Setup the cube geometry  */
-  OK(s3dut_create_cuboid(NULL, 2, 2, 2, &msh));
-  OK(s3dut_mesh_get_data(msh, &msh_data));
-  geometry_add_shape(&geom, msh_data.positions, msh_data.nvertices,
-    msh_data.indices, msh_data.nprimitives, NULL, interf1);
-  OK(s3dut_mesh_ref_put(msh));
+  /* Create the fluid2/ground interface */
+  interface_args.hc = 0.2;
+  interface_args.epsilon = 1;
+  interface_args.specular_fraction = 1;
+  interface_args.temperature = SDIS_TEMPERATURE_NONE;
+  interface_args.reference_temperature = 300;
+  interf2 = create_interface(dev, fluid2, solid, &interface_args);
 
-  /* Setup the sphere geometry */
-  OK(s3dut_create_sphere(NULL, 0.5, 32, 16, &msh));
-  OK(s3dut_mesh_get_data(msh, &msh_data));
-  geometry_add_shape(&geom, msh_data.positions, msh_data.nvertices,
-    msh_data.indices, msh_data.nprimitives, NULL, interf0);
-  OK(s3dut_mesh_ref_put(msh));
-
-  /* Setup the scene */
-  ntris = sa_size(geom.indices) / 3; /* #primitives */
-  npos = sa_size(geom.positions) / 3; /* #positions */
-  scn_args.get_indices = geometry_get_indices;
-  scn_args.get_interface = geometry_get_interface;
-  scn_args.get_position = geometry_get_position;
-  scn_args.nprimitives = ntris;
-  scn_args.nvertices = npos;
-  scn_args.t_range[0] = 300;
-  scn_args.t_range[1] = 350;
-  scn_args.radenv = radenv;
-  scn_args.context = &geom;
-  OK(sdis_scene_create(dev, &scn_args, &scn));
+  add_cube(&geom, interf1);
+  add_sphere(&geom, interf0);
+  add_ground(&geom, interf2);
 
 #if 0
   dump_mesh(stdout, geom.positions, sa_size(geom.positions)/3, geom.indices,
     sa_size(geom.indices)/3);
 #endif
 
-  /* Setup the camera */
-  d3(pos, 3, 3, 3);
-  d3(tgt, 0, 0, 0);
-  d3(up,  0, 0, 1);
-  OK(sdis_camera_create(dev, &cam));
-  OK(sdis_camera_set_proj_ratio(cam, (double)IMG_WIDTH/(double)IMG_HEIGHT));
-  OK(sdis_camera_set_fov(cam, MDEG2RAD(70)));
-  OK(sdis_camera_look_at(cam, pos, tgt, up));
+  scn = create_scene(dev, radenv, &geom);
+  cam = create_camera(dev);
 
-#if 0
-  dump_mesh(stdout, geom.positions, npos, geom.indices, ntris);
-  exit(0);
-#endif
-  solve_args.cam = cam;
-  solve_args.time_range[0] = INF;
-  solve_args.time_range[0] = INF;
-  solve_args.image_definition[0] = IMG_WIDTH;
-  solve_args.image_definition[1] = IMG_HEIGHT;
-  solve_args.spp = SPP;
-
-  BA(sdis_solve_camera(NULL, &solve_args, &buf));
-  BA(sdis_solve_camera(scn, NULL, &buf));
-  BA(sdis_solve_camera(scn, &solve_args, NULL));
-  solve_args.cam = NULL;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.cam = cam;
-  pradenv_args->temperature = SDIS_TEMPERATURE_NONE;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  pradenv_args->temperature = 300;
-  solve_args.time_range[0] = solve_args.time_range[1] = -1;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.time_range[0] = 1;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.time_range[1] = 0;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.time_range[0] = solve_args.time_range[1] = INF;
-
-  /* Launch the simulation */
-  OK(sdis_solve_camera(scn, &solve_args, &buf));
-
-  if(!is_master_process) {
-    CHK(buf == NULL);
-  } else {
-    BA(sdis_estimator_buffer_get_realisation_count(NULL, &nreals));
-    BA(sdis_estimator_buffer_get_realisation_count(buf, NULL));
-    OK(sdis_estimator_buffer_get_realisation_count(buf, &nreals));
-
-    BA(sdis_estimator_buffer_get_failure_count(NULL, &nfails));
-    BA(sdis_estimator_buffer_get_failure_count(buf, NULL));
-    OK(sdis_estimator_buffer_get_failure_count(buf, &nfails));
-
-    BA(sdis_estimator_buffer_get_temperature(NULL, &T));
-    BA(sdis_estimator_buffer_get_temperature(buf, NULL));
-    OK(sdis_estimator_buffer_get_temperature(buf, &T));
-
-    BA(sdis_estimator_buffer_get_realisation_time(NULL, &time));
-    BA(sdis_estimator_buffer_get_realisation_time(buf, NULL));
-    OK(sdis_estimator_buffer_get_realisation_time(buf, &time));
-
-    BA(sdis_estimator_buffer_get_rng_state(NULL, &rng_state));
-    BA(sdis_estimator_buffer_get_rng_state(buf, NULL));
-    OK(sdis_estimator_buffer_get_rng_state(buf, &rng_state));
-
-    CHK(nreals + nfails == IMG_WIDTH*IMG_HEIGHT*SPP);
-
-    fprintf(stderr, "Overall temperature ~ %g +/- %g\n", T.E, T.SE);
-    fprintf(stderr, "Time per realisation (in usec) ~ %g +/- %g\n", time.E, time.SE);
-    fprintf(stderr, "#failures = %lu/%lu\n",
-      (unsigned long)nfails, (unsigned long)(IMG_WIDTH*IMG_HEIGHT*SPP));
-
-    BA(sdis_estimator_buffer_get_definition(NULL, definition));
-    BA(sdis_estimator_buffer_get_definition(buf, NULL));
-    OK(sdis_estimator_buffer_get_definition(buf, definition));
-    CHK(definition[0] == IMG_WIDTH);
-    CHK(definition[1] == IMG_HEIGHT);
-
-    /* Write the image */
-    dump_image(buf);
-    OK(sdis_estimator_buffer_ref_put(buf));
-  }
-
-  /* Check RNG type */
-  solve_args.rng_state = NULL;
-  solve_args.rng_type = SSP_RNG_TYPE_NULL;
-  BA(sdis_solve_camera(scn, &solve_args, &buf2));
-  solve_args.rng_type =
-    SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_type == SSP_RNG_THREEFRY
-    ? SSP_RNG_MT19937_64 : SSP_RNG_THREEFRY;
-  OK(sdis_solve_camera(scn, &solve_args, &buf2));
-  if(is_master_process) {
-    OK(sdis_estimator_buffer_get_temperature(buf2, &T2));
-    CHK(T.E != T2.E || (T2.SE == 0 && T.SE ==0));
-    CHK(T2.E + 3*T2.SE >= T.E - 3*T.SE
-     && T2.E - 3*T2.SE <= T.E + 3*T.SE);
-    OK(sdis_estimator_buffer_ref_put(buf2));
-  }
-
-  /* Check the RNG state */
-  OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
-  OK(ssp_rng_discard(rng, 3141592653589)); /* Move the RNG state  */
-  solve_args.rng_state = rng;
-  solve_args.rng_type = SSP_RNG_TYPE_NULL;
-  OK(sdis_solve_camera(scn, &solve_args, &buf2));
-  OK(ssp_rng_ref_put(rng));
-  if(is_master_process) {
-    OK(sdis_estimator_buffer_get_temperature(buf2, &T2));
-    CHK(T.E != T2.E || (T2.SE == 0 && T.SE == 0));
-    CHK(T2.E + 3*T2.SE >= T.E - 3*T.SE
-     && T2.E - 3*T2.SE <= T.E + 3*T.SE);
-    OK(sdis_estimator_buffer_ref_put(buf2));
-  }
-
-  /* Restore args */
-  solve_args.rng_state = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_state;
-  solve_args.rng_type = SDIS_SOLVE_CAMERA_ARGS_DEFAULT.rng_type;
-
-  pfluid_args = sdis_data_get(sdis_medium_get_data(fluid1));
-  pfluid_args->temperature = SDIS_TEMPERATURE_NONE;
-
-  /* Check simulation error handling */
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
-  solve_args.register_paths = SDIS_HEAT_PATH_ALL;
-  BA(sdis_solve_camera(scn, &solve_args, &buf));
+  invalid_draw(scn, cam);
+  draw(scn, cam, is_master_process);
 
   /* Release memory */
   OK(sdis_medium_ref_put(solid));
   OK(sdis_medium_ref_put(fluid0));
   OK(sdis_medium_ref_put(fluid1));
+  OK(sdis_medium_ref_put(fluid2));
   OK(sdis_radiative_env_ref_put(radenv));
   OK(sdis_scene_ref_put(scn));
   OK(sdis_camera_ref_put(cam));
   OK(sdis_interface_ref_put(interf0));
   OK(sdis_interface_ref_put(interf1));
+  OK(sdis_interface_ref_put(interf2));
   free_default_device(dev);
   geometry_release(&geom);
 
   CHK(mem_allocated_size() == 0);
   return 0;
 }
-

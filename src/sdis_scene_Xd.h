@@ -823,7 +823,7 @@ XD(register_enclosure)(struct sdis_scene* scn, struct sencXd(enclosure)* enc)
 
   /* Setup the medium id of the enclosure */
   if(header.enclosed_media_count > 1) {
-    enc_data->medium_id = ENCLOSURE_MULTI_MEDIA;
+    enc_data->medium_id = MEDIUM_ID_MULTI;
   } else {
     SENCXD(enclosure_get_medium(enc, 0, &enc_data->medium_id));
   }
@@ -938,6 +938,89 @@ error:
   goto exit;
 }
 
+#if DIM == 2
+static res_T
+setup_primitive_keys_2d(struct sdis_scene* scn, struct senc2d_scene* senc_scn)
+{
+  unsigned iprim = 0;
+  unsigned nprims = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && senc_scn);
+
+  SENC2D(scene_get_primitives_count(senc_scn, &nprims));
+
+  FOR_EACH(iprim, 0, nprims) {
+    struct s2d_primitive prim = S2D_PRIMITIVE_NULL;
+    struct sdis_primkey key = SDIS_PRIMKEY_NULL;
+    unsigned ids[2] = {0,0};
+    double v0[2] = {0,0};
+    double v1[2] = {0,0};
+
+    /* Retrieve positions from Star-Enclosre, not Star-2D. Star-Enclosure keeps
+     * the positions submitted by the user as they are, without any
+     * transformation or conversion (Star-2D converts them to float). This
+     * ensures that the caller can construct the same key from his data */
+    SENC2D(scene_get_primitive(senc_scn, iprim, ids));
+    SENC2D(scene_get_vertex(senc_scn, ids[0], v0));
+    SENC2D(scene_get_vertex(senc_scn, ids[1], v1));
+    S2D(scene_view_get_primitive(scn->s2d_view, iprim, &prim));
+
+    sdis_primkey_2d_setup(&key, v0, v1);
+
+    res = htable_key2prim2d_set(&scn->key2prim2d, &key, &prim);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  htable_key2prim2d_purge(&scn->key2prim2d);
+  goto exit;
+}
+
+#elif DIM == 3
+static res_T
+setup_primitive_keys_3d(struct sdis_scene* scn, struct senc3d_scene* senc_scn)
+{
+  unsigned iprim = 0;
+  unsigned nprims = 0;
+  res_T res = RES_OK;
+  ASSERT(scn && senc_scn);
+
+  SENC3D(scene_get_primitives_count(senc_scn, &nprims));
+
+  FOR_EACH(iprim, 0, nprims) {
+    struct s3d_primitive prim = S3D_PRIMITIVE_NULL;
+    struct sdis_primkey key = SDIS_PRIMKEY_NULL;
+    unsigned ids[3] = {0};
+    double v0[3] = {0};
+    double v1[3] = {0};
+    double v2[3] = {0};
+
+    /* Retrieve positions from Star-Enclosre, not Star-3D. Star-Enclosure keeps
+     * the positions submitted by the user as they are, without any
+     * transformation or conversion (Star-3D converts them to float). This
+     * ensures that the caller can construct the same key from his data */
+    SENC3D(scene_get_primitive(senc_scn, iprim, ids));
+    SENC3D(scene_get_vertex(senc_scn, ids[0], v0));
+    SENC3D(scene_get_vertex(senc_scn, ids[1], v1));
+    SENC3D(scene_get_vertex(senc_scn, ids[2], v2));
+    S3D(scene_view_get_primitive(scn->s3d_view, iprim, &prim));
+
+    sdis_primkey_setup(&key, v0, v1, v2);
+
+    res = htable_key2prim3d_set(&scn->key2prim3d, &key, &prim);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  htable_key2prim3d_purge(&scn->key2prim3d);
+  goto exit;
+}
+#endif
+
 /* Create a Stardis scene */
 static res_T
 XD(scene_create)
@@ -956,8 +1039,9 @@ XD(scene_create)
 
   scn = MEM_CALLOC(dev->allocator, 1, sizeof(struct sdis_scene));
   if(!scn) {
-    log_err(dev, "%s: could not allocate the Stardis scene.\n", FUNC_NAME);
     res = RES_MEM_ERR;
+    log_err(dev, "%s: unabale to allocate the scene -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
 
@@ -973,6 +1057,8 @@ XD(scene_create)
   darray_prim_prop_init(dev->allocator, &scn->prim_props);
   htable_enclosure_init(dev->allocator, &scn->enclosures);
   htable_d_init(dev->allocator, &scn->tmp_hc_ub);
+  htable_key2prim2d_init(dev->allocator, &scn->key2prim2d);
+  htable_key2prim3d_init(dev->allocator, &scn->key2prim3d);
 
   if(args->source) {
     SDIS(source_ref_get(args->source));
@@ -994,23 +1080,32 @@ XD(scene_create)
      args->context,
      &senc_scn);
   if(res != RES_OK) {
-    log_err(dev, "%s: error during the scene analysis.\n", FUNC_NAME);
+    log_err(dev, "%s: unable to analyze the scene -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   res = XD(setup_properties)(scn, senc_scn, args->get_interface, args->context);
   if(res != RES_OK) {
-    log_err(dev, "%s: could not setup the scene interfaces and their media.\n",
-      FUNC_NAME);
+    log_err(dev, "%s: unable to configure interfaces and media -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   res = XD(setup_scene_geometry)(scn, senc_scn);
   if(res != RES_OK) {
-    log_err(dev, "%s: could not setup the scene geometry.\n", FUNC_NAME);
+    log_err(dev, "%s: unable to configure scene geometry -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   res = XD(setup_enclosures)(scn, senc_scn);
   if(res != RES_OK) {
-    log_err(dev, "%s: could not setup the enclosures.\n", FUNC_NAME);
+    log_err(dev, "%s: unable to configure enclosures -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
+    goto error;
+  }
+  res = XD(setup_primitive_keys)(scn, senc_scn);
+  if(res != RES_OK) {
+    log_err(dev, "%s: unable to configure primitive keys -- %s\n",
+      FUNC_NAME, res_to_cstr(res));
     goto error;
   }
   scn->sencXd(scn) = senc_scn;
@@ -1094,14 +1189,12 @@ error:
 /*******************************************************************************
  * Local functions
  ******************************************************************************/
-static INLINE res_T
-XD(scene_get_medium)
+static res_T
+XD(scene_get_enclosure_id)
   (struct sdis_scene* scn,
    const double pos[DIM],
-   struct get_medium_info* info, /* May be NULL */
-   struct sdis_medium** out_medium)
+   unsigned* out_enc_id)
 {
-  struct sdis_medium* medium = NULL;
   size_t iprim, nprims;
   float P[DIM];
   /* Range of the parametric coordinate into which positions are challenged */
@@ -1111,6 +1204,7 @@ XD(scene_get_medium)
   float st[3][2];
 #endif
   size_t nsteps = 3;
+  unsigned enc_id = ENCLOSURE_ID_NULL;
   res_T res = RES_OK;
   ASSERT(scn && pos);
 
@@ -1163,8 +1257,8 @@ XD(scene_get_medium)
     } while((SXD_HIT_NONE(&hit) || HIT_ON_BOUNDARY(&hit, P, dir))
          && ++istep < nsteps);
 
-    /* No valid intersection is found on the current primitive. Challenge
-     * another. */
+    /* No valid intersection is found on the current primitive.
+     * Challenge another. */
     if(istep >= nsteps) continue;
 
     fX(normalize)(N, hit.normal);
@@ -1172,44 +1266,17 @@ XD(scene_get_medium)
 
     /* Not too close and not roughly orthognonal */
     if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
-      const struct enclosure* enclosure = NULL;
       unsigned enc_ids[2];
-      const struct sdis_interface* interf;
-
-      interf = scene_get_interface(scn, hit.prim.prim_id);
       scene_get_enclosure_ids(scn, hit.prim.prim_id, enc_ids);
+      enc_id = cos_N_dir < 0 ? enc_ids[0] : enc_ids[1];
 
-      if(cos_N_dir < 0) {
-        medium = interface_get_medium(interf, SDIS_FRONT);
-        enclosure = scene_get_enclosure(scn, enc_ids[0]);
-      } else {
-        medium = interface_get_medium(interf, SDIS_BACK);
-        enclosure = scene_get_enclosure(scn, enc_ids[1]);
-      }
-
-      if(enclosure->medium_id == ENCLOSURE_MULTI_MEDIA) {
-        log_warn
-          (scn->dev,
-           "%s: invalid medium request at {%g, %g, %g}. "
-           "The position is located in an enclosure comprising several media.\n",
-           FUNC_NAME, P[0], P[1], DIM == 3 ? P[2] : 0);
-        res = RES_BAD_OP;
-        goto error;
-      }
-
-      /* Register the get_medium_info */
-      if(info) {
-        fX(set)(info->pos_tgt, attr.value);
-        fX(set)(info->ray_org, P);
-        fX(set)(info->ray_dir, dir);
-        info->XD(hit) = hit;
-      }
-      break;
+      break; /* That's all folks */
     }
   }
 
   if(iprim >= nprims) {
-    log_warn(scn->dev, "%s: could not retrieve the medium at {%g, %g, %g}.\n",
+    log_warn(scn->dev,
+      "%s: cannot retrieve current enclosure at {%g, %g, %g}.\n",
       FUNC_NAME, P[0], P[1], DIM == 3 ? P[2] : 0);
     res = RES_BAD_OP;
     goto error;
@@ -1217,31 +1284,32 @@ XD(scene_get_medium)
 
   if(iprim > 10 && iprim > (size_t)((double)nprims * 0.05)) {
     log_warn(scn->dev,
-      "%s: performance issue. Up to %lu primitives were tested to define the "
-      "current medium at {%g, %g, %g}.\n",
+      "%s: performance issue. Up to %lu primitives were tested to find "
+      "current enclosure at {%g, %g, %g}.\n",
       FUNC_NAME, (unsigned long)iprim, P[0], P[1], DIM == 3 ? P[2] : 0);
   }
 
 exit:
-  *out_medium = medium;
+  *out_enc_id = enc_id;
   return res;
 error:
+  enc_id = ENCLOSURE_ID_NULL;
   goto exit;
 }
 
-static INLINE res_T
-XD(scene_get_medium_in_closed_boundaries)
+static res_T
+XD(scene_get_enclosure_id_in_closed_boundaries)
   (struct sdis_scene* scn,
    const double pos[DIM],
-   struct sdis_medium** out_medium)
+   unsigned* out_enc_id)
 {
-  struct sdis_medium* medium = NULL;
-  float P[DIM];
-  float frame[DIM*DIM];
   float dirs[6][3] = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
+  float frame[DIM*DIM];
+  float P[DIM];
+  unsigned enc_id = ENCLOSURE_ID_NULL;
   int idir;
   res_T res = RES_OK;
-  ASSERT(scn && pos);
+  ASSERT(scn && pos && out_enc_id);
 
   /* Build a frame that will be used to rotate the main axis by PI/4 around
    * each axis. This can avoid numerical issues when geometry is discretized
@@ -1249,8 +1317,6 @@ XD(scene_get_medium_in_closed_boundaries)
 #if DIM == 2
   f22_rotation(frame, (float)PI/4);
 #else
-/*  N[0] = N[1] = N[2] = (float)(1.0 / sqrt(3.0));*/
-/*  f33_basis(frame, N);*/
   f33_rotation(frame, (float)PI/4, (float)PI/4, (float)PI/4);
 #endif
 
@@ -1279,22 +1345,23 @@ XD(scene_get_medium_in_closed_boundaries)
 
     /* Not too close and not roughly orthogonal */
     if(hit.distance > 1.e-6 && absf(cos_N_dir) > 1.e-2f) {
-      const struct sdis_interface* interf;
-      interf = scene_get_interface(scn, hit.prim.prim_id);
-      medium = interface_get_medium
-        (interf, cos_N_dir < 0 ? SDIS_FRONT : SDIS_BACK);
-      break;
+      unsigned enc_ids[2];
+      scene_get_enclosure_ids(scn, hit.prim.prim_id, enc_ids);
+      enc_id = cos_N_dir < 0 ? enc_ids[0] : enc_ids[1];
+
+      break; /* That's all folks */
     }
   }
-  if(idir >= 2*DIM) {
-    res = XD(scene_get_medium)(scn, pos, NULL, &medium);
+  if(idir >= 2*DIM) { /* Fallback to scene_get_enclosure_id function */
+    res = XD(scene_get_enclosure_id)(scn, pos, &enc_id);
     if(res != RES_OK) goto error;
   }
 
 exit:
-  *out_medium = medium;
+  *out_enc_id = enc_id;
   return res;
 error:
+  enc_id = ENCLOSURE_ID_NULL;
   goto exit;
 }
 

@@ -66,23 +66,23 @@ error:
 static INLINE res_T
 XD(sample_path)
   (struct sdis_scene* scn,
-   const struct XD(rwalk)* rwalk_from,
+   const struct rwalk* rwalk_from,
    struct rwalk_context* ctx,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
-  struct XD(rwalk) rwalk = XD(RWALK_NULL);
+  struct rwalk rwalk = RWALK_NULL;
   res_T res = RES_OK;
   ASSERT(rwalk_from && rng && T);
 
   /* Clean-up the output variable */
-  *T = XD(TEMPERATURE_NULL);
+  *T = TEMPERATURE_NULL;
   T->func = XD(boundary_path);
 
   /* Init the random walk */
   rwalk.vtx = rwalk_from->vtx;
-  rwalk.mdm = rwalk_from->mdm;
-  rwalk.hit = rwalk_from->hit;
+  rwalk.enc_id = rwalk_from->enc_id;
+  rwalk.XD(hit) = rwalk_from->XD(hit);
   rwalk.hit_side = rwalk_from->hit_side;
 
   /* Start the registration of a new heat path */
@@ -128,15 +128,14 @@ XD(solid_fluid_boundary_picardN_path)
   (struct sdis_scene* scn,
    struct rwalk_context* ctx,
    const struct sdis_interface_fragment* frag,
-   struct XD(rwalk)* rwalk,
+   struct rwalk* rwalk,
    struct ssp_rng* rng,
-   struct XD(temperature)* T)
+   struct temperature* T)
 {
   /* Input/output arguments of the function used to sample a reinjection */
-  struct XD(sample_reinjection_step_args) samp_reinject_step_args =
-    XD(SAMPLE_REINJECTION_STEP_ARGS_NULL);
-  struct XD(reinjection_step) reinject_step =
-    XD(REINJECTION_STEP_NULL);
+  struct sample_reinjection_step_args samp_reinject_step_args =
+    SAMPLE_REINJECTION_STEP_ARGS_NULL;
+  struct reinjection_step reinject_step = REINJECTION_STEP_NULL;
 
   /* Fragment on the fluid side of the boundary */
   struct sdis_interface_fragment frag_fluid;
@@ -144,6 +143,9 @@ XD(solid_fluid_boundary_picardN_path)
   /* Vertex of the heat path */
   struct sdis_heat_vertex hvtx = SDIS_HEAT_VERTEX_NULL;
   struct sdis_heat_vertex hvtx_s = SDIS_HEAT_VERTEX_NULL;
+
+  /* The enclosures split by the boundary */
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
 
   /* Data attached to the boundary */
   struct sdis_interface* interf = NULL;
@@ -172,8 +174,7 @@ XD(solid_fluid_boundary_picardN_path)
   res_T res = RES_OK;
 
   ASSERT(scn && rwalk && rng && T && ctx);
-  ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag));
-
+  ASSERT(XD(check_rwalk_fragment_consistency)(rwalk, frag) == RES_OK);
 
   /* Fetch the Min/max temperature */
   Tmin  = ctx->Tmin;
@@ -184,7 +185,7 @@ XD(solid_fluid_boundary_picardN_path)
   That3 = ctx->That3;
 
   /* Retrieve the solid and the fluid split by the boundary */
-  interf = scene_get_interface(scn, rwalk->hit.prim.prim_id);
+  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
   solid = interface_get_medium(interf, SDIS_FRONT);
   fluid = interface_get_medium(interf, SDIS_BACK);
   solid_side = SDIS_FRONT;
@@ -194,6 +195,9 @@ XD(solid_fluid_boundary_picardN_path)
     SWAP(enum sdis_side, solid_side, fluid_side);
     ASSERT(fluid->type == SDIS_FLUID);
   }
+
+  /* Get the enclosures split by the boundary */
+  scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
 
   /* Check that no net flux is set for this interface since the provided
    * picardN algorithm does not handle it */
@@ -219,7 +223,7 @@ XD(solid_fluid_boundary_picardN_path)
 
   /* Sample a reinjection step */
   samp_reinject_step_args.rng = rng;
-  samp_reinject_step_args.solid = solid;
+  samp_reinject_step_args.solid_enc_id = enc_ids[solid_side];
   samp_reinject_step_args.rwalk = rwalk;
   samp_reinject_step_args.distance = delta_boundary;
   samp_reinject_step_args.side = solid_side;
@@ -256,8 +260,8 @@ XD(solid_fluid_boundary_picardN_path)
   /* Null collision main loop */
   for(;;) {
     /* Temperature and random walk state of the sampled radiative path */
-    struct XD(temperature) T_s;
-    struct XD(rwalk) rwalk_s;
+    struct temperature T_s;
+    struct rwalk rwalk_s;
 
     double h_radi, h_radi_min, h_radi_max; /* Radiative coefficients */
     double p_radi, p_radi_min, p_radi_max; /* Radiative probas */
@@ -272,15 +276,15 @@ XD(solid_fluid_boundary_picardN_path)
     /* Switch in convective path */
     if(r < p_conv) {
       T->func = XD(convective_path);
-      rwalk->mdm = fluid;
+      rwalk->enc_id = enc_ids[fluid_side];
       rwalk->hit_side = fluid_side;
       break;
     }
 
     /* Switch in conductive path */
     if(r < p_conv + p_cond) {
-      struct XD(solid_reinjection_args) solid_reinject_args =
-        XD(SOLID_REINJECTION_ARGS_NULL);
+      struct solid_reinjection_args solid_reinject_args =
+        SOLID_REINJECTION_ARGS_NULL;
 
       /* Perform the reinjection into the solid */
       solid_reinject_args.reinjection = &reinject_step;
@@ -289,7 +293,7 @@ XD(solid_fluid_boundary_picardN_path)
       solid_reinject_args.rng = rng;
       solid_reinject_args.T = T;
       solid_reinject_args.fp_to_meter = scn->fp_to_meter;
-      res = XD(solid_reinjection)(solid, &solid_reinject_args);
+      res = XD(solid_reinjection)(scn, enc_ids[solid_side], &solid_reinject_args);
       if(res != RES_OK) goto error;
       break;
     }
@@ -303,7 +307,7 @@ XD(solid_fluid_boundary_picardN_path)
     /* Sample a radiative path */
     T_s = *T;
     rwalk_s = *rwalk;
-    rwalk_s.mdm = fluid;
+    rwalk_s.enc_id = enc_ids[fluid_side];
     rwalk_s.hit_side = fluid_side;
     res = XD(radiative_path)(scn, ctx, &rwalk_s, rng, &T_s);
     if(res != RES_OK) goto error;
@@ -340,9 +344,9 @@ XD(solid_fluid_boundary_picardN_path)
     } (void)0
 
     #define COMPUTE_TEMPERATURE(Result, RWalk, Temp) {                         \
-      struct XD(temperature) T_p;                                              \
+      struct temperature T_p;                                                  \
       if((Temp)->done) { /* Ambient radiative temperature */                   \
-        ASSERT(SXD_HIT_NONE(&(RWalk)->hit));                                   \
+        ASSERT(SXD_HIT_NONE(&(RWalk)->XD(hit)));                               \
         T_p = *(Temp);                                                         \
       } else {                                                                 \
         res = XD(sample_path)(scn, RWalk, ctx, rng, &T_p);                     \
