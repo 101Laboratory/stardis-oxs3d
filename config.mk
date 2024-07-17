@@ -55,7 +55,7 @@ SENC2D_VERSION = 0.5
 SENC2D_CFLAGS = $$($(PKG_CONFIG) $(PCFLAGS) --cflags senc2d)
 SENC2D_LIBS = $$($(PKG_CONFIG) $(PCFLAGS) --libs senc2d)
 
-SENC3D_VERSION = 0.7.1
+SENC3D_VERSION = 0.7.2
 SENC3D_CFLAGS = $$($(PKG_CONFIG) $(PCFLAGS) --cflags senc3d)
 SENC3D_LIBS = $$($(PKG_CONFIG) $(PCFLAGS) --libs senc3d)
 
