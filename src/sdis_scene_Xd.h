@@ -516,7 +516,24 @@ XD(hit_filter_function)
     reject_hit = hit_shared_edge
       (&hit_from->prim, &hit->prim, hit_from->uv, hit->uv, org, pos);
 #endif
-    return reject_hit;
+    if(reject_hit) return 1;
+  }
+
+  /* If the hit to be considered is (approximately) on a boundary between 2
+   * primitives, it may belong to the wrong primitive, i.e. the one that doesn't
+   * "face" the direction of the ray. We therefore check the enclosure towards
+   * which it is directed, and reject it if it is not the same as the one from
+   * which the ray originates */
+  if(filter_data->scn && HIT_ON_BOUNDARY(hit, org, dir)) {
+    unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
+    unsigned chk_enc_id = ENCLOSURE_ID_NULL;
+
+    scene_get_enclosure_ids(filter_data->scn, hit->prim.prim_id, enc_ids);
+    chk_enc_id = fX(dot)(dir, hit->normal) < 0
+      ? enc_ids[0] /* Front */
+      : enc_ids[1]; /* Back */
+
+    if(chk_enc_id != filter_data->enc_id) return 1;
   }
   return 0;
 }

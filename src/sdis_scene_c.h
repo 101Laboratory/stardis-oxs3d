@@ -40,6 +40,11 @@ struct hit_filter_data {
   struct s3d_hit hit_3d;
   double epsilon; /* Threshold defining roughly equal intersections */
 
+  /* When a scene is defined, primitives that do not point to the defined
+   * enclosure are filtered out */
+  struct sdis_scene* scn; /* NULL <=> do not filter wrt enc_id */
+  unsigned enc_id;
+
   /* Bypass the regular filter function */
   s2d_hit_filter_function_T custom_filter_2d;
   s3d_hit_filter_function_T custom_filter_3d;
@@ -47,7 +52,8 @@ struct hit_filter_data {
   /* Custom filter query data. It is ignored if custom_filter is NULL */
   void* custom_filter_data;
 };
-#define HIT_FILTER_DATA_NULL__ {S2D_HIT_NULL__,S3D_HIT_NULL__,0,NULL,NULL,NULL}
+#define HIT_FILTER_DATA_NULL__ \
+  {S2D_HIT_NULL__,S3D_HIT_NULL__,0,NULL,ENCLOSURE_ID_NULL,NULL,NULL,NULL}
 static const struct hit_filter_data HIT_FILTER_DATA_NULL =
   HIT_FILTER_DATA_NULL__;
 
