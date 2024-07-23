@@ -266,7 +266,8 @@ main(int argc, char** argv)
 {
   struct sdis_data* data = NULL;
   struct sdis_device* dev = NULL;
-  struct sdis_medium* fluid = NULL;
+  struct sdis_medium* fluid1 = NULL;
+  struct sdis_medium* fluid2 = NULL;
   struct sdis_medium* solid = NULL;
   struct sdis_interface* interf_adiabatic = NULL;
   struct sdis_interface* interf_Tb = NULL;
@@ -299,13 +300,19 @@ main(int argc, char** argv)
   create_default_device(&argc, &argv, &is_master_process, &dev);
   radenv = create_radenv(dev);
 
-  /* Create the fluid medium */
+  /* Create the fluid medium. In fact, create two fluid media, even if they are
+   * identical, to check that Robin's boundary conditions can be defined with
+   * several media, without compromising path sampling. Convective paths cannot
+   * be sampled in enclosures with several media, but radiative paths can be,
+   * and it should be possible to calculate the boundary flux without any
+   * problem */
   OK(sdis_data_create
     (dev, sizeof(struct fluid), ALIGNOF(struct fluid), NULL, &data));
   fluid_args = sdis_data_get(data);
   fluid_args->temperature = Tf;
   fluid_shader.temperature = fluid_get_temperature;
-  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid));
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid1));
+  OK(sdis_fluid_create(dev, &fluid_shader, data, &fluid2));
   OK(sdis_data_ref_put(data));
 
   /* Create the solid_medium */
@@ -329,7 +336,7 @@ main(int argc, char** argv)
   interf_props->temperature = SDIS_TEMPERATURE_NONE;
   interf_props->emissivity = 0;
   OK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_adiabatic));
+    (dev, solid, fluid1, &interf_shader, data, &interf_adiabatic));
   OK(sdis_data_ref_put(data));
 
   /* Create the Tb interface */
@@ -342,7 +349,7 @@ main(int argc, char** argv)
   interf_shader.back.emissivity = interface_get_emissivity;
   interf_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_Tb));
+    (dev, solid, fluid1, &interf_shader, data, &interf_Tb));
   interf_shader.back.emissivity = NULL;
   OK(sdis_data_ref_put(data));
 
@@ -356,13 +363,14 @@ main(int argc, char** argv)
   interf_shader.back.emissivity = interface_get_emissivity;
   interf_shader.back.reference_temperature = interface_get_reference_temperature;
   OK(sdis_interface_create
-    (dev, solid, fluid, &interf_shader, data, &interf_H));
+    (dev, solid, fluid2, &interf_shader, data, &interf_H));
   interf_shader.back.emissivity = NULL;
   OK(sdis_data_ref_put(data));
 
   /* Release the media */
   OK(sdis_medium_ref_put(solid));
-  OK(sdis_medium_ref_put(fluid));
+  OK(sdis_medium_ref_put(fluid1));
+  OK(sdis_medium_ref_put(fluid2));
 
   /* Map the interfaces to their box triangles */
   box_interfaces[0] = box_interfaces[1] = interf_adiabatic; /* Front */

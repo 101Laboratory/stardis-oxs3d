@@ -15,6 +15,7 @@
 
 #include "sdis_device_c.h"
 #include "sdis_heat_path.h"
+#include "sdis_heat_path_boundary_c.h"
 #include "sdis_interface_c.h"
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
@@ -449,10 +450,28 @@ XD(boundary_flux_realisation)
   /* Compute fluid temperature */
   if(compute_convective) {
     RESET_WALK(fluid_side, enc_ids[fluid_side]);
-    T.func = XD(convective_path);
-    res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
+
+    /* Check whether the temperature of the fluid is known by querying it from
+     * its boundary. This makes it possible to handle situations where fluids
+     * are used as Robin's boundary condition. In this case, a geometric
+     * enclosure may have several fluids, each defining the temperature of a
+     * boundary condition. Sampling of convective paths in such an enclosure is
+     * forbidden since this enclosure does not exist for this path space: it is
+     * beyond its boundary */
+    res = XD(query_medium_temperature_from_boundary)(scn, &ctx, &rwalk, &T);
     if(res != RES_OK) return res;
-    result->Tfluid = T.value;
+
+    /* Robin's boundary condition */
+    if(T.done) {
+      result->Tfluid = T.value;
+
+    /* Sample a convective path */
+    } else {
+      T.func = XD(convective_path);
+      res = XD(sample_coupled_path)(scn, &ctx, &rwalk, args->rng, &T);
+      if(res != RES_OK) return res;
+      result->Tfluid = T.value;
+    }
   }
 
   #undef SET_PARAM
