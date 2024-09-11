@@ -22,7 +22,7 @@
 
 /*
  * The system is an unsteady-state temperature profile, meaning that at any
- * point, at any: time, we can analytically calculate the temperature. We
+ * point, at any time, we can analytically calculate the temperature. We
  * immerse in this temperature field a supershape representing a solid in which
  * we want to evaluate the temperature by Monte Carlo at a given position and
  * observation time. On the Monte Carlo side, the temperature of the supershape

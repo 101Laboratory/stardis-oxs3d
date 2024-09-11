@@ -28,6 +28,84 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
+ * Non generic local functions
+ ******************************************************************************/
+#ifndef SDIS_HEAT_PATH_RADIATIVE_XD_H
+#define SDIS_HEAT_PATH_RADIATIVE_XD_H
+
+static res_T
+set_limit_radiative_temperature
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk* rwalk,
+   /* Direction along which the random walk reached the radiative environment */
+   const float dir[3],
+   const int branch_id,
+   struct temperature* T)
+{
+  struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
+  double trad = 0; /* [K] */
+  res_T res = RES_OK;
+
+  /* Check pre-conditions */
+  ASSERT(scn && ctx && rwalk && dir && T);
+  ASSERT(SXD_HIT_NONE(&rwalk->XD(hit)));
+
+  rwalk->hit_side = SDIS_SIDE_NULL__;
+  d3_set_f3(rwalk->dir, dir);
+  d3_normalize(rwalk->dir, rwalk->dir);
+  d3_set(ray.dir, rwalk->dir);
+
+  trad = radiative_env_get_temperature(scn->radenv, &ray);
+  if(SDIS_TEMPERATURE_IS_UNKNOWN(trad)) {
+    log_err(scn->dev,
+      "%s:%s: the random walk has reached an invalid radiative environment from "
+      "position (%g, %g, %g) along direction (%g, %g, %g): the temperature is "
+      "unknown. This may be due to numerical inaccuracies or inconsistencies "
+      "in the simulated system (e.g. non-closed geometry). For systems where "
+      "sampled paths can reach such a temperature, we need to define a valid "
+      "radiative temperature, i.e. one with a known temperature.\n",
+      __FILE__, FUNC_NAME, SPLIT3(rwalk->vtx.P), SPLIT3(rwalk->dir));
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  /* The limit condition is reached */
+  T->value += trad;
+  T->done = 1;
+
+  /* Update green path */
+  if(ctx->green_path) {
+    res = green_path_set_limit_radiative_ray
+      (ctx->green_path, &ray, rwalk->elapsed_time);
+    if(res != RES_OK) goto error;
+  }
+
+  /* Record the limit vertex of the sampled path. Set it arbitrarily at a
+   * distance of 0.1 meters from the surface along the direction reaching the
+   * radiative environment */
+  if(ctx->heat_path) {
+    const float empirical_dst = 0.1f * (float)scn->fp_to_meter;
+    struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+
+    vtx = rwalk->vtx;
+    vtx.P[0] += dir[0] * empirical_dst;
+    vtx.P[1] += dir[1] * empirical_dst;
+    vtx.P[2] += dir[2] * empirical_dst;
+    res = register_heat_vertex(ctx->heat_path, &vtx, T->value,
+      SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
+    if(res != RES_OK) goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
+#endif /* SDIS_HEAT_PATH_RADIATIVE_XD_H */
+
+/*******************************************************************************
  * Local functions
  ******************************************************************************/
 res_T
@@ -72,6 +150,8 @@ XD(trace_radiative_path)
     /* Trace the radiative ray */
     filter_data.XD(hit) = rwalk->XD(hit);
     filter_data.epsilon = 1.e-6;
+    filter_data.scn = scn; /* Enable the filtering wrt the enclosure id */
+    filter_data.enc_id = rwalk->enc_id;
 #if (SDIS_XD_DIMENSION == 2)
     SXD(scene_view_trace_ray_3d
       (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->XD(hit)));
@@ -79,53 +159,14 @@ XD(trace_radiative_path)
     SXD(scene_view_trace_ray
       (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->XD(hit)));
 #endif
-    if(SXD_HIT_NONE(&rwalk->XD(hit))) { /* Fetch the ambient radiative temperature */
-      struct sdis_radiative_ray ray = SDIS_RADIATIVE_RAY_NULL;
-      double trad = 0; /* [K] */
 
-      rwalk->hit_side = SDIS_SIDE_NULL__;
-      d3_set_f3(rwalk->dir, dir);
-      d3_normalize(rwalk->dir, rwalk->dir);
-      d3_set(ray.dir, rwalk->dir);
+    /* The path reaches the radiative environment */
+    if(SXD_HIT_NONE(&rwalk->XD(hit))) {
+      res = set_limit_radiative_temperature(scn, ctx, rwalk, dir, branch_id, T);
+      if(res != RES_OK) goto error;
 
-      trad = radiative_env_get_temperature(scn->radenv, &ray);
-      if(SDIS_TEMPERATURE_IS_UNKNOWN(trad)) {
-        log_err(scn->dev,
-          "%s: the random walk has reached an invalid radiative environment from "
-          "position `%g %g %g' along direction `%g %g %g': the temperature is "
-          "unknown. This may be due to numerical inaccuracies or inconsistencies "
-          "in the simulated system (e.g. non-closed geometry). For systems where "
-          "random walks can reach such a temperature, we need to define a valid "
-          "radiative temperature, i.e. one with a known temperature.\n",
-          FUNC_NAME, SPLIT3(rwalk->vtx.P), SPLIT3(rwalk->dir));
-        res = RES_BAD_OP;
-        goto error;
-      }
-
-      T->value += trad;
-      T->done = 1;
-
-      if(ctx->green_path) {
-        res = green_path_set_limit_radiative_ray
-          (ctx->green_path, &ray, rwalk->elapsed_time);
-        if(res != RES_OK) goto error;
-      }
-
-      if(ctx->heat_path) {
-        const float empirical_dst = 0.1f * (float)scn->fp_to_meter;
-        struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
-
-        vtx = rwalk->vtx;
-        vtx.P[0] += dir[0] * empirical_dst;
-        vtx.P[1] += dir[1] * empirical_dst;
-        vtx.P[2] += dir[2] * empirical_dst;
-        res = register_heat_vertex(ctx->heat_path, &vtx, T->value,
-          SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
-        if(res != RES_OK) goto error;
-      }
-
-      /* Stop the radiative path */
-      break;
+      ASSERT(T->done);
+      break; /* Stop the radiative path */
     }
 
     /* Define the hit side */
@@ -167,7 +208,12 @@ XD(trace_radiative_path)
     fX(normalize)(N, rwalk->XD(hit).normal);
     if(rwalk->hit_side == SDIS_BACK) fX(minus)(N, N);
 
-    /* Check that the radiative path still lies in the same enclosure */
+    /* Check that the radiative path is still within the same enclosure. Note
+     * that this may not be the case, even if the filtering of intersections
+     * relative to the current enclosure is enabled. This filtering is only
+     * performed for intersections on a boundary between primitives. As a
+     * consequence, a threshold effect on how "intersections on a boundary" are
+     * detected could lead to this situation */
     scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
     chk_enc_id = rwalk->hit_side == SDIS_FRONT ? enc_ids[0] : enc_ids[1];
     if(chk_enc_id != rwalk->enc_id) {

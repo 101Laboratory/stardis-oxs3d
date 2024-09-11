@@ -158,6 +158,17 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+
+### Version 0.16.1
+
+- Corrected net flux calculation on surfaces with several Robin boundary
+  conditions. Depending on the configuration, such a calculation could
+  be impossible and return an error.
+- Improve the performance of external flux calculations by avoiding the
+  need to calculate the contribution of external flux for surfaces with
+  zero emissivity.
+- Mitigate numerical errors when sampling radiative paths.
+
 ### Version 0.16
 
 #### Add support for custom sampling of solid paths

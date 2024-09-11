@@ -204,6 +204,24 @@ check_Tref_3d
    const double Tref,
    const char* call_func_name);
 
+/* Query medium temperature from the boundary. This medium can be different
+ * from the medium of the enclosure. Hence this function, which queries the
+ * medium on the path coming from a boundary. If the temperature is known, T is
+ * set to done. */
+extern LOCAL_SYM res_T
+query_medium_temperature_from_boundary_2d
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk* rwalk,
+   struct temperature* T);
+
+extern LOCAL_SYM res_T
+query_medium_temperature_from_boundary_3d
+  (struct sdis_scene* scn,
+   struct rwalk_context* ctx,
+   struct rwalk* rwalk,
+   struct temperature* T);
+
 /*******************************************************************************
  * Boundary sub-paths
  ******************************************************************************/

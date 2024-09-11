@@ -25,58 +25,6 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
- * Helper functions
- ******************************************************************************/
-/* This function checks whether the random walk is on a boundary and, if so,
- * verifies that the temperature of the medium attached to the interface is
- * known. This medium can be different from the medium of the enclosure. Indeed,
- * the enclosure can contain several media used to set the temperatures of
- * several boundary conditions. Hence this function, which queries the medium on
- * the trajectory coming from a boundary */
-static res_T
-XD(handle_known_medium_temperature)
-  (struct sdis_scene* scn,
-   struct rwalk_context* ctx,
-   struct rwalk* rwalk,
-   struct temperature* T)
-{
-  struct sdis_interface* interf = NULL;
-  struct sdis_medium* mdm = NULL;
-  double temperature = SDIS_TEMPERATURE_NONE;
-  res_T res = RES_OK;
-  ASSERT(scn && ctx && rwalk && T);
-
-  /* Not at an interface */
-  if(SXD_HIT_NONE(&rwalk->XD(hit))) return RES_OK; /* Nothing to do */
-
-  interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
-  mdm = rwalk->hit_side==SDIS_FRONT ? interf->medium_front: interf->medium_back;
-
-  temperature = medium_get_temperature(mdm, &rwalk->vtx);
-
-  /* Check if the temperature is known */
-  if(SDIS_TEMPERATURE_IS_UNKNOWN(temperature)) goto exit;
-
-  T->value += temperature;
-  T->done = 1;
-
-  if(ctx->green_path) {
-    res = green_path_set_limit_vertex
-      (ctx->green_path, mdm, &rwalk->vtx, rwalk->elapsed_time);
-    if(res != RES_OK) goto error;
-  }
-
-  if(ctx->heat_path) {
-    heat_path_get_last_vertex(ctx->heat_path)->weight = T->value;
-  }
-
-exit:
-  return res;
-error:
-  goto exit;
-}
-
-/*******************************************************************************
  * Local functions
  ******************************************************************************/
 res_T
@@ -135,7 +83,6 @@ XD(boundary_path)
   }
   if(res != RES_OK) goto error;
 
-#if 1
   if(T->done) goto exit;
 
   /* Handling limit boundary condition, i.e. the trajectory originates from a
@@ -155,11 +102,10 @@ XD(boundary_path)
    * computationally, and in fact it's also a handy way of testing
    * border cases */
   if(T->func == XD(convective_path) || T->func == XD(conductive_path)) {
-    res = XD(handle_known_medium_temperature)(scn, ctx, rwalk, T);
+    res = XD(query_medium_temperature_from_boundary)(scn, ctx, rwalk, T);
     if(res != RES_OK) goto error;
     if(T->done) goto exit; /* That's all folks */
   }
-#endif
 
 exit:
   return res;

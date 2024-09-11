@@ -503,6 +503,13 @@ XD(handle_external_net_flux)
   handle_flux = handle_flux && (scn->source != NULL);
   if(!handle_flux) goto exit;
 
+  /* Emissivity is null <=> external flux is null. Nothing to do */
+  src_id = sdis_source_get_id(scn->source);
+  emissivity = interface_side_get_emissivity(args->interf, src_id, &frag);
+  res = interface_side_check_emissivity(scn->dev, emissivity, frag.P, frag.time);
+  if(res != RES_OK) goto error;
+  if(emissivity == 0) goto exit;
+
   /* Sample the external source */
   res = source_sample
     (scn->source, rng, frag.P, frag.time, &src_sample);
@@ -536,10 +543,6 @@ XD(handle_external_net_flux)
     incident_flux_direct + incident_flux_diffuse.reflected;
 
   /* Calculate the net flux [W/m^2] */
-  src_id = sdis_source_get_id(scn->source);
-  emissivity = interface_side_get_emissivity(args->interf, src_id, &frag);
-  res = interface_side_check_emissivity(scn->dev, emissivity, frag.P, frag.time);
-  if(res != RES_OK) goto error;
   net_flux = incident_flux * emissivity; /* [W/m^2] */
 
   /* Calculate the net flux from the radiance source scattered at least once by
