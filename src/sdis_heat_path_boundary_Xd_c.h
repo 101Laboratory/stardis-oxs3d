@@ -485,13 +485,8 @@ XD(find_reinjection_ray)
   } while(dst0 == -1 && dst1 == -1 && ++iattempt < MAX_ATTEMPTS);
 
   if(dst0 == -1 && dst1 == -1) { /* No valid reinjection */
-#if DIM == 2
-    log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g}.\n",
-      FUNC_NAME, SPLIT2(ray->org));
-#else
-    log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
-      FUNC_NAME, SPLIT3(ray->org));
-#endif
+    log_err(scn->dev, "%s: no valid reinjection direction at {"FORMAT_VECX"}.\n",
+      FUNC_NAME, SPLITX(ray->org));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
