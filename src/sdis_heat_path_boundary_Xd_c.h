@@ -411,7 +411,7 @@ XD(find_reinjection_ray)
   ASSERT(XD(check_find_reinjection_ray_args)(scn, args) == RES_OK);
 
   *ray = XD(REINJECTION_RAY_NULL);
-  MAX_ATTEMPTS = args->can_move ? 2 : 1;
+  MAX_ATTEMPTS = args->can_move ? 20 : 1;
 
   dst_adjusted = args->distance * RAY_RANGE_MAX_SCALE;
   reinject_threshold = (float)args->distance * REINJECT_DST_MIN_SCALE;
