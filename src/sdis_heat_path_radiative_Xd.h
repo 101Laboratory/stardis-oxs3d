@@ -55,6 +55,7 @@ set_limit_radiative_temperature
   d3_set_f3(rwalk->dir, dir);
   d3_normalize(rwalk->dir, rwalk->dir);
   d3_set(ray.dir, rwalk->dir);
+  ray.time = rwalk->vtx.time;
 
   trad = radiative_env_get_temperature(scn->radenv, &ray);
   if(SDIS_TEMPERATURE_IS_UNKNOWN(trad)) {
