@@ -489,7 +489,7 @@ XD(handle_external_net_flux)
   res = XD(check_handle_external_net_flux_args)(scn, FUNC_NAME, args);
   if(res != RES_OK) goto error;
 
-  /* Setup the interface fragment on flud side */
+  /* Setup the interface fragment on fluid side */
   frag = *args->frag;
   if(sdis_medium_get_type(args->interf->medium_front) == SDIS_FLUID) {
     frag.side = SDIS_FRONT;

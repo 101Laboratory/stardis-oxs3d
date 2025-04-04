@@ -862,7 +862,7 @@ struct sdis_solve_boundary_flux_args {
   10000, /* #realisations */                                                   \
   NULL, /* List or primitive ids */                                            \
   0, /* #primitives */                                                         \
-  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  {DBL_MAX, DBL_MAX}, /* Time range */                                         \
   1, /* Picard order */                                                        \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
