@@ -415,11 +415,7 @@ XD(setup_hit_rt)
   /* Fetch interface properties and check path consistency */
   scene_get_enclosure_ids(scn, hit->prim.prim_id, enc_ids);
   if(enc_ids[side] != rwalk->enc_id) {
-    log_err(scn->dev,
-      "%s:%s: the conductive path has reached an invalid interface. "
-      "Unexpected enclosure -- pos=("FORMAT_VECX"), side=%s\n",
-      __FILE__, FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
-    res = RES_BAD_OP_IRRECOVERABLE;
+    res = RES_BAD_OP;
     goto error;
   }
 
@@ -508,6 +504,7 @@ XD(sample_next_position)
      * want to move to is actually inside the epsilon shell. In this case, the
      * trajectory will be moved to this interface in the next step anyway. */
     } else {
+      struct sXd(hit) hit_rt = SXD_HIT_NULL;
       float rt_pos[DIM] = {0};
       float rt_dir[DIM] = {0};
       float rt_range[2] = {0, 0};
@@ -516,27 +513,33 @@ XD(sample_next_position)
       fX_set_dX(rt_dir, dir);
       rt_range[0] = 0;
       rt_range[1] = (float)INF;
-      SXD(scene_view_trace_ray(scn->sXd(view), rt_pos, rt_dir, rt_range, NULL, &hit));
+      SXD(scene_view_trace_ray
+        (scn->sXd(view), rt_pos, rt_dir, rt_range, NULL, &hit_rt));
 
-      /* An intersection should be found. If not, we can do nothing and simply
-       * reject the path.
-       *
-       * TODO: we could take the treatment of numerical problems a step further
-       * by sampling other directions and trying to move in them again. But at
-       * present, and until we have proof to the contrary, we assume that the
-       * rejection of a path should not occur, or that it will be so rare that
-       * we don't care to save it. */
-      if(SXD_HIT_NONE(&hit)) {
-        log_err(scn->dev,
-          "%s:%s: unable to find the next diffusion position -- "
-          "position=("FORMAT_VECX"),  direction=("FORMAT_VECX"), distance=%g\n",
-          __FILE__, FUNC_NAME, SPLITX(pos), SPLITX(dir), wos_distance);
-        res = RES_BAD_OP_IRRECOVERABLE;
-        goto error;
+      if(SXD_HIT_NONE(&hit_rt)) {
+        /* The lack of intersection is probably due to a current position close
+         * to the boundary. And although it is detected in the solid by WoS, the
+         * specific numerical errors of the ray-tracing operator may contradict
+         * the WoS algorithm, which relies on the closest point operator. But
+         * since the position is close to the boundary, it can be snaped to it*/
+        res = XD(setup_hit_wos)(scn, &hit, rwalk);
+        if(res != RES_OK) goto error;
+
+      } else {
+        res = XD(setup_hit_rt)(scn, rwalk->vtx.P, dir, &hit_rt, rwalk);
+        if(res != RES_OK) {
+          /* An error occurs while handling ray intersection. This means that
+           * the Ray-Tracing operator find an invalid intersection regarding the
+           * current enclosure in which the path should be sampled. As in the
+           * case of the lack of intersection (see above) this means that the
+           * position is close to the enclosure boundary and that the ray missed
+           * it. So, As previously, the position can be simply snaped to it
+           * since one can assumes that the current position is is the right
+           * enclosure */
+          res = XD(setup_hit_wos)(scn, &hit, rwalk);
+          if(res != RES_OK) goto error;
+        }
       }
-
-      res = XD(setup_hit_rt)(scn, rwalk->vtx.P, dir, &hit, rwalk);
-      if(res != RES_OK) goto error;
     }
   }
 
