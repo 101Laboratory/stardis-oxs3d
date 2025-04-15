@@ -115,7 +115,8 @@ sample_brdf
 static res_T
 check_interface
   (const struct sdis_interface* interf,
-   const struct sdis_interface_fragment* frag)
+   const struct sdis_interface_fragment* frag,
+   const int verbose) /* Control the verbosity of the function */
 {
   enum sdis_medium_type mdm_frt_type = SDIS_MEDIUM_TYPES_COUNT__;
   enum sdis_medium_type mdm_bck_type = SDIS_MEDIUM_TYPES_COUNT__;
@@ -128,11 +129,13 @@ check_interface
   /* Semi-transparent materials are not supported. This means that a solid/solid
    * interface must not be intersected when tracing radiative paths */
   if(mdm_frt_type == SDIS_SOLID && mdm_bck_type == SDIS_SOLID) {
-    log_err(interf->dev,
-      "Error when sampling the trajectory to calculate the incident diffuse "
-      "flux. The trajectory reaches a solid/solid interface, whereas this is "
-      "supposed to be impossible (path position: %g, %g, %g).\n",
+    if(verbose) {
+      log_err(interf->dev,
+        "Error when sampling the trajectory to calculate the incident diffuse "
+        "flux. The trajectory reaches a solid/solid interface, whereas this is "
+        "supposed to be impossible (path position: %g, %g, %g).\n",
       SPLIT3(frag->P));
+    }
     res = RES_BAD_OP;
     goto error;
   }
@@ -148,12 +151,14 @@ check_interface
 
   /* Check that the current position is on the correct side of the interface */
   if(frag->side != fluid_side) {
-    log_err(interf->dev,
-      "Inconsistent intersection when sampling the trajectory to calculate the "
-      "incident diffuse flux. The radiative path reaches an interface on "
-      "its solid side, whereas this is supposed to be impossible "
-      "(path position: %g, %g, %g).\n",
-      SPLIT3(frag->P));
+    if(verbose) {
+      log_err(interf->dev,
+        "Inconsistent intersection when sampling the trajectory to calculate "
+        "the incident diffuse flux. The radiative path reaches an interface on "
+        "its solid side, whereas this is supposed to be impossible "
+        "(path position: %g, %g, %g).\n",
+        SPLIT3(frag->P));
+    }
     res = RES_BAD_OP;
     goto error;
   }
@@ -283,6 +288,98 @@ XD(setup_fragment)
 }
 
 static INLINE res_T
+XD(find_next_fragment)
+  (const struct sdis_scene* scn,
+   const double in_pos[3],
+   const double in_dir[3], /* Always in 3D */
+   const struct sXd(hit)* in_hit,
+   const double time,
+   struct sXd(hit)* out_hit,
+   struct sdis_interface** out_interf,
+   struct sdis_interface_fragment* out_frag)
+{
+  const int NATTEMPTS_MAX = 10;
+  int nattempts = 0;
+
+  /* Stardis */
+  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  struct sdis_interface* interf = NULL;
+
+  struct sXd(hit) hit = SXD_HIT_NULL;
+  double rt_pos[DIM] = {0};
+  res_T res = RES_OK;
+
+  ASSERT(scn && in_pos && in_dir && in_hit && !SXD_HIT_NONE(in_hit));
+  ASSERT(out_hit && out_interf && out_frag);
+
+  dX(set)(rt_pos, in_pos);
+
+  do {
+    struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+    struct sdis_medium* solid = NULL;
+    double pos[3] = {0};
+    double vec[3] = {0};
+    double N[3] = {0};
+    double delta = 0;
+
+    /* Reset result code. It may have been modified during a previous attempt */
+    res = RES_OK;
+
+    /* Find the following surface along the direction of propagation */
+    XD(trace_ray)(scn, rt_pos, in_dir, INF, in_hit, &hit);
+    if(SXD_HIT_NONE(&hit)) break;
+
+    /* Retrieve the current position and normal */
+    dX(add)(pos, rt_pos, dX(muld)(vec, in_dir, hit.distance));
+    dX_set_fX(N, hit.normal);
+    dX(normalize(N, N));
+
+    /* Retrieve the current interface properties */
+    interf = scene_get_interface(scn, hit.prim.prim_id);
+    XD(setup_fragment)(&frag, pos, in_dir, time, N, &hit);
+
+    /* Check that the path reaches a valid interface.
+     * An invalid fragment may mean that the ray position is in a corner and the
+     * traced ray has missed the surface of that corner. To correct this, the
+     * ray position is moved slightly away from the corner before a ray is drawn
+     * in the same direction. This fallback solution is executed a number of
+     * times, after which, if the fragment is still invalid, it is considered
+     * that the numerical error cannot be mitigated. */
+    res = check_interface(interf, &frag, nattempts == NATTEMPTS_MAX);
+    if(res != RES_OK && nattempts == NATTEMPTS_MAX) goto error;
+    ++nattempts;
+
+    if(res != RES_OK) { /* Mitigate numerical error (see above) */
+      if(sdis_medium_get_type(interf->medium_front) == SDIS_SOLID) {
+        solid = interf->medium_front;
+      } else {
+        ASSERT(sdis_medium_get_type(interf->medium_back) == SDIS_SOLID);
+        solid = interf->medium_back;
+      }
+
+      /* Retrieves the delta of the solid that surrounds the boundary, as it is
+       * actually the only numerical parameter that says something about the
+       * system. */
+      vtx.P[0] = pos[0];
+      vtx.P[1] = pos[1];
+      vtx.P[2] = pos[2];
+      vtx.time = time;
+      delta = solid_get_delta(solid, &vtx);
+
+      XD(move_away_primitive_boundaries)(in_hit, delta, rt_pos);
+    }
+  } while(res != RES_OK);
+
+exit:
+  *out_hit = hit;
+  *out_interf = interf;
+  *out_frag = frag;
+  return res;
+error:
+  goto exit;
+}
+
+static INLINE res_T
 XD(setup_brdf)
   (struct sdis_device* dev,
    const struct sdis_source* src,
@@ -333,6 +430,7 @@ XD(compute_incident_diffuse_flux)
   double pos[3] = {0}; /* In 3D for ray tracing ray to the source */
   double dir[3] = {0}; /* Incident direction (toward the surface). Always 3D.*/
   double N[3] = {0}; /* Surface normal. Always 3D */
+  size_t nbounces = 0; /* For debug */
   res_T res = RES_OK;
   ASSERT(in_pos && in_N && in_hit && diffuse_flux);
 
@@ -361,12 +459,13 @@ XD(compute_incident_diffuse_flux)
     /* Miscellaneous */
     double L = 0; /* incident flux to bounce position */
     double wi[3] = {0}; /* Incident direction (outward the surface). Always 3D */
-    double vec[DIM] = {0}; /* Temporary variable */
 
     d3_minus(wi, dir); /* Always in 3D */
 
-    /* Find the following surface along the direction of propagation */
-    XD(trace_ray)(scn, pos, dir, INF, &hit, &hit);
+    res = XD(find_next_fragment)
+      (scn, pos, dir, &hit, time, &hit, &interf, &frag);
+    if(res != RES_OK) goto error;
+
     if(SXD_HIT_NONE(&hit)) {
       /* No surface. Handle the radiance emitted by the source and scattered at
        * least once in the environment. Note that the value returned is not the
@@ -382,26 +481,18 @@ XD(compute_incident_diffuse_flux)
       break;
     }
 
-    /* Retrieve the current position and normal */
-    dX(add)(pos, pos, dX(muld)(vec, dir, hit.distance));
-    dX_set_fX(N, hit.normal);
-    dX(normalize(N, N));
-
-    /* Retrieve the current interface properties */
-    interf = scene_get_interface(scn, hit.prim.prim_id);
-    XD(setup_fragment)(&frag, pos, dir, time, N, &hit);
-
-    /* Check that the path reaches a valid interface */
-    res = check_interface(interf, &frag);
-    if(res != RES_OK) goto error;
-
+    d3_set(pos, frag.P);
     XD(setup_brdf)(scn->dev, scn->source, &brdf, interf, &frag);
 
     /* Check if path is absorbed */
     if(ssp_rng_canonical(rng) < brdf.emissivity) break;
 
     /* Sample rebound direction */
-    if(frag.side == SDIS_BACK) dX(minus)(N, N); /* Revert normal if necessary */
+    switch(frag.side) {
+      case SDIS_FRONT: dX(set)(N, frag.Ng); break;
+      case SDIS_BACK:  dX(minus)(N, frag.Ng); break;
+      default: FATAL("Unreachable code\n");
+    }
     sample_brdf(&brdf, rng, wi, N, &brdf_sample);
     d3_set(dir, brdf_sample.dir); /* Always in 3D */
 
@@ -437,6 +528,7 @@ XD(compute_incident_diffuse_flux)
       }
     }
     diffuse_flux->reflected += L; /* [W/m^2/sr] */
+    ++nbounces;
   }
   diffuse_flux->reflected *= PI; /* [W/m^2] */
 
@@ -508,6 +600,7 @@ XD(handle_external_net_flux)
   emissivity = interface_side_get_emissivity(args->interf, src_id, &frag);
   res = interface_side_check_emissivity(scn->dev, emissivity, frag.P, frag.time);
   if(res != RES_OK) goto error;
+
   if(emissivity == 0) goto exit;
 
   /* Sample the external source */

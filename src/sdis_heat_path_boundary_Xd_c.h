@@ -250,7 +250,7 @@ XD(sample_reinjection_dir)
 #if DIM == 2
 static void
 XD(move_away_primitive_boundaries)
-  (const struct rwalk* rwalk,
+  (const struct sXd(hit)* hit,
    const double delta,
    double position[DIM]) /* Position to move */
 {
@@ -259,9 +259,9 @@ XD(move_away_primitive_boundaries)
   float dir[DIM];
   float len;
   const float st = 0.5f;
-  ASSERT(rwalk && !SXD_HIT_NONE(&rwalk->XD(hit)) && delta > 0);
+  ASSERT(!SXD_HIT_NONE(hit) && delta > 0);
 
-  SXD(primitive_get_attrib(&rwalk->XD(hit).prim, SXD_POSITION, st, &attr));
+  SXD(primitive_get_attrib(&hit->prim, SXD_POSITION, st, &attr));
 
   fX_set_dX(pos, position);
   fX(sub)(dir, attr.value, pos);
@@ -275,7 +275,7 @@ XD(move_away_primitive_boundaries)
  * numerical issues leading to inconsistent random walks. */
 static void
 XD(move_away_primitive_boundaries)
-  (const struct rwalk* rwalk,
+  (const struct sXd(hit)* hit,
    const double delta,
    double position[DIM])
 {
@@ -292,14 +292,14 @@ XD(move_away_primitive_boundaries)
   int imin = 0;
   int imid = 0;
   int i;
-  ASSERT(rwalk && delta > 0 && !S3D_HIT_NONE(&rwalk->XD(hit)));
+  ASSERT(delta > 0 && !S3D_HIT_NONE(hit));
 
   fX_set_dX(P, position);
 
   /* Fetch triangle vertices */
-  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 0, S3D_POSITION, &v0));
-  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 1, S3D_POSITION, &v1));
-  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 2, S3D_POSITION, &v2));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 1, S3D_POSITION, &v1));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 2, S3D_POSITION, &v2));
 
   /* Compute the edge vector */
   f3_sub(E[0], v1.value, v0.value);
@@ -479,7 +479,8 @@ XD(find_reinjection_ray)
      * and retry to find a valid reinjection. */
     if(dst0 == -1 && dst1 == -1
     && iattempt < MAX_ATTEMPTS - 1) { /* Is there still a trial to be done? */
-      XD(move_away_primitive_boundaries)(args->rwalk, args->distance, ray->org);
+      XD(move_away_primitive_boundaries)
+        (&args->rwalk->XD(hit), args->distance, ray->org);
       ray->position_was_moved = 1;
     }
   } while(dst0 == -1 && dst1 == -1 && ++iattempt < MAX_ATTEMPTS);
