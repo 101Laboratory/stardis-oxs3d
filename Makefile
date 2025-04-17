@@ -30,6 +30,7 @@ MPI_DEF = -DSDIS_ENABLE_MPI
 MPI_SRC = src/sdis_mpi.c
 SRC =\
  src/sdis.c\
+ src/sdis_brdf.c\
  src/sdis_camera.c\
  src/sdis_data.c\
  src/sdis_device.c\

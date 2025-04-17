@@ -222,6 +222,20 @@ query_medium_temperature_from_boundary_3d
    struct rwalk* rwalk,
    struct temperature* T);
 
+/* Move the submitted position away from the primitive boundaries to avoid
+ * numerical issues leading to inconsistent random walks. */
+extern LOCAL_SYM void
+move_away_primitive_boundaries_2d
+  (const struct s2d_hit* hit,
+   const double delta,
+   double position[2]); /* Position to move */
+
+extern LOCAL_SYM void
+move_away_primitive_boundaries_3d
+  (const struct s3d_hit* hit,
+   const double delta,
+   double position[3]); /* Position to move */
+
 /*******************************************************************************
  * Boundary sub-paths
  ******************************************************************************/

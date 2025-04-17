@@ -13,6 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_brdf.h"
 #include "sdis_heat_path_boundary_c.h"
 #include "sdis_interface_c.h"
 #include "sdis_log.h"
@@ -29,27 +30,6 @@
 #ifndef SDIS_HEAT_PATH_BOUNDARY_XD_HANDLE_EXTERNAL_NET_FLUX_H
 #define SDIS_HEAT_PATH_BOUNDARY_XD_HANDLE_EXTERNAL_NET_FLUX_H
 
-enum brdf_component {
-  BRDF_SPECULAR,
-  BRDF_DIFFUSE,
-  BRDF_NONE
-};
-
-struct brdf_sample {
-  double dir[3];
-  double pdf;
-  enum brdf_component cpnt;
-};
-#define BRDF_SAMPLE_NULL__ {{0}, 0, BRDF_NONE}
-static const struct brdf_sample BRDF_SAMPLE_NULL = BRDF_SAMPLE_NULL__;
-
-struct brdf {
-  double emissivity;
-  double specular_fraction;
-};
-#define BRDF_NULL__ {0, 0}
-static const struct brdf BRDF_NULL = BRDF_NULL__;
-
 /* Incident diffuse flux is made up of two components. One corresponds to the
  * diffuse flux due to the reflection of the source on surfaces. The other is
  * the diffuse flux due to the source's radiation scattering at least once in
@@ -62,112 +42,6 @@ struct incident_diffuse_flux {
 #define INCIDENT_DIFFUSE_FLUX_NULL__ {0, 0, {0,0,0}}
 static const struct incident_diffuse_flux INCIDENT_DIFFUSE_FLUX_NULL =
   INCIDENT_DIFFUSE_FLUX_NULL__;
-
-/* Reflect the V wrt the normal N. By convention V points outward the surface.
- * In fact, this function is a double-precision version of the reflect_3d
- * function. TODO Clean this "repeat" */
-static FINLINE double*
-reflect(double res[3], const double V[3], const double N[3])
-{
-  double tmp[3];
-  double cos_V_N;
-  ASSERT(res && V && N);
-  ASSERT(d3_is_normalized(V) && d3_is_normalized(N));
-  cos_V_N = d3_dot(V, N);
-  d3_muld(tmp, N, 2*cos_V_N);
-  d3_sub(res, tmp, V);
-  return res;
-}
-
-static void
-sample_brdf
-  (const struct brdf* brdf,
-   struct ssp_rng* rng,
-   const double wi[3], /* Incident direction. Point away from the surface */
-   const double N[3], /* Surface normal */
-   struct brdf_sample* sample)
-{
-  double r = 0; /* Random number */
-
-  /* Preconditions */
-  ASSERT(brdf && rng && wi && N && sample);
-  ASSERT(d3_is_normalized(wi) && d3_is_normalized(N));
-  ASSERT(d3_dot(wi, N) > 0);
-
-  r = ssp_rng_canonical(rng);
-
-  /* Sample the specular part */
-  if(r < brdf->specular_fraction) {
-    reflect(sample->dir, wi, N);
-    sample->pdf = 1;
-    sample->cpnt = BRDF_SPECULAR;
-
-  /* Sample the diffuse part */
-  } else {
-    ssp_ran_hemisphere_cos(rng, N, sample->dir, NULL);
-    sample->pdf = 1.0/PI;
-    sample->cpnt = BRDF_DIFFUSE;
-  }
-}
-
-/* Check that the trajectory reaches a valid interface, i.e. that it is on a
- * fluid/solid interface and has reached it from the fluid */
-static res_T
-check_interface
-  (const struct sdis_interface* interf,
-   const struct sdis_interface_fragment* frag,
-   const int verbose) /* Control the verbosity of the function */
-{
-  enum sdis_medium_type mdm_frt_type = SDIS_MEDIUM_TYPES_COUNT__;
-  enum sdis_medium_type mdm_bck_type = SDIS_MEDIUM_TYPES_COUNT__;
-  enum sdis_side fluid_side = SDIS_SIDE_NULL__;
-  res_T res = RES_OK;
-
-  mdm_frt_type = sdis_medium_get_type(interf->medium_front);
-  mdm_bck_type = sdis_medium_get_type(interf->medium_back);
-
-  /* Semi-transparent materials are not supported. This means that a solid/solid
-   * interface must not be intersected when tracing radiative paths */
-  if(mdm_frt_type == SDIS_SOLID && mdm_bck_type == SDIS_SOLID) {
-    if(verbose) {
-      log_err(interf->dev,
-        "Error when sampling the trajectory to calculate the incident diffuse "
-        "flux. The trajectory reaches a solid/solid interface, whereas this is "
-        "supposed to be impossible (path position: %g, %g, %g).\n",
-      SPLIT3(frag->P));
-    }
-    res = RES_BAD_OP;
-    goto error;
-  }
-
-  /* Find out which side of the interface the fluid is on */
-  if(mdm_frt_type == SDIS_FLUID) {
-    fluid_side = SDIS_FRONT;
-  } else if(mdm_bck_type == SDIS_FLUID) {
-    fluid_side = SDIS_BACK;
-  } else {
-    FATAL("Unreachable code\n");
-  }
-
-  /* Check that the current position is on the correct side of the interface */
-  if(frag->side != fluid_side) {
-    if(verbose) {
-      log_err(interf->dev,
-        "Inconsistent intersection when sampling the trajectory to calculate "
-        "the incident diffuse flux. The radiative path reaches an interface on "
-        "its solid side, whereas this is supposed to be impossible "
-        "(path position: %g, %g, %g).\n",
-        SPLIT3(frag->P));
-    }
-    res = RES_BAD_OP;
-    goto error;
-  }
-
-exit:
-  return res;
-error:
-  goto exit;
-}
 
 #endif /* SDIS_HEAT_PATH_BOUNDARY_XD_HANDLE_EXTERNAL_NET_FLUX_H */
 
@@ -214,36 +88,6 @@ XD(check_handle_external_net_flux_args)
   return RES_OK;
 }
 
-static INLINE void
-XD(trace_ray)
-  (const struct sdis_scene* scn,
-   const double pos[DIM],
-   const double dir[3],
-   const double distance,
-   const struct sXd(hit)* hit_from,
-   struct sXd(hit)* hit)
-{
-  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
-  float ray_org[DIM] = {0};
-  float ray_dir[3] = {0};
-  float ray_range[2] = {0};
-  ASSERT(scn && pos && dir && distance >= 0 && hit_from && hit);
-
-  fX_set_dX(ray_org, pos);
-  f3_set_d3(ray_dir, dir);
-  ray_range[0] = 0;
-  ray_range[1] = (float)distance;
-  filter_data.XD(hit) = *hit_from;
-  filter_data.epsilon = 1.e-4;
-#if DIM == 2
-  SXD(scene_view_trace_ray_3d
-    (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
-#else
-  SXD(scene_view_trace_ray
-    (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
-#endif
-}
-
 static INLINE double /* [W/m^2/sr] */
 XD(direct_contribution)
   (const struct sdis_scene* scn,
@@ -264,156 +108,6 @@ XD(direct_contribution)
    * This trick makes it possible to manage the external flux in the green
    * function. */
   return sample->radiance_term; /* [W/m^2/sr] */
-}
-
-static INLINE void
-XD(setup_fragment)
-  (struct sdis_interface_fragment* frag,
-   const double pos[DIM],
-   const double dir[DIM], /* Direction _toward_ the hit position */
-   const double time, /* Current time */
-   const double N[DIM],/* Surface normal */
-   const struct sXd(hit)* hit)
-{
-  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
-  enum sdis_side side = SDIS_SIDE_NULL__;
-  ASSERT(frag && pos && dir && N);
-  ASSERT(dX(is_normalized)(N));
-
-  /* Setup the interface fragment at the intersection position */
-  dX(set)(vtx.P, pos);
-  vtx.time = time;
-  side = dX(dot)(dir, N) < 0 ? SDIS_FRONT : SDIS_BACK;
-  XD(setup_interface_fragment)(frag, &vtx, hit, side);
-}
-
-static INLINE res_T
-XD(find_next_fragment)
-  (const struct sdis_scene* scn,
-   const double in_pos[3],
-   const double in_dir[3], /* Always in 3D */
-   const struct sXd(hit)* in_hit,
-   const double time,
-   struct sXd(hit)* out_hit,
-   struct sdis_interface** out_interf,
-   struct sdis_interface_fragment* out_frag)
-{
-  const int NATTEMPTS_MAX = 10;
-  int nattempts = 0;
-
-  /* Stardis */
-  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-  struct sdis_interface* interf = NULL;
-
-  struct sXd(hit) hit = SXD_HIT_NULL;
-  double rt_pos[DIM] = {0};
-  res_T res = RES_OK;
-
-  ASSERT(scn && in_pos && in_dir && in_hit && !SXD_HIT_NONE(in_hit));
-  ASSERT(out_hit && out_interf && out_frag);
-
-  dX(set)(rt_pos, in_pos);
-
-  do {
-    struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
-    struct sdis_medium* solid = NULL;
-    double pos[3] = {0};
-    double vec[3] = {0};
-    double N[3] = {0};
-    double delta = 0;
-
-    /* Reset result code. It may have been modified during a previous attempt */
-    res = RES_OK;
-
-    /* Find the following surface along the direction of propagation */
-    XD(trace_ray)(scn, rt_pos, in_dir, INF, in_hit, &hit);
-    if(SXD_HIT_NONE(&hit)) break;
-
-    /* Retrieve the current position and normal */
-    dX(add)(pos, rt_pos, dX(muld)(vec, in_dir, hit.distance));
-    dX_set_fX(N, hit.normal);
-    dX(normalize(N, N));
-
-    /* Retrieve the current interface properties */
-    interf = scene_get_interface(scn, hit.prim.prim_id);
-    XD(setup_fragment)(&frag, pos, in_dir, time, N, &hit);
-
-    /* Check that the path reaches a valid interface.
-     * An invalid fragment may mean that the ray position is in a corner and the
-     * traced ray has missed the surface of that corner. To correct this, the
-     * ray position is moved slightly away from the corner before a ray is drawn
-     * in the same direction. This fallback solution is executed a number of
-     * times, after which, if the fragment is still invalid, it is considered
-     * that the numerical error cannot be mitigated. */
-    res = check_interface(interf, &frag, nattempts == NATTEMPTS_MAX);
-    if(res != RES_OK && nattempts == NATTEMPTS_MAX) goto error;
-    ++nattempts;
-
-    if(res != RES_OK) { /* Mitigate numerical error (see above) */
-      if(sdis_medium_get_type(interf->medium_front) == SDIS_SOLID) {
-        solid = interf->medium_front;
-      } else {
-        ASSERT(sdis_medium_get_type(interf->medium_back) == SDIS_SOLID);
-        solid = interf->medium_back;
-      }
-
-      /* Retrieves the delta of the solid that surrounds the boundary, as it is
-       * actually the only numerical parameter that says something about the
-       * system. */
-      vtx.P[0] = pos[0];
-      vtx.P[1] = pos[1];
-      vtx.P[2] = pos[2];
-      vtx.time = time;
-      delta = solid_get_delta(solid, &vtx);
-
-      XD(move_away_primitive_boundaries)(in_hit, delta, rt_pos);
-    }
-  } while(res != RES_OK);
-
-exit:
-  *out_hit = hit;
-  *out_interf = interf;
-  *out_frag = frag;
-  return res;
-error:
-  goto exit;
-}
-
-static INLINE res_T
-XD(setup_brdf)
-  (struct sdis_device* dev,
-   const struct sdis_source* src,
-   struct brdf* brdf,
-   const struct sdis_interface* interf,
-   const struct sdis_interface_fragment* frag)
-{
-  double epsilon = 0;
-  double alpha = 0;
-  unsigned src_id = 0;
-  res_T res = RES_OK;
-  ASSERT(brdf && frag);
-  ASSERT((frag->side == SDIS_FRONT
-      && sdis_medium_get_type(interf->medium_front) == SDIS_FLUID)
-      || sdis_medium_get_type(interf->medium_back) == SDIS_FLUID);
-
-  src_id = sdis_source_get_id(src);
-
-  epsilon = interface_side_get_emissivity(interf, src_id, frag);
-  res = interface_side_check_emissivity(dev, epsilon, frag->P, frag->time);
-  if(res != RES_OK) goto error;
-
-  alpha = interface_side_get_specular_fraction(interf, src_id, frag);
-  res = interface_side_check_specular_fraction(dev, alpha, frag->P, frag->time);
-  if(res != RES_OK) goto error;
-
-  brdf->emissivity = epsilon;
-  brdf->specular_fraction = alpha;
-
-exit:
-  return res;
-error:
-  *brdf = BRDF_NULL;
-  goto exit;
 }
 
 static res_T
@@ -454,7 +148,8 @@ XD(compute_incident_diffuse_flux)
 
     /* BRDF */
     struct brdf brdf = BRDF_NULL;
-    struct brdf_sample brdf_sample = BRDF_SAMPLE_NULL;
+    struct brdf_sample bounce = BRDF_SAMPLE_NULL;
+    struct brdf_setup_args brdf_setup_args = BRDF_SETUP_ARGS_NULL;
 
     /* Miscellaneous */
     double L = 0; /* incident flux to bounce position */
@@ -482,7 +177,13 @@ XD(compute_incident_diffuse_flux)
     }
 
     d3_set(pos, frag.P);
-    XD(setup_brdf)(scn->dev, scn->source, &brdf, interf, &frag);
+
+    /* Retrieve BRDF at current interface position */
+    brdf_setup_args.interf = interf;
+    brdf_setup_args.frag = &frag;
+    brdf_setup_args.source_id = sdis_source_get_id(scn->source);
+    res = brdf_setup(scn->dev, &brdf_setup_args, &brdf);
+    if(res != RES_OK) goto error;
 
     /* Check if path is absorbed */
     if(ssp_rng_canonical(rng) < brdf.emissivity) break;
@@ -493,12 +194,12 @@ XD(compute_incident_diffuse_flux)
       case SDIS_BACK:  dX(minus)(N, frag.Ng); break;
       default: FATAL("Unreachable code\n");
     }
-    sample_brdf(&brdf, rng, wi, N, &brdf_sample);
-    d3_set(dir, brdf_sample.dir); /* Always in 3D */
+    brdf_sample(&brdf, rng, wi, N, &bounce);
+    d3_set(dir, bounce.dir); /* Always in 3D */
 
     /* Calculate the direct contribution if the rebound is specular */
-    if(brdf_sample.cpnt == BRDF_SPECULAR) {
-      res = source_trace_to(scn->source, pos, brdf_sample.dir, time, &src_sample);
+    if(bounce.cpnt == BRDF_SPECULAR) {
+      res = source_trace_to(scn->source, pos, bounce.dir, time, &src_sample);
       if(res != RES_OK) goto error;
 
       if(!SOURCE_SAMPLE_NONE(&src_sample)) {
@@ -509,7 +210,7 @@ XD(compute_incident_diffuse_flux)
     /* Calculate the direct contribution of the rebound is diffuse */
     } else {
       double cos_theta = 0;
-      ASSERT(brdf_sample.cpnt == BRDF_DIFFUSE);
+      ASSERT(bounce.cpnt == BRDF_DIFFUSE);
 
       /* Sample an external source to handle its direct contribution at the
        * bounce position */
