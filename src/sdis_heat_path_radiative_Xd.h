@@ -391,8 +391,8 @@ XD(find_next_fragment)
    struct sdis_interface** out_interf,
    struct sdis_interface_fragment* out_frag)
 {
-  const int NATTEMPTS_MAX = 10;
-  int nattempts = 0;
+  int NATTEMPTS_MAX = 10;
+  int nattempts = 1;
 
   /* Stardis */
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
@@ -404,6 +404,9 @@ XD(find_next_fragment)
 
   ASSERT(scn && in_pos && in_dir && in_hit);
   ASSERT(out_hit && out_interf && out_frag);
+
+  /* Only one attempt is allowed when the ray does not start from a primitive */
+  NATTEMPTS_MAX = S3D_HIT_NONE(in_hit) ? 1 : 10;
 
   dX(set)(rt_pos, in_pos);
 
