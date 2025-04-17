@@ -236,7 +236,7 @@ XD(trace_radiative_path)
     d3_minus(wi, dir);
 
     res = XD(find_next_fragment)(scn, pos, dir, &rwalk->XD(hit),
-      rwalk->vtx.time, &rwalk->XD(hit), &interf, &frag);
+      rwalk->vtx.time, rwalk->enc_id, &rwalk->XD(hit), &interf, &frag);
     if(res != RES_OK) goto error;
 
     /* The path reaches the radiative environment */
@@ -348,10 +348,11 @@ error:
 
 void
 XD(trace_ray)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double pos[DIM],
    const double dir[3],
    const double distance,
+   const unsigned enc_id,
    const struct sXd(hit)* hit_from,
    struct sXd(hit)* hit)
 {
@@ -366,7 +367,9 @@ XD(trace_ray)
   ray_range[0] = 0;
   ray_range[1] = (float)distance;
   filter_data.XD(hit) = *hit_from;
-  filter_data.epsilon = 1.e-4;
+  filter_data.epsilon = 1.e-6;
+  filter_data.scn = scn; /* Enable the filtering wrt the enclosure id */
+  filter_data.enc_id = enc_id;
 #if DIM == 2
   SXD(scene_view_trace_ray_3d
     (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
@@ -378,11 +381,12 @@ XD(trace_ray)
 
 res_T
 XD(find_next_fragment)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    const double in_pos[DIM],
    const double in_dir[3], /* Always in 3D */
    const struct sXd(hit)* in_hit,
    const double time,
+   const unsigned enc_id,
    struct sXd(hit)* out_hit,
    struct sdis_interface** out_interf,
    struct sdis_interface_fragment* out_frag)
@@ -415,7 +419,7 @@ XD(find_next_fragment)
     res = RES_OK;
 
     /* Find the following surface along the direction of propagation */
-    XD(trace_ray)(scn, rt_pos, in_dir, INF, in_hit, &hit);
+    XD(trace_ray)(scn, rt_pos, in_dir, INF, enc_id, in_hit, &hit);
     if(SXD_HIT_NONE(&hit)) break;
 
     /* Retrieve the current position and normal */

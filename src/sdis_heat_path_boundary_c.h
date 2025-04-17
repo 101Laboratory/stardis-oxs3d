@@ -175,14 +175,14 @@ HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL = HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL__;
 
 extern LOCAL_SYM res_T
 handle_external_net_flux_2d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const struct handle_external_net_flux_args* args,
    struct temperature* T);
 
 extern LOCAL_SYM res_T
 handle_external_net_flux_3d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const struct handle_external_net_flux_args* args,
    struct temperature* T);

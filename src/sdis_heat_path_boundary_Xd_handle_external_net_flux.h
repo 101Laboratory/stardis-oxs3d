@@ -90,16 +90,17 @@ XD(check_handle_external_net_flux_args)
 
 static INLINE double /* [W/m^2/sr] */
 XD(direct_contribution)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct source_sample* sample,
    const double pos[DIM],
+   const unsigned enc_id, /* Current enclosure */
    const struct sXd(hit)* hit_from)
 {
   struct sXd(hit) hit = SXD_HIT_NULL;
   ASSERT(scn && sample && pos && hit_from);
 
   /* Is the source hidden */
-  XD(trace_ray)(scn, pos, sample->dir, sample->dst, hit_from, &hit);
+  XD(trace_ray)(scn, pos, sample->dir, sample->dst, enc_id, hit_from, &hit);
   if(!SXD_HIT_NONE(&hit)) return 0; /* [W/m^2/sr] */
 
   /* Note that the value returned is not the source's actual radiance, but the
@@ -112,11 +113,12 @@ XD(direct_contribution)
 
 static res_T
 XD(compute_incident_diffuse_flux)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const double in_pos[DIM], /* position */
    const double in_N[DIM], /* Surface normal. (Away from the surface) */
    const double time,
+   const unsigned enc_id, /* Current enclosure */
    const struct sXd(hit)* in_hit, /* Current intersection */
    struct incident_diffuse_flux* diffuse_flux) /* [W/m^2] */
 {
@@ -158,7 +160,7 @@ XD(compute_incident_diffuse_flux)
     d3_minus(wi, dir); /* Always in 3D */
 
     res = XD(find_next_fragment)
-      (scn, pos, dir, &hit, time, &hit, &interf, &frag);
+      (scn, pos, dir, &hit, time, enc_id, &hit, &interf, &frag);
     if(res != RES_OK) goto error;
 
     if(SXD_HIT_NONE(&hit)) {
@@ -203,7 +205,8 @@ XD(compute_incident_diffuse_flux)
       if(res != RES_OK) goto error;
 
       if(!SOURCE_SAMPLE_NONE(&src_sample)) {
-        const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
+        const double Ld = XD(direct_contribution)
+          (scn, &src_sample, pos, enc_id, &hit);
         L = Ld; /* [W/m^2/sr] */
       }
 
@@ -224,7 +227,8 @@ XD(compute_incident_diffuse_flux)
 
       /* The source is above the surface */
       } else {
-        const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
+        const double Ld = XD(direct_contribution)
+          (scn, &src_sample, pos, enc_id, &hit);
         L = Ld * cos_theta / (PI * src_sample.pdf); /* [W/m^2/sr] */
       }
     }
@@ -244,7 +248,7 @@ error:
  ******************************************************************************/
 res_T
 XD(handle_external_net_flux)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const struct handle_external_net_flux_args* args,
    struct temperature* T)
@@ -270,6 +274,7 @@ XD(handle_external_net_flux)
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
 
   /* Miscellaneous */
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
   double sum_h = 0;
   double emissivity = 0; /* Emissivity */
   double Ld = 0; /* Incident radiance [W/m^2/sr] */
@@ -290,6 +295,9 @@ XD(handle_external_net_flux)
     ASSERT(sdis_medium_get_type(args->interf->medium_back) == SDIS_FLUID);
     frag.side = SDIS_BACK;
   }
+
+  /* Retrieve the enclosures */
+  scene_get_enclosure_ids(scn, args->XD(hit)->prim.prim_id, enc_ids);
 
   /* No external sources <=> no external fluxes. Nothing to do */
   handle_flux = interface_side_is_external_flux_handled(args->interf, &frag);
@@ -317,13 +325,14 @@ XD(handle_external_net_flux)
    * interface side */
   cos_theta = d3_dot(N, src_sample.dir);
   if(cos_theta > 0) {
-    Ld = XD(direct_contribution)(scn, &src_sample, frag.P, args->XD(hit));
+    Ld = XD(direct_contribution)
+      (scn, &src_sample, frag.P, enc_ids[frag.side], args->XD(hit));
     incident_flux_direct = cos_theta * Ld / src_sample.pdf; /* [W/m^2] */
   }
 
   /* Calculate the incident diffuse flux [W/m^2] */
-  res = XD(compute_incident_diffuse_flux)
-    (scn, rng, frag.P, N, frag.time, args->XD(hit), &incident_flux_diffuse);
+  res = XD(compute_incident_diffuse_flux)(scn, rng, frag.P, N, frag.time,
+    enc_ids[frag.side], args->XD(hit), &incident_flux_diffuse);
   if(res != RES_OK) goto error;
 
   /* Calculate the incident flux without the part scattered by the environment.
