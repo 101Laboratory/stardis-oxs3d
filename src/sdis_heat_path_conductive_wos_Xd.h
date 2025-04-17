@@ -410,7 +410,7 @@ XD(setup_hit_wos)
   }
 
   /* Check path consistency */
-  if(enc_ids[side] != rwalk->enc_id) {
+  if(side == SDIS_SIDE_NULL__ || enc_ids[side] != rwalk->enc_id) {
     res = RES_BAD_OP_IRRECOVERABLE;
     log_err(scn->dev,
       "%s:%s: the conductive path has reached an invalid interface. "
