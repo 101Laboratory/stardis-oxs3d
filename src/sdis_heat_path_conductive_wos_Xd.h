@@ -22,6 +22,9 @@
 
 #include "sdis_Xd_begin.h"
 
+/* Define epsilon shell from delta */
+#define EPSILON_SHELL(Delta) ((Delta)*1e-2)
+
 /*******************************************************************************
  * Non generic helper functions
  ******************************************************************************/
@@ -218,6 +221,7 @@ exit:
 static INLINE enum sdis_side
 compute_hit_side_2d
   (const struct s2d_hit* hit,
+   const double delta,
    const double pos[2]) /* Position from which intersection occurs */
 {
   struct s2d_attrib p0, p1; /* Segment positions */
@@ -226,7 +230,14 @@ compute_hit_side_2d
   double z = 0;
 
   /* Check pre-conditions */
-  ASSERT(hit && pos && !S2D_HIT_NONE(hit));
+  ASSERT(hit && delta > 0 && pos && !S2D_HIT_NONE(hit));
+
+  /* Delta is not yet used. It could be used to check confidence in the impact
+   * side calculation. A small value of Z (in relation to epsilon) means that the
+   * position of the input is close to the boundary and that the calculation of
+   * the side must be carried out with care. So far, however, no such problems
+   * have been observed in 2D. */
+  (void)delta;
 
   /* Retrieve the positions of the intersected segment */
   S2D(segment_get_vertex_attrib(&hit->prim, 0, S2D_POSITION, &p0));
@@ -245,9 +256,13 @@ compute_hit_side_2d
 #endif
 
 #if DIM == 3
+/* May return SDIS_SIDE_NULL__ if the side cannot be calculated with confidence,
+ * i.e. if the input position is too close to the boundary and the calculation
+ * may therefore present numerical problems */
 static INLINE enum sdis_side
 compute_hit_side_3d
   (const struct s3d_hit* hit,
+   const double delta,
    const double pos[3]) /* Position from which intersection occurs */
 {
   struct s3d_attrib v0; /* Position of the 1st triangle vertex */
@@ -257,7 +272,13 @@ compute_hit_side_3d
   double dst = 0; /* Distance of pos to the plane */
 
   /* Check pre-conditions */
-  ASSERT(hit && pos && !S3D_HIT_NONE(hit));
+  ASSERT(hit && delta > 0 && pos && !S3D_HIT_NONE(hit));
+
+  /* The distance is close to the border and its calculation can suffer from
+   * numerical problems. No side can therefore be estimated with confidence */
+  if(hit->distance < 1e-4 && eq_eps(hit->distance, 0, EPSILON_SHELL(delta))) {
+    return SDIS_SIDE_NULL__;
+  }
 
   /* Retrieve the positions of the intersected triangle */
   S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
@@ -287,6 +308,7 @@ XD(check_diffusion_position)
   enum sdis_side side = SDIS_SIDE_NULL__;
 
   struct sXd(hit) hit = SXD_HIT_NULL;
+  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
   float wos_pos[DIM] = {0};
   float wos_radius = 0;
   res_T res = RES_OK;
@@ -294,6 +316,11 @@ XD(check_diffusion_position)
   /* Check pre-conditions */
   ASSERT(scn && pos);
   ASSERT(expected_enc_id != ENCLOSURE_ID_NULL);
+
+  /* Filter positions on/near a primitive boundary that don't look towards the
+   * query position */
+  filter_data.scn = scn;
+  filter_data.enc_id = expected_enc_id;
 
   /* Look for the nearest surface of the position to be checked. By limiting the
    * search radius to delta we speed up the closest point query. If no surface
@@ -309,15 +336,25 @@ XD(check_diffusion_position)
    * problem of this kind could have arisen. */
   wos_radius = (float)delta;
   fX_set_dX(wos_pos, pos);
-  SXD(scene_view_closest_point(scn->sXd(view), wos_pos, wos_radius, NULL, &hit));
+  SXD(scene_view_closest_point
+    (scn->sXd(view), wos_pos, wos_radius, &filter_data, &hit));
   if(SXD_HIT_NONE(&hit)) goto exit;
 
   /* Check path consistency */
   scene_get_enclosure_ids(scn, hit.prim.prim_id, enc_ids);
-  side = XD(compute_hit_side)(&hit, pos);
-  if(enc_ids[side] != expected_enc_id) {
+  side = XD(compute_hit_side)(&hit, delta, pos);
+  if(side != SDIS_SIDE_NULL__ && enc_ids[side] != expected_enc_id) {
     res = RES_BAD_ARG;
     goto error;
+  }
+
+  /* Position is close of the border: check both sides to handle numerical
+   * problems in calculating hit side */
+  if(side == SDIS_SIDE_NULL__
+  && enc_ids[SDIS_FRONT] != expected_enc_id
+  && enc_ids[SDIS_BACK]  != expected_enc_id) {
+     res = RES_BAD_ARG;
+     goto error;
   }
 
 exit:
@@ -330,6 +367,7 @@ static res_T
 XD(setup_hit_wos)
   (struct sdis_scene* scn,
    const struct sXd(hit)* hit,
+   const double delta,
    struct rwalk* rwalk)
 {
   /* Geometry */
@@ -355,18 +393,30 @@ XD(setup_hit_wos)
   SXD(primitive_get_attrib(&prim, SXD_POSITION, hit->uv, &attr));
 #endif
 
+  scene_get_enclosure_ids(scn, hit->prim.prim_id, enc_ids);
+
   /* Calculate on which side the intersection occurs */
   dX_set_fX(tgt, attr.value);
-  side = XD(compute_hit_side)(hit, rwalk->vtx.P);
+  side = XD(compute_hit_side)(hit, delta, rwalk->vtx.P);
+
+  /* Calculating the side of the intersection can suffer from numerical problems
+   * when the position of the path is close to the intersected surface (i.e.
+   * side == SDIS_SIDE_NULL). It is therefore reasonable to assume that there is
+   * no cause for concern as long as the enclosure identifier on the other side
+   * of the triangle is the expected one. */
+  if(side == SDIS_SIDE_NULL__) {
+    if(rwalk->enc_id == enc_ids[SDIS_FRONT]) side = SDIS_FRONT;
+    if(rwalk->enc_id == enc_ids[SDIS_BACK]) side = SDIS_BACK;
+  }
 
   /* Check path consistency */
-  scene_get_enclosure_ids(scn, hit->prim.prim_id, enc_ids);
   if(enc_ids[side] != rwalk->enc_id) {
+    res = RES_BAD_OP_IRRECOVERABLE;
     log_err(scn->dev,
       "%s:%s: the conductive path has reached an invalid interface. "
       "Unexpected enclosure -- pos=("FORMAT_VECX"), side=%s\n",
-      __FILE__, FUNC_NAME, SPLITX(tgt), side == SDIS_FRONT ? "front" : "back");
-    res = RES_BAD_OP_IRRECOVERABLE;
+      __FILE__, FUNC_NAME, SPLITX(tgt),
+      side == SDIS_FRONT ? "front" : "back");
     goto error;
   }
 
@@ -461,11 +511,11 @@ XD(sample_next_position)
   CHK(!SXD_HIT_NONE(&hit));
   wos_distance = hit.distance;
 
-  /* The current position is in the epsilon shell, i.e. 1% of delta:
+  /* The current position is in the epsilon shell,
    * move it to the nearest interface position */
-  wos_epsilon = delta*1.e-2;
+  wos_epsilon = EPSILON_SHELL(delta);
   if(wos_distance <= wos_epsilon) {
-    res = XD(setup_hit_wos)(scn, &hit, rwalk);
+    res = XD(setup_hit_wos)(scn, &hit, delta, rwalk);
     if(res != RES_OK) goto error;
 
   /* Uniformly sample a new position on the surrounding sphere */
@@ -522,7 +572,7 @@ XD(sample_next_position)
          * specific numerical errors of the ray-tracing operator may contradict
          * the WoS algorithm, which relies on the closest point operator. But
          * since the position is close to the boundary, it can be snaped to it*/
-        res = XD(setup_hit_wos)(scn, &hit, rwalk);
+        res = XD(setup_hit_wos)(scn, &hit, delta, rwalk);
         if(res != RES_OK) goto error;
 
       } else {
@@ -534,9 +584,9 @@ XD(sample_next_position)
            * case of the lack of intersection (see above) this means that the
            * position is close to the enclosure boundary and that the ray missed
            * it. So, As previously, the position can be simply snaped to it
-           * since one can assumes that the current position is is the right
+           * since one can assumes that the current position is in the right
            * enclosure */
-          res = XD(setup_hit_wos)(scn, &hit, rwalk);
+          res = XD(setup_hit_wos)(scn, &hit, delta, rwalk);
           if(res != RES_OK) goto error;
         }
       }
