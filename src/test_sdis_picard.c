@@ -687,7 +687,7 @@ main(int argc, char** argv)
   interf_props.temperature = 350;
   interf_props.h = -1;
   interf_props.emissivity = 1;
-  interf_props.specular_fraction = -1;
+  interf_props.specular_fraction = 0;
   interf_props.Tref = 350;
   create_interface(dev, fluid, dummy, &interf_props, interfaces+BOUNDARY_pX);
 
