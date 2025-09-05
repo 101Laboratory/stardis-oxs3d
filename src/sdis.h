@@ -377,7 +377,7 @@ struct sdis_interface_side_shader {
   /* Fixed temperature/flux. May be NULL if the temperature/flux is unknown
    * onto the whole interface */
   sdis_interface_getter_T temperature; /* [K]. SDIS_TEMPERATURE_NONE = Unknown */
-  sdis_interface_getter_T flux; /* [W.m^-2]. SDIS_FLUX_NONE = no flux  */
+  sdis_interface_getter_T flux; /* Toward solid. [W.m^-2]. SDIS_FLUX_NONE = no flux */
 
   /* Control the emissivity of the interface. May be NULL for solid/solid
    * interface or if the emissivity is 0 onto the whole interface. */
