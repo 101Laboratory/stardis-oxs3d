@@ -1104,7 +1104,6 @@ XD(move_away_primitive_boundaries)
   float P[3]; /* Random walk position */
   float tmp[3];
   float min_dst, max_dst;
-  float cos_a1, cos_a2;
   float len;
   int imax = 0;
   int imin = 0;
@@ -1157,34 +1156,38 @@ XD(move_away_primitive_boundaries)
   }
   (void)imax;
 
-  /* TODO if the current position is near a vertex, one should move toward the
-   * farthest edge along its normal to avoid too small displacement */
+  if(eq_eps(dst[imin], 0, delta*1e-3) && eq_eps(dst[imid], 0, delta*1e-3)) {
+    /* The random position is in a corner, meaning that its distance to the two
+     * nearest edges is approximately equal to 0. Move it toward the farthest
+     * edge along its normal to avoid moving too little. */
+    len = MMIN(dst[imax]*0.5f, (float)delta*0.1f);
+    XD(move_pos)(position, f3_minus(tmp, E[imax]), len);
 
-  /* Compute the distance `dst' from the current position to the edges to move
-   * to, along the normal of the edge from which the random walk is the nearest
-   *
-   *           +.                 cos(a) = d / dst => dst = d / cos_a
-   *          /  `*.
-   *         /    | `*.
-   *        /  dst| a /`*.
-   *       /      |  /    `*.
-   *      /       | / d      `*.
-   *     /        |/            `*.
-   *    +---------o----------------+  */
-  cos_a1 = f3_dot(E[imin], f3_minus(tmp, E[imid]));
-  cos_a2 = f3_dot(E[imin], f3_minus(tmp, E[imax]));
-  dst[imid] = cos_a1 > 0 ? dst[imid] / cos_a1 : FLT_MAX;
-  dst[imax] = cos_a2 > 0 ? dst[imax] / cos_a2 : FLT_MAX;
+  } else {
+    /* Compute the distance `dst' from the current position to the edges to move
+     * to, along the normal of the edge from which the random walk is the nearest
+     *
+     *           +.                 cos(a) = d / dst => dst = d / cos_a
+     *          /  `*.
+     *         /    | `*.
+     *        /  dst| a /`*.
+     *       /      |  /    `*.
+     *      /       | / d      `*.
+     *     /        |/            `*.
+     *    +---------o----------------+  */
+    const float cos_a1 = f3_dot(E[imin], f3_minus(tmp, E[imid]));
+    const float cos_a2 = f3_dot(E[imin], f3_minus(tmp, E[imax]));
+    dst[imid] = cos_a1 > 0 ? dst[imid] / cos_a1 : FLT_MAX;
+    dst[imax] = cos_a2 > 0 ? dst[imax] / cos_a2 : FLT_MAX;
+    len = MMIN(dst[imid], dst[imax]);
+    ASSERT(len != FLT_MAX);
 
-  /* Compute the maximum displacement distance into the triangle along the
-   * normal of the edge from which the random walk is the nearest */
-  len = MMIN(dst[imid], dst[imax]);
-  ASSERT(len != FLT_MAX);
+    /* Define the displacement distance as the minimum between 10 percent of
+     * delta and len / 2. */
+    len = MMIN(len*0.5f, (float)(delta*0.1));
+    XD(move_pos)(position, E[imin], len);
+  }
 
-  /* Define the displacement distance as the minimum between 10 percent of
-   * delta and len / 2. */
-  len = MMIN(len*0.5f, (float)(delta*0.1));
-  XD(move_pos)(position, E[imin], len);
 }
 #endif
 
