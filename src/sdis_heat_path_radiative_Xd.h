@@ -208,6 +208,7 @@ XD(trace_radiative_path)
   double dir[3] = {0,0,0};
   double pos[3] = {0,0,0};
   int branch_id;
+  size_t nbounces = 0; /* For debug */
   res_T res = RES_OK;
 
   ASSERT(scn && ray_dir && ctx && rwalk && rng && T);
@@ -301,6 +302,8 @@ XD(trace_radiative_path)
     }
     brdf_sample(&brdf, rng, wi, N, &bounce);
     d3_set(dir, bounce.dir); /* Always in 3D */
+
+    ++nbounces;
   }
 
 exit:
