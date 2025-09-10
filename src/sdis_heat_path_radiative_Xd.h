@@ -248,8 +248,16 @@ XD(trace_radiative_path)
       break; /* Stop the radiative path */
     }
 
-    /* Move the random walk to the hit position, i.e. the next position on the
-     * interface returned as a fragment by the previous function */
+   /* Move the random walk to the hit position, i.e., the next position on the
+    * interface returned as a fragment by the find_next_fragment function. Do
+    * not use the sampled direction and distance to the hit point to
+    * calculate the new position, as the current position may have been slightly
+    * shifted on the starting triangle by the find_next_fragment function in
+    * order to avoid numerical inaccuracy issues, making it impossible to
+    * reconstruct the position actually returned by the function. The starting
+    * point and distance returned are not, in any case, those used by the
+    * function to calculate the new wall position. So simply use the position
+    * returned by this function. */
     d3_set(rwalk->vtx.P, frag.P);
     rwalk->hit_side = frag.side;
 
