@@ -231,7 +231,6 @@ XD(trace_radiative_path)
     struct sdis_interface* interf = NULL;
     struct sdis_medium* chk_mdm = NULL;
     double wi[3] = {0,0,0};
-    float dirf[3] = {0,0,0};
 
     d3_set(pos, rwalk->vtx.P);
     d3_minus(wi, dir);
@@ -249,8 +248,9 @@ XD(trace_radiative_path)
       break; /* Stop the radiative path */
     }
 
-    /* Move the random walk to the hit position */
-    XD(move_pos)(rwalk->vtx.P, fX_set_dX(dirf, dir), rwalk->XD(hit).distance);
+    /* Move the random walk to the hit position, i.e. the next position on the
+     * interface returned as a fragment by the previous function */
+    d3_set(rwalk->vtx.P, frag.P);
     rwalk->hit_side = frag.side;
 
     /* Verify that the intersection, although in the same enclosure, touches the
