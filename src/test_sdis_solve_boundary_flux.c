@@ -123,7 +123,7 @@ solid_get_delta
 {
   (void) data;
   CHK(vtx != NULL);
-  return 1.0 / 20.0;
+  return 1.0 / 40.0;
 }
 
 static double

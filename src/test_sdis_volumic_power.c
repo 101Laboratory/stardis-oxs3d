@@ -50,7 +50,7 @@
 #define T0 320
 #define LAMBDA 0.1
 #define P0 10
-#define DELTA 1.0/55.0
+#define DELTA 1.0/60.0
 
 /*******************************************************************************
  * Helper functions

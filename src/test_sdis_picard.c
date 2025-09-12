@@ -225,7 +225,7 @@ solid_get_delta
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(vtx && data);
-  return 0.005;
+  return 0.0025;
 }
 
 static double
