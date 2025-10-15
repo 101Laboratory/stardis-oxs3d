@@ -22,11 +22,21 @@
 struct sdis_source;
 struct ssp_rng;
 
+struct source_props {
+  double pos[3]; /* [m/fp_to_meter] */
+  double radius; /* [m/fp_to_meter] */
+  double power; /* [W] */
+  double area; /* [m^2/fp_to_meter] */
+  double time; /* [s] */
+};
+#define SOURCE_PROPS_NULL__ {0}
+static const struct source_props SOURCE_PROPS_NULL = SOURCE_PROPS_NULL__;
+
 struct source_sample {
   double dir[3]; /* Direction _to_ the source */
   double pdf; /* pdf of sampled direction */
   double dst; /* Distance to the source [m] */
-  double power; /* [W] */
+
   double radiance; /* [W/m^2/sr] */
 
   /* Radiance relative to power, i.e. the source power is assumed to be equal to
@@ -36,18 +46,24 @@ struct source_sample {
    * green function */
   double radiance_term; /* [W/m^2/sr] */
 };
-#define SOURCE_SAMPLE_NULL__ {{0,0,0}, 0, 0, 0, 0, 0}
+#define SOURCE_SAMPLE_NULL__ {0}
 static const struct source_sample SOURCE_SAMPLE_NULL = SOURCE_SAMPLE_NULL__;
 
 /* Helper macro used to define whether a sample is valid or not */
 #define SOURCE_SAMPLE_NONE(Sample) ((Sample)->pdf == 0)
 
 extern LOCAL_SYM res_T
+source_get_props
+  (const struct sdis_source* source,
+   const double time, /* Time at which props are retrieved [s] */
+   struct source_props* props);
+
+extern LOCAL_SYM res_T
 source_sample
   (const struct sdis_source* source,
+   const struct source_props* props,
    struct ssp_rng* rng,
    const double pos[3], /* Position from which the source is sampled */
-   const double time, /* Time at which the source is sampled */
    struct source_sample* sample);
 
 /* Trace a ray toward the source. The returned sample has a pdf of 1 or 0
@@ -56,9 +72,9 @@ source_sample
 extern LOCAL_SYM res_T
 source_trace_to
   (const struct sdis_source* source,
+   const struct source_props* props,
    const double pos[3], /* Ray origin */
    const double dir[3], /* Ray direction */
-   const double time, /* Time at which ray is traced */
    struct source_sample* sample); /* pdf == 0 if no source is reached */
 
 extern LOCAL_SYM double /* [W] */

@@ -115,6 +115,7 @@ static res_T
 XD(compute_incident_diffuse_flux)
   (struct sdis_scene* scn,
    struct ssp_rng* rng,
+   const struct source_props* props,
    const double in_pos[DIM], /* position */
    const double in_N[DIM], /* Surface normal. (Away from the surface) */
    const double time,
@@ -128,7 +129,7 @@ XD(compute_incident_diffuse_flux)
   double N[3] = {0}; /* Surface normal. Always 3D */
   size_t nbounces = 0; /* For debug */
   res_T res = RES_OK;
-  ASSERT(in_pos && in_N && in_hit && diffuse_flux);
+  ASSERT(props && in_pos && in_N && in_hit && diffuse_flux);
 
   /* Local copy of input argument */
   dX(set)(pos, in_pos);
@@ -142,7 +143,7 @@ XD(compute_incident_diffuse_flux)
 
   for(;;) {
     /* External sources */
-    struct source_sample src_sample = SOURCE_SAMPLE_NULL;
+    struct source_sample samp = SOURCE_SAMPLE_NULL;
 
     /* Interface */
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
@@ -201,12 +202,11 @@ XD(compute_incident_diffuse_flux)
 
     /* Calculate the direct contribution if the rebound is specular */
     if(bounce.cpnt == BRDF_SPECULAR) {
-      res = source_trace_to(scn->source, pos, bounce.dir, time, &src_sample);
+      res = source_trace_to(scn->source, props, pos, bounce.dir, &samp);
       if(res != RES_OK) goto error;
 
-      if(!SOURCE_SAMPLE_NONE(&src_sample)) {
-        const double Ld = XD(direct_contribution)
-          (scn, &src_sample, pos, enc_id, &hit);
+      if(!SOURCE_SAMPLE_NONE(&samp)) {
+        double Ld = XD(direct_contribution)(scn, &samp, pos, enc_id, &hit);
         L = Ld; /* [W/m^2/sr] */
       }
 
@@ -217,9 +217,9 @@ XD(compute_incident_diffuse_flux)
 
       /* Sample an external source to handle its direct contribution at the
        * bounce position */
-      res = source_sample(scn->source, rng, pos, time, &src_sample);
+      res = source_sample(scn->source, props, rng, pos, &samp);
       CHK(res == RES_OK);
-      cos_theta = d3_dot(src_sample.dir, N);
+      cos_theta = d3_dot(samp.dir, N);
 
       /* The source is behind the surface */
       if(cos_theta <= 0) {
@@ -227,9 +227,8 @@ XD(compute_incident_diffuse_flux)
 
       /* The source is above the surface */
       } else {
-        const double Ld = XD(direct_contribution)
-          (scn, &src_sample, pos, enc_id, &hit);
-        L = Ld * cos_theta / (PI * src_sample.pdf); /* [W/m^2/sr] */
+        double Ld = XD(direct_contribution)(scn, &samp, pos, enc_id, &hit);
+        L = Ld * cos_theta / (PI * samp.pdf); /* [W/m^2/sr] */
       }
     }
     diffuse_flux->reflected += L; /* [W/m^2/sr] */
@@ -257,7 +256,8 @@ XD(handle_external_net_flux)
   struct sdis_green_external_flux_terms green =
     SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL;
 
-  /* Sampling external sources */
+  /* External source */
+  struct source_props src_props = SOURCE_PROPS_NULL;
   struct source_sample src_sample = SOURCE_SAMPLE_NULL;
 
   /* External flux */
@@ -312,9 +312,11 @@ XD(handle_external_net_flux)
 
   if(emissivity == 0) goto exit;
 
-  /* Sample the external source */
-  res = source_sample
-    (scn->source, rng, frag.P, frag.time, &src_sample);
+  res = source_get_props(scn->source, frag.time, &src_props);
+  if(res != RES_OK) goto error;
+
+  /* Sample a direction toward the source to add its direct contribution */
+  res = source_sample(scn->source, &src_props, rng, frag.P, &src_sample);
   if(res != RES_OK) goto error;
 
   /* Setup the normal to ensure that it points toward the fluid medium */
@@ -331,8 +333,8 @@ XD(handle_external_net_flux)
   }
 
   /* Calculate the incident diffuse flux [W/m^2] */
-  res = XD(compute_incident_diffuse_flux)(scn, rng, frag.P, N, frag.time,
-    enc_ids[frag.side], args->XD(hit), &incident_flux_diffuse);
+  res = XD(compute_incident_diffuse_flux)(scn, rng, &src_props, frag.P, N,
+    frag.time, enc_ids[frag.side], args->XD(hit), &incident_flux_diffuse);
   if(res != RES_OK) goto error;
 
   /* Calculate the incident flux without the part scattered by the environment.

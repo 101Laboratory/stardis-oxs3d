@@ -163,43 +163,25 @@ sdis_source_get_id(const struct sdis_source* source)
 res_T
 source_sample
   (const struct sdis_source* src,
+   const struct source_props* props,
    struct ssp_rng* rng,
    const double pos[3],
-   const double time,
    struct source_sample* sample)
 {
-  double src_pos[3]; /* [m] */
   double main_dir[3];
   double half_angle; /* [radians] */
   double cos_half_angle; /* [radians] */
   double dst; /* [m] */
-  double radius; /* Source radius [m] */
-  double power; /* Source power [W] */
-  double area; /* Source area [m^2] */
   res_T res = RES_OK;
   ASSERT(src && rng && pos && sample);
 
-  /* Retrieve current source position, radius and power */
-  src->spherical.position(time, src_pos, src->data);
-  power = src->spherical.power(time, src->data);
-  radius = src->spherical.radius;
-
-  if(power < 0) {
-    log_err(src->dev, "%s: invalid source power '%g' W. It cannot be negative.\n",
-      FUNC_NAME, power);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
-  area = 4*PI*radius*radius; /* [m^2] */
-
   /* compute the direction of `pos' toward the center of the source */
-  d3_sub(main_dir, src_pos, pos);
+  d3_sub(main_dir, props->pos, pos);
 
   /* Normalize the direction and keep the distance from `pos' to the center of
    * the source */
   dst = d3_normalize(main_dir, main_dir);
-  if(dst <= radius) {
+  if(dst <= props->radius) {
     log_err(src->dev,
       "%s: the position from which the external source is sampled "
       "is included in the source:\n"
@@ -208,34 +190,32 @@ source_sample
       "\tposition = %g, %g, %g\n"
       "\ttime = %g\n"
       "\tdistance from position to source = %g\n",
-      FUNC_NAME, SPLIT3(src_pos), radius, SPLIT3(pos), time, dst);
+      FUNC_NAME, SPLIT3(props->pos), props->radius, SPLIT3(pos), props->time, dst);
     res = RES_BAD_ARG;
     goto error;
   }
 
   /* Point source */
-  if(area == 0) {
+  if(props->area == 0) {
     d3_set(sample->dir, main_dir);
     sample->pdf = 1;
     sample->dst = dst;
-    sample->power = power; /* [W] */
     sample->radiance_term = 1.0 / (4*PI*dst*dst); /* [W/m^2/sr] */
-    sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
+    sample->radiance = props->power * sample->radiance_term; /* [W/m^2/sr] */
 
   /* Spherical source */
   } else {
     /* Sample the source according to its solid angle,
      * i.e. 2*PI*(1 - cos(half_angle)) */
-    half_angle = asin(radius/dst);
+    half_angle = asin(props->radius/dst);
     cos_half_angle = cos(half_angle);
     ssp_ran_sphere_cap_uniform /* pdf = 1/(2*PI*(1-cos(half_angle))) */
       (rng, main_dir, cos_half_angle, sample->dir, &sample->pdf);
 
     /* Set other sample variables */
-    sample->dst = dst - radius; /* From pos to source boundaries [m] */
-    sample->power = power; /* [W] */
-    sample->radiance_term = 1.0 / (PI*area); /* [W/m^2/sr] */
-    sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
+    sample->dst = dst - props->radius; /* From pos to source boundaries [m] */
+    sample->radiance_term = 1.0 / (PI*props->area); /* [W/m^2/sr] */
+    sample->radiance = props->power * sample->radiance_term; /* [W/m^2/sr] */
   }
 
 exit:
@@ -247,47 +227,31 @@ error:
 res_T
 source_trace_to
   (const struct sdis_source* src,
+   const struct source_props* props,
    const double pos[3], /* Ray origin */
    const double dir[3], /* Ray direction */
-   const double time, /* Time at which ray is traced */
    struct source_sample* sample)
 {
-  double src_pos[3]; /* [m] */
   double main_dir[3];
-  double radius; /* [m] */
-  double power; /* [W] */
   double dst; /* Distance from pos to the source center [m] */
   double half_angle; /* [radian] */
   res_T res = RES_OK;
-  ASSERT(src && pos && dir && sample);
+  ASSERT(src && props && pos && dir && sample);
   ASSERT(d3_is_normalized(dir));
 
-  radius = src->spherical.radius;
-
   /* Point sources cannot be targeted */
-  if(radius == 0) {
+  if(props->radius == 0) {
     *sample = SOURCE_SAMPLE_NULL;
     goto exit;
   }
 
-  /* Retrieve current source position and power */
-  src->spherical.position(time, src_pos, src->data);
-  power = src->spherical.power(time, src->data);
-
-  if(power < 0) {
-    log_err(src->dev, "%s: invalid source power '%g' W. It cannot be negative.\n",
-      FUNC_NAME, power);
-    res = RES_BAD_ARG;
-    goto error;
-  }
-
   /* compute the direction of `pos' toward the center of the source */
-  d3_sub(main_dir, src_pos, pos);
+  d3_sub(main_dir, props->pos, pos);
 
   /* Normalize the direction and keep the distance from `pos' to the center of
    * the source */
   dst = d3_normalize(main_dir, main_dir);
-  if(dst <= radius) {
+  if(dst <= props->radius) {
     log_err(src->dev,
       "%s: the position from which the external source is targeted "
       "is included in the source:\n"
@@ -296,13 +260,13 @@ source_trace_to
       "\tposition = %g, %g, %g\n"
       "\ttime = %g\n"
       "\tdistance from position to source = %g\n",
-      FUNC_NAME, SPLIT3(src_pos), radius, SPLIT3(pos), time, dst);
+      FUNC_NAME, SPLIT3(props->pos), props->radius, SPLIT3(pos), props->time, dst);
     res = RES_BAD_ARG;
     goto error;
   }
 
   /* Compute the half angle of the source as seen from pos */
-  half_angle = asin(radius/dst);
+  half_angle = asin(props->radius/dst);
 
   /* The source is missed */
   if(d3_dot(dir, main_dir) < cos(half_angle)) {
@@ -310,20 +274,47 @@ source_trace_to
 
   /* The source is intersected */
   } else {
-    const double area = 4*PI*radius*radius; /* [m^2] */
-
     d3_set(sample->dir, dir);
     sample->pdf = 1;
-    sample->dst = dst - radius; /* From pos to source boundaries [m] */
-    sample->power = power; /* [W] */
-    sample->radiance_term = 1.0 / (PI*area); /* [W/m^2/sr] */
-    sample->radiance = sample->power * sample->radiance_term; /* [W/m^2/sr] */
+    sample->dst = dst - props->radius; /* From pos to source boundaries [m] */
+    sample->radiance_term = 1.0 / (PI*props->area); /* [W/m^2/sr] */
+    sample->radiance = props->power * sample->radiance_term; /* [W/m^2/sr] */
   }
 
 exit:
   return res;
 error:
   *sample = SOURCE_SAMPLE_NULL;
+  goto exit;
+}
+
+res_T
+source_get_props
+  (const struct sdis_source* src,
+   const double time, /* [s] */
+   struct source_props* props)
+{
+  res_T res = RES_OK;
+  ASSERT(src && props);
+
+  /* Retrieve the source properties */
+  src->spherical.position(time, props->pos, src->data);
+  props->power = src->spherical.power(time, src->data);
+  props->radius = src->spherical.radius;
+
+  if(props->power < 0) {
+    log_err(src->dev, "%s: invalid source power '%g' W. It cannot be negative.\n",
+      FUNC_NAME, props->power);
+    res = RES_BAD_ARG;
+    goto error;
+  }
+
+  props->area = 4*PI*props->radius*props->radius; /* [m^2] */
+  props->time = time; /* [s] */
+
+exit:
+  return res;
+error:
   goto exit;
 }
 
