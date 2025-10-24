@@ -367,7 +367,7 @@ XD(handle_external_net_flux)
   green.dir[1] = incident_flux_diffuse.dir[1];
   green.dir[2] = incident_flux_diffuse.dir[2];
 
-  T->value += green.term_wrt_power * source_get_power(scn->source, green.time);
+  T->value += green.term_wrt_power * src_props.power;
   if(green.term_wrt_diffuse_radiance) {
     T->value +=
         green.term_wrt_diffuse_radiance
