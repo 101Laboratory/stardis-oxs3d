@@ -158,6 +158,13 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+### Version 0.16.2
+
+- Continue to improve numerical robustness when sampling the radiative
+  path, both in long waves and when processing an external source.
+- Update the attenuation of numerical inaccuracies when the candidate
+  path for reinjection is located approximately on one of the vertices
+  of a triangle.
 
 ### Version 0.16.1
 
