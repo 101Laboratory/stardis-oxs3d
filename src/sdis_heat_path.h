@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -326,6 +326,51 @@ radiative_path_3d
    struct rwalk* rwalk,
    struct ssp_rng* rng,
    struct temperature* temperature);
+
+extern LOCAL_SYM void
+trace_ray_2d
+  (struct sdis_scene* scn,
+   const double pos[2],
+   const double dir[3], /* Always in 3D */
+   const double distance,
+   const unsigned enc_id,
+   const struct s2d_hit* hit_from,
+   struct s2d_hit* hit);
+
+extern LOCAL_SYM void
+trace_ray_3d
+  (struct sdis_scene* scn,
+   const double pos[3],
+   const double dir[3], /* Always in 3D */
+   const double distance,
+   const unsigned enc_id,
+   const struct s3d_hit* hit_from,
+   struct s3d_hit* hit);
+
+/* Trace a ray and setup the fragment at the intersection found, if any. */
+extern LOCAL_SYM res_T
+find_next_fragment_2d
+  (struct sdis_scene* scn,
+   const double in_pos[2],
+   const double in_dir[3], /* Always in 3D */
+   const struct s2d_hit* in_hit,
+   const double time,
+   const unsigned enc_id,
+   struct s2d_hit* out_hit,
+   struct sdis_interface** out_interf,
+   struct sdis_interface_fragment* out_frag);
+
+extern LOCAL_SYM res_T
+find_next_fragment_3d
+  (struct sdis_scene* scn,
+   const double in_pos[3],
+   const double in_dir[3], /* Always in 3D */
+   const struct s3d_hit* in_hit,
+   const double time,
+   const unsigned enc_id,
+   struct s3d_hit* out_hit,
+   struct sdis_interface** out_interf,
+   struct sdis_interface_fragment* out_frag);
 
 /*******************************************************************************
  * Convective path

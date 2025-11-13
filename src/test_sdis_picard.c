@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -225,7 +225,7 @@ solid_get_delta
   (const struct sdis_rwalk_vertex* vtx, struct sdis_data* data)
 {
   CHK(vtx && data);
-  return 0.005;
+  return 0.0025;
 }
 
 static double
@@ -435,6 +435,7 @@ static void
 test_picard
   (struct sdis_scene* scn,
    const size_t picard_order,
+   const enum sdis_diffusion_algorithm algo,
    const struct reference_result* ref)
 {
   struct sdis_solve_probe_args probe_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
@@ -458,6 +459,7 @@ test_picard
   probe_args.position[1] = 0;
   probe_args.position[2] = 0;
   probe_args.picard_order = picard_order;
+  probe_args.diff_algo = algo;
   OK(sdis_solve_probe(scn, &probe_args, &estimator));
   OK(sdis_estimator_get_temperature(estimator, &mc));
   printf("Temperature at `%g %g %g' = %g ~ %g +/- %g\n",
@@ -687,7 +689,7 @@ main(int argc, char** argv)
   interf_props.temperature = 350;
   interf_props.h = -1;
   interf_props.emissivity = 1;
-  interf_props.specular_fraction = -1;
+  interf_props.specular_fraction = 0;
   interf_props.Tref = 350;
   create_interface(dev, fluid, dummy, &interf_props, interfaces+BOUNDARY_pX);
 
@@ -712,8 +714,8 @@ main(int argc, char** argv)
   pinterf_props[BOUNDARY_pX]->Tref = 300;
   radenv_props->temperature = 280;
   radenv_props->reference = 300;
-  test_picard(scn_2d, 1/*Picard order*/, &ref);
-  test_picard(scn_3d, 1/*Picard order*/, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
   printf("\n");
 
   /* Test picard1 using T4 as a reference */
@@ -726,8 +728,8 @@ main(int argc, char** argv)
   pinterf_props[BOUNDARY_pX]->Tref = 350;
   radenv_props->temperature = 280;
   radenv_props->reference = 280;
-  test_picard(scn_2d, 1/*Picard order*/, &ref);
-  test_picard(scn_3d, 1/*Picard order*/, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, SDIS_DIFFUSION_DELTA_SPHERE, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, SDIS_DIFFUSION_DELTA_SPHERE, &ref);
   printf("\n");
 
   /* Test picard2  */
@@ -740,8 +742,8 @@ main(int argc, char** argv)
   pinterf_props[BOUNDARY_pX]->Tref = 300;
   radenv_props->temperature = 280;
   radenv_props->reference = 300;
-  test_picard(scn_2d, 2/*Picard order*/, &ref);
-  test_picard(scn_3d, 2/*Picard order*/, &ref);
+  test_picard(scn_2d, 2/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
+  test_picard(scn_3d, 2/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
   printf("\n");
 
   t_range[0] = 200;
@@ -761,8 +763,8 @@ main(int argc, char** argv)
   pinterf_props[BOUNDARY_pX]->Tref = pinterf_props[BOUNDARY_pX]->temperature;
   radenv_props->temperature = t_range[0];
   radenv_props->reference = t_range[0];
-  test_picard(scn_2d, 3/*Picard order*/, &ref);
-  test_picard(scn_3d, 3/*Picard order*/, &ref);
+  test_picard(scn_2d, 3/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
+  test_picard(scn_3d, 3/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
   register_heat_paths(scn_2d, 3/*Picard order*/, stream);
   register_heat_paths(scn_3d, 3/*Picard order*/, stream);
   printf("\n");
@@ -787,8 +789,8 @@ main(int argc, char** argv)
   pinterf_props[BOUNDARY_pX]->Tref = 300;
   radenv_props->temperature = t_range[0];
   radenv_props->reference = 300;
-  test_picard(scn_2d, 1/*Picard order*/, &ref);
-  test_picard(scn_3d, 1/*Picard order*/, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, SDIS_DIFFUSION_DELTA_SPHERE, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, SDIS_DIFFUSION_DELTA_SPHERE, &ref);
   printf("\n");
 
   /* Test picard1 with a volumic power and T4 a the reference */
@@ -801,8 +803,8 @@ main(int argc, char** argv)
   pinterf_props[BOUNDARY_pX]->Tref = 350;
   radenv_props->temperature = 280;
   radenv_props->reference = 280;
-  test_picard(scn_2d, 1/*Picard order*/, &ref);
-  test_picard(scn_3d, 1/*Picard order*/, &ref);
+  test_picard(scn_2d, 1/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
+  test_picard(scn_3d, 1/*Picard order*/, SDIS_DIFFUSION_WOS, &ref);
   printf("\n");
 
   /* Release memory */

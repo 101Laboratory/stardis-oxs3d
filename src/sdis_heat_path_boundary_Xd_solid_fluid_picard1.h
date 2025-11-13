@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +48,7 @@ XD(rwalk_get_Tref)
     ray.dir[0] = rwalk->dir[0];
     ray.dir[1] = rwalk->dir[1];
     ray.dir[2] = rwalk->dir[2];
+    ray.time = rwalk->vtx.time;
     Tref = radiative_env_get_reference_temperature(scn->radenv, &ray);
   } else {
     struct sdis_interface_fragment frag;

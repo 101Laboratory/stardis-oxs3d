@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,9 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_brdf.h"
 #include "sdis_device_c.h"
 #include "sdis_green.h"
 #include "sdis_heat_path.h"
+#include "sdis_heat_path_boundary_c.h"
 #include "sdis_interface_c.h"
 #include "sdis_log.h"
 #include "sdis_medium_c.h"
@@ -28,7 +30,7 @@
 #include "sdis_Xd_begin.h"
 
 /*******************************************************************************
- * Non generic local functions
+ * Non generic helper functions
  ******************************************************************************/
 #ifndef SDIS_HEAT_PATH_RADIATIVE_XD_H
 #define SDIS_HEAT_PATH_RADIATIVE_XD_H
@@ -39,7 +41,7 @@ set_limit_radiative_temperature
    struct rwalk_context* ctx,
    struct rwalk* rwalk,
    /* Direction along which the random walk reached the radiative environment */
-   const float dir[3],
+   const double dir[3],
    const int branch_id,
    struct temperature* T)
 {
@@ -52,9 +54,10 @@ set_limit_radiative_temperature
   ASSERT(SXD_HIT_NONE(&rwalk->XD(hit)));
 
   rwalk->hit_side = SDIS_SIDE_NULL__;
-  d3_set_f3(rwalk->dir, dir);
+  d3_set(rwalk->dir, dir);
   d3_normalize(rwalk->dir, rwalk->dir);
   d3_set(ray.dir, rwalk->dir);
+  ray.time = rwalk->vtx.time;
 
   trad = radiative_env_get_temperature(scn->radenv, &ray);
   if(SDIS_TEMPERATURE_IS_UNKNOWN(trad)) {
@@ -85,7 +88,7 @@ set_limit_radiative_temperature
    * distance of 0.1 meters from the surface along the direction reaching the
    * radiative environment */
   if(ctx->heat_path) {
-    const float empirical_dst = 0.1f * (float)scn->fp_to_meter;
+    const double empirical_dst = 0.1 * (float)scn->fp_to_meter;
     struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
 
     vtx = rwalk->vtx;
@@ -103,7 +106,89 @@ error:
   goto exit;
 }
 
+/* Check that the trajectory reaches a valid interface, i.e. that it is on a
+ * fluid/solid interface and has reached it from the fluid */
+static res_T
+check_interface
+  (const struct sdis_interface* interf,
+   const struct sdis_interface_fragment* frag,
+   const int verbose) /* Control the verbosity of the function */
+{
+  enum sdis_medium_type mdm_frt_type = SDIS_MEDIUM_TYPES_COUNT__;
+  enum sdis_medium_type mdm_bck_type = SDIS_MEDIUM_TYPES_COUNT__;
+  enum sdis_side fluid_side = SDIS_SIDE_NULL__;
+  res_T res = RES_OK;
+
+  mdm_frt_type = sdis_medium_get_type(interf->medium_front);
+  mdm_bck_type = sdis_medium_get_type(interf->medium_back);
+
+  /* Semi-transparent materials are not supported. This means that a solid/solid
+   * interface must not be intersected when tracing radiative paths */
+  if(mdm_frt_type == SDIS_SOLID && mdm_bck_type == SDIS_SOLID) {
+    if(verbose) {
+      log_err(interf->dev,
+        "Error when sampling the radiatve path. The trajectory reaches a "
+        "solid/solid interface, whereas this is supposed to be impossible "
+        "(path position: %g, %g, %g).\n",
+      SPLIT3(frag->P));
+    }
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+  /* Find out which side of the interface the fluid is on */
+  if(mdm_frt_type == SDIS_FLUID) {
+    fluid_side = SDIS_FRONT;
+  } else if(mdm_bck_type == SDIS_FLUID) {
+    fluid_side = SDIS_BACK;
+  } else {
+    FATAL("Unreachable code\n");
+  }
+
+  /* Check that the current position is on the correct side of the interface */
+  if(frag->side != fluid_side) {
+    if(verbose) {
+      log_err(interf->dev,
+        "Inconsistent intersection when sampling the radiative path. "
+        "The path reaches an interface on its solid side, whereas this is "
+        "supposed to be impossible (path position: %g, %g, %g).\n",
+        SPLIT3(frag->P));
+    }
+    res = RES_BAD_OP;
+    goto error;
+  }
+
+exit:
+  return res;
+error:
+  goto exit;
+}
+
 #endif /* SDIS_HEAT_PATH_RADIATIVE_XD_H */
+
+/*******************************************************************************
+ * Generic helper functions
+ ******************************************************************************/
+static INLINE void
+XD(setup_fragment)
+  (struct sdis_interface_fragment* frag,
+   const double pos[DIM],
+   const double dir[DIM], /* Direction _toward_ the hit position */
+   const double time, /* Current time */
+   const double N[DIM],/* Surface normal */
+   const struct sXd(hit)* hit)
+{
+  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+  enum sdis_side side = SDIS_SIDE_NULL__;
+  ASSERT(frag && pos && dir && N);
+  ASSERT(dX(is_normalized)(N));
+
+  /* Setup the interface fragment at the intersection position */
+  dX(set)(vtx.P, pos);
+  vtx.time = time;
+  side = dX(dot)(dir, N) < 0 ? SDIS_FRONT : SDIS_BACK;
+  XD(setup_interface_fragment)(frag, &vtx, hit, side);
+}
 
 /*******************************************************************************
  * Local functions
@@ -119,46 +204,40 @@ XD(trace_radiative_path)
 {
   /* The radiative random walk is always performed in 3D. In 2D, the geometry
    * are assumed to be extruded to the infinity along the Z dimension. */
-  float N[3] = {0, 0, 0};
-  float dir[3] = {0, 0, 0};
+  double N[3] = {0,0,0};
+  double dir[3] = {0,0,0};
+  double pos[3] = {0,0,0};
   int branch_id;
+  size_t nbounces = 0; /* For debug */
   res_T res = RES_OK;
 
   ASSERT(scn && ray_dir && ctx && rwalk && rng && T);
 
-  f3_set(dir, ray_dir);
+  d3_set_f3(dir, ray_dir);
+  d3_normalize(dir, dir);
 
   /* (int)ctx->nbranchings < 0 <=> Beginning of the realisation */
   branch_id = MMAX((int)ctx->nbranchings, 0);
 
   /* Launch the radiative random walk */
   for(;;) {
-    const struct sdis_interface* interf = NULL;
-    struct sdis_medium* chk_mdm = NULL;
-    struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
+    /* BRDF */
+    struct brdf brdf = BRDF_NULL;
+    struct brdf_sample bounce = BRDF_SAMPLE_NULL;
+    struct brdf_setup_args brdf_setup_args = BRDF_SETUP_ARGS_NULL;
+
+    /* Miscellaneous */
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
-    unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
-    unsigned chk_enc_id = ENCLOSURE_ID_NULL;
-    double alpha;
-    double epsilon;
-    double r;
-    float pos[DIM];
-    const float range[2] = { 0, FLT_MAX };
+    struct sdis_interface* interf = NULL;
+    struct sdis_medium* chk_mdm = NULL;
+    double wi[3] = {0,0,0};
 
-    fX_set_dX(pos, rwalk->vtx.P);
+    d3_set(pos, rwalk->vtx.P);
+    d3_minus(wi, dir);
 
-    /* Trace the radiative ray */
-    filter_data.XD(hit) = rwalk->XD(hit);
-    filter_data.epsilon = 1.e-6;
-    filter_data.scn = scn; /* Enable the filtering wrt the enclosure id */
-    filter_data.enc_id = rwalk->enc_id;
-#if (SDIS_XD_DIMENSION == 2)
-    SXD(scene_view_trace_ray_3d
-      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->XD(hit)));
-#else
-    SXD(scene_view_trace_ray
-      (scn->sXd(view), pos, dir, range, &filter_data, &rwalk->XD(hit)));
-#endif
+    res = XD(find_next_fragment)(scn, pos, dir, &rwalk->XD(hit),
+      rwalk->vtx.time, rwalk->enc_id, &rwalk->XD(hit), &interf, &frag);
+    if(res != RES_OK) goto error;
 
     /* The path reaches the radiative environment */
     if(SXD_HIT_NONE(&rwalk->XD(hit))) {
@@ -169,60 +248,18 @@ XD(trace_radiative_path)
       break; /* Stop the radiative path */
     }
 
-    /* Define the hit side */
-    rwalk->hit_side = fX(dot)(dir, rwalk->XD(hit).normal) < 0
-      ? SDIS_FRONT : SDIS_BACK;
-
-    /* Move the random walk to the hit position */
-    XD(move_pos)(rwalk->vtx.P, dir, rwalk->XD(hit).distance);
-
-    /* Register the random walk vertex against the heat path */
-    res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,
-      SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
-    if(res != RES_OK) goto error;
-
-    /* Fetch the new interface and setup the hit fragment */
-    interf = scene_get_interface(scn, rwalk->XD(hit).prim.prim_id);
-    XD(setup_interface_fragment)(&frag, &rwalk->vtx, &rwalk->XD(hit), rwalk->hit_side);
-
-    /* Fetch the interface emissivity */
-    epsilon = interface_side_get_emissivity(interf, SDIS_INTERN_SOURCE_ID, &frag);
-    if(epsilon > 1 || epsilon < 0) {
-      log_err(scn->dev,
-        "%s: invalid overall emissivity `%g' at position `%g %g %g'.\n",
-        FUNC_NAME, epsilon, SPLIT3(rwalk->vtx.P));
-      res = RES_BAD_OP;
-      goto error;
-    }
-
-    /* Switch in boundary temperature ? */
-    r = ssp_rng_canonical(rng);
-    if(r < epsilon) {
-      T->func = XD(boundary_path);
-      rwalk->enc_id = ENCLOSURE_ID_NULL; /* Interface between 2 enclosures */
-      break;
-    }
-
-    /* Normalize the normal of the interface and ensure that it points toward the
-     * current medium */
-    fX(normalize)(N, rwalk->XD(hit).normal);
-    if(rwalk->hit_side == SDIS_BACK) fX(minus)(N, N);
-
-    /* Check that the radiative path is still within the same enclosure. Note
-     * that this may not be the case, even if the filtering of intersections
-     * relative to the current enclosure is enabled. This filtering is only
-     * performed for intersections on a boundary between primitives. As a
-     * consequence, a threshold effect on how "intersections on a boundary" are
-     * detected could lead to this situation */
-    scene_get_enclosure_ids(scn, rwalk->XD(hit).prim.prim_id, enc_ids);
-    chk_enc_id = rwalk->hit_side == SDIS_FRONT ? enc_ids[0] : enc_ids[1];
-    if(chk_enc_id != rwalk->enc_id) {
-      log_warn(scn->dev,
-        "%s: the radiative path has escaped from its cavity -- pos=(%g, %g, %g)\n",
-        FUNC_NAME, SPLIT3(rwalk->vtx.P));
-      res = RES_BAD_OP;
-      goto error;
-    }
+   /* Move the random walk to the hit position, i.e., the next position on the
+    * interface returned as a fragment by the find_next_fragment function. Do
+    * not use the sampled direction and distance to the hit point to
+    * calculate the new position, as the current position may have been slightly
+    * shifted on the starting triangle by the find_next_fragment function in
+    * order to avoid numerical inaccuracy issues, making it impossible to
+    * reconstruct the position actually returned by the function. The starting
+    * point and distance returned are not, in any case, those used by the
+    * function to calculate the new wall position. So simply use the position
+    * returned by this function. */
+    d3_set(rwalk->vtx.P, frag.P);
+    rwalk->hit_side = frag.side;
 
     /* Verify that the intersection, although in the same enclosure, touches the
      * interface of a fluid. We verify this by interface, since a radiative path
@@ -235,7 +272,8 @@ XD(trace_radiative_path)
      * when semi-transparent solids are not yet supported by Stardis. This error
      * is therefore fatal for the calculation */
     chk_mdm = rwalk->hit_side == SDIS_FRONT
-      ? interf->medium_front : interf->medium_back;
+      ? interf->medium_front
+      : interf->medium_back;
     if(sdis_medium_get_type(chk_mdm) == SDIS_SOLID) {
       log_err(scn->dev,
         "%s: a radiative path cannot evolve in a solid -- pos=(%g, %g, %g)\n",
@@ -244,13 +282,36 @@ XD(trace_radiative_path)
       goto error;
     }
 
-    alpha = interface_side_get_specular_fraction(interf, SDIS_INTERN_SOURCE_ID, &frag);
-    r = ssp_rng_canonical(rng);
-    if(r < alpha) { /* Sample specular part */
-      reflect_3d(dir, f3_minus(dir, dir), N);
-    } else { /* Sample diffuse part */
-      ssp_ran_hemisphere_cos_float(rng, N, dir, NULL);
+    /* Register the random walk vertex against the heat path */
+    res = register_heat_vertex(ctx->heat_path, &rwalk->vtx, T->value,
+      SDIS_HEAT_VERTEX_RADIATIVE, branch_id);
+    if(res != RES_OK) goto error;
+
+    /* Retrieve BRDF at current interface position */
+    brdf_setup_args.interf = interf;
+    brdf_setup_args.frag = &frag;
+    brdf_setup_args.source_id = SDIS_INTERN_SOURCE_ID;
+    res = brdf_setup(scn->dev, &brdf_setup_args, &brdf);
+    if(res != RES_OK) goto error;
+
+    /* Switch in boundary temperature? */
+    if(ssp_rng_canonical(rng) < brdf.emissivity) {
+      T->func = XD(boundary_path);
+      rwalk->enc_id = ENCLOSURE_ID_NULL; /* Interface between 2 enclosures */
+      break;
     }
+
+    /* Normalize the normal of the interface and ensure that it points toward the
+     * current medium */
+    switch(frag.side) {
+      case SDIS_FRONT: d3_set(N, frag.Ng); break;
+      case SDIS_BACK:  d3_minus(N, frag.Ng); break;
+      default: FATAL("Unreachable code\n"); break;
+    }
+    brdf_sample(&brdf, rng, wi, N, &bounce);
+    d3_set(dir, bounce.dir); /* Always in 3D */
+
+    ++nbounces;
   }
 
 exit:
@@ -291,6 +352,135 @@ XD(radiative_path)
   if(res != RES_OK) goto error;
 
 exit:
+  return res;
+error:
+  goto exit;
+}
+
+void
+XD(trace_ray)
+  (struct sdis_scene* scn,
+   const double pos[DIM],
+   const double dir[3],
+   const double distance,
+   const unsigned enc_id,
+   const struct sXd(hit)* hit_from,
+   struct sXd(hit)* hit)
+{
+  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
+  float ray_org[DIM] = {0};
+  float ray_dir[3] = {0};
+  float ray_range[2] = {0};
+  ASSERT(scn && pos && dir && distance >= 0 && hit_from && hit);
+
+  fX_set_dX(ray_org, pos);
+  f3_set_d3(ray_dir, dir);
+  ray_range[0] = 0;
+  ray_range[1] = (float)distance;
+  filter_data.XD(hit) = *hit_from;
+  filter_data.epsilon = 1.e-6;
+  filter_data.scn = scn; /* Enable the filtering wrt the enclosure id */
+  filter_data.enc_id = enc_id;
+#if DIM == 2
+  SXD(scene_view_trace_ray_3d
+    (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
+#else
+  SXD(scene_view_trace_ray
+    (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
+#endif
+}
+
+res_T
+XD(find_next_fragment)
+  (struct sdis_scene* scn,
+   const double in_pos[DIM],
+   const double in_dir[3], /* Always in 3D */
+   const struct sXd(hit)* in_hit,
+   const double time,
+   const unsigned enc_id,
+   struct sXd(hit)* out_hit,
+   struct sdis_interface** out_interf,
+   struct sdis_interface_fragment* out_frag)
+{
+  int NATTEMPTS_MAX = 10;
+  int nattempts = 1;
+
+  /* Stardis */
+  struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
+  struct sdis_interface* interf = NULL;
+
+  struct sXd(hit) hit = SXD_HIT_NULL;
+  double rt_pos[DIM] = {0};
+  res_T res = RES_OK;
+
+  ASSERT(scn && in_pos && in_dir && in_hit);
+  ASSERT(out_hit && out_interf && out_frag);
+
+  /* Only one attempt is allowed when the ray does not start from a primitive */
+  NATTEMPTS_MAX = S3D_HIT_NONE(in_hit) ? 1 : 10;
+
+  dX(set)(rt_pos, in_pos);
+
+  do {
+    struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
+    struct sdis_medium* solid = NULL;
+    double pos[3] = {0};
+    double vec[3] = {0};
+    double N[3] = {0};
+    double delta = 0;
+
+    /* Reset result code. It may have been modified during a previous attempt */
+    res = RES_OK;
+
+    /* Find the following surface along the direction of propagation */
+    XD(trace_ray)(scn, rt_pos, in_dir, INF, enc_id, in_hit, &hit);
+    if(SXD_HIT_NONE(&hit)) break;
+
+    /* Retrieve the current position and normal */
+    dX(add)(pos, rt_pos, dX(muld)(vec, in_dir, hit.distance));
+    dX_set_fX(N, hit.normal);
+    dX(normalize(N, N));
+
+    /* Retrieve the current interface properties */
+    interf = scene_get_interface(scn, hit.prim.prim_id);
+    XD(setup_fragment)(&frag, pos, in_dir, time, N, &hit);
+
+    /* Check that the path reaches a valid interface.
+     * An invalid fragment may mean that the ray position is in a corner and the
+     * traced ray has missed the surface of that corner. To correct this, the
+     * ray position is moved slightly away from the corner before a ray is drawn
+     * in the same direction. This fallback solution is executed a number of
+     * times, after which, if the fragment is still invalid, it is considered
+     * that the numerical error cannot be mitigated. */
+    res = check_interface(interf, &frag, nattempts == NATTEMPTS_MAX);
+    if(res != RES_OK && nattempts == NATTEMPTS_MAX) goto error;
+    ++nattempts;
+
+    if(res != RES_OK) { /* Mitigate numerical error (see above) */
+      if(sdis_medium_get_type(interf->medium_front) == SDIS_SOLID) {
+        solid = interf->medium_front;
+      } else {
+        ASSERT(sdis_medium_get_type(interf->medium_back) == SDIS_SOLID);
+        solid = interf->medium_back;
+      }
+
+      /* Retrieves the delta of the solid that surrounds the boundary, as it is
+       * actually the only numerical parameter that says something about the
+       * system. */
+      vtx.P[0] = pos[0];
+      vtx.P[1] = pos[1];
+      vtx.P[2] = pos[2];
+      vtx.time = time;
+      delta = solid_get_delta(solid, &vtx);
+
+      XD(move_away_primitive_boundaries)(in_hit, delta, rt_pos);
+    }
+  } while(res != RES_OK);
+
+exit:
+  *out_hit = hit;
+  *out_interf = interf;
+  *out_frag = frag;
   return res;
 error:
   goto exit;

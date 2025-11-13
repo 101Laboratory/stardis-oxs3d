@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,29 +28,6 @@
 /*******************************************************************************
  * Helper functions
  ******************************************************************************/
-static void
-compute_aabb
-  (const double* positions,
-   const size_t nvertices,
-   double lower[3],
-   double upper[3])
-{
-  size_t i;
-  CHK(positions && nvertices && lower && upper);
-
-  lower[0] = lower[1] = lower[2] = DBL_MAX;
-  upper[0] = upper[1] = upper[2] =-DBL_MAX;
-
-  FOR_EACH(i, 0, nvertices) {
-    lower[0] = MMIN(lower[0], positions[i*3+0]);
-    lower[1] = MMIN(lower[1], positions[i*3+1]);
-    lower[2] = MMIN(lower[2], positions[i*3+2]);
-    upper[0] = MMAX(upper[0], positions[i*3+0]);
-    upper[1] = MMAX(upper[1], positions[i*3+1]);
-    upper[2] = MMAX(upper[2], positions[i*3+2]);
-  }
-}
-
 static double
 trilinear_temperature(const double pos[3])
 {
@@ -81,22 +58,17 @@ volumetric_temperature(const double pos[3], const double upper[3])
   return temp;
 }
 
-static void
-print_estimation_result
-  (const struct sdis_estimator* estimator, const double Tref)
+static const char*
+algo_cstr(const enum sdis_diffusion_algorithm diff_algo)
 {
-  struct sdis_mc T = SDIS_MC_NULL;
-  size_t nreals;
-  size_t nfails;
+  const char* cstr = "none";
 
-  OK(sdis_estimator_get_temperature(estimator, &T));
-  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
-  OK(sdis_estimator_get_failure_count(estimator, &nfails));
-  CHK(nfails <= Nreals * 0.0005);
-  printf("T = %g ~ %g +/- %g [%g, %g]; #failures = %lu / %lu\n",
-    Tref, T.E, T.SE, T.E - 3*T.SE, T.E + 3*T.SE,
-    (unsigned long)nfails, (unsigned long)Nreals);
-  CHK(eq_eps(T.E, Tref, T.SE*3));
+  switch(diff_algo) {
+    case SDIS_DIFFUSION_DELTA_SPHERE: cstr = "delta sphere"; break;
+    case SDIS_DIFFUSION_WOS: cstr = "WoS"; break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
+  return cstr;
 }
 
 /*******************************************************************************
@@ -135,13 +107,55 @@ get_interface(const size_t itri, struct sdis_interface** bound, void* context)
   *bound = ctx->interf;
 }
 
+static struct sdis_scene*
+create_scene(struct sdis_device* dev, struct sdis_interface* interf)
+{
+  /* Star-3DUT */
+  struct s3dut_super_formula f0 = S3DUT_SUPER_FORMULA_NULL;
+  struct s3dut_super_formula f1 = S3DUT_SUPER_FORMULA_NULL;
+  struct s3dut_mesh* msh = NULL;
+
+  /* Stardis */
+  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
+  struct sdis_scene* scn = NULL;
+
+  /* Miscellaneous */
+  struct context ctx;
+
+  ASSERT(dev && interf);
+
+  /* Create the solid super shape */
+  f0.A = 1; f0.B = 1; f0.M = 20; f0.N0 = 1; f0.N1 = 1; f0.N2 = 5;
+  f1.A = 1; f1.B = 1; f1.M = 7; f1.N0 = 1; f1.N1 = 2; f1.N2 = 5;
+  OK(s3dut_create_super_shape(NULL, &f0, &f1, 1, 128, 64, &msh));
+  OK(s3dut_mesh_get_data(msh, &ctx.msh));
+
+  /*dump_mesh(stdout, ctx.msh.positions,
+     ctx.msh.nvertices, ctx.msh.indices, ctx.msh.nprimitives);*/
+
+  /* Create the scene */
+  ctx.interf = interf;
+  scn_args.get_indices = get_indices;
+  scn_args.get_interface = get_interface;
+  scn_args.get_position = get_position;
+  scn_args.nprimitives = ctx.msh.nprimitives;
+  scn_args.nvertices = ctx.msh.nvertices;
+  scn_args.context = &ctx;
+  OK(sdis_scene_create(dev, &scn_args, &scn));
+
+  OK(s3dut_mesh_ref_put(msh));
+
+  return scn;
+}
+
 /*******************************************************************************
  * Interface
  ******************************************************************************/
 enum profile {
   PROFILE_UNKNOWN,
   PROFILE_TRILINEAR,
-  PROFILE_VOLUMETRIC_POWER
+  PROFILE_VOLUMETRIC_POWER,
+  PROFILE_COUNT__
 };
 struct interf {
   enum profile profile;
@@ -180,6 +194,31 @@ interface_get_convection_coef
   return ((const struct interf*)sdis_data_cget(data))->h;;
 }
 
+static struct sdis_interface*
+create_interface
+  (struct sdis_device* dev,
+   struct sdis_medium* front,
+   struct sdis_medium* back)
+{
+  struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
+  struct sdis_interface* interf = NULL;
+  struct sdis_data* data = NULL;
+  struct interf* interf_param = NULL;
+  ASSERT(dev && front && back);
+
+  OK(sdis_data_create
+    (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data));
+  interf_param = sdis_data_get(data);
+  interf_param->h = 1;
+
+  interf_shader.convection_coef = interface_get_convection_coef;
+  interf_shader.front.temperature = interface_get_temperature;
+  OK(sdis_interface_create(dev, front, back, &interf_shader, data, &interf));
+  OK(sdis_data_ref_put(data));
+
+  return interf;
+}
+
 /*******************************************************************************
  * Fluid
  ******************************************************************************/
@@ -190,6 +229,19 @@ fluid_get_temperature
   CHK(vtx != NULL);
   (void)data;
   return Tfluid;
+}
+static struct sdis_medium*
+create_fluid(struct sdis_device* dev)
+{
+  struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
+  struct sdis_medium* fluid = NULL;
+  ASSERT(dev);
+
+  /* Create the fluid medium */
+  fluid_shader.temperature = fluid_get_temperature;
+  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
+
+  return fluid;
 }
 
 /*******************************************************************************
@@ -252,51 +304,15 @@ solid_get_volumetric_power
   return ((const struct solid*)sdis_data_cget(data))->power;
 }
 
-/*******************************************************************************
- * Main function
- ******************************************************************************/
-int
-main(int argc, char** argv)
+static struct sdis_medium*
+create_solid(struct sdis_device* dev)
 {
-  struct s3dut_super_formula f0 = S3DUT_SUPER_FORMULA_NULL;
-  struct s3dut_super_formula f1 = S3DUT_SUPER_FORMULA_NULL;
-  struct s3dut_mesh* msh = NULL;
-  struct sdis_device* dev = NULL;
-  struct sdis_data* data = NULL;
-  struct sdis_estimator* estimator = NULL;
-  struct sdis_medium* fluid = NULL;
-  struct sdis_medium* solid = NULL;
-  struct sdis_interface* interf = NULL;
-  struct sdis_scene* scn = NULL;
-  struct sdis_scene_create_args scn_args = SDIS_SCENE_CREATE_ARGS_DEFAULT;
-  struct sdis_fluid_shader fluid_shader = DUMMY_FLUID_SHADER;
   struct sdis_solid_shader solid_shader = SDIS_SOLID_SHADER_NULL;
-  struct sdis_interface_shader interf_shader = SDIS_INTERFACE_SHADER_NULL;
-  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
-  struct sdis_solve_medium_args solve_mdm_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
-  struct interf* interf_param = NULL;
-  struct solid* solid_param = NULL;
-  struct context ctx;
-  double lower[3];
-  double upper[3];
-  double spread;
-  (void)argc, (void)argv;
+  struct sdis_medium* solid = NULL;
+  struct sdis_data* data = NULL;
+  struct solid* solid_param;
+  ASSERT(dev);
 
-  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
-
-  /* Create the fluid medium */
-  fluid_shader.temperature = fluid_get_temperature;
-  OK(sdis_fluid_create(dev, &fluid_shader, NULL, &fluid));
-
-  /* Setup the solid shader */
-  solid_shader.calorific_capacity = solid_get_calorific_capacity;
-  solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
-  solid_shader.volumic_mass = solid_get_volumic_mass;
-  solid_shader.delta = solid_get_delta;
-  solid_shader.temperature = solid_get_temperature;
-  solid_shader.volumic_power = solid_get_volumetric_power;
-
-  /* Create the solid medium */
   OK(sdis_data_create
     (dev, sizeof(struct solid), ALIGNOF(struct solid), NULL, &data));
   solid_param = sdis_data_get(data);
@@ -306,47 +322,53 @@ main(int argc, char** argv)
   solid_param->rho = 1.0;
   solid_param->temperature = SDIS_TEMPERATURE_NONE;
   solid_param->power = SDIS_VOLUMIC_POWER_NONE;
+
+  solid_shader.calorific_capacity = solid_get_calorific_capacity;
+  solid_shader.thermal_conductivity = solid_get_thermal_conductivity;
+  solid_shader.volumic_mass = solid_get_volumic_mass;
+  solid_shader.delta = solid_get_delta;
+  solid_shader.temperature = solid_get_temperature;
+  solid_shader.volumic_power = solid_get_volumetric_power;
   OK(sdis_solid_create(dev, &solid_shader, data, &solid));
   OK(sdis_data_ref_put(data));
 
-  /* Create the interface */
-  OK(sdis_data_create
-    (dev, sizeof(struct interf), ALIGNOF(struct interf), NULL, &data));
-  interf_param = sdis_data_get(data);
-  interf_param->h = 1;
-  interf_shader.convection_coef = interface_get_convection_coef;
-  interf_shader.front.temperature = interface_get_temperature;
-  OK(sdis_interface_create(dev, solid, fluid, &interf_shader, data, &interf));
-  OK(sdis_data_ref_put(data));
+  return solid;
+}
 
-  /* Create the solid super shape */
-  f0.A = 1; f0.B = 1; f0.M = 20; f0.N0 = 1; f0.N1 = 1; f0.N2 = 5;
-  f1.A = 1; f1.B = 1; f1.M = 7; f1.N0 = 1; f1.N1 = 2; f1.N2 = 5;
-  OK(s3dut_create_super_shape(NULL, &f0, &f1, 1, 128, 64, &msh));
-  OK(s3dut_mesh_get_data(msh, &ctx.msh));
+/*******************************************************************************
+ * Solve functions
+ ******************************************************************************/
+static void
+check_estimation
+  (const struct sdis_estimator* estimator, const double Tref)
+{
+  struct sdis_mc T = SDIS_MC_NULL;
+  size_t nreals;
+  size_t nfails;
 
-  compute_aabb(ctx.msh.positions, ctx.msh.nvertices, lower, upper);
+  OK(sdis_estimator_get_temperature(estimator, &T));
+  OK(sdis_estimator_get_realisation_count(estimator, &nreals));
+  OK(sdis_estimator_get_failure_count(estimator, &nfails));
+  CHK(nfails <= Nreals * 0.0005);
+  printf("T = %g ~ %g +/- %g [%g, %g]; #failures = %lu / %lu\n",
+    Tref, T.E, T.SE, T.E - 3*T.SE, T.E + 3*T.SE,
+    (unsigned long)nfails, (unsigned long)Nreals);
+  CHK(eq_eps(T.E, Tref, T.SE*3));
+}
 
-  /* Create the scene */
-  ctx.interf = interf;
-  scn_args.get_indices = get_indices;
-  scn_args.get_interface = get_interface;
-  scn_args.get_position = get_position;
-  scn_args.nprimitives = ctx.msh.nprimitives;
-  scn_args.nvertices = ctx.msh.nvertices;
-  scn_args.context = &ctx;
-  OK(sdis_scene_create(dev, &scn_args, &scn));
-  /*dump_mesh(stdout, ctx.msh.positions,
-     ctx.msh.nvertices, ctx.msh.indices, ctx.msh.nprimitives);*/
+static void
+check_probe
+  (struct sdis_scene* scn,
+   const enum profile profile,
+   const enum sdis_diffusion_algorithm diff_algo)
+{
+  struct sdis_solve_probe_args solve_args = SDIS_SOLVE_PROBE_ARGS_DEFAULT;
+  struct sdis_estimator* estimator = NULL;
+  double lower[3], upper[3];
+  double Tref;
+  ASSERT(scn);
 
-  /* Compute the delta of the solid random walk */
-  OK(sdis_scene_get_medium_spread(scn, solid, &spread));
-  solid_param->delta = 0.4 / spread; /* (4V/S) / 10 */
-
-  interf_param->upper[0] = upper[0];
-  interf_param->upper[1] = upper[1];
-  interf_param->upper[2] = upper[2];
-  interf_param->h = 1;
+  printf("algo: %s\n", algo_cstr(diff_algo));
 
   solve_args.nrealisations = Nreals;
   solve_args.position[0] = 0;
@@ -354,38 +376,116 @@ main(int argc, char** argv)
   solve_args.position[2] = 0;
   solve_args.time_range[0] = INF;
   solve_args.time_range[1] = INF;
+  solve_args.diff_algo = diff_algo;
   solve_args.register_paths = SDIS_HEAT_PATH_FAILURE;
-
-  /* Launch probe estimation with trilinear profile set at interfaces */
-  interf_param->profile = PROFILE_TRILINEAR;
   OK(sdis_solve_probe(scn, &solve_args, &estimator));
-  print_estimation_result
-    (estimator, trilinear_temperature(solve_args.position));
-  OK(sdis_estimator_ref_put(estimator));
 
-  /* Launch probe estimation with volumetric power profile set at interfaces */
-  interf_param->profile = PROFILE_VOLUMETRIC_POWER;
-  solid_param->power = Pw;
-  OK(sdis_solve_probe(scn, &solve_args, &estimator));
-  print_estimation_result
-    (estimator, volumetric_temperature(solve_args.position, upper));
-  solid_param->power = SDIS_VOLUMIC_POWER_NONE;
-  OK(sdis_estimator_ref_put(estimator));
+  switch(profile) {
+    case PROFILE_TRILINEAR:
+      Tref = trilinear_temperature(solve_args.position);
+      break;
+    case PROFILE_VOLUMETRIC_POWER:
+      OK(sdis_scene_get_aabb(scn, lower, upper));
+     Tref = volumetric_temperature(solve_args.position, upper);
+      break;
+    default: FATAL("Unreachable code.\n"); break;
+  }
 
-  /* Launch medium integration */
-  interf_param->profile = PROFILE_UNKNOWN;
+  check_estimation(estimator, Tref);
+  OK(sdis_estimator_ref_put(estimator));
+}
+
+static void
+check_medium
+  (struct sdis_scene* scn,
+   struct sdis_medium* medium,
+   const enum sdis_diffusion_algorithm diff_algo)
+{
+  struct sdis_solve_medium_args solve_mdm_args = SDIS_SOLVE_MEDIUM_ARGS_DEFAULT;
+  struct sdis_estimator* estimator = NULL;
+  ASSERT(scn);
+
+  printf("algo: %s\n", algo_cstr(diff_algo));
+
   solve_mdm_args.nrealisations = Nreals;
-  solve_mdm_args.medium = solid;
+  solve_mdm_args.medium = medium;
   solve_mdm_args.time_range[0] = INF;
   solve_mdm_args.time_range[1] = INF;
+  solve_mdm_args.diff_algo = diff_algo;
   OK(sdis_solve_medium(scn, &solve_mdm_args, &estimator));
 
-  print_estimation_result(estimator, Tfluid);
+  check_estimation(estimator, Tfluid);
   /*dump_heat_paths(stdout, estimator);*/
   OK(sdis_estimator_ref_put(estimator));
+}
+
+/*******************************************************************************
+ * Main function
+ ******************************************************************************/
+int
+main(int argc, char** argv)
+{
+  struct sdis_device* dev = NULL;
+  struct sdis_medium* fluid = NULL;
+  struct sdis_medium* solid = NULL;
+  struct sdis_interface* interf = NULL;
+  struct sdis_scene* scn = NULL;
+  struct interf* interf_param = NULL;
+  struct solid* solid_param = NULL;
+  double lower[3];
+  double upper[3];
+  double spread;
+  (void)argc, (void)argv;
+
+  OK(sdis_device_create(&SDIS_DEVICE_CREATE_ARGS_DEFAULT, &dev));
+
+  fluid = create_fluid(dev);
+  solid = create_solid(dev);
+  interf = create_interface(dev, solid, fluid);
+  scn = create_scene(dev, interf);
+
+  solid_param = sdis_data_get(sdis_medium_get_data(solid));
+  interf_param = sdis_data_get(sdis_interface_get_data(interf));
+
+  OK(sdis_scene_get_medium_spread(scn, solid, &spread));
+  OK(sdis_scene_get_aabb(scn, lower, upper));
+
+  /* Compute the delta of the solid random walk */
+  solid_param->delta = 0.4 / spread;
+
+  /* Setup the upper boundary required to solve the trilinear profile */
+  interf_param->upper[0] = upper[0];
+  interf_param->upper[1] = upper[1];
+  interf_param->upper[2] = upper[2];
+
+  /* Launch probe estimation with trilinear profile set at interfaces */
+  solid_param->delta = 0.4 / spread;
+  interf_param->profile = PROFILE_TRILINEAR;
+  check_probe(scn, PROFILE_TRILINEAR, SDIS_DIFFUSION_DELTA_SPHERE);
+  solid_param->delta = 1e-5 / spread; /* Make life difficult for WoS */
+  check_probe(scn, PROFILE_TRILINEAR, SDIS_DIFFUSION_WOS);
+
+  /* Launch probe estimation with volumetric power profile set at interfaces */
+  solid_param->delta = 0.4 / spread;
+  solid_param->power = Pw;
+  interf_param->profile = PROFILE_VOLUMETRIC_POWER;
+  check_probe(scn, PROFILE_VOLUMETRIC_POWER, SDIS_DIFFUSION_DELTA_SPHERE);
+  solid_param->delta = 1e-5 / spread; /* Make life difficult for WoS */
+  check_probe(scn, PROFILE_VOLUMETRIC_POWER, SDIS_DIFFUSION_WOS);
+  solid_param->power = SDIS_VOLUMIC_POWER_NONE;
+
+  /* Launch medium integration. Do not use an analytic profile as a boundary
+   * condition but a Robin boundary condition */
+  interf_param->profile = PROFILE_UNKNOWN;
+  solid_param->delta = 0.4 / spread;
+  check_medium(scn, solid, SDIS_DIFFUSION_DELTA_SPHERE);
+
+  /* Contrary to previous WoS tests, don't reduce the delta parameter to avoid
+   * prohibitive increases in calculation time: too small a delta would trap the
+   * path in the solid */
+  check_medium(scn, solid, SDIS_DIFFUSION_WOS);
 
   /* Release */
-  OK(s3dut_mesh_ref_put(msh));
   OK(sdis_device_ref_put(dev));
   OK(sdis_medium_ref_put(fluid));
   OK(sdis_medium_ref_put(solid));
@@ -395,4 +495,3 @@ main(int argc, char** argv)
   CHK(mem_allocated_size() == 0);
   return 0;
 }
-

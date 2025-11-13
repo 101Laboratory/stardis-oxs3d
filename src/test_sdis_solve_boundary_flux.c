@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,7 +123,7 @@ solid_get_delta
 {
   (void) data;
   CHK(vtx != NULL);
-  return 1.0 / 20.0;
+  return 1.0 / 40.0;
 }
 
 static double

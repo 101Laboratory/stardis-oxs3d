@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,6 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+#include "sdis_brdf.h"
 #include "sdis_heat_path_boundary_c.h"
 #include "sdis_interface_c.h"
 #include "sdis_log.h"
@@ -29,27 +30,6 @@
 #ifndef SDIS_HEAT_PATH_BOUNDARY_XD_HANDLE_EXTERNAL_NET_FLUX_H
 #define SDIS_HEAT_PATH_BOUNDARY_XD_HANDLE_EXTERNAL_NET_FLUX_H
 
-enum brdf_component {
-  BRDF_SPECULAR,
-  BRDF_DIFFUSE,
-  BRDF_NONE
-};
-
-struct brdf_sample {
-  double dir[3];
-  double pdf;
-  enum brdf_component cpnt;
-};
-#define BRDF_SAMPLE_NULL__ {{0}, 0, BRDF_NONE}
-static const struct brdf_sample BRDF_SAMPLE_NULL = BRDF_SAMPLE_NULL__;
-
-struct brdf {
-  double emissivity;
-  double specular_fraction;
-};
-#define BRDF_NULL__ {0, 0}
-static const struct brdf BRDF_NULL = BRDF_NULL__;
-
 /* Incident diffuse flux is made up of two components. One corresponds to the
  * diffuse flux due to the reflection of the source on surfaces. The other is
  * the diffuse flux due to the source's radiation scattering at least once in
@@ -62,107 +42,6 @@ struct incident_diffuse_flux {
 #define INCIDENT_DIFFUSE_FLUX_NULL__ {0, 0, {0,0,0}}
 static const struct incident_diffuse_flux INCIDENT_DIFFUSE_FLUX_NULL =
   INCIDENT_DIFFUSE_FLUX_NULL__;
-
-/* Reflect the V wrt the normal N. By convention V points outward the surface.
- * In fact, this function is a double-precision version of the reflect_3d
- * function. TODO Clean this "repeat" */
-static FINLINE double*
-reflect(double res[3], const double V[3], const double N[3])
-{
-  double tmp[3];
-  double cos_V_N;
-  ASSERT(res && V && N);
-  ASSERT(d3_is_normalized(V) && d3_is_normalized(N));
-  cos_V_N = d3_dot(V, N);
-  d3_muld(tmp, N, 2*cos_V_N);
-  d3_sub(res, tmp, V);
-  return res;
-}
-
-static void
-sample_brdf
-  (const struct brdf* brdf,
-   struct ssp_rng* rng,
-   const double wi[3], /* Incident direction. Point away from the surface */
-   const double N[3], /* Surface normal */
-   struct brdf_sample* sample)
-{
-  double r = 0; /* Random number */
-
-  /* Preconditions */
-  ASSERT(brdf && rng && wi && N && sample);
-  ASSERT(d3_is_normalized(wi) && d3_is_normalized(N));
-  ASSERT(d3_dot(wi, N) > 0);
-
-  r = ssp_rng_canonical(rng);
-
-  /* Sample the specular part */
-  if(r < brdf->specular_fraction) {
-    reflect(sample->dir, wi, N);
-    sample->pdf = 1;
-    sample->cpnt = BRDF_SPECULAR;
-
-  /* Sample the diffuse part */
-  } else {
-    ssp_ran_hemisphere_cos(rng, N, sample->dir, NULL);
-    sample->pdf = 1.0/PI;
-    sample->cpnt = BRDF_DIFFUSE;
-  }
-}
-
-/* Check that the trajectory reaches a valid interface, i.e. that it is on a
- * fluid/solid interface and has reached it from the fluid */
-static res_T
-check_interface
-  (const struct sdis_interface* interf,
-   const struct sdis_interface_fragment* frag)
-{
-  enum sdis_medium_type mdm_frt_type = SDIS_MEDIUM_TYPES_COUNT__;
-  enum sdis_medium_type mdm_bck_type = SDIS_MEDIUM_TYPES_COUNT__;
-  enum sdis_side fluid_side = SDIS_SIDE_NULL__;
-  res_T res = RES_OK;
-
-  mdm_frt_type = sdis_medium_get_type(interf->medium_front);
-  mdm_bck_type = sdis_medium_get_type(interf->medium_back);
-
-  /* Semi-transparent materials are not supported. This means that a solid/solid
-   * interface must not be intersected when tracing radiative paths */
-  if(mdm_frt_type == SDIS_SOLID && mdm_bck_type == SDIS_SOLID) {
-    log_err(interf->dev,
-      "Error when sampling the trajectory to calculate the incident diffuse "
-      "flux. The trajectory reaches a solid/solid interface, whereas this is "
-      "supposed to be impossible (path position: %g, %g, %g).\n",
-      SPLIT3(frag->P));
-    res = RES_BAD_OP;
-    goto error;
-  }
-
-  /* Find out which side of the interface the fluid is on */
-  if(mdm_frt_type == SDIS_FLUID) {
-    fluid_side = SDIS_FRONT;
-  } else if(mdm_bck_type == SDIS_FLUID) {
-    fluid_side = SDIS_BACK;
-  } else {
-    FATAL("Unreachable code\n");
-  }
-
-  /* Check that the current position is on the correct side of the interface */
-  if(frag->side != fluid_side) {
-    log_err(interf->dev,
-      "Inconsistent intersection when sampling the trajectory to calculate the "
-      "incident diffuse flux. The radiative path reaches an interface on "
-      "its solid side, whereas this is supposed to be impossible "
-      "(path position: %g, %g, %g).\n",
-      SPLIT3(frag->P));
-    res = RES_BAD_OP;
-    goto error;
-  }
-
-exit:
-  return res;
-error:
-  goto exit;
-}
 
 #endif /* SDIS_HEAT_PATH_BOUNDARY_XD_HANDLE_EXTERNAL_NET_FLUX_H */
 
@@ -209,48 +88,19 @@ XD(check_handle_external_net_flux_args)
   return RES_OK;
 }
 
-static INLINE void
-XD(trace_ray)
-  (const struct sdis_scene* scn,
-   const double pos[DIM],
-   const double dir[3],
-   const double distance,
-   const struct sXd(hit)* hit_from,
-   struct sXd(hit)* hit)
-{
-  struct hit_filter_data filter_data = HIT_FILTER_DATA_NULL;
-  float ray_org[DIM] = {0};
-  float ray_dir[3] = {0};
-  float ray_range[2] = {0};
-  ASSERT(scn && pos && dir && distance >= 0 && hit_from && hit);
-
-  fX_set_dX(ray_org, pos);
-  f3_set_d3(ray_dir, dir);
-  ray_range[0] = 0;
-  ray_range[1] = (float)distance;
-  filter_data.XD(hit) = *hit_from;
-  filter_data.epsilon = 1.e-4;
-#if DIM == 2
-  SXD(scene_view_trace_ray_3d
-    (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
-#else
-  SXD(scene_view_trace_ray
-    (scn->sXd(view), ray_org, ray_dir, ray_range, &filter_data, hit));
-#endif
-}
-
 static INLINE double /* [W/m^2/sr] */
 XD(direct_contribution)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct source_sample* sample,
    const double pos[DIM],
+   const unsigned enc_id, /* Current enclosure */
    const struct sXd(hit)* hit_from)
 {
   struct sXd(hit) hit = SXD_HIT_NULL;
   ASSERT(scn && sample && pos && hit_from);
 
   /* Is the source hidden */
-  XD(trace_ray)(scn, pos, sample->dir, sample->dst, hit_from, &hit);
+  XD(trace_ray)(scn, pos, sample->dir, sample->dst, enc_id, hit_from, &hit);
   if(!SXD_HIT_NONE(&hit)) return 0; /* [W/m^2/sr] */
 
   /* Note that the value returned is not the source's actual radiance, but the
@@ -261,71 +111,15 @@ XD(direct_contribution)
   return sample->radiance_term; /* [W/m^2/sr] */
 }
 
-static INLINE void
-XD(setup_fragment)
-  (struct sdis_interface_fragment* frag,
-   const double pos[DIM],
-   const double dir[DIM], /* Direction _toward_ the hit position */
-   const double time, /* Current time */
-   const double N[DIM],/* Surface normal */
-   const struct sXd(hit)* hit)
-{
-  struct sdis_rwalk_vertex vtx = SDIS_RWALK_VERTEX_NULL;
-  enum sdis_side side = SDIS_SIDE_NULL__;
-  ASSERT(frag && pos && dir && N);
-  ASSERT(dX(is_normalized)(N));
-
-  /* Setup the interface fragment at the intersection position */
-  dX(set)(vtx.P, pos);
-  vtx.time = time;
-  side = dX(dot)(dir, N) < 0 ? SDIS_FRONT : SDIS_BACK;
-  XD(setup_interface_fragment)(frag, &vtx, hit, side);
-}
-
-static INLINE res_T
-XD(setup_brdf)
-  (struct sdis_device* dev,
-   const struct sdis_source* src,
-   struct brdf* brdf,
-   const struct sdis_interface* interf,
-   const struct sdis_interface_fragment* frag)
-{
-  double epsilon = 0;
-  double alpha = 0;
-  unsigned src_id = 0;
-  res_T res = RES_OK;
-  ASSERT(brdf && frag);
-  ASSERT((frag->side == SDIS_FRONT
-      && sdis_medium_get_type(interf->medium_front) == SDIS_FLUID)
-      || sdis_medium_get_type(interf->medium_back) == SDIS_FLUID);
-
-  src_id = sdis_source_get_id(src);
-
-  epsilon = interface_side_get_emissivity(interf, src_id, frag);
-  res = interface_side_check_emissivity(dev, epsilon, frag->P, frag->time);
-  if(res != RES_OK) goto error;
-
-  alpha = interface_side_get_specular_fraction(interf, src_id, frag);
-  res = interface_side_check_specular_fraction(dev, alpha, frag->P, frag->time);
-  if(res != RES_OK) goto error;
-
-  brdf->emissivity = epsilon;
-  brdf->specular_fraction = alpha;
-
-exit:
-  return res;
-error:
-  *brdf = BRDF_NULL;
-  goto exit;
-}
-
 static res_T
 XD(compute_incident_diffuse_flux)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
+   const struct source_props* props,
    const double in_pos[DIM], /* position */
    const double in_N[DIM], /* Surface normal. (Away from the surface) */
    const double time,
+   const unsigned enc_id, /* Current enclosure */
    const struct sXd(hit)* in_hit, /* Current intersection */
    struct incident_diffuse_flux* diffuse_flux) /* [W/m^2] */
 {
@@ -333,8 +127,9 @@ XD(compute_incident_diffuse_flux)
   double pos[3] = {0}; /* In 3D for ray tracing ray to the source */
   double dir[3] = {0}; /* Incident direction (toward the surface). Always 3D.*/
   double N[3] = {0}; /* Surface normal. Always 3D */
+  size_t nbounces = 0; /* For debug */
   res_T res = RES_OK;
-  ASSERT(in_pos && in_N && in_hit && diffuse_flux);
+  ASSERT(props && in_pos && in_N && in_hit && diffuse_flux);
 
   /* Local copy of input argument */
   dX(set)(pos, in_pos);
@@ -348,7 +143,7 @@ XD(compute_incident_diffuse_flux)
 
   for(;;) {
     /* External sources */
-    struct source_sample src_sample = SOURCE_SAMPLE_NULL;
+    struct source_sample samp = SOURCE_SAMPLE_NULL;
 
     /* Interface */
     struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
@@ -356,17 +151,19 @@ XD(compute_incident_diffuse_flux)
 
     /* BRDF */
     struct brdf brdf = BRDF_NULL;
-    struct brdf_sample brdf_sample = BRDF_SAMPLE_NULL;
+    struct brdf_sample bounce = BRDF_SAMPLE_NULL;
+    struct brdf_setup_args brdf_setup_args = BRDF_SETUP_ARGS_NULL;
 
     /* Miscellaneous */
     double L = 0; /* incident flux to bounce position */
     double wi[3] = {0}; /* Incident direction (outward the surface). Always 3D */
-    double vec[DIM] = {0}; /* Temporary variable */
 
     d3_minus(wi, dir); /* Always in 3D */
 
-    /* Find the following surface along the direction of propagation */
-    XD(trace_ray)(scn, pos, dir, INF, &hit, &hit);
+    res = XD(find_next_fragment)
+      (scn, pos, dir, &hit, time, enc_id, &hit, &interf, &frag);
+    if(res != RES_OK) goto error;
+
     if(SXD_HIT_NONE(&hit)) {
       /* No surface. Handle the radiance emitted by the source and scattered at
        * least once in the environment. Note that the value returned is not the
@@ -382,49 +179,47 @@ XD(compute_incident_diffuse_flux)
       break;
     }
 
-    /* Retrieve the current position and normal */
-    dX(add)(pos, pos, dX(muld)(vec, dir, hit.distance));
-    dX_set_fX(N, hit.normal);
-    dX(normalize(N, N));
+    d3_set(pos, frag.P);
 
-    /* Retrieve the current interface properties */
-    interf = scene_get_interface(scn, hit.prim.prim_id);
-    XD(setup_fragment)(&frag, pos, dir, time, N, &hit);
-
-    /* Check that the path reaches a valid interface */
-    res = check_interface(interf, &frag);
+    /* Retrieve BRDF at current interface position */
+    brdf_setup_args.interf = interf;
+    brdf_setup_args.frag = &frag;
+    brdf_setup_args.source_id = sdis_source_get_id(scn->source);
+    res = brdf_setup(scn->dev, &brdf_setup_args, &brdf);
     if(res != RES_OK) goto error;
-
-    XD(setup_brdf)(scn->dev, scn->source, &brdf, interf, &frag);
 
     /* Check if path is absorbed */
     if(ssp_rng_canonical(rng) < brdf.emissivity) break;
 
     /* Sample rebound direction */
-    if(frag.side == SDIS_BACK) dX(minus)(N, N); /* Revert normal if necessary */
-    sample_brdf(&brdf, rng, wi, N, &brdf_sample);
-    d3_set(dir, brdf_sample.dir); /* Always in 3D */
+    switch(frag.side) {
+      case SDIS_FRONT: dX(set)(N, frag.Ng); break;
+      case SDIS_BACK:  dX(minus)(N, frag.Ng); break;
+      default: FATAL("Unreachable code\n");
+    }
+    brdf_sample(&brdf, rng, wi, N, &bounce);
+    d3_set(dir, bounce.dir); /* Always in 3D */
 
     /* Calculate the direct contribution if the rebound is specular */
-    if(brdf_sample.cpnt == BRDF_SPECULAR) {
-      res = source_trace_to(scn->source, pos, brdf_sample.dir, time, &src_sample);
+    if(bounce.cpnt == BRDF_SPECULAR) {
+      res = source_trace_to(scn->source, props, pos, bounce.dir, &samp);
       if(res != RES_OK) goto error;
 
-      if(!SOURCE_SAMPLE_NONE(&src_sample)) {
-        const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
+      if(!SOURCE_SAMPLE_NONE(&samp)) {
+        double Ld = XD(direct_contribution)(scn, &samp, pos, enc_id, &hit);
         L = Ld; /* [W/m^2/sr] */
       }
 
     /* Calculate the direct contribution of the rebound is diffuse */
     } else {
       double cos_theta = 0;
-      ASSERT(brdf_sample.cpnt == BRDF_DIFFUSE);
+      ASSERT(bounce.cpnt == BRDF_DIFFUSE);
 
       /* Sample an external source to handle its direct contribution at the
        * bounce position */
-      res = source_sample(scn->source, rng, pos, time, &src_sample);
+      res = source_sample(scn->source, props, rng, pos, &samp);
       CHK(res == RES_OK);
-      cos_theta = d3_dot(src_sample.dir, N);
+      cos_theta = d3_dot(samp.dir, N);
 
       /* The source is behind the surface */
       if(cos_theta <= 0) {
@@ -432,11 +227,12 @@ XD(compute_incident_diffuse_flux)
 
       /* The source is above the surface */
       } else {
-        const double Ld = XD(direct_contribution)(scn, &src_sample, pos, &hit);
-        L = Ld * cos_theta / (PI * src_sample.pdf); /* [W/m^2/sr] */
+        double Ld = XD(direct_contribution)(scn, &samp, pos, enc_id, &hit);
+        L = Ld * cos_theta / (PI * samp.pdf); /* [W/m^2/sr] */
       }
     }
     diffuse_flux->reflected += L; /* [W/m^2/sr] */
+    ++nbounces;
   }
   diffuse_flux->reflected *= PI; /* [W/m^2] */
 
@@ -451,7 +247,7 @@ error:
  ******************************************************************************/
 res_T
 XD(handle_external_net_flux)
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const struct handle_external_net_flux_args* args,
    struct temperature* T)
@@ -460,7 +256,8 @@ XD(handle_external_net_flux)
   struct sdis_green_external_flux_terms green =
     SDIS_GREEN_EXTERNAL_FLUX_TERMS_NULL;
 
-  /* Sampling external sources */
+  /* External source */
+  struct source_props src_props = SOURCE_PROPS_NULL;
   struct source_sample src_sample = SOURCE_SAMPLE_NULL;
 
   /* External flux */
@@ -477,6 +274,7 @@ XD(handle_external_net_flux)
   struct sdis_interface_fragment frag = SDIS_INTERFACE_FRAGMENT_NULL;
 
   /* Miscellaneous */
+  unsigned enc_ids[2] = {ENCLOSURE_ID_NULL, ENCLOSURE_ID_NULL};
   double sum_h = 0;
   double emissivity = 0; /* Emissivity */
   double Ld = 0; /* Incident radiance [W/m^2/sr] */
@@ -489,7 +287,7 @@ XD(handle_external_net_flux)
   res = XD(check_handle_external_net_flux_args)(scn, FUNC_NAME, args);
   if(res != RES_OK) goto error;
 
-  /* Setup the interface fragment on flud side */
+  /* Setup the interface fragment on fluid side */
   frag = *args->frag;
   if(sdis_medium_get_type(args->interf->medium_front) == SDIS_FLUID) {
     frag.side = SDIS_FRONT;
@@ -497,6 +295,9 @@ XD(handle_external_net_flux)
     ASSERT(sdis_medium_get_type(args->interf->medium_back) == SDIS_FLUID);
     frag.side = SDIS_BACK;
   }
+
+  /* Retrieve the enclosures */
+  scene_get_enclosure_ids(scn, args->XD(hit)->prim.prim_id, enc_ids);
 
   /* No external sources <=> no external fluxes. Nothing to do */
   handle_flux = interface_side_is_external_flux_handled(args->interf, &frag);
@@ -508,11 +309,14 @@ XD(handle_external_net_flux)
   emissivity = interface_side_get_emissivity(args->interf, src_id, &frag);
   res = interface_side_check_emissivity(scn->dev, emissivity, frag.P, frag.time);
   if(res != RES_OK) goto error;
+
   if(emissivity == 0) goto exit;
 
-  /* Sample the external source */
-  res = source_sample
-    (scn->source, rng, frag.P, frag.time, &src_sample);
+  res = source_get_props(scn->source, frag.time, &src_props);
+  if(res != RES_OK) goto error;
+
+  /* Sample a direction toward the source to add its direct contribution */
+  res = source_sample(scn->source, &src_props, rng, frag.P, &src_sample);
   if(res != RES_OK) goto error;
 
   /* Setup the normal to ensure that it points toward the fluid medium */
@@ -523,13 +327,14 @@ XD(handle_external_net_flux)
    * interface side */
   cos_theta = d3_dot(N, src_sample.dir);
   if(cos_theta > 0) {
-    Ld = XD(direct_contribution)(scn, &src_sample, frag.P, args->XD(hit));
+    Ld = XD(direct_contribution)
+      (scn, &src_sample, frag.P, enc_ids[frag.side], args->XD(hit));
     incident_flux_direct = cos_theta * Ld / src_sample.pdf; /* [W/m^2] */
   }
 
   /* Calculate the incident diffuse flux [W/m^2] */
-  res = XD(compute_incident_diffuse_flux)
-    (scn, rng, frag.P, N, frag.time, args->XD(hit), &incident_flux_diffuse);
+  res = XD(compute_incident_diffuse_flux)(scn, rng, &src_props, frag.P, N,
+    frag.time, enc_ids[frag.side], args->XD(hit), &incident_flux_diffuse);
   if(res != RES_OK) goto error;
 
   /* Calculate the incident flux without the part scattered by the environment.
@@ -562,7 +367,7 @@ XD(handle_external_net_flux)
   green.dir[1] = incident_flux_diffuse.dir[1];
   green.dir[2] = incident_flux_diffuse.dir[2];
 
-  T->value += green.term_wrt_power * source_get_power(scn->source, green.time);
+  T->value += green.term_wrt_power * src_props.power;
   if(green.term_wrt_diffuse_radiance) {
     T->value +=
         green.term_wrt_diffuse_radiance

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -246,130 +246,6 @@ XD(sample_reinjection_dir)
 #endif
 }
 
-
-#if DIM == 2
-static void
-XD(move_away_primitive_boundaries)
-  (const struct rwalk* rwalk,
-   const double delta,
-   double position[DIM]) /* Position to move */
-{
-  struct sXd(attrib) attr;
-  float pos[DIM];
-  float dir[DIM];
-  float len;
-  const float st = 0.5f;
-  ASSERT(rwalk && !SXD_HIT_NONE(&rwalk->XD(hit)) && delta > 0);
-
-  SXD(primitive_get_attrib(&rwalk->XD(hit).prim, SXD_POSITION, st, &attr));
-
-  fX_set_dX(pos, position);
-  fX(sub)(dir, attr.value, pos);
-  len = fX(normalize)(dir, dir);
-  len = MMIN(len, (float)(delta*0.1));
-
-  XD(move_pos)(position, dir, len);
-}
-#else
-/* Move the submitted position away from the primitive boundaries to avoid
- * numerical issues leading to inconsistent random walks. */
-static void
-XD(move_away_primitive_boundaries)
-  (const struct rwalk* rwalk,
-   const double delta,
-   double position[DIM])
-{
-  struct s3d_attrib v0, v1, v2; /* Triangle vertices */
-  float E[3][4]; /* 3D edge equations */
-  float dst[3]; /* Distance from current position to edge equation */
-  float N[3]; /* Triangle normal */
-  float P[3]; /* Random walk position */
-  float tmp[3];
-  float min_dst, max_dst;
-  float cos_a1, cos_a2;
-  float len;
-  int imax = 0;
-  int imin = 0;
-  int imid = 0;
-  int i;
-  ASSERT(rwalk && delta > 0 && !S3D_HIT_NONE(&rwalk->XD(hit)));
-
-  fX_set_dX(P, position);
-
-  /* Fetch triangle vertices */
-  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 0, S3D_POSITION, &v0));
-  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 1, S3D_POSITION, &v1));
-  S3D(triangle_get_vertex_attrib(&rwalk->XD(hit).prim, 2, S3D_POSITION, &v2));
-
-  /* Compute the edge vector */
-  f3_sub(E[0], v1.value, v0.value);
-  f3_sub(E[1], v2.value, v1.value);
-  f3_sub(E[2], v0.value, v2.value);
-
-  /* Compute the triangle normal */
-  f3_cross(N, E[1], E[0]);
-
-  /* Compute the 3D edge equation */
-  f3_normalize(E[0], f3_cross(E[0], E[0], N));
-  f3_normalize(E[1], f3_cross(E[1], E[1], N));
-  f3_normalize(E[2], f3_cross(E[2], E[2], N));
-  E[0][3] = -f3_dot(E[0], v0.value);
-  E[1][3] = -f3_dot(E[1], v1.value);
-  E[2][3] = -f3_dot(E[2], v2.value);
-
-  /* Compute the distance from current position to the edges */
-  dst[0] = f3_dot(E[0], P) + E[0][3];
-  dst[1] = f3_dot(E[1], P) + E[1][3];
-  dst[2] = f3_dot(E[2], P) + E[2][3];
-
-  /* Retrieve the min and max distance from random walk position to triangle
-   * edges */
-  min_dst = MMIN(MMIN(dst[0], dst[1]), dst[2]);
-  max_dst = MMAX(MMAX(dst[0], dst[1]), dst[2]);
-
-  /* Sort the edges with respect to their distance to the random walk position */
-  FOR_EACH(i, 0, 3) {
-    if(dst[i] == min_dst) {
-      imin = i;
-    } else if(dst[i] == max_dst) {
-      imax = i;
-    } else {
-      imid = i;
-    }
-  }
-  (void)imax;
-
-  /* TODO if the current position is near a vertex, one should move toward the
-   * farthest edge along its normal to avoid too small displacement */
-
-  /* Compute the distance `dst' from the current position to the edges to move
-   * to, along the normal of the edge from which the random walk is the nearest
-   *
-   *           +.                 cos(a) = d / dst => dst = d / cos_a
-   *          /  `*.
-   *         /    | `*.
-   *        /  dst| a /`*.
-   *       /      |  /    `*.
-   *      /       | / d      `*.
-   *     /        |/            `*.
-   *    +---------o----------------+  */
-  cos_a1 = f3_dot(E[imin], f3_minus(tmp, E[imid]));
-  cos_a2 = f3_dot(E[imin], f3_minus(tmp, E[imax]));
-  dst[imid] = cos_a1 > 0 ? dst[imid] / cos_a1 : FLT_MAX;
-  dst[imax] = cos_a2 > 0 ? dst[imax] / cos_a2 : FLT_MAX;
-
-  /* Compute the maximum displacement distance into the triangle along the
-   * normal of the edge from which the random walk is the nearest */
-  len = MMIN(dst[imid], dst[imax]);
-  ASSERT(len != FLT_MAX);
-
-  /* Define the displacement distance as the minimum between 10 percent of
-   * delta and len / 2. */
-  len = MMIN(len*0.5f, (float)(delta*0.1));
-  XD(move_pos)(position, E[imin], len);
-}
-#endif
-
 static res_T
 XD(find_reinjection_ray)
   (struct sdis_scene* scn,
@@ -411,7 +287,7 @@ XD(find_reinjection_ray)
   ASSERT(XD(check_find_reinjection_ray_args)(scn, args) == RES_OK);
 
   *ray = XD(REINJECTION_RAY_NULL);
-  MAX_ATTEMPTS = args->can_move ? 2 : 1;
+  MAX_ATTEMPTS = args->can_move ? 20 : 1;
 
   dst_adjusted = args->distance * RAY_RANGE_MAX_SCALE;
   reinject_threshold = (float)args->distance * REINJECT_DST_MIN_SCALE;
@@ -421,7 +297,13 @@ XD(find_reinjection_ray)
   do {
     fX_set_dX(org, ray->org);
     filter_data.XD(hit) = args->rwalk->XD(hit);
+
+    /* Limit the epsilon to 1.e-6, as Star-3D's single-precision floating-point
+     * representation will inevitably present numerical accuracy problems below
+     * this threshold. There's no point in going any lower */
+    /*filter_data.epsilon = MMAX(args->distance * 0.01, 1e-6);*/
     filter_data.epsilon = args->distance * 0.01;
+
     SXD(scene_view_trace_ray
       (scn->sXd(view), org, args->dir0, range, &filter_data, &hit0));
     SXD(scene_view_trace_ray
@@ -479,19 +361,15 @@ XD(find_reinjection_ray)
      * and retry to find a valid reinjection. */
     if(dst0 == -1 && dst1 == -1
     && iattempt < MAX_ATTEMPTS - 1) { /* Is there still a trial to be done? */
-      XD(move_away_primitive_boundaries)(args->rwalk, args->distance, ray->org);
+      XD(move_away_primitive_boundaries)
+        (&args->rwalk->XD(hit), args->distance, ray->org);
       ray->position_was_moved = 1;
     }
   } while(dst0 == -1 && dst1 == -1 && ++iattempt < MAX_ATTEMPTS);
 
   if(dst0 == -1 && dst1 == -1) { /* No valid reinjection */
-#if DIM == 2
-    log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g}.\n",
-      FUNC_NAME, SPLIT2(ray->org));
-#else
-    log_err(scn->dev, "%s: no valid reinjection direction at {%g, %g, %g}.\n",
-      FUNC_NAME, SPLIT3(ray->org));
-#endif
+    log_err(scn->dev, "%s: no valid reinjection direction at {"FORMAT_VECX"}.\n",
+      FUNC_NAME, SPLITX(ray->org));
     res = RES_BAD_OP_IRRECOVERABLE;
     goto error;
   }
@@ -1186,5 +1064,131 @@ exit:
 error:
   goto exit;
 }
+
+#if DIM == 2
+void
+XD(move_away_primitive_boundaries)
+  (const struct sXd(hit)* hit,
+   const double delta,
+   double position[DIM]) /* Position to move */
+{
+  struct sXd(attrib) attr;
+  float pos[DIM];
+  float dir[DIM];
+  float len;
+  const float st = 0.5f;
+  ASSERT(!SXD_HIT_NONE(hit) && delta > 0);
+
+  SXD(primitive_get_attrib(&hit->prim, SXD_POSITION, st, &attr));
+
+  fX_set_dX(pos, position);
+  fX(sub)(dir, attr.value, pos);
+  len = fX(normalize)(dir, dir);
+  len = MMIN(len, (float)(delta*0.1));
+
+  XD(move_pos)(position, dir, len);
+}
+#else
+/* Move the submitted position away from the primitive boundaries to avoid
+ * numerical issues leading to inconsistent random walks. */
+void
+XD(move_away_primitive_boundaries)
+  (const struct sXd(hit)* hit,
+   const double delta,
+   double position[DIM])
+{
+  struct s3d_attrib v0, v1, v2; /* Triangle vertices */
+  float E[3][4]; /* 3D edge equations */
+  float dst[3]; /* Distance from current position to edge equation */
+  float N[3]; /* Triangle normal */
+  float P[3]; /* Random walk position */
+  float tmp[3];
+  float min_dst, max_dst;
+  float len;
+  int imax = 0;
+  int imin = 0;
+  int imid = 0;
+  int i;
+  ASSERT(delta > 0 && !S3D_HIT_NONE(hit));
+
+  fX_set_dX(P, position);
+
+  /* Fetch triangle vertices */
+  S3D(triangle_get_vertex_attrib(&hit->prim, 0, S3D_POSITION, &v0));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 1, S3D_POSITION, &v1));
+  S3D(triangle_get_vertex_attrib(&hit->prim, 2, S3D_POSITION, &v2));
+
+  /* Compute the edge vector */
+  f3_sub(E[0], v1.value, v0.value);
+  f3_sub(E[1], v2.value, v1.value);
+  f3_sub(E[2], v0.value, v2.value);
+
+  /* Compute the triangle normal */
+  f3_cross(N, E[1], E[0]);
+
+  /* Compute the 3D edge equation */
+  f3_normalize(E[0], f3_cross(E[0], E[0], N));
+  f3_normalize(E[1], f3_cross(E[1], E[1], N));
+  f3_normalize(E[2], f3_cross(E[2], E[2], N));
+  E[0][3] = -f3_dot(E[0], v0.value);
+  E[1][3] = -f3_dot(E[1], v1.value);
+  E[2][3] = -f3_dot(E[2], v2.value);
+
+  /* Compute the distance from current position to the edges */
+  dst[0] = f3_dot(E[0], P) + E[0][3];
+  dst[1] = f3_dot(E[1], P) + E[1][3];
+  dst[2] = f3_dot(E[2], P) + E[2][3];
+
+  /* Retrieve the min and max distance from random walk position to triangle
+   * edges */
+  min_dst = MMIN(MMIN(dst[0], dst[1]), dst[2]);
+  max_dst = MMAX(MMAX(dst[0], dst[1]), dst[2]);
+
+  /* Sort the edges with respect to their distance to the random walk position */
+  FOR_EACH(i, 0, 3) {
+    if(dst[i] == min_dst) {
+      imin = i;
+    } else if(dst[i] == max_dst) {
+      imax = i;
+    } else {
+      imid = i;
+    }
+  }
+  (void)imax;
+
+  if(eq_eps(dst[imin], 0, delta*1e-3) && eq_eps(dst[imid], 0, delta*1e-3)) {
+    /* The random position is in a corner, meaning that its distance to the two
+     * nearest edges is approximately equal to 0. Move it toward the farthest
+     * edge along its normal to avoid moving too little. */
+    len = MMIN(dst[imax]*0.5f, (float)delta*0.1f);
+    XD(move_pos)(position, f3_minus(tmp, E[imax]), len);
+
+  } else {
+    /* Compute the distance `dst' from the current position to the edges to move
+     * to, along the normal of the edge from which the random walk is the nearest
+     *
+     *           +.                 cos(a) = d / dst => dst = d / cos_a
+     *          /  `*.
+     *         /    | `*.
+     *        /  dst| a /`*.
+     *       /      |  /    `*.
+     *      /       | / d      `*.
+     *     /        |/            `*.
+     *    +---------o----------------+  */
+    const float cos_a1 = f3_dot(E[imin], f3_minus(tmp, E[imid]));
+    const float cos_a2 = f3_dot(E[imin], f3_minus(tmp, E[imax]));
+    dst[imid] = cos_a1 > 0 ? dst[imid] / cos_a1 : FLT_MAX;
+    dst[imax] = cos_a2 > 0 ? dst[imax] / cos_a2 : FLT_MAX;
+    len = MMIN(dst[imid], dst[imax]);
+    ASSERT(len != FLT_MAX);
+
+    /* Define the displacement distance as the minimum between 10 percent of
+     * delta and len / 2. */
+    len = MMIN(len*0.5f, (float)(delta*0.1));
+    XD(move_pos)(position, E[imin], len);
+  }
+
+}
+#endif
 
 #include "sdis_Xd_end.h"

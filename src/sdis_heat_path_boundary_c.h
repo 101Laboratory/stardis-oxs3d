@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -175,14 +175,14 @@ HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL = HANDLE_EXTERNAL_NET_FLUX_ARGS_NULL__;
 
 extern LOCAL_SYM res_T
 handle_external_net_flux_2d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const struct handle_external_net_flux_args* args,
    struct temperature* T);
 
 extern LOCAL_SYM res_T
 handle_external_net_flux_3d
-  (const struct sdis_scene* scn,
+  (struct sdis_scene* scn,
    struct ssp_rng* rng,
    const struct handle_external_net_flux_args* args,
    struct temperature* T);
@@ -221,6 +221,20 @@ query_medium_temperature_from_boundary_3d
    struct rwalk_context* ctx,
    struct rwalk* rwalk,
    struct temperature* T);
+
+/* Move the submitted position away from the primitive boundaries to avoid
+ * numerical issues leading to inconsistent random walks. */
+extern LOCAL_SYM void
+move_away_primitive_boundaries_2d
+  (const struct s2d_hit* hit,
+   const double delta,
+   double position[2]); /* Position to move */
+
+extern LOCAL_SYM void
+move_away_primitive_boundaries_3d
+  (const struct s3d_hit* hit,
+   const double delta,
+   double position[3]); /* Position to move */
 
 /*******************************************************************************
  * Boundary sub-paths

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@ static const size_t nreferences = sizeof(references)/sizeof(*references);
 SOLID_PROP(calorific_capacity, 2000.0) /* [J/K/kg] */
 SOLID_PROP(thermal_conductivity, 0.5) /* [W/m/K] */
 SOLID_PROP(volumic_mass, 2500.0) /* [kg/m^3] */
-SOLID_PROP(delta, 1.0/60.0)
+SOLID_PROP(delta, 1.0/80.0)
 #undef SOLID_PROP
 
 static double /* [K] */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@
 #define T0 320
 #define LAMBDA 0.1
 #define P0 10
-#define DELTA 1.0/55.0
+#define DELTA 1.0/60.0
 
 /*******************************************************************************
  * Helper functions

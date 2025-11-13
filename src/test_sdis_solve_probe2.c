@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -296,7 +296,7 @@ main(int argc, char** argv)
 
   /* Check the RNG state */
   OK(ssp_rng_create(NULL, SSP_RNG_THREEFRY, &rng));
-  OK(ssp_rng_discard(rng, 3141592653589)); /* Move the RNG state  */
+  OK(ssp_rng_discard(rng, 314159265358979)); /* Move the RNG state  */
   solve_args.rng_state = rng;
   solve_args.rng_type = SSP_RNG_TYPE_NULL;
   OK(sdis_solve_probe(scn, &solve_args, &estimator2));

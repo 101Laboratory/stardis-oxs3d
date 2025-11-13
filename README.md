@@ -158,6 +158,13 @@ Edit config.mk as needed, then run:
 
 ## Release notes
 
+### Version 0.16.2
+
+- Continue to improve numerical robustness when sampling the radiative
+  path, both in long waves and when processing an external source.
+- Update the attenuation of numerical inaccuracies when the candidate
+  path for reinjection is located approximately on one of the vertices
+  of a triangle.
 
 ### Version 0.16.1
 
@@ -697,9 +704,8 @@ First version and implementation of the Stardis-Solver API.
 
 ## License
 
-Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
 
 Stardis-Solver is free software released under the GPLv3+ license: GNU
 GPL version 3 or later.  You are welcome to redistribute it under
 certain conditions; refer to the COPYING files for details.
-

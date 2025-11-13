@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2024 |Méso|Star> (contact@meso-star.com)
+/* Copyright (C) 2016-2025 |Méso|Star> (contact@meso-star.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -377,7 +377,7 @@ struct sdis_interface_side_shader {
   /* Fixed temperature/flux. May be NULL if the temperature/flux is unknown
    * onto the whole interface */
   sdis_interface_getter_T temperature; /* [K]. SDIS_TEMPERATURE_NONE = Unknown */
-  sdis_interface_getter_T flux; /* [W.m^-2]. SDIS_FLUX_NONE = no flux  */
+  sdis_interface_getter_T flux; /* Toward solid. [W.m^-2]. SDIS_FLUX_NONE = no flux */
 
   /* Control the emissivity of the interface. May be NULL for solid/solid
    * interface or if the emissivity is 0 onto the whole interface. */
@@ -862,7 +862,7 @@ struct sdis_solve_boundary_flux_args {
   10000, /* #realisations */                                                   \
   NULL, /* List or primitive ids */                                            \
   0, /* #primitives */                                                         \
-  {DBL_MAX,DBL_MAX}, /* Time range */                                          \
+  {DBL_MAX, DBL_MAX}, /* Time range */                                         \
   1, /* Picard order */                                                        \
   NULL, /* RNG state */                                                        \
   SSP_RNG_THREEFRY, /* RNG type */                                             \
