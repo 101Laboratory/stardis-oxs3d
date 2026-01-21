@@ -1,0 +1,198 @@
+# Star SamPling
+
+Star-SamPling is a library whose purpose is to generate pseudo-random
+numbers and sample distributions. A proxy generator can also be used to
+generate independent random sequences from the same pseudo-random
+generator. This is particularly useful for ensuring the statistical
+independence of random sequences on parallel computations. Although
+Star-SamPling relies on C++ libraries, its API is still raw C.
+
+## Requirements
+
+- C++ compiler (C++11)
+- POSIX make
+- pkg-config
+- [Random123](https://github.com/DEShawResearch/random123)
+- [RSys](https://gitlab.com/vaplv/rsys)
+
+## Installation
+
+Edit config.mk as needed, then run:
+
+    make clean install
+
+## Release notes
+
+### Version 0.15
+
+- Keep RNG caches managed by proxy in memory to avoid write failures
+  when the temporary directory ran out of space.
+- Reduce the size of the RNG cache managed by proxy to 4MB to limit the
+  memory footprint of the proxy.
+- Write state cache in case of fatal error to help debug what went
+  wrong.
+- Improve the building system. Simplify it by doing everything in one
+  place (Makefile). Provide additional macros to control installation
+  subdirectories.
+
+### Version 0.14
+
+Replace CMake by Makefile as build system. The build procedure is
+written in POSIX make, which the user can configure via the `config.mk`
+file. The POSIX script `make.sh` contains commands that could be found
+directly in the Makefile, but which are placed here to simplify its
+writing. Finally, a pkg-config file is provided to link the library as
+an external dependency.
+
+In addition to the features already provided by its CMake alternative,
+the Makefile supports the construction of static libraries, provides an
+uninstall target and updates compiler and linker flags to increase the
+security and robustness of generated binaries. In any case, the main
+motivation for using POSIX make is to rely on a good old
+well-established standard with simple functionality, available on all
+UNIX systems, thus simplifying its portability and support while being
+much lighter.
+
+### Version 0.13
+
+#### Index of the RNG proxy sequence
+
+Add the `sequence_id` variable to the RNG proxy. A sequence is a set of
+random numbers consumed by the buckets managed by the RNG proxy. This
+new variable saves the index of the current sequence relative to the
+initial state of the RNG proxy. It thus identifies the set of random
+numbers already consumed and currently reserved by an RNG proxy. This
+data is provided to allow the caller to synchronize multiple RNG
+proxies.
+
+The new `ssp_rng_proxy_get_sequence_id` function allows the caller to
+retrieve the index of the current sequence while the
+`ssp_rng_proxy_flush_sequences` function allows to remove random numbers
+from the current sequence and those from the next one.
+
+#### Issues in RNG proxy
+
+- Fixes the `ssp_rng_proxy_read` function: cached RNG states were not
+  being cleaned up when updating the proxy state, resulting in the use
+  of random numbers generated from the wrong state.
+- Fixes critical issues in the caching mechanism of the RNG proxy: a
+  cache size smaller than the size of an RNG state led to critical bugs.
+
+### Version 0.12.1
+
+Fix creating a random number proxy generator using the KISS type: this
+type was considered invalid while it is not.
+
+### Version 0.12
+
+Ensures C++11 compliance to correct gcc 11 compilation errors. On the
+other hand, this introduces API breaks.
+
+According to the C++11 standard, the min/max values of a
+UniformRandomBitGenerator must be static constant expressions. But until
+now, gcc has been flexible enough to allow the use of
+UniformRandomBitGenerators with regular min/max values. At run time, the
+caller could thus define its own RNG type as provided by the struct
+`ssp_rng_type` data structure.  Unfortunately, since its version 11, gcc
+is more severe and refuses to compile this code.
+
+This version updates the API to respect this C++11 constraint. The
+`ssp_rng_type` is no longer a structure; it becomes an enumeration which
+is then instantiated internally in a specific UniformRandomBitGenerator
+with min/max values resolved at compilation time.
+
+### Version 0.11.1
+
+Sets the CMake minimum version to 3.1 in the Random123Config.cmake file:
+since CMake 3.20, version 2 has become obsolete.
+
+### Version 0.11
+
+- Add the `ssp_ran_spherical_zone_uniform` distribution that uniformly
+  samples a position on a truncated spherical cap.
+- Rename the library to `star-sp` to avoid conflicts with GCC's
+  `libssp`.
+
+### Version 0.10
+
+- Add the `ssp_ran_exp_truncated` distribution.
+
+### Version 0.9
+
+- Rewrite the caching mechanism used to register the RNG states provided
+  by the proxy to its managed generators. These states are no more saved
+  in files that continuously grow. The streams have now a limited size,
+  and the states are structured into them as in a FIFO circular queue.
+  When a queue is full, the RNG states are no more stored into it but
+  will be generated by the associated managed RNG.
+- Update the `ssp_rng_proxy_create2` function: input arguments are now
+  provided through a structured variable. Furthermore, its initial state
+  can be setup from an optionnal RNG.
+- Add the `ssp_ran_tetrahedron_uniform[_float]` random variates that
+  uniformly distributes a point into a tetrahedron.
+- Fix the read function of the KISS RNG: de-serialised data could be
+  wrong.
+
+### Version 0.8.1
+
+- Fix a possible invalid memory read on proxy allocator clear.
+
+### Version 0.8
+
+- Add the `ssp_ran_sphere_cap_uniform[_local][_float]` random variates
+  that uniformly distributes a point onto a unit sphere cap centered in
+  zero.
+- Fix the allocation of the `ssp_rng` data structure: the `ssp_rng`
+  structure contains a long double attribute that might be not correctly
+  aligned on 16 bytes.
+
+### Version 0.7
+
+- Add the `ssp_ran_circle_uniform` random variate that uniformly
+  distributes a 2 dimensional position onto a unit circle.
+
+### Version 0.6
+
+- Add the `ssp_rng_proxy_create2` function that allows to tune the sub
+  sets of pseudo random numbers that the proxy generator can use. Pseudo
+  random numbers that do not lie in these partitions are skipped by the
+  proxy. Thanks to this functionality, on can create several proxies,
+  each generating its own set of pseudo random numbers that does not
+  overlap the sequences of the other proxies.
+- Update the version of the RSys dependency to 0.6: replace the
+  deprecated `[N]CHECK` macros by the new macro `CHK`.
+
+### Version 0.5
+
+- Rename the `ssp_ran_uniform_disk` API call into
+  `ssp_ran_uniform_disk_local`.
+- Add a more general version of the uniform disk random variate allowing
+  users to provide the disk's normal.
+- Add a float equivalent for all the already defined double random
+  variates.
+- Add some missing pdf API calls.
+- Change the API of some random variates that returned the pdf as an
+  additional vector component along with the sampled vector (i.e.
+  filling up a vector[4] instead of a vector[3]). The pdf is now
+  returned through an optional dedicated argument.
+
+### Version 0.4
+
+- Update the API of the random variates to return double precision reals
+  rather than single precision values.
+- Use the specific prefix `ssp_ranst` to name the state-based random
+  variates.
+- Add the piecewise linear and uniform disk random variates.
+- Ensure that the single precision version of the canonical uniform
+  distribution does not return 1.
+- Speed up the canonical uniform distribution.
+- Add the `ssp_rng_proxy_write` and `ssp_rng_proxy_read` functions that
+  serializes and deserializes the data of the proxy RNG, respectively.
+
+## License
+
+Copyright (C) 2015-2025 |Méso|Star> (contact@meso-star.com)
+
+Star-SP is free software released under GPL v3+ license: GNU GPL version
+3 or later. You are welcome to redistribute it under certain conditions;
+refer to the COPYING file for details.

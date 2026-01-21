@@ -1,0 +1,10 @@
+solid My Solid
+
+  facet normal 0.0 -1.0 0.0
+    outer loop     hophophophophop
+      vertex	  0.0      0.0 0.0
+      vertex 1.0   0.0 0.0     	aaa
+      vertex 0.0   0.0     1.0
+    endloop   
+  endfacet   			 noise
+endsolid pouet

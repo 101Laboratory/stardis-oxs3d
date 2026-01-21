@@ -1,0 +1,93 @@
+.\" Copyright (C) 2020-2023, 2025 |Méso|Star> (contact@meso-star.com)
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program. If not, see <http://www.gnu.org/licenses/>.
+.Dd February 20, 2025
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Dt SUVM-VOXELIZE 1
+.Os
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh NAME
+.Nm suvm-voxelize
+.Nd voxelize a tetrahedral mesh
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SYNOPSIS
+.Nm
+.Op Fl hnv
+.Op Fl d Ar x , Ns Ar y , Ns Ar z
+.Op Fl o Ar output
+.Op Ar input
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh DESCRIPTION
+.Nm
+voxelize a tetrahedral mesh stored in the
+.Xr smsh 5
+file format.
+Generated voxels are parallelepipeds saved in VTK format.
+Each voxel stores the number of tetrahedra covering it.
+.Pp
+If input is not defined, the mesh is read from standard input.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d Ar x , Ns Ar y , Ns Ar z
+definition of voxelization along the 3 axes.
+Default is 64,64,64.
+.It Fl h
+Display short help and exit.
+.It Fl n
+pre-calculate tetrahedron normals.
+This should speed up voxelization speed by calculating normals once and
+for all, rather than re-evaluating them each time a tetrahedron is
+tested against a voxel.
+On the other hand, the memory space used to store normals increases the
+memory footprint.
+.It Fl o Ar output
+Output file.
+Voxels are stored in VTK format.
+If not defined, data is written to standard output.
+.It Fl v
+Make
+.Nm
+verbose.
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXIT STATUS
+.Ex -std
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXAMPLES
+Voxelize
+.Pa volumic_mesh.smsh
+and save the results in
+.Pa voxels.vtk :
+.Bd -literal -offset Ds
+suvm-voxelize -o voxels.vtk volumic_mesh.smsh
+.Ed
+.Pp
+Same as above but with a voxelization definition of 256^3:
+.Bd -literal -offset Ds
+suvm-voxelize -d256,256,256 -o voxels.vtk volumic_mesh.smsh
+.Ed
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SEE ALSO
+.Xr smsh 5
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh STANDARDS
+.Rs
+.%B The VTK User's Guide
+.%O Simple Legacy Formats
+.%I Kitware, Inc
+.%N 11
+.%D 2010
+.%P 470--482
+.Re

@@ -1,0 +1,395 @@
+.\" Copyright (C) 2018-2025 |Méso|Star> (contact@meso-star.com)
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program. If not, see <http://www.gnu.org/licenses/>.
+.Dd April 18, 2024
+.Dt STARDIS-INPUT 5
+.Os
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Name and short description
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh NAME
+.Nm stardis-input
+.Nd thermal system description for
+.Xr stardis 1
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Detailed description
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh DESCRIPTION
+.Nm
+is the format used by the
+.Xr stardis 1
+program to describe a thermal system.
+It is a line-by-line ASCII syntax.
+.Pp
+A thermal system is composed of lines of text, each one describing
+either a program
+.Pq an user-provided shared object ,
+a medium frontier
+.Pq solid or fluid ,
+a boundary condition, a connection between two media, the scale of the
+whole geometry, or the radiative temperature around the system.
+In the medium, boundary and connection cases, description lines include
+a list of file names that constitute the limit, boundary or connection.
+.Xr stardis 1
+only accepts triangle mesh geometry files in STL format.
+If a scale is specified, it defines the scaling factor to apply to the
+geometry to have it expressed in meters
+.Pq e.g. 1e-3 if the geometry is in mm .
+.Pp
+Any physical quantity involved in descriptions is expected in the
+International System of Units
+.Pq second, meter, kilogram, kelvin, watt, joule .
+However, the geometry provided to
+.Xr stardis 1
+can be described in any unit, multiple of meters or not, as long as the
+scaling factor is provided.
+.Pp
+Properties are defined directly as constants in the input file.
+Several properties can also be defined by programs, i.e. shared objects
+provided by the user
+.Pq compiled libraries  .
+The latter allow user-defined variable properties to be supplied to
+.Xr stardis 1 .
+Depending on the type of description they use, programs must
+export a given list of mandatory functions.
+They can also export some other optional functions.
+The exact list with names and types can be found in the public header
+.Pa stardis-prog-properties.h ,
+which is installed together with
+.Xr stardis 1
+binary.
+.Pp
+A medium limit, a boundary or a connection description can be split
+across files and a single file or description line can describe more
+than one frontier
+.Pq more than one connex region .
+The main semantic constraint on descriptions is that enclosures must be
+defined by a single description line, to ensure that every constitutive
+part of the system is made from a single medium.
+.Pp
+Description lines can be submitted to
+.Xr stardis 1
+in any order, with the exception of programs that must be
+defined before use, and can be split across more than one file, through
+multiple use of option
+.Fl M .
+.Pp
+When a description line is parsed, the first step is to split it in
+different parts.
+.Xr stardis 1
+relies on the
+.Xr wordexp 3
+POSIX function for this step.
+As a consequence the rules that apply at this stage all come from
+the wordexp rules: environment variables can be used and are
+substituted, including inside arithmetic expressions, text inside quote
+pairs is considered a single item, whitespace characters can be escaped
+so that the current item continues past it
+.Po see
+.Xr wordexp 3
+for details
+.Pc .
+Note however that both the use of undefined environment variables and
+the use of command substitution will be reported as an error as these
+features are not enabled in
+.Xr stardis 1 .
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Grammar in Backus-Naur form
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh GRAMMAR
+In what follows, some lines end with a backslash
+.Pq Li \e .
+This is used as a convenience to continue a description next line.
+However, this trick cannot be used in actual description files and
+actual description lines must be kept single-line.
+Text introduced by the sharp character
+.Pq Li #
+in descriptions is a comment and is not part of the description.
+.Pp
+The file format is as follows:
+.Bl -column (description-line) (::) ()
+.It Ao Va thermal-system Ac Ta ::= Ta Ao Va description-line Ac
+.It Ta Ta ...
+.It Ao Va description-line Ac Ta ::= Ta Ao Va comment Ac
+.It Ta \& \& | Ta Ao Va program Ac Op Ao Va comment Ac
+.It Ta \& \& | Ta Ao Va medium Ac Op Ao Va comment Ac
+.It Ta \& \& | Ta Ao Va connection Ac Op Ao Va comment Ac
+.It Ta \& \& | Ta Ao Va boundary-condition Ac Op Ao Va comment Ac
+.It Ta \& \& | Ta Ao Va scaling Ac Op Ao Va comment Ac
+# At most once
+.It \  Ta Ta
+.It Ao Va comment Ac Ta ::= Ta Li # Vt string
+.It Ao Va program Ac Ta ::= Ta Li PROGRAM Ao Va prog-name Ac Ao Va lib-path Ac Op Ao Va args Ac
+.It Ao Va scaling Ac Ta ::= Ta Li SCALE Vt real
+# Geometry scaling in ]0, INF)
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Media
+.Bl -column (description-line) (::) ()
+.It Ao Va medium Ac Ta ::= Ta Ao Va fluid Ac | Ao Va solid Ac
+.It \  Ta Ta
+.It Ao Va fluid Ac Ta ::= Ta Ao Va fluid-const Ac | Ao Va fluid-prog Ac
+.It Ao Va fluid-const Ac Ta ::= Ta
+.Li FLUID Ao Va medium-name Ac Ao Va rho Ac Ao Va cp Ac \e
+.It Ta Ta Ao Va initial-temp Ac Ao Va imposed-temp Ac \e
+.It Ta Ta Ao Va triangle-sides Ac ...
+.It Ao Va fluid-prog Ac Ta ::= Ta Li FLUID_PROG Ao Va medium-name Ac Ao Va prog-desc-sides Ac
+.It \  Ta Ta
+.It Ao Va solid Ac Ta ::= Ta Ao Va solid-const Ac | Ao Va solid-prog Ac
+.It Ao Va solid-const Ac Ta ::= Ta
+.Li SOLID Ao Va medium-name Ac Ao Va lambda Ac Ao Va rho Ac Ao Va cp Ac \e
+.It Ta Ta Ao Va delta Ac Ao Va initial-temp Ac Ao Va imposed-temp Ac \e
+.It Ta Ta Ao Va volumic-power Ac Ao Va triangle-sides Ac No ...
+.It Ao Va solid-prog Ac Ta ::= Ta Li SOLID_PROG Ao Va medium-name Ac Ao Va prog-desc-sides Ac
+.It \  Ta Ta
+.It Ao Va lambda Ac Ta ::= Ta Vt real No # Conductivity > 0 [W/m/K]
+.It Ao Va rho Ac Ta ::= Ta Vt real No # Volumic mass > 0 [kg/m^3]
+.It Ao Va cp Ac Ta ::= Ta Vt real No # Capacity > 0 [J/K/kg]
+.It Ao Va volumic-power Ac Ta ::= Ta Vt real No # [W/m^3]
+.El
+.Pp
+Delta is the numerical parameter that defines the length of a conductive
+random walk step.
+The user can define it manually or let Stardis calculate it
+automatically from the volume of the solid.
+In the latter case, delta is set to V/(6*A), V and A being the solid's
+volume and surface respectively:
+.Bl -column (description-line) (::) ()
+.It Ao Va delta Ac Ta ::= Ta Li AUTO | Vt real
+.El
+.Pp
+Media's descriptions, either solids or fluids, include two possible
+temperatures: initial and imposed.
+If imposed temperature is set
+.Pq that is not Li UNKNOWN ,
+initial temperature must be defined at the same value.
+In other words, one cannot define a medium with an imposed temperature
+that changes at
+.Li t= Ns Ar 0 :
+.Bl -column (description-line) (::) ()
+.It Ao Va initial-temp Ac Ta ::= Ta Vt real No # Temperature > 0 [K]
+.It Ao Va imposed-temp Ac Ta ::= Ta Li UNKNOWN No # Temperature has to be solved
+.It Ta \& \& | Ta Vt real No # Temperature > 0 [K]
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Connection
+.Bl -column (description-line) (::) ()
+.It Ao Va connection Ac Ta ::= Ta Ao Va solid-fluid Ac
+.It Ta \& \& | Ta Ao Va solid-solid Ac
+.It Ta \& \& | Ta Ao Va solid-fluid-flux Ac
+.It \  Ta Ta
+.\" Solid/fluid connection
+.It Ao Va solid-fluid Ac Ta ::= Ta Ao Va solid-fluid-const Ac | Ao Va solid-fluid-prog Ac
+.It Ao Va solid-fluid-const Ac Ta ::= Ta Li SOLID_FLUID_CONNECTION Ao Va connect-name Ac \e
+.It Ta Ta Ao Va Tref Ac Ao Va emissivity Ac Ao Va specular-fraction Ac \e
+.It Ta Ta Ao Va hc Ac Ao Va triangles Ac ...
+.It Ao Va solid-fluid-prog Ac Ta ::= Ta Li SOLID_FLUID_CONNECTION_PROG \e
+.It Ta Ta Ao Va connect-name Ac Ao Va prog-desc Ac
+.It \  Ta Ta
+.\" Solid/solid connection
+.It Ao Va solid-solid Ac Ta ::= Ta Ao Va solid-solid-const Ac | Ao Va solid-solid-prog Ac
+.It Ao Va solid-solid-const Ac Ta ::= Ta Li SOLID_SOLID_CONNECTION Ao Va connect-name Ac \e
+.It Ta Ta Ao Va contact-resistance Ac Ao Va triangles Ac ...
+.It Ao Va solid-solid-prog Ac Ta ::= Ta Li SOLID_SOLID_CONNECTION_PROG \e
+.It Ta Ta Ao Va connect-name Ac Ao Va prog-desc Ac
+.It \  Ta Ta
+.\" Solid/fluid connection with flux
+.It Ao Va solid-fluid-flux Ac Ta :: Ta Ao Va sf-flux-const Ac | Ao Va s-flux-prog Ac
+.It Ao Va sf-flux-const Ac Ta :: Ta Li F_SOLID_FLUID_CONNECTION Ao Va connect-name Ac \e
+.It Ta Ta Ao Va Tref Ac Ao Va emissivity Ac Ao Va specular-fraction Ac \e
+.It Ta Ta Ao Va hc Ac Ao Va flux Ac Ao Va triangles Ac ...
+.It Ao Va sf-flux-prog Ac Ta :: Ta Li F_SOLID_FLUID_CONNECTION_PROG \e
+.It Ta Ta Ao Va connect-name Ac Ao Va prog-desc Ac
+.It \  Ta Ta
+.\" Miscellaneous
+.It Ao Va emissivity Ac Ta ::= Ta Vt real No # \&In [0,1]
+.It Ao Va specular-fraction Ac Ta ::= Ta Vt real No # \&In [0,1]
+.It Ao Va hc Ac Ta ::= Ta Vt real No # Convective coefficient > 0 [W/m^2/K]
+.It Ao Va contact-resistance Ac Ta ::= Ta Vt real No # > 0 [K/m^-2/W]
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Boundary conditions
+.Bl -column (description-line) (::) ()
+.It Ao Va boundary-condition Ac Ta ::= Ta
+.Aq Va dirichlet
+.It Ta \& \& | Ta Aq Va robin
+.It Ta \& \& | Ta Aq Va neumann
+.It Ta \& \& | Ta Aq Va robin-neumann
+.It Ta \& \& | Ta Ao Va rad-env Ac No # \&At most once
+.It Ta \& \& | Ta Ao Va ext-source Ac No # \&At most once
+.It \  Ta Ta
+.\" Dirichlet
+.It Ao Va dirichlet  Ac Ta ::= Ta Ao Va dirichlet-const Ac | Ao Va dirichlet-prog Ac
+.It Ao Va dirichlet-const Ac Ta ::= Ta Li T_BOUNDARY_FOR_SOLID Ao Va bound-name Ac \e
+.It Ta Ta Ao Va temp Ac Ao Va triangles Ac ...
+.It Ao Va dirichlet-prog Ac Ta ::= Ta Li T_BOUNDARY_FOR_SOLID_PROG Ao Va bound-name Ac \e
+.It Ta Ta Ao Va prog-desc Ac
+.It \  Ta Ta
+.\" Robin
+.It Ao Va robin Ac Ta ::= Ta Ao Va robin-fluid Ac | Ao Va robin-solid Ac
+.It Ao Va robin-fluid Ac Ta ::= Ta Ao Va robin-fluid-const Ac | Ao Va robin-fluid-prog Ac
+.It Ao Va robin-solid Ac Ta ::= Ta Ao Va robin-solid-const Ac | Ao Va robin-solid-prog Ac
+.It Ao Va robin-fluid-const Ac Ta ::= Ta Li H_BOUNDARY_FOR_FLUID Ao Va bound-name Ac \e
+.It Ta Ta Ao Va robin-const-desc Ac
+.It Ao Va robin-solid-const Ac Ta ::= Ta Li H_BOUNDARY_FOR_SOLID Ao Va bound-name Ac \e
+.It Ta Ta Ao Va robin-const-desc Ac
+.It Ao Va robin-const-desc Ac Ta ::= Ta Ao Va Tref Ac Ao Va emissivity Ac Ao Va specular-fraction Ac
+.It Ta Ta Ao Va hc Ac Ao Va outside-temp Ac Ao Va triangles Ac ...
+.It Ao Va robin-fluid-prog Ac Ta ::= Ta Li H_BOUNDARY_FOR_FLUID_PROG Ao Va bound-name Ac \e
+.It Ta Ta Ao Va prog-desc Ac
+.It Ao Va robin-solid-prog Ac Ta ::= Ta Li H_BOUNDARY_FOR_SOLID_PROG Ao Va bound-name Ac \e
+.It Ta Ta Ao Va prog-desc Ac
+.It \  Ta Ta
+.\" Neumann
+.It Ao Va neumann Ac Ta ::= Ta Ao Va neumann-const Ac | Ao Va neumann-prog Ac
+.It Ao Va neumann-const Ac Ta ::= Ta Li F_BOUNDARY_FOR_SOLID Ao Va bound-name Ac \e
+.It Ta Ta Ao Va flux Ac Ao Va triangles Ac ...
+.It Ao Va neumann-prog Ac Ta ::= Ta Li F_BOUNDARY_FOR_SOLID_PROG Ao Va bound-name Ac \e
+.It Ta Ta Ao Va prog-desc Ac
+.It \  Ta Ta
+.\" Robin & Neumann
+.It Ao Va robin-neumann Ac Ta ::= Ta Ao Va robin-neumann-const Ac
+.It Ta \& \& | Ta Ao Va robin-neumann-prog Ac
+.It Ao Va robin-neumann-const Ac Ta ::= Ta Li HF_BOUNDARY_FOR_SOLID Ao Va bound-name Ac \e
+.It Ta Ta Ao Va Tref Ac Ao Va emissivity Ac Ao Va specular-fraction Ac \e
+.It Ta Ta Ao Va hc Ac Ao Va outside-temp Ac Ao Va flux Ac Ao Va triangles Ac ...
+.It Ao Va robin-neumann-prog Ac Ta ::= Ta Li HF_BOUNDARY_FOR_SOLID_PROG Ao Va bound-name Ac \e
+.It Ta Ta Ao Va prog-desc Ac
+.It \  Ta Ta
+.\" Radiative temperature
+.It Ao Va rad-env Ac Ta ::= Ta Ao Va rad-env-const Ac | Ao Va rad-env-prog Ac
+.It Ao Va rad-env-const Ac Ta ::= Ta Li TRAD Ao Va temp Ac Ao Va Tref Ac
+.It Ao Va rad-env-prog Ac Ta ::= Ta Li TRAD_PROG Ao Va prog-name Ac \e
+.It Ta Ta Op Li PROG_PARAMS Op Ao Va args Ac
+.It \  Ta Ta
+.\" External source
+.It Ao Va ext-source Ac Ta ::= Ta Ao Va ext-source-const Ac | Ao Va ext-source-prog Ac
+.It Ao Va ext-source-const Ac Ta ::= Ta Li SPHERICAL_SOURCE Ao Va radius Ac Ao Va position Ac \e
+.It Ta Ta Ao Va power Ac Ao Va diffuse-radiance Ac
+.It Ao Va ext-source-prog Ac Ta ::= Ta Li SPHERICAL_SOURCE_PROG Ao Va radius Ac \e
+.It Ta Ta Ao Va prog-name Ac Op Li PROG_PARAMS Op Ao Va args Ac
+.It \  Ta Ta
+.\" Miscellaneous
+.It Ao Va temp Ac Ta ::= Ta Vt real No # Temperature > 0 [K]
+.It Ao Va Tref Ac Ta ::= Ta Vt real No # Reference temperature > 0 [K]
+.It Ao Va outside-temp Ac Ta ::= Ta Vt real No # Temperature > 0 [K]
+.It Ao Va flux Ac Ta ::= Ta Vt real No # [W/m^2]
+.It Ao Va power Ac Ta ::= Ta Vt real No # [W]
+.It Ao Va diffuse-radiance Ac Ta ::= Ta Vt real No # [W/m^2/sr]
+.It Ao Va position Ac Ta ::= Ta Vt real real real
+.It Ao Va radius Ac Ta ::= Ta Vt real
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Miscellaneous
+Names, either file names or description names
+.Pq boundary names, medium names, program names, or connection names ,
+are a sequence of one or more ASCII characters, including
+numbers and special characters like
+.Ql \&. ,
+.Ql _ ,
+or
+.Ql -
+as one may consider using in standard file names.
+Description names are case-sensitive and two different description
+lines, either in the same description file or from different description
+files, cannot use the same name.
+Additionally, description names cannot be a number, nor be one of the
+keywords defined by the present grammar and their lowercase
+counterparts.
+Finally, description names cannot be longer than
+@STARDIS_MAX_NAME_LENGTH@ characters.
+.Bl -column (description-line) (::) ()
+.It Ao Va bound-name Ac Ta ::= Ta Vt string
+.It Ao Va medium-name Ac Ta ::= Ta Vt string
+.It Ao Va prog-name Ac Ta ::= Ta Vt string
+.It Ao Va connect-name Ac Ta ::= Ta Vt string
+.It \  Ta Ta
+.It Ao Va stl-path Ac Ta ::= Ta Pa path
+.It Ao Va lib-path Ac Ta ::= Ta Pa path
+.It \  Ta Ta
+.It Ao Va args Ac Ta ::= Ta Vt string No ...
+.It \  Ta Ta
+.It Ao Va prog-desc Ac Ta ::= Ta Ao Va prog-name Ac Ao Va triangles Ac ... \e
+.It Ta Ta Op Li PROG_PARAMS Op Ao Va args Ac
+.It Ao Va prog-desc-sides Ac Ta ::= Ta Ao Va prog-name Ac Ao Va triangles-sides Ac ... \e
+.It Ta Ta Op Li PROG_PARAMS Op Ao Va args Ac
+.It \  Ta Ta
+.It Ao Va triangles Ac Ta ::= Ta Ao Va stl-path Ac
+.It Ao Va triangle-sides Ac Ta ::= Ta Ao Va side-specifier Ac Ao Va triangles Ac
+.El
+.Pp
+Side descriptions in side specifiers rely on the following convention:
+we first consider the direct triangle's normal (right-hand rule), then
+we define the
+.Li BACK
+side of a triangle to be the side this normal comes out from.
+That means that a closed set of triangles with normals pointing outside
+should be used with the
+.Li FRONT
+side specifier to describe inside medium:
+.Bl -column (description-line) (::) ()
+.It Ao Va side-specifier Ac Ta ::= Ta Li FRONT | Li BACK | Li BOTH
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" File examples
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXAMPLES
+Define a system consisting of a solid cube named
+.Ql Cube 1 ,
+with a Robin-type boundary condition and radiative exchange with the
+environment.
+The cube geometry is read from the file
+.Pa cube.stl
+and the solid medium properties are
+.No lambda= Ns Ar 0.1 No W/m/K ,
+.No rho= Ns Ar 25 No kg/m^3 ,
+.No cp= Ns Ar 2 No J/K/kg .
+The numerical parameter delta, that is used for solid conductive walks, is
+.Ar 0.05 .
+The initial temperature of the cube is
+.Ar 0 No K , its temperature is unknown
+.Pq it has to be solved ,
+and its volumic power is
+.Ar 2.5 No W/m^3 .
+The boundary properties are
+.No emissivity= Ns Ar 0 ,
+.No specular-fraction= Ns Ar 0 ,
+.No hc= Ns Ar 10 No W/m^2/K
+and
+.No external-temperature= Ns Ar 100 No K .
+The radiative environment is at
+.Ar 300 No K .
+Finally, the linearization of radiative transfer involving Robin's
+boundary condition uses
+.Ar 310 No K
+as reference temperature and is set to
+.Ar 330 No K
+when linearisation involves the radiative environment:
+.Bd -literal -offset Ds
+SOLID Cube\ 1 0.1 25 2 0.05 0 UNKNOWN 2.5 FRONT cube.stl
+H_BOUNDARY_FOR_SOLID HdT 310 0 0 10 100 cube.stl
+TRAD 300 330
+.Ed
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" External references
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SEE ALSO
+.Xr stardis 1 ,
+.Xr wordexp 3
+.Rs
+.%T The StL Format: Standard Data Format for Fabbers
+.%A Marshall Burns
+.%D 1993
+.%U https://www.fabbers.com/tech/STL_Format
+.Re

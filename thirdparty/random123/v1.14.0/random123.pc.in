@@ -1,0 +1,8 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+
+Name: Random123
+Description: Counter-Based Random Number Generators
+Version: 1.14.0
+
+Cflags: -I${includedir}

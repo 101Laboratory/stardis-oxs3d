@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Name: Star-3DUT
+Description: Star 3D Utility Toolkit library
+Version: @VERSION@
+Libs: -L${libdir} -ls3dut
+Libs.private: -lm
+CFlags: -I${includedir}

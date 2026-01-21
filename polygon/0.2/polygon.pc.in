@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Name: Polygon
+Description: Polygon library
+Version: @VERSION@
+Libs: -L${libdir} -lpolygon 
+Libs.private: -lm
+CFlags: -I${includedir}

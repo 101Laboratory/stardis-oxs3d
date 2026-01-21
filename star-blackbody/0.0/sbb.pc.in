@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Name: Star-Blackbody
+Description: Star Blackbody
+Version: @VERSION@
+Libs: -L${libdir} -lsbb
+Libs.private: -lm
+CFlags: -I${includedir}

@@ -1,0 +1,916 @@
+.\" Copyright (C) 2018-2025 |Méso|Star> (contact@meso-star.com)
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program. If not, see <http://www.gnu.org/licenses/>.
+.Dd April 12, 2024
+.Dt STARDIS-OUTPUT 5
+.Os
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Name and short description
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh NAME
+.Nm stardis-output
+.Nd output format of
+.Xr stardis 1
+results
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Detailed description
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh DESCRIPTION
+.Nm
+describes the output format of the
+.Xr stardis 1
+program.
+Any
+.Xr stardis 1
+result is written to standard output, even though some additional
+informations can be written in files.
+.Pp
+The type of the data that are generated depends on the options used when
+.Xr stardis 1 is invoked.
+When invoked with one of the basic computation options
+.Pq Fl p , Fl P , Fl m , Fl s No or Fl F ,
+.Xr stardis 1
+outputs a single Monte Carlo result.
+On the opposite,
+.Xr stardis 1
+ouputs compound results when invoked with
+option
+.Fl S
+or
+.Fl R .
+Additionally, options
+.Fl g
+and
+.Fl G
+make
+.Xr stardis 1
+compute and output a Green function and possibly information on heat
+paths' ends.
+Most of the complex data output is in VTK format.
+.Pp
+Note that some special options
+.Pq Fl v , Fl h No or Fl d
+that does not involve any computation produce output including
+information on the
+.Xr stardis 1
+software
+.Pq their ouputs will not be described thereafter
+or the provided thermal system.
+.Pp
+Any physical quantity in output is in the International System of Units
+.Pq second, metre, kilogram, kelvin
+except the coordinates that are in same system as the geometry.
+.Pp
+In what follows, some lines end with a backslash
+.Pq Li \e .
+This is used as a convenience to continue a description next line.
+However, this trick cannot be used in actual description files and
+actual description lines must be kept single-line.
+Text introduced by the sharp character
+.Pq Li #
+in descriptions is a comment and is not part of the description.
+.Pp
+The output format is as follows:
+.Bl -column (******************) (::=) ()
+.It Ao Va output Ac Ta ::= Ta Aq Va mc-estimate
+.It Ta \& \& | Ta Aq Va green-function
+.It Ta \& \& | Ta Aq Va geometry-dump
+.It Ta \& \& | Ta Aq Va infrared-image
+.It Ta \& \& | Ta Aq Va heat-paths
+.El
+.Pp
+The following sections describe in detail each of these possible
+outputs.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Single Monte Carlo estimate
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh MONTE CARLO ESTIMATE
+When
+.Xr stardis 1
+is used to calculate a single Monte Carlo estimate, either a temperature
+or a flux, the estimate is output first to standard output, possibly
+followed by some of the heat paths involved in the computation if option
+.Fl D
+was used too.
+Two different formats are possible: a raw, numbers only format
+.Pq the default
+or an extended format that mixes numbers and their descriptions
+.Pq if option Fl e No is used .
+.Bl -column (******************) (::=) ()
+.It Ao Va mc-estimate Ac Ta ::= Ta Ao Va probe-temp Ac # Options Fl P No or Fl p
+.It Ta \& \& | Ta Ao Va medium-temp Ac # Option Fl m
+.It Ta \& \& | Ta Ao Va mean-temp Ac # Option Fl s
+.It Ta \& \& | Ta Ao Va mean-flux Ac # Option Fl F
+.It Ta \& \& | Ta Ao Va flux-density Ac # Option Fl f
+.It \  Ta Ta
+.\" Probe temperature
+.It Ao Va probe-temp Ac Ta ::= Ta Ao Va probe-temp-raw Ac | Ao Va probe-temp-ext Ac
+.It Ao Va probe-temp-raw Ac Ta ::= Ta Ao Va estimate Ac Ao Va failures Ac
+.It Ao Va probe-temp-ext Ac Ta ::= Ta Li Temperature at Ao Va position Ac Ao Va time Ac \e
+.It Ta Ta Ao Va estimate-temp-ext Ac Ao Va failures-ext Ac
+.It \  Ta Ta
+.\" Medium temperature
+.It Ao Va medium-temp Ac Ta ::= Ta Ao Va medium-temp-raw Ac | Ao Va medium-temp-ext Ac
+.It Ao Va medium-temp-raw Ac Ta ::= Ta Ao Va estimate Ac Ao Va failures Ac
+.It Ao Va medium-temp-ext Ac Ta ::= Ta Li Temperature in medium Ao Va medium-name Ac \e
+.It Ta Ta Ao Va time Ac Ao Va estimate-temp-ext Ac Ao Va failures-ext Ac
+.It \  Ta Ta
+.\" Mean temperature
+.It Ao Va mean-temp Ac Ta ::= Ta Ao Va mean-temp-raw Ac | Ao Va mean-temp-ext Ac
+.It Ao Va mean-temp-raw Ac Ta ::= Ta Ao Va estimate Ac Ao Va failures Ac
+.It Ao Va mean-temp-ext Ac Ta ::= Ta Li Temperature at boundary Ao Va stl-path Ac \e
+.It Ta Ta Ao Va time Ac Ao Va estimate-temp-ext Ac Ao Va failures-ext Ac
+.It \  Ta Ta
+.\" Mean flux
+.It Ao Va mean-flux Ac Ta ::= Ta Ao Va mean-flux-raw Ac | Ao Va mean-flux-ext Ac
+.It Ao Va flux-density Ac Ta ::= Ta Ao Va flux-density-raw Ac | Ao Va flux-density-ext Ac
+.It Ao Va mean-flux-raw Ac Ta ::= Ta Ao Va estimate Ac Ao Va estimate Ac Ao Va estimate Ac \e
+.It Ta Ta Ao Va estimate Ac Ao Va estimate Ac Ao Va failures Ac
+.It Ao Va flux-density-raw Ac Ta ::= Ta Ao Va estimate Ac Ao Va estimate Ac Ao Va estimate Ac \e
+.It Ta Ta Ao Va estimate Ac Ao Va estimate Ac Ao Va failures Ac
+.It Ao Va mean-flux-ext Ac Ta ::= Ta Li Temperature at boundary Ao Va stl-path Ac \e
+.It Ta Ta Ao Va time Ac Ao Va estimate-temp-ext Ac
+.It Ta Ta Li Convective flux at boundary Ao Va stl-path Ac \e
+.It Ta Ta Ao Va time Ac Ao Va estimate-flux-ext Ac
+.It Ta Ta Li Radiative flux at boundary Ao Va stl-path Ac \e
+.It Ta Ta Ao Va time Ac Ao Va estimate-flux-ext Ac
+.It Ta Ta Li Imposed flux at boundary Ao Va stl-path Ac \e
+.It Ta Ta Ao Va time Ac Ao Va estimate-flux-ext Ac
+.It Ta Ta Li Total flux at boundary Ao Va stl-path Ac \e
+.It Ta Ta Ao Va time Ac Ao Va estimate-flux-ext Ac
+.It Ta Ta Ao Va failures-ext Ac
+.It Ao Va flux-density-ext Ac Ta ::= Ta Li Temperature at Ao Va position Ac Ao Va time Ac \e
+.It Ta Ta Ao Va estimate-temp-ext Ac
+.It Ta Ta Li Convective flux density at Ao Va position Ac Ao Va time Ac \e
+.It Ta Ta Ao Va estimate-f-dsity-ext Ac
+.It Ta Ta Li Radiative flux density at Ao Va position Ac Ao Va time Ac \e
+.It Ta Ta Ao Va estimate-f-dsity-ext Ac
+.It Ta Ta Li Imposed flux density at Ao Va position Ac Ao Va time Ac \e
+.It Ta Ta Ao Va estimate-f-dsity-ext Ac
+.It Ta Ta Li Total flux density at Ao Va position Ac Ao Va time Ac \e
+.It Ta Ta Ao Va estimate-f-dsity-ext Ac
+.It Ta Ta Ao Va failures-ext Ac
+.It \  Ta Ta
+.\" Miscellaneous
+.It Ao Va estimate Ac Ta ::= Ta Ao Va expected-value Ac Ao Va standard-error Ac
+.It Ao Va estimate-temp-ext Ac Ta ::= Ta Ao Va expected-value Ac Li K +/- Ao Va standard-error Ac
+.It Ao Va estimate-flux-ext Ac Ta ::= Ta Ao Va expected-value Ac Li W +/- Ao Va standard-error Ac
+.It Ao Va estimate-f-dsity-ext Ac Ta ::= Ta Ao Va expected-value Ac Li W/m² +/- Ao Va standard-error Ac
+.It Ao Va expected-value Ac Ta ::= Ta Vt real
+.It Ao Va standard-error Ac Ta ::= Ta Vt real
+.It \  Ta Ta
+.It Ao Va failures Ac Ta ::= Ta Ao Va error-count Ac Ao Va success-count Ac
+.It Ao Va error-count Ac Ta ::= Ta Vt integer
+.It Ao Va success-count Ac Ta ::= Ta Vt integer
+.It \  Ta Ta
+.It Ao Va position Ac Ta ::= Ta [ Vt real , Vt real , Vt real ]
+.It Ao Va time Ac Ta ::= Ta Li at t= Ns Vt real
+.It Ta \& \& | Ta Li with t in [ Vt real , Vt real ]
+.It Ao Va medium-name Ac Ta ::= Ta Vt string
+.It Ao Va stl-path Ac Ta ::= Ta Pa path
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Green function
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh GREEN FUNCTION
+The Green function is generated, either in binary or ascii format, when
+a green-compatible
+.Xr stardis 1
+simulation option is used in conjuction with option
+.Fl G
+for a binary output, or option
+.Fl g
+for an ascii output.
+For every successful heat path sampled carrying out the simulation, the
+solver records all the elements of the path history relevant to link the
+various imposed temperature, flux and volumic power values to the
+simulation result.
+The output is made of tables containing the different media and
+boundaries and their imposed temperature, flux and volumic power values,
+followed by the heat paths' history.
+Also, option
+.Fl G
+make it possible to output heat paths' end information on an ascii, csv
+formated file.
+.Bl -column (******************) (::=) ()
+.It Ao Va green-function Ac Ta ::= Ta Ao Va green-ascii Ac No # Option Fl g
+.It Ta \& \& | Ta Ao Va green-binary Ac Oo Ao Va paths Ac Oc No # Option Fl G
+.El
+.Pp
+The Monte Carlo estimate and standard deviation for a given set of settings can
+be computed as the mean and standard deviation of the samples of the Green
+function computed using these settings.
+Each sample can be computed as follows:
+.Bl -bullet -compact -offset indent
+.It
+get the temperature of the ending boundary, medium or Trad
+.It
+add the temperature gain of each power term
+.It
+add the temperature gain of each flux term
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss ASCII format
+Beyond the file format described below,
+.Xr stardis 1
+could write comments
+.Pq characters behind the hash mark Pq Li #
+or blank lines
+.Pq lines without any characters or composed only of spaces and tabs .
+These are not part of the file format and should be ignored.
+.Pp
+The ASCII file format of a Green function is as follows:
+.Bl -column (******************) (::=) ()
+.It Ao Va green-ascii Ac Ta ::= Ta Li ---BEGIN GREEN---
+.It Ta Ta Aq Va time-range
+.It Ta Ta Ao Va #solids Ac Ao Va #fluids Ac \e
+.It Ta Ta Ao Va #dirichlet-boundaries Ac \e
+.It Ta Ta Ao Va #robin-boundaries Ac \e
+.It Ta Ta Ao Va #neumann-boundaries Ac \e
+.It Ta Ta Ao Va #successes Ac Ao Va #failures Ac
+.It Ta Ta Aq Va solid
+.It Ta Ta ...
+.It Ta Ta Aq Va fluid
+.It Ta Ta ...
+.It Ta Ta Aq Va dirichlet-boundary
+.It Ta Ta ...
+.It Ta Ta Aq Va robin-boundary
+.It Ta Ta ...
+.It Ta Ta Aq Va neumann-boundary
+.It Ta Ta ...
+.It Ta Ta Aq Va rad-temp
+.It Ta Ta Aq Va samples
+.It \  Ta Ta
+.It Ao Va time-rad Ac Ta ::= Ta Vt real Vt real
+.It Ao Va #solids Ac Ta ::= Ta Vt integer
+.It Ao Va #fluids Ac Ta ::= Ta Vt integer
+.It Ao Va #dirichlet-boundaries Ac Ta ::= Ta Vt integer
+.It Ao Va #robin-boundaries Ac Ta ::= Ta Vt integer
+.It Ao Va #neumann-boundaries Ac Ta ::= Ta Vt integer
+.It Ao Va #successes Ac Ta ::= Ta Vt integer
+.It Ao Va #failures Ac Ta ::= Ta Vt integer
+.It \  Ta Ta
+.It Ao Va solid Ac Ta ::= Ta Ao Va green-id Ac Ao Va name Ac Ao Va lambda Ac Ao Va rho Ac Ao Va cp Ac \e
+.It Ta Ta Ao Va power Ac Ao Va initial-temp Ac Ao Va imposed-temp Ac
+.It Ao Va fluid Ac Ta ::= Ta Ao Va green-id Ac Ao Va name Ac Ao Va rho Ac Ao Va cp Ac \e
+.It Ta Ta Ao Va initial-temp Ac Ao Va imposed-temp Ac
+.It Ao Va lambda Ac Ta ::= Ta Vt real No # Conductivity > 0 [W/m/K]
+.It Ao Va rho Ac Ta ::= Ta Vt real No # Volumic mass > 0 [kg/m^3]
+.It Ao Va cp Ac Ta ::= Ta Vt real No # Capacity > 0 [J/K/kg]
+.It Ao Va power Ac Ta ::= Ta Vt real No # Volumic power [W/m^3]
+.It Ao Va initial-temp Ac Ta ::= Ta Vt real No # Temperature [K]
+.It Ao Va imposed-temp Ac Ta ::= Ta Vt real No # Temperature [K]
+.It \  Ta Ta
+.It Ao Va dirichlet-boundary Ac Ta ::= Ta Ao Va green-id Ac Ao Va name Ac Ao Va temp Ac
+.It Ao Va robin-boundary Ac Ta ::= Ta Ao Va green-id Ac Ao Va name Ac Ao Va temp-ref Ac \e
+.It Ta Ta Ao Va emissivity Ac Ao Va specular-fraction Ac Ao Va hc Ac \e
+.It Ta Ta Ao Va temp Ac
+.It Ao Va neumann-boundary Ac Ta ::= Ta Ao Va green-id Ac Ao Va name Ac Ao Va flux Ac
+.It Ao Va emissivity Ac Ta ::= Ta Vt real No # \&In [0,1]
+.It Ao Va specular-fraction Ac Ta ::= Ta Vt real No # \&In [0,1]
+.It Ao Va hc Ac Ta ::= Ta Vt real No # Convective coefficient [W/m^2/K]
+.It Ao Va temp Ac Ta ::= Ta Vt real No # Temperature [K]
+.It Ao Va temp-ref Ac Ta ::= Ta Vt real No # Reference temperature [K]
+.It Ao Va flux Ac Ta ::= Ta Vt real No # [W/m^2]
+.It \  Ta Ta
+.It Ao Va rad-temp Ac Ta ::= Ta Ao Va green-id Ac Ao Va Trad Ac Ao Va Trad-ref Ac
+.It Ao Va Trad Ac Ta ::= Ta Vt real No # Radiative temperature [K]
+.It Ao Va Trad-ref Ac Ta ::= Ta Vt real No # Reference temperature [K]
+.It \  Ta Ta
+.It Ao Va sample Ac Ta ::= Ta Ao Va end-type Ac Ao Va green-id Ac \e
+.It Ta Ta Ao Va #power-terms Ac Ao Va #flux-terms Ac \e
+.It Ta Ta Ao Va power-term Ac ... Ao Va flux-term Ac ...
+.It Ao Va end-type Ac Ta ::= Ta Aq Va end-dirichlet
+.It Ta \& \& | Ta Aq Va end-robin
+.It Ta \& \& | Ta Aq Va end-Trad
+.It Ta \& \& | Ta Ao Va end-fluid Ac No # Fluid temperature
+.It Ta \& \& | Ta Ao Va end-solid Ac No # Solid temperature
+.It Ao Va end-dirichlet Ac Ta ::= Ta Li T
+.It Ao Va end-robin Ac Ta ::= Ta Li H
+.It Ao Va end-Trad Ac Ta ::= Ta Li R
+.It Ao Va end-fluid Ac Ta ::= Ta Li F
+.It Ao Va end-solid Ac Ta ::= Ta Li S
+.It Ao Va #power-terms Ac Ta ::= Ta Vt integer
+.It Ao Va #flux-terms Ac Ta ::= Ta Vt integer
+.It Ao Va power-term Ac Ta ::= Ta Ao Va green-id Ac Ao Va factor Ac
+.It Ao Va flux-term Ac Ta ::= Ta Ao Va green-id Ac Ao Va factor Ac
+.It Ao Va factor Ac Ta ::= Ta Vt real
+.It \  Ta Ta
+.It Ao Va green-id Ac Ta ::= Ta Vt integer
+.It Ao Va name Ac Ta ::= Ta Vt string
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Binary format
+Binary Green outputs are formated according to the various C types from the
+.Pa stardis-green.h
+header file.
+The output begins with a header
+.Pq of type Vt struct green_file_header
+that includes counts, followed by descriptions
+.Pq of type Vt struct green_description
+and samples.
+Thereafter is the format of binary Green outputs.
+This output is produced by
+.Sy fwrite
+calls and does not take care of endianness.
+.Pp
+The binary file format of a Green function is as follows:
+.Bl -column (******************) (::=) ()
+.It Ao Va green-binary Ac Ta ::= Ta Li GREEN_BIN_FILE\&:
+.It Ta Ta Aq Va file_format_version
+.It Ta Ta Aq Va #descriptions
+.It Ta Ta Aq Va #solids
+.It Ta Ta Aq Va #fluids
+.It Ta Ta Aq Va #robin-boundaries
+.It Ta Ta Aq Va #dirichlet-boundaries
+.It Ta Ta Aq Va #neumann-boundaries
+.It Ta Ta Aq Va #solid-fluid-connects
+.It Ta Ta Aq Va #solid-solid-connects
+.It Ta Ta Aq Va #successes
+.It Ta Ta Aq Va #failures
+.It Ta Ta Aq Va Trad
+.It Ta Ta Aq Va Trad-ref
+.It Ta Ta Aq Va time-range
+.It Ta Ta Ao Va description Ac ...
+.It Ta Ta Ao Va sample Ac ...
+.It \  Ta Ta
+.It Ao Va file_format_version Ac Ta ::= Ta Vt unsigned
+.It Ao Va #descriptions Ac Ta ::= Ta Vt unsigned
+.It Ao Va #solids Ac Ta ::= Ta Vt unsigned
+.It Ao Va #fluids Ac Ta ::= Ta Vt unsigned
+.It Ao Va #robin-boundaries Ac Ta ::= Ta Vt unsigned
+.It Ao Va #dirichlet-boundaries Ac Ta ::= Ta Vt unsigned
+.It Ao Va #neumann-boundaries Ac Ta ::= Ta Vt unsigned
+.It Ao Va #solid-fluid-connects Ac Ta ::= Ta Vt unsigned
+.It Ao Va #solid-solid-connects Ac Ta ::= Ta Vt unsigned
+.It Ao Va #successes Ac Ta ::= Ta Vt size_t
+.It Ao Va #failures Ac Ta ::= Ta Vt size_t
+.It Ao Va Trad Ac Ta ::= Ta Vt double No # Radiative temperature
+.It Ao Va Trad-ref Ac Ta ::= Ta Vt double No # Reference radiative temperature
+.It Ao Va time-range Ac Ta ::= Ta Vt double[2]
+.It \  Ta Ta
+.It Ao Va description Ac Ta ::= Ta Vt struct green_description
+.It \  Ta Ta
+.It Ao Va sample Ac Ta ::= Ta Ao Va sample-header Ac
+.It Ta Ta Ao Va power-id Ac ...
+.It Ta Ta Ao Va flux-id Ac ...
+.It Ta Ta Ao Va power-weight Ac ...
+.It Ta Ta Ao Va flux-weight Ac ...
+.It Ao Va sample-header Ac Ta ::= Ta Vt struct green_sample_header
+.It Ao Va power-id Ac Ta ::= Ta Vt unsigned
+.It Ao Va flux-id Ac Ta ::= Ta Vt unsigned
+.It Ao Va power-weight Ac Ta ::= Ta Vt double
+.It Ao Va flux-weight Ac Ta ::= Ta Vt double
+.El
+.Pp
+Binary Green function can be followed by partial information on the
+sampled paths.
+The output data are restricted to paths' ends.
+.Bl -column (******************) (::=) ()
+.It Ao Va paths Ac Ta ::= Ta Li \&"End\&"\&, \&"End ID\&"\&, \&"X\&"\&, \&"Y\&"\&, \&"Z\&"\&, \e
+.It Ta Ta Li \&"Elapsed Time\&"
+.It Ta Ta Ao Va path-end Ac
+.It Ta Ta ...
+.It \  Ta Ta
+.It Ao Va path-end Ac Ta ::= Ta \
+Ao Va end-name Ac Ns Li \&, \
+Ao Va end-id Ac Ns Li \&, \
+Ao Va x Ac Ns Li \&, \
+Ao Va y Ac Ns Li \&, \
+Ao Va z Ac Ns Li \&, \e
+.It Ta Ta Ao Va elapsed-time Ac
+.It Ao Va end-name Ac Ta ::= Ta Vt string No # Boundary name or TRAD
+.It Ao Va end-id Ac Ta ::= Ta Vt integer
+.It Ao Va x Ac Ta ::= Ta Vt real
+.It Ao Va y Ac Ta ::= Ta Vt real
+.It Ao Va z Ac Ta ::= Ta Vt real
+.It Ao Va elapsed-time Ac Ta ::= Ta Vt real No # [s]
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Geometry
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh GEOMETRY DUMP
+A
+.Aq Va geometry-dump
+is generated when
+.Xr stardis 1
+is invoked with option
+.Fl d .
+In this mode,
+.Xr stardis 1
+outputs the system geometry, as submitted in
+.Xr stardis-input 5
+description, to standard output in VTK format.
+The output geometry is
+.Em not
+the concatenation of the various geometry files
+used in
+.Xr stardis-input 5
+description.
+It is the result of a deduplication process that removes duplicate and
+degenerated triangles from the submited geometry.
+Additionaly, as permitted by the VTK format, the output geometry is
+decorated with many different properties provided to help users
+understand the description processing, including possible errors.
+.Pp
+If errors are detected, some optional error-related data fields are
+included in the geometry file.
+Some errors report a by-triangle error status, other errors report a
+by-enclosure error status.
+.Pp
+Also, holes in the geometry, if any, are reported in geometry dumps.
+A hole is defined by its frontier that is a collection of triangles
+surrounding the hole.
+Such triangles are detected as having their 2 sides in the same
+enclosure, but with a different medium on each side.
+.Pp
+Media information is provided in two different flavours.
+First the medium on front and back sides of triangles can be found
+through the
+.Li Front_medium
+and
+.Li Back_medium
+fields.
+These fields use the special value
+.Sy INT_MAX
+for sides with no defined medium, as one can expect on boundary
+triangles.
+On the other hand, medium information provided by the
+Enclosures_internal_media field displays the id of the medium created to
+hold boundary information for boundary triangles.
+In either case, media numbering information can be found in log messages
+if option
+.Fl V Ar 3
+is used in conjunction with the
+.Fl d
+dump option.
+.Pp
+The VTK layout is as follows:
+.Bl -column (******************) (::=) ()
+.It Ao Va geometry-dump Ac Ta ::= Ta Li # vtk DataFile Version 2.0
+.It Ta Ta Ao Va description Ac
+.It Ta Ta Li ASCII
+.It Ta Ta Li DATASET POLYDATA
+.It Ta Ta Aq Va vertices
+.It Ta Ta Aq Va triangles
+.It Ta Ta Li CELL_DATA Ao Va #triangles Ac
+.It Ta Ta Aq Va front-media
+.It Ta Ta Aq Va back-media
+.It Ta Ta Aq Va interfaces
+.It Ta Ta Aq Va unique-ids
+.It Ta Ta Aq Va user-ids
+.It Ta Ta Op Aq Va merge-conflicts
+.It Ta Ta Op Aq Va property-conflicts
+.It Ta Ta Aq Va file-ids
+.It Ta Ta Aq Va boundaries
+.It Ta Ta Op Aq Va compute-region
+.It Ta Ta Aq Va encl-or-overlaps
+.It \  Ta Ta
+.It Ao Va description Ac Ta ::= Ta Vt string No # Up to 256 characters
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Geometry
+.Bl -column (******************) (::=) ()
+.It Ao Va vertices Ac Ta ::= Ta Li POINTS Ao Va #vertices Ac Li double
+.It Ta Ta Ao Va x Ac Ao Va y Ac Ao Va z Ac
+.It Ta Ta ...
+.It Ao Va triangles Ac Ta ::= Ta Li POLYGONS Ao Va #triangles Ac Ao Va #triangles*4 Ac
+.It Ta Ta Li 3 Ao Va vertex-id Ac Ao Va vertex-id Ac Ao Va vertex-id Ac
+.It Ta Ta ...
+.El
+.Pp
+List triangle indices
+.Em after
+.Xr stardis 1
+deduplication:
+.Bl -column (******************) (::=) ()
+.It Ao Va unique-ids Ac Ta ::= Ta Li SCALARS Unique_ID unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Ao Va triangle-id Ac No # \&In Bq 0, Ao Va #triangles Ac
+.It Ta Ta ... # Up to Aq Va #triangles
+.El
+.Pp
+List triangle indices
+.Em before
+deduplication to let the caller indentify his geometry as submitted to
+.Xr stardis 1 :
+.Bl -column (******************) (::=) ()
+.It Ao Va user-ids Ac Ta ::= Ta Li SCALARS User_ID unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Ao Va triangle-id Ac
+.It Ta Ta ... # Up to Aq Va #triangles
+.El
+.Pp
+List the file identifier in which each triangle first appeared:
+.Bl -column (******************) (::=) ()
+.It Ao Va file-ids Ac Ta ::= Ta Li SCALARS Created_at_sg3d_geometry_add \e
+.It Ta Ta Li unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Aq Va file-rank
+.It Ta Ta ... # Up to Aq Va #triangles
+.It \  Ta Ta
+.It Ao Va #vertices Ac Ta ::= Ta Vt integer
+.It Ao Va #triangles Ac Ta ::= Ta Vt integer
+.It Ao Va #triangles*4 Ac Ta ::= Ta Vt integer
+.It Ao Va vertex-id Ac Ta ::= Ta Vt integer No # \&In Bq 0, Ao Va #vertices Ac
+.It Ao Va triangle-id Ac Ta ::= Ta Vt integer
+.It Ao Va x Ac Ta ::= Ta Vt real
+.It Ao Va y Ac Ta ::= Ta Vt real
+.It Ao Va z Ac Ta ::= Ta Vt real
+.It Ao Va file-rank Ac Ta ::= Ta Vt integer
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Properties
+.Bl -column (******************) (::=) ()
+.It Ao Va front-media Ac Ta ::= Ta Li SCALARS Front_medium unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Ao Va medium-id Ac | Ao Va undef-medium Ac
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va back-media Ac Ta ::= Ta Li SCALARS Back_medium unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Ao Va medium-id Ac | Ao Va undef-medium Ac
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va interfaces-media Ac Ta ::= Ta Li SCALARS Interface unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Ao Va interface-id Ac
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va boundaries Ac Ta ::= Ta Li SCALARS Boundaries unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Aq Va boundary-id
+.It Ta Ta ... # Up to Aq Va #triangles
+.It \  Ta Ta
+.It Ao Va medium-id Ac Ta ::= Ta Vt integer
+.It Ao Va undef-medium Ac Ta ::= Ta Sy INT_MAX
+.It Ao Va interface-id Ac Ta ::= Ta Vt integer
+.It Ao Va boundary-id Ac Ta ::= Ta Vt integer
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Compute region
+Define which triangles are members of the surface on which
+.Xr stardis 1
+performs the calculation
+.Pq options Fl F , Fl S No or Fl s :
+.Bl -column (******************) (::=) ()
+.It Ao Va compute-region Ac Ta ::= Ta Li SCALARS Compute_region unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Aq Va region-membership
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va region-membership Ac Ta ::= Ta Li 0 No # Not member
+.It Ta \& \& | Ta Li 1 No # The front side is member
+.It Ta \& \& | Ta Li 2 No # The back side is member
+.It Ta \& \& | Ta Li 3 No # Both sides are members
+.It Ta \& \& | Ta Sy INT_MAX No # Error: must not be member
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Check description problems
+Define which triangles have an invalid media definition when merging
+partitions:
+.Bl -column (******************) (::=) ()
+.It Ao Va merge-conflicts Ac Ta ::= Ta Li SCALARS Merge_conflict int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Aq Va merge-conflict-id
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va merge-conflict-id Ac Ta ::= Ta Li 0 No # \&No conflict
+.It Ta \& \& | Ta Li 1 No # Conflict
+.El
+.Pp
+Define which triangles have an invalid limit condition or an invalid
+connection and report what is wrong:
+.Bl -column (******************) (::=) ()
+.It Ao Va property-conflicts Ac Ta ::= Ta Li SCALARS Property_conflict int 1
+.It Ta Ta Aq Va prop-conflict-id
+.It Ta Ta ...
+.It Ao Va prop-conflict-id Ac Ta ::= Ta Li 0 No # \&No conflict
+.It Ta \& \& | Ta Li 1 No # Robin btw 2 defined fluids
+.It Ta \& \& | Ta Li 2 No # Robin btw 2 undefined fluids
+.It Ta \& \& | Ta Li 3 No # Robin on fluid applied to solid
+.It Ta \& \& | Ta Li 4 No # Robin btw 2 defined solids
+.It Ta \& \& | Ta Li 5 No # Robin btw 2 undefined solids
+.It Ta \& \& | Ta Li 6 No # Robin on solid applied to fluid
+.It Ta \& \& | Ta Li 7 No # Robin&Neumann btw 2 defined media
+.It Ta \& \& | Ta Li 8 No # Robin&Neumann btw 2 undefined media
+.It Ta \& \& | Ta Li 9 No # Robin&Neumann applied to fluid
+.It Ta \& \& | Ta Li 10 No # Dirichlet btw 2 defined solids
+.It Ta \& \& | Ta Li 11 No # Dirichlet btw 2 undefined solids
+.It Ta \& \& | Ta Li 12 No # Dirichlet on solid applied to fluid
+.It Ta \& \& | Ta Li 13 No # Neumann btw 2 defined media
+.It Ta \& \& | Ta Li 14 No # Neumann btw 2 undefined media
+.It Ta \& \& | Ta Li 15 No # Neumann applied to fluid
+.It Ta \& \& | Ta Li 16 No # Solid/fluid btw 2 solids
+.It Ta \& \& | Ta Li 17 No # Solid/fluid btw 2 fluids
+.It Ta \& \& | Ta Li 18 No # Solid/fluid used as boundary
+.It Ta \& \& | Ta Li 19 No # Solid/fluid btw 2 undefined media
+.It Ta \& \& | Ta Li 20 No # \&No connection btw fluid/fluid
+.It Ta \& \& | Ta Li 21 No # \&No connection btw solid/fluid
+.It Ta \& \& | Ta Li 22 No # \&No boundary around fluid
+.It Ta \& \& | Ta Li 23 No # \&No boundary around solid
+.It Ta \& \& | Ta Li 24 No # Invalid part of a compute surface
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss Enclosure
+.Bl -column (******************) (::=) ()
+.It Ao Va encl-or-overlaps Ac Ta ::= Ta Ao Va encl-information Ac
+.It Ta \& \& | Ta Ao Va overlappings Ac
+.It \  Ta Ta
+.It Ao Va encl-information Ac Ta ::= Ta Oo Ao Va holes Ac Oc No # If any
+.It Ta Ta Aq Va enclosures
+.It \  Ta Ta
+.It Ao Va enclosures Ac Ta ::= Ta Li FIELD FieldData 2
+.It Ta Ta Ao Va enclosures-geoms Ac
+.It Ta Ta Ao Va enclosures-media Ac
+.El
+.Pp
+Report which triangles surround a hole:
+.Bl -column (******************) (::=) ()
+.It Ao Va holes Ac Ta ::= Ta Li SCALARS Hole_frontiers unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Aq Va hole-membership
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va hole-membership Ac Ta ::= Ta Li 0 No # Not surrounding a hole
+.It Ta Ta Li 1 No # Surrounding a hole
+.El
+.Pp
+List the enclosures to which the triangle belongs and report the
+validity status of the enclosures:
+.Bl -column (******************) (::=) ()
+.It Ao Va enclosures-geoms Ac Ta ::= Ta Li Enclosures Ao Va #enclosures Ac \e
+.It Ta Ta Ao Va #triangles Ac Li unsigned_char
+.It Ta Ta Ao Va encl-status Ac ... # Up to Aq Va #enclosures
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va encl-status Ac Ta ::= Ta Li 0 No # Not part of the enclosure
+.It Ta \& \& | Ta Li 1 No # Enclosure is valid
+.It Ta \& \& | Ta Li 3 No # More than 1 medium
+.It Ta \& \& | Ta Li 5 No # Triangles with undef medium
+.It Ta \& \& | Ta Li 7 No # More than 1 medium including undef
+.El
+.Pp
+List the media that the triangle surrounds for each enclosure and report
+media description problems:
+.Bl -column (******************) (::=) ()
+.It Ao Va enclosures-media Ac Ta ::= Ta Li Enclosures_internal_media Ao Va #enclosures Ac \e
+.It Ta Ta Ao Va #triangles Ac  Li unsigned_char
+.It Ta Ta Ao Va encl-media Ac ... # Up to Aq Va #enclosures
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va encl-media Ac Ta ::= Ta Ao Va medium-id Ac No # Medium of the enclosure
+.It Ta \& \& | Ta Sy INT_MAX No # Not part of the enclosure
+.It Ta \& \& | Ta Sy INT_MAX Ns Li -1 No # Error: \&in the enclosure
+.It Ta \& \& | Ta Sy INT_MAX Ns Li -2 No # Error: medium missing
+.El
+.Pp
+Report problems of triangle overlap:
+.Bl -column (******************) (::=) ()
+.It Ao Va overlappings Ac Ta ::= Ta Li SCALARS Overlapping_triangles \e
+.It Ta Ta unsigned_int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Ao Va overlapping-status Ac
+.It Ta Ta ... # Up to Aq Va #triangles
+.It Ao Va overlapping-status Ac Ta ::= Ta Li 0 No # Doesn't overlap another triangle
+.It Ta \& \& | Ta Li 1 No # Error: overlaps another triangle
+.El
+.Bl -column (******************) (::=) ()
+.It Ao Va #enclosures Ac Ta ::= Ta Vt integer
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Infrared image
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh INFRARED IMAGE
+When invoked with option
+.Fl R ,
+.Xr stardis 1
+calculates an infrared image of the system and write it to standard
+output.
+Depending on the
+.Cm fmt
+sub-option, this file can be either in
+.Xr htrdr-image 5
+format or in VTK format.
+.Bl -column (******************) (::=) ()
+.It Ao Va infrared-image Ac Ta ::= Ta Ao Va infrared-image-ht Ac # Option Fl R Cm fmt=HT
+.It Ta \& \& | Ta Ao Va infrared-image-vtk Ac # Option Fl R Cm fmt=VTK
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss htrdr-image format
+The
+.Xr htrdr-image 5
+layout of an infrared image is as follows:
+.Bl -column (******************) (::=) ()
+.It Ao Va infrared-image-ht Ac Ta ::= Ta Ao Va definition Ac
+.It Ta Ta Aq Va pixel
+.It Ta Ta ... # Up to number of pixels
+.It \  Ta Ta
+.It Ao Va definition Ac Ta ::= Ta Ao Va width Ac Ao Va height Ac
+.It Ao Va width Ac Ta ::= Ta Vt integer
+.It Ao Va height Ac Ta ::= Ta Vt integer
+.It \  Ta Ta
+.It Ao Va pixel Ac Ta ::= Ta Ao Va temperature Ac Li 0 0 0 0 Ao Va time Ac
+.It Ao Va temperature Ac Ta ::= Ta Ao Va estimate Ac
+.It Ao Va time Ac Ta ::= Ta Ao Va estimate Ac # Time per realisation
+.It \  Ta Ta
+.It Ao Va estimate Ac Ta ::= Ta Ao Va expected-value Ac Ao Va standard-error Ac
+.It Ao Va expected-value Ac Ta ::= Ta Vt real
+.It Ao Va standard-error Ac Ta ::= Ta Vt real
+.El
+.Pp
+See
+.Xr htpp 1
+to convert images in
+.Xr htrdr-image 5
+format into a regular image.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Ss VTK format
+An infrared VTK image is an XY plane.
+By convention, the origin
+.Pq 0,0
+pixel is at the top-left corner of the image.
+The result not only includes the computed temperature image, but also
+includes a per-pixel computation time image as well as a per-pixel path
+error count image and per-pixel standard deviation images for both
+temperature and computation time.
+.Pp
+The VTK layout of an infrared image is as follows:
+.Bl -column (******************) (::=) ()
+.It Ao Va infrared-image-vtk Ac Ta ::= Ta Li # vtk DataFile Version 2.0
+.It Ta Ta Ao Va description Ac
+.It Ta Ta Li DATASET STRUCTURED_POINTS
+.It Ta Ta Li DIMENSIONS Ao Va width Ac Ao Va height Ac Li 1
+.It Ta Ta Li ORIGIN 0 0 0
+.It Ta Ta Li SPACING 1 1 1
+.It Ta Ta Li POINT_DATA Ao Va #pixels Ac
+.It Ta Ta Aq Va temp
+.It Ta Ta Aq Va temp-stderr
+.It Ta Ta Aq Va time
+.It Ta Ta Aq Va time-stderr
+.It Ta Ta Aq Va failures-count
+.It \  Ta Ta
+.It Ao Va temp Ac Ta ::= Ta Li SCALARS temperature_estimate float 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt real
+.It Ta Ta ... # Up to Aq Va #pixels
+.It \  Ta Ta
+.It Ao Va temp-stderr Ac Ta ::= Ta Li SCALARS temperature_std_dev float 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt real
+.It Ta Ta ... # Up to Aq Va #pixels
+.It \  Ta Ta
+.It Ao Va time Ac Ta ::= Ta Li SCALARS computation_time float 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt real
+.It Ta Ta ... # Up to Aq Va #pixels
+.It \  Ta Ta
+.It Ao Va time-stderr Ac Ta ::= Ta Li SCALARS computation_time_std_dev float 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt real
+.It Ta Ta ... # Up to Aq Va #pixels
+.It \  Ta Ta
+.It Ao Va failures-count Ac Ta ::= Ta Li SCALARS failures_count \e
+.It Ta Ta Li unsigned_long_long 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt integer
+.It Ta Ta ... # Up to Aq Va #pixels
+.It \  Ta Ta
+.It Ao Va #pixels Ac Ta ::= Ta Vt integer No # = Ao Va width Ac * Ao Va height Ac
+.It Ao Va width Ac Ta ::= Ta Vt integer
+.It Ao Va height Ac Ta ::= Ta Vt integer
+.It Ao Va description Ac Ta ::= Ta Vt string No # Up to 256 characters
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" Heath paths
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh HEAT PATHS
+When the
+.Xr stardis 1
+option
+.Fl D
+is used in conjunction with an option that computes a result, some of
+the heat paths
+.Pq successful paths, erroneous paths, or both
+sampled during the simulation are written to files.
+Each path is written in VTK format, one VTK file per path.
+The path description can include vertices' time if it makes sense, that
+is if the computation time is not
+.Sy INF .
+.Pp
+Due to the branching nature of non-linear Monte Carlo algorithms, paths
+are made of strips.
+With a Picard order of 1
+.Pq option Fl o Ar 1 ,
+there is only a single strip.
+With higher orders, the number of strips can be greater than 1.
+As a result, the whole path is a tree: past the first strip, each strip
+can start from any vertex of one of the previous strips.
+This tree, when displaying the
+.Li Branch_id
+field, starts with id 0, then increments each time a non-linearity leads
+to the creation of a new strip
+.Pq to fetch a temperature .
+.Pp
+The VTK layout of a path is as follows:
+.Bl -column (******************) (::=) ()
+.It Ao Va heat-path Ac Ta ::= Ta Li # vtk DataFile Version 2.0
+.It Ta Ta Aq Va description
+.It Ta Ta Li ASCII
+.It Ta Ta Li DATASET POLYDATA
+.It Ta Ta Aq Va vertices
+.It Ta Ta Aq Va strips
+.It Ta Ta Li CELL_DATA Aq Va #strips
+.It Ta Ta Aq Va status
+.It Ta Ta Li POINT_DATA Aq Va #vertices
+.It Ta Ta Aq Va segment-types
+.It Ta Ta Aq Va weights
+.It Ta Ta Aq Va branch-ids
+.It Ta Ta Oo Ao Va vertices-time Ac Oc # If not steady
+.It \  Ta Ta
+.It Ao Va description Ac Ta ::= Ta Vt string No # Up to 256 characters
+.It Ao Va #vertices Ac Ta ::= Ta Vt integer
+.It Ao Va #strips Ac Ta ::= Ta Vt integer
+.El
+.Pp
+List the vertices of the main trajectory and its branches:
+.Bl -column (******************) (::=) ()
+.It Ao Va vertices Ac Ta ::= Ta Li POINTS Ao Va #vertices Ac Li double
+.It Ta Ta Ao Va x Ac Ao Va y Ac Ao Va z Ac
+.It Ta Ta ... # Up to Aq Va #vertices
+.It Ao Va x Ac Ta ::= Ta Vt real
+.It Ao Va y Ac Ta ::= Ta Vt real
+.It Ao Va z Ac Ta ::= Ta Vt real
+.El
+.Pp
+List the main trajectory and branches of the path:
+.Bl -column (******************) (::=) ()
+.It Ao Va strips Ac Ta ::= Ta  Li LINES Ao Va #strips Ac Ao Va strip-list-size Ac
+.It Ta Ta Ao Va #strip-vertices Ac Ao Va vertex-id  Ac ...
+.It Ta Ta ... # Up to Aq Va #strips
+.It Ao Va strip-list-size Ac Ta ::= Ta Vt integer No # vertices per strip + Ao Va #strips Ac
+.It Ao Va vertex-id Ac Ta ::= Ta Vt integer No # \&In [0 , Ao Va #vertices Ac Ns [
+.El
+.Pp
+Status of the path:
+.Bl -column (******************) (::=) ()
+.It Ao Va status Ac Ta ::= Ta Li SCALARS Path_Failure unsigned_char 1
+.It Ta Ta Li 0 | Li 1 No # 0: Success; 1: Failure
+.It Ta Ta ... # Up to Aq Va #strips
+.El
+.Pp
+List the type of heat transfert to which each path vertex belongs:
+.Bl -column (******************) (::=) ()
+.It Ao Va segment-types Ac Ta ::= Ta Li SCALARS Segment_Type unsigned_char 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Aq Va segment-type
+.It Ta Ta ... # Up to Aq Va #vertices
+.It Ao Va segment-type Ac Ta ::= Ta Li 0 No # Conduction
+.It Ta \& \& | Ta Li 1 No # Convection
+.It Ta \& \& | Ta Li 2 No # Radiative
+.El
+.Pp
+Monte Carlo weight along the path:
+.Bl -column (******************) (::=) ()
+.It Ao Va weights Ac Ta ::= Ta Li SCALARS Weight double 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt real
+.It Ta Ta ... # Up to Aq Va #vertices
+.El
+.Pp
+List the identifier of the main path and its branches with respect to
+the branch depth:
+.Bl -column (******************) (::=) ()
+.It Ao Va branch-ids Ac Ta ::= Ta Li SCALARS Branch_id int 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt integer No # \&In [0 , Picard_order[
+.It Ta Ta ... # Up to Aq Va #vertices
+.El
+.Pp
+Rewinded time along the path:
+.Bl -column (******************) (::=) ()
+.It Ao Va vertices-time Ac Ta ::= Ta Li SCALARS Time double 1
+.It Ta Ta Li LOOKUP_TABLE default
+.It Ta Ta Vt real No # Time [s]
+.It Ta Ta ... # Up to Aq Va #vertices
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.\" External references
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SEE ALSO
+.Xr htpp 1 ,
+.Xr stardis 1 ,
+.Xr htrdr-image 5 ,
+.Xr stardis-input 5
+.Sh STANDARDS
+.Rs
+.%B The VTK User's Guide
+.%O Simple Legacy Formats
+.%I Kitware, Inc
+.%N 11
+.%D 2010
+.%P 470--482
+.Re

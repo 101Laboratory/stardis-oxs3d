@@ -1,0 +1,102 @@
+.\" Copyright (C) 2020-2023, 2025, 2025 |Méso|Star> (contact@meso-star.com)
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program. If not, see <http://www.gnu.org/licenses/>.
+.Dd July 26, 2023
+.Dt SMSH 5
+.Os
+.Sh NAME
+.Nm smsh
+.Nd Star-Mesh file format
+.Sh DESCRIPTION
+.Nm
+is a binary file format that describes an indexed mesh
+.Pq surface or volume .
+Only the geometric data of the mesh is stored; no additional properties are
+attached to its nodes or cells.
+.Pp
+A
+.Nm
+file begins with a header that describes the layout of the data, followed by
+the geometric data itself, i.e. the list of nodes and the list of cells.
+.Pp
+The header consists of 5 integers.
+The first integer is a power of two
+.Pq usually 4096
+that defines the size of the memory page in bytes
+.Pq Va pagesize
+on which the list of nodes and the list of cells are aligned.
+By aligning data to
+.Va pagesize ,
+and depending on system requirements, memory mapping can be used to
+automatically load/unload pages on demand
+.Pq see Xr mmap 2 .
+The remaining integers store the number of nodes
+.Pq Va #nodes
+and the number of cells
+.Pq Va #cells ,
+followed by the size of a node
+.Pq Va dimnode
+and the size of a cell
+.Pq Va dimcell ,
+respectively.
+.Pp
+Fill bytes follow the file header to align nodes to
+.Va pagesize .
+The nodes are then listed with a list of
+.Va #nodes dimnode
+double-precision floating-point numbers per node, where
+.Va #nodes
+is the number
+of mesh nodes and
+.Va dimnode
+is the number of floating-point numbers per node.
+Additional fill bytes are added after the node list to align the list of
+upcoming cells to
+.Va pagesize .
+The cells are then listed using
+.Va dimcell
+64-bit unsigned integers per node where each
+integer indexes a node in the previously defined list of nodes
+.Pq indexing starts at 0 .
+Finally, fill bytes are added to align the overall file size to
+.Va pagesize .
+.Pp
+Data are encoded with respect to the little endian bytes ordering, i.e. least
+significant bytes are stored first.
+.Pp
+The file format is as follows:
+.Bl -column (pagesize) (::=) ()
+.It Ao Va smsh Ac Ta ::= Ta Ao Va pagesize Ac Ao Va #nodes Ac Ao Va #cells Ac Ao Va dimnode Ac Ao Va dimcel Ac
+.It Ta Ta Aq Va padding
+.It Ta Ta Aq Va nodes
+.It Ta Ta Aq Va padding
+.It Ta Ta Aq Va cells
+.It Ta Ta Aq Va padding
+.It Ao Va pagesize Ac Ta ::= Ta Vt uint64_t
+.It Ao Va #nodes Ac Ta ::= Ta Vt uint64_t
+.It Ao Va #cells Ac Ta ::= Ta Vt uint64_t
+.It Ao Va dimnode Ac Ta ::= Ta Vt uint32_t
+.It Ao Va dimcell Ac Ta ::= Ta Vt uint32_t
+.It \  Ta Ta
+.It Ao Va padding Ac Ta ::= Ta Op Vt int8_t ...
+# Ensure alignment on
+.Va pagesize
+.It \  Ta Ta
+.It Ao Va nodes Ac Ta ::= Ta Ao Va node-pos Ac Va ...
+.It Ao Va cells Ac Ta ::= Ta Ao Va cell-ids Ac Va ...
+.It Ao Va node-pos Ac Ta ::= Ta Vt double ...
+.It Ao Va cell-ids Ac Ta ::= Ta Vt uint64_t ...
+.El
+.Sh SEE ALSO
+.Xr mmap 2

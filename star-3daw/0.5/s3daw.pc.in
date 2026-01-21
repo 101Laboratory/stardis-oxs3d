@@ -1,0 +1,14 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Requires.private:\
+ aw >= @AW_VERSION@,\
+ polygon >= @POLYGON_VERSION@,\
+ s3d >= @S3D_VERSION@
+Name: Star-3DAW
+Description: Star-3DAW library
+Version: @VERSION@
+Libs: -L${libdir} -ls3daw
+CFlags: -I${includedir}

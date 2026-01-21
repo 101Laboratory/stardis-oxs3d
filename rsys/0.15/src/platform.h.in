@@ -1,0 +1,8 @@
+#ifndef PLATFORM_H
+#define PLATFORM_H
+
+#define SHARED_LIBRARY_PREFIX "@LIB_PREFIX@"
+#define SHARED_LIBRARY_SUFFIX "@LIB_SUFFIX@"
+
+#endif /* PLATFORM_H */
+

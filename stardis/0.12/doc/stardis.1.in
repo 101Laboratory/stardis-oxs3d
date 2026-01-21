@@ -1,0 +1,670 @@
+.\" Copyright (C) 2018-2025 |Méso|Star> (contact@meso-star.com)
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program. If not, see <http://www.gnu.org/licenses/>.
+.Dd July 18, 2024
+.Dt STARDIS 1
+.Os
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh NAME
+.Nm stardis
+.Nd statistical solving of coupled thermal systems
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SYNOPSIS
+.Nm
+.Op Fl eghiv
+.Op Fl a Ar diff_algo
+.Op Fl D Ar path_type , Ns Ar files_name_prefix
+.Op Fl d Ar file_base_name
+.Op Fl F Pa surface Ns Op , Ns Ar time Ns Op , Ns Ar time
+.Op Fl f Ar x , Ns Ar y , Ns Ar z Ns Op , Ns Ar time Ns Op , Ns Ar time
+.Op Fl G Pa green_bin Ns Op , Ns Pa green_ascii
+.Op Fl I Ar initial_time
+.Op Fl L Pa interface_probes
+.Op Fl l Pa interface_probes
+.Op Fl m Ar medium_name Ns Op , Ns Ar time Ns Op , Ns Ar time
+.Op Fl n Ar samples_count
+.Op Fl o Ar picard_order
+.Op Fl P Ar x , Ns Ar y , Ns Ar z Ns Oo , Ns Ar time Ns Oo , Ns Ar time Oc Oc \
+ Ns Op : Ns Ar side_indicator
+.Op Fl p Ar x , Ns Ar y , Ns Ar z Ns Op , Ns Ar time Ns Op , Ns Ar time
+.Op Fl R Ar rendering_opt Ns Op : Ns Ar rendering_opt No ...
+.Op Fl S Pa surface Ns Op , Ns Ar time Ns Op , Ns Ar time
+.Op Fl s Pa surface Ns Op , Ns Ar time Ns Op , Ns Ar time
+.Op Fl t Ar threads_count
+.Op Fl V Ar verbosity_level
+.Op Fl X Pa output_rng
+.Op Fl x Pa input_rng
+.Fl M Pa system
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh DESCRIPTION
+.Nm
+solves coupled thermal systems: conductive, convective and radiative transfers
+are solved together.
+The physical model used for conduction is the local unstationary heat conduction
+equation.
+Convection fluxes are assumed to be linear with temperature, and radiation
+is assumed to be integrated over the whole thermal spectral range,
+therefore radiative heat fluxes are proportionnal to a difference of
+temperatures to the power 4.
+.Nm
+can deal with complex geometries as well as high-frequency external
+solicitations over a very long period of time, relative to the characteristic
+time of the system.
+The provided system description should comply with the
+.Xr stardis-input 5
+format.
+.Pp
+.Nm
+can compute a thermal observable, like temperature or flux, at a probe point and
+date or the mean value of an observable over a given surface, volume, or time
+range.
+When a time range
+.Ar t1 , Ns Ar t2
+is provided, the computed value is the mean value over the time range.
+To compute the value at a given time, simply provide a single value
+.Ar t .
+In addition,
+.Nm
+gives access to the evaluation of the propagator (a.k.a the Green function).
+The propagator is of great value for thermicist engineers as it gives some
+crucial information to analyse heat transfers in the system.
+It helps engineers answer questions like
+.Dq Where from does the heat come at this location? .
+Propagators seamlessly aggregate all the provided geometrical and physical
+information on the system in an unbiased and very-fast statistical model.
+.Pp
+.Nm
+also provides two additional functionalities: converting the
+.Xr stardis-input 5
+geometry into a VTK file and rendering an infrared image of
+the submitted system.
+.Pp
+.Nm Ns '
+algorithms are based on state-of-the-art Monte Carlo method applied to radiative
+transfer physics (Delatorre et al. 2014) combined with conduction's
+statistical formulation (Kac 1949 and Muller 1956).
+Monte Carlo algorithms associated with convective and conductive processes
+consist in sampling heat paths: this can be seen as an extension of Monte Carlo
+algorithms that solve monochromatic radiative transfer.
+The radiative transfer algorithm, based on the Picard method, is also based on
+sampling radiative paths.
+However, since
+.Nm
+solves the spectrally integrated radiative transfer, the process can be
+recursive: secondary heat paths (convective, conductive and radiative) may be
+necessary along the sampling of an initial radiative path.
+The solution may not be sufficiently converged with a Picard order equal to 1 in
+the presence of high temperature gradients.
+Increasing the Picard order may be necessary in this case, until the required
+convergence is reached.
+.Pp
+One of the key features of
+.Nm
+is that its algorithms are not based on a volumetric mesh of the system:
+only the representation of its interfaces is required.
+And these are used only as a description of the system, not as a basis
+for calculation, whose discretization would have an impact on the
+accuracy of estimates.
+.Pp
+.Nm
+implements mixed parallelism.
+On a single computer (that is, a node), it uses shared memory parallelism while
+it relies on Message Passing Interface (MPI) to parallelize calculations between
+multiple nodes.
+.Nm
+can therefore be launched either directly or via a process launcher such as
+.Xr mpirun 1
+to distribute the calculation on several computers.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl a Ar diff_algo
+Define the diffusion algorithm to be used when sampling a conductive
+path.
+The default diffusion algorithm is
+.Cm dsphere .
+.Pp
+The diffusion algorithms are as follows:
+.Bl -tag -width Ds
+.It Cm dsphere
+Use the delta sphere algorithm, in which Brownian motion is approximated
+by a random walk of random delta steps.
+The algorithm is consistent with respect to the
+.Ar delta
+parameter, i.e. Brownian motion is estimated exactly with
+.Ar delta
+tending towards 0.
+This numerical parameter
+.Ar delta
+is defined by solid and can be varied in
+time and space to handle the spatio-temporal temperature gradient
+without prohibitively increasing computation time
+.Pq see Xr stardis-input 1 .
+.It Cm wos
+Use the Walk on Sphere algorithm to estimate Brownian motion.
+Although a numerical parameter is required to define the distance at
+which the random walk is considered to have reached the boundary, it can
+be assumed that this algorithm estimates Brownian motion without any
+bias with respect to numerical uncertainty.
+Indeed, the aforementioned distance can be set to the computer's
+numerical accuracy without any significant impact on performance.
+.El
+.It Fl D Ar path_type , Ns Ar files_name_prefix
+Write sampled heat paths of the given
+.Ar path_type
+to files in VTK format, one file per path.
+Possible values for
+.Ar path_type
+are
+.Cm error
+.Pq write paths ending in error ,
+.Cm success
+.Pq write successful paths ,
+and
+.Cm all
+.Pq write all paths .
+Actual file names are produced by appending
+.Ar files_name_prefix
+and the path rank starting at index
+.Ql 00000000 ,
+and possibly followed by
+.Ql _err
+for failure paths
+.Pq e.g. Pa prefix00000000.vtk , Pa prefix00000001_err.vtk
+.Pp
+Can only be used in conjunction with some options that sample heat paths
+.Pq Fl m , Fl p , Fl P , Fl R, Fl s No or Fl S .
+.It Fl d Ar file_base_name
+Write the geometry to a file in VTK format along with various properties,
+including possible errors.
+Also possibly write some problematic parts of the geometry (if any) in OBJ
+format.
+Possible parts are overlapping triangles, riangles with property conflicts, and
+triangles with merge errors.
+The various file are all named after the provided base name.
+If this option is used, no computation occurs.
+.Pp
+Using this option in conjunction with an option that
+specifies a compute region
+.Pq i.e. Fl F , Fl S ,  Fl s
+has the effect to include the region in the VTK output.
+.It Fl e
+Use extended format to output Monte Carlo results.
+Can only be used in conjunction with options that compute a single Monte-Carlo
+.Pq Fl F , Fl m , Fl P , Fl p No or Fl s No without options Fl g No or Fl G .
+.It Fl F Pa surface Ns Op , Ns Ar time Ns Op , Ns Ar time
+Compute the flux through a given 2D surface at a given time, the surface being
+defined by the triangles in a STL file.
+The flux can only be computed on a solid-fluid interface and is accounted
+positive from the solid to the fluid.
+These triangles are not added to the geometry, but must be part of it.
+By default the compute time is @STARDIS_ARGS_DEFAULT_COMPUTE_TIME@.
+The surface does not need to be connex.
+.It Fl f Ar x , Ns Ar y , Ns Ar z Ns Op , Ns Ar time Ns Op , Ns Ar time
+Compute the flux density at a given probe on an interface at a given time.
+The probe is supposed to be on an interface and is moved to the closest point of
+the closest interface before the computation starts.
+The flux density can only be computed on a solid-fluid interface and is
+accounted positive from the solid to the fluid.
+The probe coordinates must be in the same system as the geometry.
+By default the compute time is @STARDIS_ARGS_DEFAULT_COMPUTE_TIME@.
+.It Fl G Pa green_bin Ns Op , Ns Pa green_ascii
+Compute the Green function at the specified time and write it to a binary file.
+If a
+.Pa green_ascii
+file name is provided, information on heat paths' ends is also written in this
+second file in ascii csv format.
+.Pp
+This option can only be used in conjunction with one these options:
+.Fl p , Fl P , Fl m , Fl s
+and cannot be used in conjunction with option
+.Fl D .
+.Pp
+The resulting file can be further used through the
+.Xr sgreen 1
+command to apply different temperature, flux or volumic power values.
+.It Fl g
+Compute the Green function at the specified time and write it in ASCII to
+standard output.
+This option can only be used in conjunction with one these options:
+.Fl p , Fl P , Fl m , Fl s
+and cannot be used in conjunction with option
+.Fl D .
+.It Fl h
+Output short help and exit.
+.It Fl I Ar initial_time
+Define initial time in seconds.
+It can take any value between +/- infinity.
+The default initial time is 0.
+.It Fl i
+Disable internal radiative exchanges.
+External radiative exchanges are still processed, i.e. the external
+source.
+.It Fl L Pa interface_probes
+Defines a set of interface probes for which
+.Nm
+calculates the temperature.
+The argument file lists the interface probe points.
+Each line of this file describes a probe point using the same grammar as
+that used to describe a single interface probe
+.Pq see Fl P No option .
+In addition to this syntax, characters behind the hash mark
+.Pq Ql #
+are considered comments and are therefore ignored, as are empty lines,
+i.e. lines with no characters at all or composed solely of spaces and
+tabs.
+.Pp
+Note that this option parallelizes the calculation of the probe list,
+and not the calculation of each individual probe.
+Its use is therefore more advantageous in terms of load distribution
+when the number of probes to be evaluated is large, compared with the
+cost of calculating a single probe point.
+.It Fl l Pa interface_probes
+Defines a set of interface probes for which
+.Nm
+calculates the flux density.
+The argument file lists the interface probe points.
+Each line of this file describes a probe point using the same grammar as
+that used to describe a single interface probe
+.Pq see Fl f No option .
+In addition to this syntax, characters behind the hash mark
+.Pq Ql #
+are considered comments and are therefore ignored, as are empty lines,
+i.e. lines with no characters at all or composed solely of spaces and
+tabs.
+.Pp
+This option allows the calculation of the probe list while reading and
+constructing the system only once.
+.It Fl M Pa system
+Read a text file containing a possibly partial description of the system.
+Can include programs, media enclosures and boundary conditions.
+Media and boundaries can appear in any order, but programs must be defined
+before their first reference.
+Refer to
+.Xr stardis-input 5
+for a full description of the file format.
+Can be used more than once if the description is split across different files.
+.It Fl m Ar medium_name Ns Op , Ns Ar time Ns Op , Ns Ar time
+Compute the mean temperature in a given medium at a given time.
+The medium name must be part of the
+.Pa system
+description.
+By default the compute time is @STARDIS_ARGS_DEFAULT_COMPUTE_TIME@.
+The medium region does not need to be connex.
+.It Fl n Ar samples_count
+Number of Monte Carlo realisations.
+By default, the number of realisations is
+@STARDIS_ARGS_DEFAULT_SAMPLES_COUNT@.
+.It Fl o Ar picard_order
+Determine the iteration level used with the Picard method to deal with
+non-linear radiative transfer accross the model.
+By default
+.Ar picard_order
+is set to @STARDIS_ARGS_DEFAULT_PICARD_ORDER@.
+Note that a Picard order greater than 1 is incompatible both with Green
+computations and systems including volumic power sources or non zero flux at a
+boundary.
+.It Fl P Ar x , Ns Ar y , Ns Ar z Ns Oo , Ns Ar time Ns Oo , Ns Ar time Oc Oc \
+Ns Op : Ns Ar side_indicator
+Compute the temperature at the given probe on an interface at a given time.
+If the probe is on an interface where a thermal contact resistance is defined,
+it is mandatory to provide a side indicator
+.Pq either Cm FRONT , Cm BACK , No or a medium name ,
+as the temperature differs between the two sides.
+By default the compute time is @STARDIS_ARGS_DEFAULT_COMPUTE_TIME@.
+The probe is supposed to be on an interface and is moved to the closest point of
+the closest interface before the computation starts.
+The probe coordinates must be in the same system as the geometry.
+.It Fl p Ar x , Ns Ar y , Ns Ar z Ns Op , Ns Ar time Ns Op , Ns Ar time
+Compute the temperature at the given probe at a given time.
+By default the compute time is @STARDIS_ARGS_DEFAULT_COMPUTE_TIME@.
+The probe must be in a medium.
+The probe coordinates must be in the same system as the geometry.
+.It Fl R Ar rendering_opt Ns Op : Ns Ar rendering_opt No ...
+Render an infrared image of the system through a pinhole camera.
+One can use all-default sub-options by simply providing the colon character
+.Pq Ql \&:
+alone as an argument.
+Please note that the camera position must be outside the geometry or in a fluid.
+.Pp
+The rendering options are as follows:
+.Bl -tag -width Ds
+.It Cm file= Ns Pa output_file
+File name to use to write the infrared image to.
+If no file name is provided, the result is written to standard output.
+.It Cm fmt= Ns Ar image_file_format
+Format of the image file in output.
+Can be
+.Cm VTK ,
+or
+.Cm HT
+.Pq see Xr htrdr-image 5 No and Xr htpp 1 .
+Default
+.Ar image_file_format
+is @STARDIS_ARGS_DEFAULT_RENDERING_OUTPUT_FILE_FMT@.
+.It Cm fov= Ns Ar angle
+Vertical field of view of the camera in [30,120] degrees.
+The default field of view is @STARDIS_ARGS_DEFAULT_RENDERING_FOV@ degrees.
+.It Cm img= Ns Ar width Ns x Ns Ar height
+Image definition.
+Default is
+@STARDIS_ARGS_DEFAULT_RENDERING_IMG_WIDTH@x@STARDIS_ARGS_DEFAULT_RENDERING_IMG_HEIGHT@.
+.It Cm pos= Ns Ar x , Ns Ar y , Ns Ar z
+Camera position.
+Default is @STARDIS_ARGS_DEFAULT_RENDERING_POS@ unless
+.Cm tgt
+is not defined, in which case the position is automatically calculated to ensure
+that the entire scene is visible.
+.It Cm spp= Ns Ar samples_per_pixel
+Number of samples to solve the Monte Carlo estimation of each pixel.
+Default is @STARDIS_ARGS_DEFAULT_RENDERING_SPP@.
+.It Cm t= Ns Ar time , Ns Op Ns Ar time
+Rendering time.
+Default is @STARDIS_ARGS_DEFAULT_RENDERING_TIME@.
+.It Cm tgt= Ns Ar x , Ns Ar y , Ns Ar z
+Targeted position.
+Default is @STARDIS_ARGS_DEFAULT_RENDERING_TGT@ unless
+.Cm pos
+is not defined, in which case the targeted position is automatically calculated
+to ensure that the entire scene is visible.
+.It Cm up= Ns Ar x , Ns Ar y , Ns Ar z
+Upward vector that the top of the camera is pointing towards.
+Default is @STARDIS_ARGS_DEFAULT_RENDERING_UP@.
+.El
+.It Fl S Pa surface Ns Op , Ns Ar time Ns Op , Ns Ar time
+Compute the by-triangle mean temperature on a given 2D
+.Pa surface
+at a given time,
+the
+.Pa surface
+defined as the front sides of the triangles in the provided STL file.
+These triangles are not added to the geometry, but must be part of it.
+By default the compute time is @STARDIS_ARGS_DEFAULT_COMPUTE_TIME@.
+The
+.Pa surface
+does not need to be connex.
+.It Fl s Pa surface Ns Op , Ns Ar time Ns Op , Ns Ar time
+Compute the mean temperature on a given 2D
+.Pa surface
+at a given time, the
+.Pa surface
+being defined as the front sides of the triangles in the provided STL file.
+By default the compute time is @STARDIS_ARGS_DEFAULT_COMPUTE_TIME@.
+These triangles are not added to the geometry, but must be part of it.
+The
+.Pa surface
+does not need to be connex.
+.It Fl t Ar threads_count
+Advice on the number of threads to use.
+By default,
+.Nm
+uses many threads as processor cores.
+.It Fl V Ar verbosity_level
+Set the verbosity level.
+Possible values are
+.Ql 0
+.Pq no message ,
+.Ql 1
+.Pq error messages only ,
+.Ql 2
+.Pq error and warning messages ,
+and
+.Ql 3
+.Pq error, warning and informative messages .
+All the messages are written to standard error.
+Default is @STARDIS_ARGS_DEFAULT_VERBOSE_LEVEL@.
+.It Fl v
+Output version information and exit.
+.It Fl X Pa output_rng
+Write the random generator's internal state, as it is at the end of the
+computation, to the provided file.
+.It Fl x Pa input_rng
+Read the provided file and use its content to initialize the random generator's
+internal state.
+Used in conjunction with the
+.Fl X
+option, this can be used to ensure statistical independence between subsequent
+computations.
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXIT STATUS
+.Ex -std
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXAMPLES
+Preprocess the system as described in
+.Pa scene 5.txt
+when intending to compute the mean flux on the triangles from the file
+.Pa edge.stl ,
+and write its geometry in the file
+.Pa scene.vtk .
+Verbosity level is set to
+.Ar 3 :
+.Bd -literal -offset Ds
+stardis -M "scene 5.txt" -F edge.stl -d -V 3 > scene.vtk
+.Ed
+.Pp
+Compute the temperature at the probe point
+.Ar 0 , Ns Ar 0.5 , Ns Ar 0
+at steady state.
+The system is read from the file
+.Pa model.txt
+and the number of samples is set to
+.Ar 1000000 :
+.Bd -literal -offset Ds
+ stardis -M model.txt -p 0,0.5,0 -n 1000000
+.Ed
+.Pp
+Compute the mean temperature in the medium
+.Ar med05
+at
+.No t= Ns Ar 100 Ns s .
+The system is read from the file
+.Pa model.txt
+and the result is output with extended format
+.Pq option Fl e :
+.Bd -literal -offset Ds
+stardis -M model.txt -m med05,100 -e
+.Ed
+.Pp
+Compute the temperature at the probe point
+.Ar 0 , Ns Ar 0 , Ns Ar 0
+at
+.No t= Ns Ar 2500 .
+The system is read from the 2 files
+.Pa media.txt
+and
+.Pa bounds.txt ,
+and the number of samples is set to
+.Ar 1000000 :
+.Bd -literal -offset Ds
+stardis -M media.txt -M bounds.txt -p 0,0,0,2500 -n 1000000
+.Ed
+.Pp
+Compute the mean temperature at the probe point
+.Ar 1 , Ns Ar 2.5 , Ns Ar 0
+over the
+.Ar 50 , Ns Ar 5000
+time range.
+The system is read from the file
+.Pa model.txt :
+.Bd -literal -offset Ds
+stardis -M model.txt -p 1,2.5,0,50,5000
+.Ed
+.Pp
+Compute 3 probe temperatures, ensuring statistical independence:
+.Bd -literal -offset Ds
+stardis -M model.txt -p 1,1.5,0,50,5000 -Xstate1
+stardis -M model.txt -p 1,2.5,0,50,5000 -xstate1 -Xstate2
+stardis -M model.txt -p 1,3.5,0,50,5000 -xstate2
+.Ed
+.Pp
+Use
+.Xr mpirun 1
+to launch
+.Nm
+on several hosts defined in the my_hosts file.
+Render the system as described in
+.Pa scene.txt
+with default settings:
+.Bd -literal -offset Ds
+mpirun --hostfile my_hosts stardis -M scene.txt -R\&:
+.Ed
+.Pp
+Render the system as described in
+.Pa scn.txt
+at
+.Ar 100
+seconds
+Using 2 samples per pixel
+for an image of
+.Ar 800 No by Ar 600
+pixels
+saved in
+.Xr htrdr-image 5
+format
+and all other settings set to their default values.
+The output is redirected to the
+.Pa img.ht
+file.
+If the computation encounters erroneous heat paths, they will be dumped to VTK
+files named
+.Pa err_path_00000000.vtk , err_path_00000001.vtk ,
+etc.
+The image file is then post-processed using
+.Xr htpp 1
+with default settings to obtain a png file:
+.Bd -literal -offset Ds
+stardis -M scn.txt \\
+        -R t=100:spp=2:img=800x600:fmt=ht \\
+        -D error,err_path_ \\
+        > img.ht
+htpp -o img.pgn -v -m default img.ht
+.Ed
+.Pp
+Compute the Green function that computes the temperature at the probe point
+.Ar 0 , Ns Ar 0 , Ns Ar 0
+at steady state.
+The system is read from the file
+.Pa model.txt
+and the Green function is written to the
+.Pa probe.green
+file and the heat paths' ends are written to the
+.Pa probe_ends.csv
+file:
+.Bd -literal -offset Ds
+stardis -M model.txt -p 0,0,0 -G probe.green,probe_ends.csv
+.Ed
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SEE ALSO
+.Xr htpp 1 ,
+.Xr mpirun 1 ,
+.Xr sgreen 1 ,
+.Xr htrdr-image 5 ,
+.Xr stardis-input 5 ,
+.Xr stardis-output 5
+.Rs
+.%A Léa Penazzi et al.
+.%T Path integrals formulations leading to propagator evaluation for coupled \
+linear physics in large geometric models
+.%J Computer Physics Communications
+.%V 294
+.%D 2024
+.%U https://doi.org/10.1016/j.cpc.2023.108911
+.Re
+.Rs
+.%A Mégane Bati et al.
+.%T Coupling Conduction, Convection and Radiative Transfer in a Single \
+Path-Space: Application to Infrared Rendering
+.%J ACM Transactions on Graphics
+.%V 42
+.%N 4
+.%D August 2023
+.%U https://doi.org/10.1145/3592121
+.Re
+.Rs
+.%A Jean Marc Tregan et al.
+.%T Coupling radiative, conductive and convective heat-transfers in a single \
+Monte Carlo algorithm: A general theoretical framework for linear situations
+.%J PLOS ONE
+.%V 18
+.%N 4
+.%D 2023
+.%U https://doi.org/10.1371/journal.pone.0283681
+.Re
+.Rs
+.%A Jérémie Delatorre et al.
+.%T Monte Carlo advances and concentrated solar applications
+.%J Solar Energy
+.%V 103
+.%P 653--681
+.%D 2014
+.%U https://doi.org/10.1016/j.solener.2013.02.035
+.Re
+.Rs
+.%A Abdolhossein Haji-Sheikh
+.%A Ephraim Maurice Sparrow
+.%T The floating random walk and its applications to Monte-Carlo \
+solutions of heat equations
+.%J SIAM Journal on Applied Mathematics
+.%V 14
+.%N 2
+.%P 370--389
+.%D 1966
+.Re
+.Rs
+.%A Mervin E Muller
+.%T Some continuous Monte Carlo methods for the Dirichlet problem
+.%J The Annals of Mathematical Statistics
+.%P 569--589
+.%D 1956
+.Re
+.Rs
+.%A Mark Kac
+.%T On distributions of certain Wiener functionals
+.%J Transactions of the American Mathematical Society
+.%V 65
+.%N 1
+.%P 1--13
+.%D 1949
+.Re
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh STANDARDS
+.Rs
+.%B The VTK User's Guide
+.%O Simple Legacy Formats
+.%I Kitware, Inc
+.%N 11
+.%D 2010
+.%P 470--482
+.Re
+.Pp
+.Rs
+.%A OpenMP Architecture Review Board
+.%D March 2002
+.%T OpenMP C and C++ Application Interface
+.%O version 2.0
+.Re
+.Pp
+.Rs
+.%A Message Passing Interface Forum
+.%D July 1997
+.%T MPI-2: Extensions to The Message-Passing Interface
+.Re
+.Pp
+.Rs
+.%T The StL Format: Standard Data Format for Fabbers
+.%A Marshall Burns
+.%D 1993
+.%U https://www.fabbers.com/tech/STL_Format
+.Re

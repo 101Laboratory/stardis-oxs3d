@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys > @RSYS_VERSION@, star-sp > @STAR-SP_VERSION@
+Name: Star-MonteCarlo
+Description: Star-MonteCarlo library
+Version: @VERSION@
+Libs: -L${libdir} -lsmc
+Libs.private: -fopenmp -lm
+CFlags: -I${includedir}

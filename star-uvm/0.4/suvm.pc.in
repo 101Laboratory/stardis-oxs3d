@@ -1,0 +1,12 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Requires.private: embree4 >= @EMBREE_VERSION@
+Name: Star-UVM
+Description: Star Unstructured Volumetric Mesh
+Version: @VERSION@
+Libs: -L${libdir} -lsuvm
+Libs.private: -lm
+CFlags: -I${includedir}
