@@ -15,3 +15,6 @@ tags
 src/sdis_version.h
 *.vtk
 *.obj
+*backup
+*.bak
+*.backup

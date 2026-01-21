@@ -1,0 +1,573 @@
+# stardis-solver Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: stardis-solver - Radiation Transfer Solver Library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-19
+# Note: MPI support temporarily disabled for Windows migration
+
+cmake_minimum_required(VERSION 3.15)
+project(stardis-solver
+    VERSION 0.16.2
+    DESCRIPTION "stardis-solver: Monte Carlo radiation transfer solver"
+    LANGUAGES C
+)
+
+# Inherit options from root CMakeLists.txt if exists
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+if(NOT DEFINED SDIS_BUILD_TESTS)
+    option(SDIS_BUILD_TESTS "Build tests" OFF)
+endif()
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - MSVC requires C99 minimum
+if(MSVC)
+    set(CMAKE_C_STANDARD 99)
+    add_compile_options(/TC)  # Compile as C code
+else()
+    set(CMAKE_C_STANDARD 89)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
+
+# Platform-specific Warning Flags
+set(WARNING_FLAGS "")
+set(HARDENING_FLAGS "")
+
+if(MSVC)
+    # MSVC warning flags (equivalent to GCC -Wall -Wextra)
+    set(WARNING_FLAGS
+        /W4          # Warning level 4
+        /wd4200      # Disable: non-standard extension: zero-sized array
+        /wd4204      # Disable: non-standard extension: non-constant aggregate initializer
+    )
+    
+    # MSVC security hardening
+    set(HARDENING_FLAGS
+        /GS          # Buffer security check
+        /guard:cf    # Control flow guard
+    )
+else()
+    # GCC/Clang warning flags (from config.mk WFLAGS)
+    set(WARNING_FLAGS
+        -Wall
+        -Wcast-align
+        -Wconversion
+        -Wextra
+        -Wmissing-declarations
+        -Wmissing-prototypes
+        -Wshadow
+        -pedantic
+    )
+    
+    # GCC/Clang hardening flags (from config.mk CFLAGS_HARDENED)
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2
+        -fcf-protection=full
+        -fstack-clash-protection
+        -fstack-protector-strong
+        -fvisibility=hidden
+        -fstrict-aliasing
+    )
+endif()
+
+# Apply warning and hardening flags
+add_compile_options(${WARNING_FLAGS})
+add_compile_options(${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od")
+    else()
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG")
+    endif()
+endif()
+
+# Position Independent Code for shared libraries
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# Linker flags - Platform specific
+if(NOT WIN32 AND NOT MSVC)
+    # Unix/Linux linker hardening flags
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro,-z,now")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+# Find rsys (required)
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+set(RSYS_INCLUDE_DIR "${RSYS_ROOT}/src" CACHE PATH "rsys include directory")
+
+# Find star-2d (required)
+set(S2D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-2d/0.7" CACHE PATH "Path to star-2d library")
+if(NOT TARGET s2d)
+    if(EXISTS "${S2D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-2d from: ${S2D_ROOT}")
+        if(NOT DEFINED S2D_BUILD_TESTS)
+            set(S2D_BUILD_TESTS OFF CACHE BOOL "Disable star-2d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${S2D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/s2d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-2d not found at ${S2D_ROOT}")
+    endif()
+endif()
+set(S2D_INCLUDE_DIR "${S2D_ROOT}/src" CACHE PATH "star-2d include directory")
+
+# Find star-3d (required)
+set(S3D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-3d/0.10" CACHE PATH "Path to star-3d library")
+if(NOT TARGET s3d)
+    if(EXISTS "${S3D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-3d from: ${S3D_ROOT}")
+        if(NOT DEFINED S3D_BUILD_TESTS)
+            set(S3D_BUILD_TESTS OFF CACHE BOOL "Disable star-3d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${S3D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/s3d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-3d not found at ${S3D_ROOT}")
+    endif()
+endif()
+set(S3D_INCLUDE_DIR "${S3D_ROOT}/src" CACHE PATH "star-3d include directory")
+
+# Find star-enclosures-2d (required)
+set(SENC2D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-enclosures-2d/0.6" CACHE PATH "Path to star-enclosures-2d library")
+if(NOT TARGET senc2d)
+    if(EXISTS "${SENC2D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-enclosures-2d from: ${SENC2D_ROOT}")
+        if(NOT DEFINED SENC2D_BUILD_TESTS)
+            set(SENC2D_BUILD_TESTS OFF CACHE BOOL "Disable star-enclosures-2d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${SENC2D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/senc2d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-enclosures-2d not found at ${SENC2D_ROOT}")
+    endif()
+endif()
+set(SENC2D_INCLUDE_DIR "${SENC2D_ROOT}/src" CACHE PATH "star-enclosures-2d include directory")
+
+# Find star-enclosures-3d (required)
+set(SENC3D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-enclosures-3d/0.7.2" CACHE PATH "Path to star-enclosures-3d library")
+if(NOT TARGET senc3d)
+    if(EXISTS "${SENC3D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-enclosures-3d from: ${SENC3D_ROOT}")
+        if(NOT DEFINED SENC3D_BUILD_TESTS)
+            set(SENC3D_BUILD_TESTS OFF CACHE BOOL "Disable star-enclosures-3d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${SENC3D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/senc3d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-enclosures-3d not found at ${SENC3D_ROOT}")
+    endif()
+endif()
+set(SENC3D_INCLUDE_DIR "${SENC3D_ROOT}/src" CACHE PATH "star-enclosures-3d include directory")
+
+# Find star-sp (required)
+set(SSP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-sp/0.15" CACHE PATH "Path to star-sp library")
+if(NOT TARGET ssp)
+    if(EXISTS "${SSP_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-sp from: ${SSP_ROOT}")
+        if(NOT DEFINED SSP_BUILD_TESTS)
+            set(SSP_BUILD_TESTS OFF CACHE BOOL "Disable star-sp tests when included as subdirectory")
+        endif()
+        add_subdirectory("${SSP_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/ssp" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-sp not found at ${SSP_ROOT}")
+    endif()
+endif()
+set(SSP_INCLUDE_DIR "${SSP_ROOT}/src" CACHE PATH "star-sp include directory")
+
+# Find swf (required) - Actually star-wf
+set(SWF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-wf/0.0" CACHE PATH "Path to swf library")
+if(EXISTS "${SWF_ROOT}/CMakeLists.txt")
+    message(STATUS "Adding swf from: ${SWF_ROOT}")
+    if(NOT DEFINED SWF_BUILD_TESTS)
+        set(SWF_BUILD_TESTS OFF CACHE BOOL "Disable swf tests when included as subdirectory")
+    endif()
+    add_subdirectory("${SWF_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/swf" EXCLUDE_FROM_ALL)
+    set(SWF_INCLUDE_DIR "${SWF_ROOT}/src" CACHE PATH "swf include directory")
+    set(SWF_AVAILABLE TRUE)
+else()
+    message(WARNING "swf library not found at ${SWF_ROOT}, continuing without it")
+    set(SWF_AVAILABLE FALSE)
+endif()
+
+# Find OpenMP (required)
+find_package(OpenMP REQUIRED)
+if(NOT OpenMP_C_FOUND)
+    message(FATAL_ERROR "OpenMP not found. Please install OpenMP or use a compiler with OpenMP support.")
+endif()
+
+# Math library (automatic on MSVC)
+if(NOT MSVC)
+    set(MATH_LIBRARY m)
+endif()
+
+################################################################################
+# Source Files (from Makefile SRC variable)
+# Note: MPI source (sdis_mpi.c) excluded for Windows migration
+################################################################################
+
+set(SDIS_SOURCES
+    src/sdis.c
+    src/sdis_brdf.c
+    src/sdis_camera.c
+    src/sdis_data.c
+    src/sdis_device.c
+    src/sdis_estimator.c
+    src/sdis_estimator_buffer.c
+    src/sdis_green.c
+    src/sdis_heat_path.c
+    src/sdis_heat_path_boundary.c
+    src/sdis_heat_path_conductive.c
+    src/sdis_interface.c
+    src/sdis_log.c
+    src/sdis_medium.c
+    src/sdis_misc.c
+    src/sdis_primkey.c
+    src/sdis_radiative_env.c
+    src/sdis_realisation.c
+    src/sdis_scene.c
+    src/sdis_solve.c
+    src/sdis_solve_camera.c
+    src/sdis_source.c
+    src/sdis_tile.c
+)
+
+# Public header for installation
+set(SDIS_PUBLIC_HEADERS
+    src/sdis.h
+)
+
+################################################################################
+# Create Library
+################################################################################
+
+if(BUILD_SHARED_LIBS)
+    add_library(sdis SHARED ${SDIS_SOURCES})
+    target_compile_definitions(sdis PRIVATE SDIS_SHARED_BUILD)
+else()
+    add_library(sdis STATIC ${SDIS_SOURCES})
+endif()
+
+# Add alias for consistent naming
+add_library(sdis::sdis ALIAS sdis)
+
+# Library properties
+set_target_properties(sdis PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0.16
+    OUTPUT_NAME "sdis"
+    PUBLIC_HEADER "${SDIS_PUBLIC_HEADERS}"
+)
+
+# Include directories
+target_include_directories(sdis
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${RSYS_INCLUDE_DIR}
+        ${S2D_INCLUDE_DIR}
+        ${S3D_INCLUDE_DIR}
+        ${SENC2D_INCLUDE_DIR}
+        ${SENC3D_INCLUDE_DIR}
+        ${SSP_INCLUDE_DIR}
+)
+
+if(SWF_AVAILABLE)
+    target_include_directories(sdis PRIVATE ${SWF_INCLUDE_DIR})
+endif()
+
+# Link libraries
+target_link_libraries(sdis
+    PUBLIC
+        rsys
+        s2d
+        s3d
+        senc2d
+        senc3d
+        ssp
+        OpenMP::OpenMP_C
+    PRIVATE
+        ${MATH_LIBRARY}
+)
+
+if(SWF_AVAILABLE)
+    target_link_libraries(sdis PRIVATE swf)
+endif()
+
+# Windows-specific definitions
+if(MSVC)
+    target_compile_definitions(sdis PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        _WIN32_WINNT=0x0A00  # Windows 10
+        NOMINMAX             # Prevent min/max macro conflicts
+    )
+endif()
+
+################################################################################
+# Installation
+################################################################################
+
+include(GNUInstallDirs)
+
+install(TARGETS sdis
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# Generate and install package config file
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdisConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/sdisConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sdis
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/sdisConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/sdisConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/sdisConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sdis
+)
+
+################################################################################
+# Tests
+################################################################################
+
+if(SDIS_BUILD_TESTS)
+    enable_testing()
+    
+    # Test utility source (shared by all tests)
+    add_library(test_sdis_utils OBJECT src/test_sdis_utils.c)
+    target_include_directories(test_sdis_utils PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${RSYS_INCLUDE_DIR}
+        ${S2D_INCLUDE_DIR}
+        ${S3D_INCLUDE_DIR}
+        ${SENC2D_INCLUDE_DIR}
+        ${SENC3D_INCLUDE_DIR}
+        ${SSP_INCLUDE_DIR}
+    )
+    if(SWF_AVAILABLE)
+        target_include_directories(test_sdis_utils PRIVATE ${SWF_INCLUDE_DIR})
+    endif()
+    
+    # Regular tests (no additional dependencies beyond core libs)
+    set(SDIS_REGULAR_TESTS
+        test_sdis_camera
+        test_sdis_conducto_radiative
+        test_sdis_conducto_radiative_2d
+        test_sdis_contact_resistance
+        test_sdis_contact_resistance_2
+        test_sdis_convection
+        test_sdis_convection_non_uniform
+        test_sdis_data
+        test_sdis_enclosure_limit_conditions
+        test_sdis_flux
+        test_sdis_flux2
+        test_sdis_flux_with_h
+        test_sdis_interface
+        test_sdis_medium
+        test_sdis_picard
+        test_sdis_radiative_env
+        test_sdis_solve_probe
+        test_sdis_solve_probe_2d
+        test_sdis_solve_probe2_2d
+        test_sdis_solve_probe3_2d
+        test_sdis_source
+        test_sdis_transcient
+        test_sdis_unsteady
+        test_sdis_unsteady_1d
+        test_sdis_unsteady_analytic_profile_2d
+        test_sdis_unsteady_atm
+        test_sdis_volumic_power
+        test_sdis_volumic_power4
+    )
+    
+    # Long-running tests
+    set(SDIS_LONG_TESTS
+        test_sdis_volumic_power2
+        test_sdis_volumic_power2_2d
+        test_sdis_volumic_power3_2d
+    )
+    
+    # MPI tests (disabled for Windows migration)
+    # TEST_SRC_MPI from Makefile - skipped
+    
+    # Helper function for regular tests
+    function(add_sdis_test TEST_NAME)
+        add_executable(${TEST_NAME} src/${TEST_NAME}.c)
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${RSYS_INCLUDE_DIR}
+            ${S2D_INCLUDE_DIR}
+            ${S3D_INCLUDE_DIR}
+            ${SENC2D_INCLUDE_DIR}
+            ${SENC3D_INCLUDE_DIR}
+            ${SSP_INCLUDE_DIR}
+        )
+        if(SWF_AVAILABLE)
+            target_include_directories(${TEST_NAME} PRIVATE ${SWF_INCLUDE_DIR})
+        endif()
+        
+        target_link_libraries(${TEST_NAME} PRIVATE
+            test_sdis_utils
+            sdis
+            rsys
+            s2d
+            s3d
+            senc2d
+            senc3d
+            ssp
+            ${MATH_LIBRARY}
+        )
+        if(SWF_AVAILABLE)
+            target_link_libraries(${TEST_NAME} PRIVATE swf)
+        endif()
+        
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+        
+        set_tests_properties(${TEST_NAME} PROPERTIES
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:${TEST_NAME}>
+        )
+        
+        # Windows DLL copy
+        if(WIN32 AND BUILD_SHARED_LIBS)
+            # Copy all required DLLs
+            foreach(lib sdis rsys s2d s3d senc2d senc3d ssp)
+                add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        $<TARGET_FILE:${lib}>
+                        $<TARGET_FILE_DIR:${TEST_NAME}>
+                    COMMENT "Copying ${lib}.dll to ${TEST_NAME} directory"
+                )
+            endforeach()
+            
+            if(SWF_AVAILABLE)
+                add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        $<TARGET_FILE:swf>
+                        $<TARGET_FILE_DIR:${TEST_NAME}>
+                    COMMENT "Copying swf.dll to ${TEST_NAME} directory"
+                )
+            endif()
+            
+            # Copy embree4 and tbb12 DLLs (from s3d dependency)
+            set(EMBREE4_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../embree4")
+            file(GLOB EMBREE4_DLLS "${EMBREE4_ROOT}/bin/*.dll")
+            if(EMBREE4_DLLS)
+                foreach(dll ${EMBREE4_DLLS})
+                    add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            ${dll}
+                            $<TARGET_FILE_DIR:${TEST_NAME}>
+                        COMMENT "Copying embree DLL to ${TEST_NAME} directory"
+                    )
+                endforeach()
+            endif()
+        endif()
+    endfunction()
+    
+    # Add regular tests
+    foreach(test ${SDIS_REGULAR_TESTS})
+        add_sdis_test(${test})
+    endforeach()
+    
+    # Add long-running tests with timeout
+    foreach(test ${SDIS_LONG_TESTS})
+        add_sdis_test(${test})
+        set_tests_properties(${test} PROPERTIES TIMEOUT 600)
+    endforeach()
+    
+    # Tests requiring s2d (already included in regular tests)
+    # test_sdis_primkey_2d - already in REGULAR_TESTS
+    
+    # Tests requiring senc2d + senc3d (already included)
+    # test_sdis_scene - already in REGULAR_TESTS
+    
+    # Tests requiring s3dut (optional - to be added when s3dut migrated)
+    set(SDIS_S3DUT_TESTS
+        test_sdis_draw_external_flux
+        test_sdis_external_flux_with_diffuse_radiance
+        test_sdis_primkey
+        test_sdis_solid_random_walk_robustness
+        test_sdis_solve_probe3
+        test_sdis_unsteady_analytic_profile
+    )
+    
+    message(STATUS "Note: ${SDIS_S3DUT_TESTS} tests require s3dut (not yet migrated)")
+    message(STATUS "Note: MPI tests disabled for Windows migration")
+    
+    message(STATUS "Configured tests:")
+    message(STATUS "  - Regular tests: ${SDIS_REGULAR_TESTS}")
+    message(STATUS "  - Long tests: ${SDIS_LONG_TESTS}")
+    message(STATUS "  - Total enabled: ${CMAKE_CTEST_COMMAND}")
+endif()
+
+################################################################################
+# Summary
+################################################################################
+
+message(STATUS "")
+message(STATUS "========================================")
+message(STATUS "stardis-solver Configuration Summary")
+message(STATUS "========================================")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Shared libs: ${BUILD_SHARED_LIBS}")
+message(STATUS "C Standard: C${CMAKE_C_STANDARD}")
+message(STATUS "----------------------------------------")
+message(STATUS "Dependencies:")
+message(STATUS "  - rsys: ${RSYS_ROOT}")
+message(STATUS "  - star-2d: ${S2D_ROOT}")
+message(STATUS "  - star-3d: ${S3D_ROOT}")
+message(STATUS "  - star-enclosures-2d: ${SENC2D_ROOT}")
+message(STATUS "  - star-enclosures-3d: ${SENC3D_ROOT}")
+message(STATUS "  - star-sp: ${SSP_ROOT}")
+if(SWF_AVAILABLE)
+    message(STATUS "  - swf: ${SWF_ROOT}")
+else()
+    message(STATUS "  - swf: NOT FOUND (optional)")
+endif()
+message(STATUS "  - OpenMP: ${OpenMP_C_VERSION}")
+message(STATUS "----------------------------------------")
+message(STATUS "Tests: ${SDIS_BUILD_TESTS} (not yet implemented)")
+message(STATUS "MPI Support: DISABLED (Windows migration)")
+message(STATUS "========================================")
+message(STATUS "")

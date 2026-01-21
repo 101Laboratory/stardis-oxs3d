@@ -1,0 +1,403 @@
+# star-2d Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: star-2d - 2D Ray Tracing Library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-18
+
+cmake_minimum_required(VERSION 3.15)
+project(star-2d
+    VERSION 0.7.0
+    DESCRIPTION "star-2d: 2D ray tracing and geometric operations using Embree acceleration"
+    LANGUAGES C
+)
+
+# Inherit options from root CMakeLists.txt if exists
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+if(NOT DEFINED S2D_BUILD_TESTS)
+    option(S2D_BUILD_TESTS "Build tests" OFF)
+endif()
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - MSVC requires C99 minimum
+if(MSVC)
+    set(CMAKE_C_STANDARD 99)
+    add_compile_options(/TC)  # Compile as C code
+else()
+    set(CMAKE_C_STANDARD 99)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
+
+# Platform-specific Warning Flags
+set(WARNING_FLAGS "")
+set(HARDENING_FLAGS "")
+
+if(MSVC)
+    # MSVC warning flags (equivalent to GCC -Wall -Wextra)
+    set(WARNING_FLAGS
+        /W4          # Warning level 4
+        /wd4200      # Disable: non-standard extension: zero-sized array
+        /wd4204      # Disable: non-standard extension: non-constant aggregate initializer
+    )
+    
+    # MSVC security hardening
+    set(HARDENING_FLAGS
+        /GS          # Buffer security check
+        /guard:cf    # Control flow guard
+    )
+else()
+    # GCC/Clang warning flags (from config.mk WFLAGS)
+    set(WARNING_FLAGS
+        -Wall
+        -Wcast-align
+        -Wconversion
+        -Wextra
+        -Wmissing-declarations
+        -Wmissing-prototypes
+        -Wshadow
+        -pedantic
+    )
+    
+    # GCC/Clang hardening flags (from config.mk CFLAGS_HARDENED)
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2
+        -fcf-protection=full
+        -fstack-clash-protection
+        -fstack-protector-strong
+        -fvisibility=hidden
+        -fstrict-aliasing
+    )
+endif()
+
+# Apply warning and hardening flags
+add_compile_options(${WARNING_FLAGS})
+add_compile_options(${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od")
+    else()
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -DNDEBUG")
+    endif()
+endif()
+
+# Position Independent Code for shared libraries
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# Linker flags - Platform specific
+if(NOT WIN32 AND NOT MSVC)
+    # Unix/Linux linker hardening flags
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro,-z,now")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+
+# Find rsys (required)
+# Assuming rsys is built in ../rsys/0.15/ or provided via CMAKE_PREFIX_PATH
+# For #include <rsys/rsys.h> to work, we need the parent of src/ directory
+find_path(RSYS_SRC_DIR rsys.h
+    PATHS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../rsys/0.15/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15/src
+    NO_DEFAULT_PATH
+)
+
+if(RSYS_SRC_DIR)
+    # Get parent directory of src/ for #include <rsys/rsys.h>
+    get_filename_component(RSYS_ROOT_DIR "${RSYS_SRC_DIR}" DIRECTORY)
+    set(RSYS_INCLUDE_DIR "${RSYS_ROOT_DIR}")
+    message(STATUS "rsys root for includes: ${RSYS_ROOT_DIR}")
+endif()
+
+find_library(RSYS_LIBRARY_DEBUG
+    NAMES rsys
+    PATHS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../rsys/0.15/Debug
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15/Debug
+    NO_DEFAULT_PATH
+)
+
+find_library(RSYS_LIBRARY_RELEASE
+    NAMES rsys
+    PATHS
+        ${CMAKE_CURRENT_SOURCE_DIR}/../rsys/0.15/Release
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15/Release
+    NO_DEFAULT_PATH
+)
+
+# Use debug or release based on configuration
+if(RSYS_LIBRARY_DEBUG AND RSYS_LIBRARY_RELEASE)
+    set(RSYS_LIBRARY debug ${RSYS_LIBRARY_DEBUG} optimized ${RSYS_LIBRARY_RELEASE})
+elseif(RSYS_LIBRARY_DEBUG)
+    set(RSYS_LIBRARY ${RSYS_LIBRARY_DEBUG})
+elseif(RSYS_LIBRARY_RELEASE)
+    set(RSYS_LIBRARY ${RSYS_LIBRARY_RELEASE})
+endif()
+
+if(NOT RSYS_SRC_DIR OR NOT RSYS_LIBRARY)
+    message(FATAL_ERROR "rsys library not found. Please build rsys first or set CMAKE_PREFIX_PATH")
+endif()
+
+message(STATUS "Found rsys library: ${RSYS_LIBRARY}")
+message(STATUS "rsys include directory: ${RSYS_INCLUDE_DIR}")
+
+# Find embree4 (required)
+# User provided embree4 at embree4/ directory
+set(EMBREE4_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../embree4" CACHE PATH "embree4 root directory")
+
+find_path(EMBREE4_INCLUDE_DIR embree4/rtcore.h
+    PATHS ${EMBREE4_ROOT}/include
+    NO_DEFAULT_PATH
+)
+
+find_library(EMBREE4_LIBRARY
+    NAMES embree4
+    PATHS ${EMBREE4_ROOT}/lib
+    NO_DEFAULT_PATH
+)
+
+find_library(TBB12_LIBRARY
+    NAMES tbb12
+    PATHS ${EMBREE4_ROOT}/lib
+    NO_DEFAULT_PATH
+)
+
+if(NOT EMBREE4_INCLUDE_DIR OR NOT EMBREE4_LIBRARY)
+    message(FATAL_ERROR "embree4 not found at ${EMBREE4_ROOT}. Please check EMBREE4_ROOT path")
+endif()
+
+message(STATUS "Found embree4: ${EMBREE4_LIBRARY}")
+message(STATUS "Found tbb12: ${TBB12_LIBRARY}")
+message(STATUS "embree4 include: ${EMBREE4_INCLUDE_DIR}")
+
+# Math library (automatic on MSVC)
+if(NOT MSVC)
+    set(MATH_LIBRARY m)
+endif()
+
+# =============================================================================
+# Source Files (from Makefile SRC variable)
+# =============================================================================
+
+set(S2D_SOURCES
+    src/s2d_device.c
+    src/s2d_geometry.c
+    src/s2d_line_segments.c
+    src/s2d_primitive.c
+    src/s2d_scene.c
+    src/s2d_scene_view.c
+    src/s2d_scene_view_closest_point.c
+    src/s2d_shape.c
+)
+
+# Public header for installation
+set(S2D_PUBLIC_HEADER
+    src/s2d.h
+)
+
+# =============================================================================
+# Create Library
+# =============================================================================
+
+if(BUILD_SHARED_LIBS)
+    add_library(s2d SHARED ${S2D_SOURCES})
+    target_compile_definitions(s2d PRIVATE S2D_SHARED_BUILD)
+else()
+    add_library(s2d STATIC ${S2D_SOURCES})
+endif()
+
+# Library properties
+set_target_properties(s2d PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0.7
+    OUTPUT_NAME "s2d"
+    PUBLIC_HEADER "${S2D_PUBLIC_HEADER}"
+)
+
+# Include directories
+# Support both #include <s2d.h> and #include <star/s2d.h>
+target_include_directories(s2d
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>        # For #include <s2d.h>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>             # For #include <star/s2d.h> (via star->src symlink)
+        $<BUILD_INTERFACE:${RSYS_INCLUDE_DIR}>                     # For #include <rsys/rsys.h>
+        $<INSTALL_INTERFACE:include/star>
+    PRIVATE
+        ${EMBREE4_INCLUDE_DIR}
+)
+
+# Link libraries
+target_link_libraries(s2d
+    PUBLIC
+        rsys  # Link to CMake target to inherit PUBLIC includes
+    PRIVATE
+        ${EMBREE4_LIBRARY}
+        ${TBB12_LIBRARY}
+        ${MATH_LIBRARY}
+)
+
+# Windows-specific definitions
+if(MSVC)
+    target_compile_definitions(s2d PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        _WIN32_WINNT=0x0A00  # Windows 10
+        NOMINMAX             # Prevent min/max macro conflicts
+    )
+endif()
+
+# =============================================================================
+# Tests (from Makefile TEST_SRC variable)
+# =============================================================================
+
+if(S2D_BUILD_TESTS)
+    enable_testing()
+    
+    set(S2D_TEST_SOURCES
+        src/test_s2d_closest_point.c
+        src/test_s2d_device.c
+        src/test_s2d_primitive.c
+        src/test_s2d_raytrace.c
+        src/test_s2d_sample.c
+        src/test_s2d_shape.c
+        src/test_s2d_scene.c
+        src/test_s2d_scene_view.c
+        src/test_s2d_scene_view2.c
+        src/test_s2d_trace_ray.c
+        src/test_s2d_trace_ray_3d.c
+    )
+    
+    foreach(test_src ${S2D_TEST_SOURCES})
+        # Extract test name from filename
+        get_filename_component(test_name ${test_src} NAME_WE)
+        
+        # Create test executable
+        add_executable(${test_name} ${test_src})
+        
+        # Link against s2d library
+        target_link_libraries(${test_name}
+            PRIVATE
+                s2d
+                ${RSYS_LIBRARY}
+                ${EMBREE4_LIBRARY}
+                ${TBB12_LIBRARY}
+                ${MATH_LIBRARY}
+        )
+        
+        # Include directories for tests
+        target_include_directories(${test_name}
+            PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+                ${RSYS_INCLUDE_DIR}
+                ${EMBREE4_INCLUDE_DIR}
+        )
+        
+        # Add to CTest
+        add_test(NAME ${test_name} COMMAND ${test_name})
+        
+        # Set working directory to executable location (for DLL loading on Windows)
+        set_tests_properties(${test_name} PROPERTIES
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:${test_name}>
+        )
+    endforeach()
+    
+    # Copy DLLs to test directory on Windows
+    # Note: Do this after all tests are defined to avoid cyclic dependencies
+    if(WIN32 AND BUILD_SHARED_LIBS)
+        # Copy s2d.dll and dependencies to each test directory
+        foreach(test_src ${S2D_TEST_SOURCES})
+            get_filename_component(test_name ${test_src} NAME_WE)
+            
+            # Copy s2d DLL
+            add_custom_command(TARGET ${test_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:s2d>
+                    $<TARGET_FILE_DIR:${test_name}>
+                COMMENT "Copying s2d.dll to ${test_name} directory"
+            )
+            
+            # Copy rsys DLL (convert .lib path to .dll path)
+            get_filename_component(RSYS_DEBUG_DIR "${RSYS_LIBRARY_DEBUG}" DIRECTORY)
+            set(RSYS_DLL_DEBUG "${RSYS_DEBUG_DIR}/rsys.dll")
+            if(EXISTS "${RSYS_DLL_DEBUG}")
+                add_custom_command(TARGET ${test_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${RSYS_DLL_DEBUG}"
+                        $<TARGET_FILE_DIR:${test_name}>
+                    COMMENT "Copying rsys.dll to ${test_name} directory"
+                )
+            endif()
+            
+            get_filename_component(RSYS_RELEASE_DIR "${RSYS_LIBRARY_RELEASE}" DIRECTORY)
+            set(RSYS_DLL_RELEASE "${RSYS_RELEASE_DIR}/rsys.dll")
+            if(EXISTS "${RSYS_DLL_RELEASE}")
+                add_custom_command(TARGET ${test_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${RSYS_DLL_RELEASE}"
+                        $<TARGET_FILE_DIR:${test_name}>
+                    COMMENT "Copying rsys.dll to ${test_name} directory"
+                )
+            endif()
+            
+            # Copy embree4 and tbb12 DLLs if they exist
+            file(GLOB EMBREE4_DLLS "${EMBREE4_ROOT}/bin/*.dll")
+            if(EMBREE4_DLLS)
+                foreach(dll ${EMBREE4_DLLS})
+                    add_custom_command(TARGET ${test_name} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            ${dll}
+                            $<TARGET_FILE_DIR:${test_name}>
+                        COMMENT "Copying embree DLL to ${test_name} directory"
+                    )
+                endforeach()
+            endif()
+        endforeach()
+    endif()
+endif()
+
+# =============================================================================
+# Installation (optional)
+# =============================================================================
+
+install(TARGETS s2d
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    PUBLIC_HEADER DESTINATION include/star
+)
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+message(STATUS "")
+message(STATUS "star-2d Configuration Summary:")
+message(STATUS "  Version: ${PROJECT_VERSION}")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Library Type: ${BUILD_SHARED_LIBS}")
+message(STATUS "  Build Tests: ${S2D_BUILD_TESTS}")
+message(STATUS "  C Standard: ${CMAKE_C_STANDARD}")
+message(STATUS "  Dependencies:")
+message(STATUS "    - rsys: ${RSYS_LIBRARY}")
+message(STATUS "    - embree4: ${EMBREE4_LIBRARY}")
+message(STATUS "    - tbb12: ${TBB12_LIBRARY}")
+message(STATUS "")
