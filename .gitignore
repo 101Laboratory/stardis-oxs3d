@@ -10,6 +10,7 @@ install_manifest.txt
 CTestTestfile.cmake
 
 # ===== IDE =====
+**/.vs/
 **/.vscode/
 **/.idea/
 
