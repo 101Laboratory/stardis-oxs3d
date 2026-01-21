@@ -1,20 +1,18 @@
-.gitignore
-[Bb]uild*
-*.sw[po]
-*.[aod]
-*.so
-*~
-test*
-!test*.[ch]
-.config
-.config_test
-.test
-rng_state
-tags
-*.pc
-src/sdis_version.h
-*.vtk
-*.obj
-*backup
-*.bak
-*.backup
+# ===== build artifacts =====
+/build/
+/build-*/
+
+# ===== CMake =====
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+
+# ===== IDE =====
+**/.vscode/
+**/.idea/
+
+# ===== temp =====
+**/*~
+**/*.log
