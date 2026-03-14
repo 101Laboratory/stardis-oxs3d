@@ -307,6 +307,12 @@ struct s3d_batch_trace_context {
     FilterPerRayData*            h_filter_pinned; /* pinned host (filter H2D) */
     HitResult*                   h_hits_pinned;   /* pinned host (hits D2H)   */
 
+    /* === PCIe overlap instrumentation === */
+    cudaEvent_t  evt_h2d_begin;  /* timing: before uploadAsync  */
+    cudaEvent_t  evt_h2d_end;    /* timing: after uploadAsync   */
+    cudaEvent_t  evt_d2h_begin;  /* timing: before downloadAsync */
+    cudaEvent_t  evt_d2h_end;    /* timing: after downloadAsync  */
+
     s3d_batch_trace_context(size_t max)
         : max_rays(max)
         , compute_stream(nullptr)
@@ -325,6 +331,10 @@ struct s3d_batch_trace_context {
         , params_allocated(false)
         , h_filter_pinned(nullptr)
         , h_hits_pinned(nullptr)
+        , evt_h2d_begin(nullptr)
+        , evt_h2d_end(nullptr)
+        , evt_d2h_begin(nullptr)
+        , evt_d2h_end(nullptr)
     {
         d_rays.alloc(static_cast<unsigned int>(max));
         d_multi_hits.alloc(static_cast<unsigned int>(max));
@@ -339,6 +349,10 @@ struct s3d_batch_trace_context {
         CUDA_CHECK(cudaHostAlloc(&h_mhits_pinned,  max * sizeof(MultiHitResult),  cudaHostAllocDefault));
         CUDA_CHECK(cudaHostAlloc(&h_filter_pinned,  max * sizeof(FilterPerRayData), cudaHostAllocDefault));
         CUDA_CHECK(cudaHostAlloc(&h_hits_pinned,    max * sizeof(HitResult),        cudaHostAllocDefault));
+        CUDA_CHECK(cudaEventCreate(&evt_h2d_begin));
+        CUDA_CHECK(cudaEventCreate(&evt_h2d_end));
+        CUDA_CHECK(cudaEventCreate(&evt_d2h_begin));
+        CUDA_CHECK(cudaEventCreate(&evt_d2h_end));
     }
 
     ~s3d_batch_trace_context() {
@@ -353,6 +367,10 @@ struct s3d_batch_trace_context {
         if (evt_upload_done)  { cudaEventDestroy(evt_upload_done);  evt_upload_done  = nullptr; }
         if (evt_kernel_start) { cudaEventDestroy(evt_kernel_start); evt_kernel_start = nullptr; }
         if (evt_kernel_done)  { cudaEventDestroy(evt_kernel_done);  evt_kernel_done  = nullptr; }
+        if (evt_h2d_begin) { cudaEventDestroy(evt_h2d_begin); evt_h2d_begin = nullptr; }
+        if (evt_h2d_end)   { cudaEventDestroy(evt_h2d_end);   evt_h2d_end   = nullptr; }
+        if (evt_d2h_begin) { cudaEventDestroy(evt_d2h_begin); evt_d2h_begin = nullptr; }
+        if (evt_d2h_end)   { cudaEventDestroy(evt_d2h_end);   evt_d2h_end   = nullptr; }
         if (transfer_stream) { cudaStreamDestroy(transfer_stream); transfer_stream = nullptr; }
         if (compute_stream)  { cudaStreamDestroy(compute_stream);  compute_stream  = nullptr; }
     }

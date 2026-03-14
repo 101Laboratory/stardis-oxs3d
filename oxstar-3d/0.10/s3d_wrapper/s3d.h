@@ -482,6 +482,18 @@ S3D_API res_T s3d_scene_view_trace_rays_batch_ctx_filtered_sync_kernel(
 S3D_API float s3d_batch_trace_context_get_last_kernel_ms(
   struct s3d_batch_trace_context* ctx);
 
+/* PCIe overlap instrumentation: measure GPU-side D2H/H2D transfer timing
+ * between two batch_trace_contexts from different views.
+ * ctx_d2h = view that did start_d2h, ctx_h2d = view that did gpu_launch.
+ * All outputs in milliseconds. overlap_ms > 0 proves D2H/H2D overlap. */
+S3D_API void s3d_batch_trace_context_pcie_overlap_query(
+  struct s3d_batch_trace_context* ctx_d2h,
+  struct s3d_batch_trace_context* ctx_h2d,
+  float* out_d2h_ms,
+  float* out_h2d_ms,
+  float* out_d2h_to_h2d_offset_ms,
+  float* out_overlap_ms);
+
 /* L4: start filtered D2H (downloads HitResult, not MultiHitResult) */
 S3D_API res_T s3d_scene_view_trace_rays_batch_ctx_filtered_start_d2h(
   struct s3d_batch_trace_context* ctx, size_t nrays);

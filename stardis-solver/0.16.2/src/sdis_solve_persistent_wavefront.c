@@ -4984,6 +4984,7 @@ solve_camera_persistent_wavefront(
         const char* env_tl = getenv("STARDIS_PIPELINE_LOG");
         env_tl="2";
         if(env_tl && env_tl[0] == '2' && pool.total_steps % 1000 == 0) {
+          /* Relative durations (ms) */
           double syncKA   = time_elapsed_sec(&t_cy[0],  &t_cy[1])  * 1000.0;
           double startDA  = time_elapsed_sec(&t_cy[1],  &t_cy[2])  * 1000.0;
           double launchB  = time_elapsed_sec(&t_cy[2],  &t_cy[3])  * 1000.0;
@@ -4995,6 +4996,20 @@ solve_camera_persistent_wavefront(
           double waitDB   = time_elapsed_sec(&t_cy[8],  &t_cy[9])  * 1000.0;
           double cpuB     = time_elapsed_sec(&t_cy[9],  &t_cy[10]) * 1000.0;
           double cycle    = time_elapsed_sec(&t_cy[0],  &t_cy[10]) * 1000.0;
+          
+          /* Absolute timestamps from program start (ms) */
+          double t0  = time_elapsed_sec(&t_start, &t_cy[0])  * 1000.0;
+          double t1  = time_elapsed_sec(&t_start, &t_cy[1])  * 1000.0;
+          double t2  = time_elapsed_sec(&t_start, &t_cy[2])  * 1000.0;
+          double t3  = time_elapsed_sec(&t_start, &t_cy[3])  * 1000.0;
+          double t4  = time_elapsed_sec(&t_start, &t_cy[4])  * 1000.0;
+          double t5  = time_elapsed_sec(&t_start, &t_cy[5])  * 1000.0;
+          double t6  = time_elapsed_sec(&t_start, &t_cy[6])  * 1000.0;
+          double t7  = time_elapsed_sec(&t_start, &t_cy[7])  * 1000.0;
+          double t8  = time_elapsed_sec(&t_start, &t_cy[8])  * 1000.0;
+          double t9  = time_elapsed_sec(&t_start, &t_cy[9])  * 1000.0;
+          double t10 = time_elapsed_sec(&t_start, &t_cy[10]) * 1000.0;
+          
           log_info(scn->dev,
             "[TIMELINE] step=%llu "
             "|syncKA=%.2f|startDA=%.2f|launchB=%.2f|waitDA=%.2f|cpuA=%.2f"
@@ -5006,6 +5021,34 @@ solve_camera_persistent_wavefront(
             cycle,
             (unsigned long long)pv_a->ray_count,
             (unsigned long long)pv_b->ray_count);
+          
+          log_info(scn->dev,
+            "[TIMELINE_TS] step=%llu "
+            "|t0=%.2f|t1=%.2f|t2=%.2f|t3=%.2f|t4=%.2f|t5=%.2f"
+            "|t6=%.2f|t7=%.2f|t8=%.2f|t9=%.2f|t10=%.2f\n",
+            (unsigned long long)pool.total_steps,
+            t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
+
+          /* PCIe overlap proof: GPU-side transfer timing via CUDA events.
+           * Phase 1: startD2H(A) then launch(B) → D2H(A) vs H2D(B)
+           * Phase 2: startD2H(B) then launch(A) → D2H(B) vs H2D(A) */
+          {
+            float p1_d2h, p1_h2d, p1_offset, p1_overlap;
+            float p2_d2h, p2_h2d, p2_offset, p2_overlap;
+            s3d_batch_trace_context_pcie_overlap_query(
+              pv_a->batch_ctx, pv_b->batch_ctx,
+              &p1_d2h, &p1_h2d, &p1_offset, &p1_overlap);
+            s3d_batch_trace_context_pcie_overlap_query(
+              pv_b->batch_ctx, pv_a->batch_ctx,
+              &p2_d2h, &p2_h2d, &p2_offset, &p2_overlap);
+            log_info(scn->dev,
+              "[PCIE_OVERLAP] step=%llu "
+              "phase1(D2H_A→H2D_B): d2h=%.4f h2d=%.4f offset=%.4f overlap=%.4fms "
+              "phase2(D2H_B→H2D_A): d2h=%.4f h2d=%.4f offset=%.4f overlap=%.4fms\n",
+              (unsigned long long)pool.total_steps,
+              p1_d2h, p1_h2d, p1_offset, p1_overlap,
+              p2_d2h, p2_h2d, p2_offset, p2_overlap);
+          }
         }
       }
 

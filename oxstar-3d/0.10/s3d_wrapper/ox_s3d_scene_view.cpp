@@ -2622,10 +2622,12 @@ static res_T batch_trace_filtered_pinned_async_impl(
 
     /* H2D uploads on transfer_stream */
     unsigned int count = static_cast<unsigned int>(nrays);
+    CUDA_CHECK(cudaEventRecord(ctx->evt_h2d_begin, ctx->transfer_stream));
     ctx->d_rays.uploadAsync(ctx->h_rays_pinned, count, ctx->transfer_stream);
     ctx->d_filter_data.uploadAsync(
         reinterpret_cast<FilterPerRayData*>(ctx->h_filter_pinned),
         count, ctx->transfer_stream);
+    CUDA_CHECK(cudaEventRecord(ctx->evt_h2d_end, ctx->transfer_stream));
     CUDA_CHECK(cudaEventRecord(ctx->evt_upload_done, ctx->transfer_stream));
     CUDA_CHECK(cudaStreamWaitEvent(ctx->compute_stream, ctx->evt_upload_done, 0));
 
@@ -2694,9 +2696,11 @@ static res_T batch_trace_filtered_start_d2h_impl(
 {
     if (nrays == 0) { ctx->d2h_pending = false; return RES_OK; }
     unsigned int count = static_cast<unsigned int>(nrays);
+    CUDA_CHECK(cudaEventRecord(ctx->evt_d2h_begin, ctx->transfer_stream));
     ctx->d_hits_filtered.downloadAsync(
         reinterpret_cast<HitResult*>(ctx->h_hits_pinned),
         count, ctx->transfer_stream);
+    CUDA_CHECK(cudaEventRecord(ctx->evt_d2h_end, ctx->transfer_stream));
     ctx->d2h_pending = true;
     return RES_OK;
 }
@@ -2907,6 +2911,57 @@ float s3d_batch_trace_context_get_last_kernel_ms(
 {
     if (!ctx) return 0.0f;
     return ctx->last_kernel_ms;
+}
+
+/* PCIe overlap instrumentation: measure GPU-side transfer timing between
+ * two batch_trace_contexts from different views.
+ * ctx_d2h = the view that did start_d2h (D2H transfer)
+ * ctx_h2d = the view that did H2D upload (gpu_launch_all)
+ * All outputs are in milliseconds. overlap_ms > 0 means proven overlap. */
+void s3d_batch_trace_context_pcie_overlap_query(
+    s3d_batch_trace_context* ctx_d2h,
+    s3d_batch_trace_context* ctx_h2d,
+    float* out_d2h_ms,
+    float* out_h2d_ms,
+    float* out_d2h_to_h2d_offset_ms,
+    float* out_overlap_ms)
+{
+    float d2h_dur = 0.0f, h2d_dur = 0.0f, offset = 0.0f;
+    if (ctx_d2h && ctx_d2h->evt_d2h_begin && ctx_d2h->evt_d2h_end)
+        cudaEventElapsedTime(&d2h_dur, ctx_d2h->evt_d2h_begin, ctx_d2h->evt_d2h_end);
+    if (ctx_h2d && ctx_h2d->evt_h2d_begin && ctx_h2d->evt_h2d_end)
+        cudaEventElapsedTime(&h2d_dur, ctx_h2d->evt_h2d_begin, ctx_h2d->evt_h2d_end);
+    /* Cross-stream: time from D2H start to H2D start (positive = H2D started later) */
+    if (ctx_d2h && ctx_h2d && ctx_d2h->evt_d2h_begin && ctx_h2d->evt_h2d_begin)
+        cudaEventElapsedTime(&offset, ctx_d2h->evt_d2h_begin, ctx_h2d->evt_h2d_begin);
+
+    float overlap = 0.0f;
+    if (offset >= 0.0f && offset < d2h_dur) {
+        /* H2D started while D2H was still running */
+        float h2d_end_from_d2h_start = offset + h2d_dur;
+        float d2h_end_from_d2h_start = d2h_dur;
+        float later_start = offset;  /* H2D start relative to D2H start */
+        float earlier_end = (h2d_end_from_d2h_start < d2h_end_from_d2h_start)
+                          ? h2d_end_from_d2h_start : d2h_end_from_d2h_start;
+        overlap = earlier_end - later_start;
+        if (overlap < 0.0f) overlap = 0.0f;
+    } else if (offset < 0.0f) {
+        /* H2D started before D2H — check if D2H starts within H2D window */
+        float h2d_end_from_h2d_start = h2d_dur;
+        float d2h_start_from_h2d_start = -offset;
+        if (d2h_start_from_h2d_start < h2d_end_from_h2d_start) {
+            float d2h_end_from_h2d_start = d2h_start_from_h2d_start + d2h_dur;
+            float earlier_end2 = (d2h_end_from_h2d_start < h2d_end_from_h2d_start)
+                               ? d2h_end_from_h2d_start : h2d_end_from_h2d_start;
+            overlap = earlier_end2 - d2h_start_from_h2d_start;
+            if (overlap < 0.0f) overlap = 0.0f;
+        }
+    }
+
+    if (out_d2h_ms)              *out_d2h_ms = d2h_dur;
+    if (out_h2d_ms)              *out_h2d_ms = h2d_dur;
+    if (out_d2h_to_h2d_offset_ms) *out_d2h_to_h2d_offset_ms = offset;
+    if (out_overlap_ms)          *out_overlap_ms = overlap;
 }
 
 /* Plan E: public API for pinned buffer access */
