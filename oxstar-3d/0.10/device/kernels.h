@@ -62,3 +62,46 @@ void countHitsDevice(
     unsigned int*    d_count,
     cudaStream_t     stream = 0
 );
+
+/*
+ * GPU postprocess: in-place UV/normal fixup on HitResult.
+ * Overwrites bary_u/bary_v/normal fields with final s3d values:
+ *   - Sphere: spherical UV from normal (atan2/acos)
+ *   - Mesh: UV swap (bary → w,u) + clamp, normal negation (CCW→CW)
+ * D2H transfers the same 40B HitResult — no extra buffer needed.
+ *
+ * @param d_hits       HitResult buffer from OptiX (device, modified in-place)
+ * @param d_pp_table   Per-geometry postprocess entries (device)
+ * @param pp_table_sz  Number of entries in pp_table
+ * @param count        Number of rays
+ * @param stream       CUDA stream
+ */
+void postprocessHitsInPlaceDevice(
+    HitResult*        d_hits,
+    const GpuPpEntry* d_pp_table,
+    unsigned int      pp_table_sz,
+    unsigned int      count,
+    cudaStream_t      stream = 0
+);
+
+/*
+ * Plan-D GPU postprocess: HitResult + GpuPpEntry → GpuS3dHit (56B).
+ * Reads OptiX HitResult, performs UV/normal transform, fills all
+ * s3d_hit-compatible fields.  Output is D2H'd directly to pinned
+ * memory and consumed by merged_pass with zero CPU postprocess.
+ *
+ * @param d_hits       HitResult buffer from OptiX (device, read-only)
+ * @param d_pp_table   Per-geometry postprocess entries (device)
+ * @param d_out        GpuS3dHit output buffer (device, 56B/ray)
+ * @param pp_table_sz  Number of entries in pp_table
+ * @param count        Number of rays
+ * @param stream       CUDA stream
+ */
+void postprocessToS3dHitDevice(
+    const HitResult*  d_hits,
+    const GpuPpEntry* d_pp_table,
+    GpuS3dHit*        d_out,
+    unsigned int      pp_table_sz,
+    unsigned int      count,
+    cudaStream_t      stream = 0
+);

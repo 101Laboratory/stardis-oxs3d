@@ -50,7 +50,7 @@ endif()
 # ====================================================================
 # 4. 第三方依赖注册（工程级唯一位置）
 # ====================================================================
-# 注意：ThirdPartyRegistry.cmake 已处理 Embree、cuBQL、Random、MPI
+# 注意：ThirdPartyRegistry.cmake 已处理 Embree、Random、MPI
 # 如需添加其他第三方库，在此注册
 
 # 示例：Embree（如果已解压到 third_party/embree）

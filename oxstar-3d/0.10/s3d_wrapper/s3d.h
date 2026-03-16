@@ -504,7 +504,8 @@ S3D_API void s3d_batch_trace_context_get_pinned_buffers(
   struct s3d_batch_trace_context* ctx,
   struct s3d_ray_pinned**       out_rays,
   struct s3d_filter_per_ray**   out_filter,
-  size_t*                        out_capacity);
+  size_t*                        out_capacity,
+  struct s3d_hit**               out_hits);
 
 /* Launch GPU trace directly from pinned buffers (no AoS→SoA copy).
  * Caller must have written ray/filter data into the pinned buffers

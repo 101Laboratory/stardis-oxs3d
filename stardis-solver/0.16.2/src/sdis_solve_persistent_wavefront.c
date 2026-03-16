@@ -228,14 +228,15 @@ pool_view_init(struct pool_view* pv, size_t base, size_t view_size,
     max_rays, sizeof(struct s3d_ray_request));
   pv->ray_to_slot  = (uint32_t*)calloc(max_rays, sizeof(uint32_t));
   pv->ray_slot_sub = (uint32_t*)calloc(max_rays, sizeof(uint32_t));
-  pv->ray_hits     = (struct s3d_hit*)calloc(max_rays, sizeof(struct s3d_hit));
+  /* ray_hits will be borrowed from batch_ctx pinned memory (Plan D) */
+  pv->ray_hits     = NULL;
 
   /* L4: GPU inline filter per-ray data */
   pv->filter_per_ray = (struct s3d_filter_per_ray*)calloc(
     max_rays, sizeof(struct s3d_filter_per_ray));
 
   if(!pv->ray_requests || !pv->ray_to_slot
-  || !pv->ray_slot_sub || !pv->ray_hits || !pv->filter_per_ray)
+  || !pv->ray_slot_sub || !pv->filter_per_ray)
     return RES_MEM_ERR;
 
   /* GPU batch trace context (will hold independent CUDA stream + params) */
@@ -244,9 +245,11 @@ pool_view_init(struct pool_view* pv, size_t base, size_t view_size,
     if(rc != RES_OK) return rc;
   }
 
-  /* Plan E: Borrow pinned buffer pointers from batch_ctx for direct-write */
+  /* Plan E+D: Borrow pinned buffer pointers from batch_ctx.
+   * ray_hits points directly into GPU-filled pinned memory (zero-copy). */
   s3d_batch_trace_context_get_pinned_buffers(
-    pv->batch_ctx, &pv->ray_pinned, &pv->filter_pinned, NULL);
+    pv->batch_ctx, &pv->ray_pinned, &pv->filter_pinned, NULL,
+    &pv->ray_hits);
 
   /* enc_locate buffers */
   pv->max_enc_locates     = capacity;
@@ -302,7 +305,8 @@ pool_view_destroy(struct pool_view* pv)
   free(pv->ray_requests);
   free(pv->ray_to_slot);
   free(pv->ray_slot_sub);
-  free(pv->ray_hits);
+  /* ray_hits is borrowed from batch_ctx pinned memory — do NOT free */
+  pv->ray_hits = NULL;
   free(pv->filter_per_ray);
 
   if(pv->batch_ctx) s3d_batch_trace_context_destroy(pv->batch_ctx);
@@ -4454,6 +4458,9 @@ pool_run_dual(struct wavefront_pool* pool,
     pool->time_submit_s += time_elapsed_sec(&t_sub0, &t_sub1);
   }
 
+  /* Timeline CPU base for aligning with GPU [TIMELINE] prints */
+  double tl_cpu_base_ms = 0.0;
+
   while(pool->active_count > 0 || pool->task_next < pool->task_count) {
     struct time t_pl0, t_pl1, t_hk0, t_hk1;
     struct time t_cy[6];
@@ -4498,6 +4505,32 @@ pool_run_dual(struct wavefront_pool* pool,
     time_current(&t_pl1);
     pool->time_pipeline_cpu_between_s += time_elapsed_sec(&t_pl0, &t_pl1);
 
+    /* CPU timeline dump — aligned with GPU [TIMELINE] warmup/dump window.
+     * total_steps was just incremented; the GPU tl_counter for this
+     * half-cycle is (total_steps - 1). */
+    {
+      static const size_t TL_WARMUP = 50000;
+      static const size_t TL_DUMP   = 6;
+      size_t seq = pool->total_steps - 1;
+      if(seq == TL_WARMUP) {
+        struct time tnow; time_current(&tnow);
+        tl_cpu_base_ms = (double)tnow.sec * 1e3 + (double)tnow.nsec * 1e-6;
+      }
+      if(seq >= TL_WARMUP && seq < TL_WARMUP + TL_DUMP) {
+        double wall_ms = (double)t_pl0.sec * 1e3 + (double)t_pl0.nsec * 1e-6
+                       - tl_cpu_base_ms;
+        double merge_ms = time_elapsed_sec(&t_pl0, &t_pl1) * 1e3;
+        double wait_ms = time_elapsed_sec(&t_cy[0], &t_pl0) * 1e3;
+        fprintf(stderr,
+            "[TIMELINE CPU %llu] view=A  wait=%.3f  merge+compact=%.3f  "
+            "cpu_start=%.3f  cpu_end=%.3f ms\n",
+            (unsigned long long)(seq - TL_WARMUP),
+            wait_ms, merge_ms,
+            wall_ms,
+            wall_ms + merge_ms);
+      }
+    }
+
     /* O13: async submit(A) — fires on background thread.
      * The submit thread runs gpu_submit_all(A) concurrently with
      * Half-B's entire CPU pipeline below (~40s to hide 12.8s submit). */
@@ -4517,6 +4550,7 @@ pool_run_dual(struct wavefront_pool* pool,
     }
 
     /* ════════ Half-B: wait D2H(B) → CPU on B → async submit(B) ════════ */
+    time_current(&t_cy[2]);  /* mark Half-B start for timeline */
 
     /* Ensure B's submit from the PREVIOUS cycle completed.
      * First iter: evt_done[1] starts signaled → instant.
@@ -4554,6 +4588,26 @@ pool_run_dual(struct wavefront_pool* pool,
     time_current(&t_pl1);
     pool->time_pipeline_cpu_between_s += time_elapsed_sec(&t_pl0, &t_pl1);
     t_cy[4] = t_pl1;
+
+    /* CPU timeline dump — Half-B */
+    {
+      static const size_t TL_WARMUP = 50000;
+      static const size_t TL_DUMP   = 6;
+      size_t seq = pool->total_steps - 1;
+      if(seq >= TL_WARMUP && seq < TL_WARMUP + TL_DUMP) {
+        double wall_ms = (double)t_pl0.sec * 1e3 + (double)t_pl0.nsec * 1e-6
+                       - tl_cpu_base_ms;
+        double merge_ms = time_elapsed_sec(&t_pl0, &t_pl1) * 1e3;
+        double wait_ms = time_elapsed_sec(&t_cy[2], &t_pl0) * 1e3;
+        fprintf(stderr,
+            "[TIMELINE CPU %llu] view=B  wait=%.3f  merge+compact=%.3f  "
+            "cpu_start=%.3f  cpu_end=%.3f ms\n",
+            (unsigned long long)(seq - TL_WARMUP),
+            wait_ms, merge_ms,
+            wall_ms,
+            wall_ms + merge_ms);
+      }
+    }
 
     /* O13: async submit(B) */
 #ifdef SDIS_DEBUG_CHECKS

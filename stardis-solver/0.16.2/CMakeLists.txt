@@ -449,7 +449,7 @@ if(ENABLE_TESTS)
         deploy_runtime_dependencies(test_sdis_b4_e2e)
         deploy_runtime_dependencies(test_sdis_b4_integration)
         deploy_runtime_dependencies(test_sdis_wavefront_benchmark)
-        deploy_runtime_dependencies(test_sdis_dispatch_soa)
+        # deploy_runtime_dependencies(test_sdis_dispatch_soa)  # target not yet defined
         foreach(p0test ${WF_P0_TESTS})
             deploy_runtime_dependencies(${p0test})
         endforeach()

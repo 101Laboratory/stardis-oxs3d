@@ -224,6 +224,10 @@ struct s3d_scene_view {
     };
     std::vector<pp_entry> pp_table;
 
+    /* GPU-resident postprocess table: mirrors pp_table for device-side
+     * HitResult → s3d_hit conversion.  Rebuilt on every scene-view build. */
+    CudaBuffer<GpuPpEntry> d_pp_table;
+
     /* Persistent retrace GPU buffers (grow-only, avoid per-call alloc).
      * Must be members (not static) so they are freed while CUDA context
      * is still alive — static locals outlive the device and crash on
@@ -305,7 +309,18 @@ struct s3d_batch_trace_context {
     CudaBuffer<FilterPerRayData> d_filter_data;  /* per-ray filter input     */
     CudaBuffer<HitResult>        d_hits_filtered; /* single-hit output        */
     FilterPerRayData*            h_filter_pinned; /* pinned host (filter H2D) */
-    HitResult*                   h_hits_pinned;   /* pinned host (hits D2H)   */
+
+    /* === Plan-D: GPU PP outputs s3d_hit directly === */
+    CudaBuffer<GpuS3dHit>        d_s3d_hits;     /* PP kernel output (56B)   */
+    GpuS3dHit*                   h_s3d_hits_pinned; /* pinned host (D2H dest) */
+
+    /* === GPU-side transfer timing (CUDA events on transfer_stream) === */
+    cudaEvent_t evt_h2d_start;   /* before first H2D upload              */
+    cudaEvent_t evt_d2h_start;   /* before D2H download                  */
+    cudaEvent_t evt_d2h_done;    /* after D2H download                   */
+    double      h2d_ms_sum;      /* accumulated H2D elapsed (ms)         */
+    double      d2h_ms_sum;      /* accumulated D2H elapsed (ms)         */
+    size_t      xfer_sample_count; /* number of samples                  */
 
     s3d_batch_trace_context(size_t max)
         : max_rays(max)
@@ -324,24 +339,43 @@ struct s3d_batch_trace_context {
         , params_ptr(0)
         , params_allocated(false)
         , h_filter_pinned(nullptr)
-        , h_hits_pinned(nullptr)
+        , h_s3d_hits_pinned(nullptr)
+        , evt_h2d_start(nullptr)
+        , evt_d2h_start(nullptr)
+        , evt_d2h_done(nullptr)
+        , h2d_ms_sum(0.0)
+        , d2h_ms_sum(0.0)
+        , xfer_sample_count(0)
     {
         d_rays.alloc(static_cast<unsigned int>(max));
         d_multi_hits.alloc(static_cast<unsigned int>(max));
         d_filter_data.alloc(static_cast<unsigned int>(max));
         d_hits_filtered.alloc(static_cast<unsigned int>(max));
+        d_s3d_hits.alloc(static_cast<unsigned int>(max));
         CUDA_CHECK(cudaStreamCreate(&compute_stream));
         CUDA_CHECK(cudaStreamCreate(&transfer_stream));
-        CUDA_CHECK(cudaEventCreateWithFlags(&evt_upload_done, cudaEventDisableTiming));
+        CUDA_CHECK(cudaEventCreateWithFlags(&evt_upload_done, 0)); /* timing-enabled for XFER instrumentation */
         CUDA_CHECK(cudaEventCreate(&evt_kernel_start));
         CUDA_CHECK(cudaEventCreate(&evt_kernel_done));
         CUDA_CHECK(cudaHostAlloc(&h_rays_pinned,   max * sizeof(Ray),             cudaHostAllocDefault));
         CUDA_CHECK(cudaHostAlloc(&h_mhits_pinned,  max * sizeof(MultiHitResult),  cudaHostAllocDefault));
         CUDA_CHECK(cudaHostAlloc(&h_filter_pinned,  max * sizeof(FilterPerRayData), cudaHostAllocDefault));
-        CUDA_CHECK(cudaHostAlloc(&h_hits_pinned,    max * sizeof(HitResult),        cudaHostAllocDefault));
+        CUDA_CHECK(cudaHostAlloc(&h_s3d_hits_pinned, max * sizeof(GpuS3dHit),        cudaHostAllocDefault));
+        CUDA_CHECK(cudaEventCreate(&evt_h2d_start));
+        CUDA_CHECK(cudaEventCreate(&evt_d2h_start));
+        CUDA_CHECK(cudaEventCreate(&evt_d2h_done));
     }
 
     ~s3d_batch_trace_context() {
+        if (xfer_sample_count > 0) {
+            fprintf(stderr, "[XFER FINAL] samples=%llu  H2D_total=%.1f s  D2H_total=%.1f s  "
+                    "H2D_avg=%.3f ms  D2H_avg=%.3f ms\n",
+                    (unsigned long long)xfer_sample_count,
+                    h2d_ms_sum * 1e-3,
+                    d2h_ms_sum * 1e-3,
+                    h2d_ms_sum / xfer_sample_count,
+                    d2h_ms_sum / xfer_sample_count);
+        }
         if (params_ptr) {
             cudaFree(reinterpret_cast<void*>(params_ptr));
             params_ptr = 0;
@@ -349,7 +383,10 @@ struct s3d_batch_trace_context {
         if (h_rays_pinned)   { cudaFreeHost(h_rays_pinned);   h_rays_pinned   = nullptr; }
         if (h_mhits_pinned)  { cudaFreeHost(h_mhits_pinned);  h_mhits_pinned  = nullptr; }
         if (h_filter_pinned) { cudaFreeHost(h_filter_pinned);  h_filter_pinned = nullptr; }
-        if (h_hits_pinned)   { cudaFreeHost(h_hits_pinned);    h_hits_pinned   = nullptr; }
+        if (h_s3d_hits_pinned) { cudaFreeHost(h_s3d_hits_pinned); h_s3d_hits_pinned = nullptr; }
+        if (evt_h2d_start)    { cudaEventDestroy(evt_h2d_start);  evt_h2d_start  = nullptr; }
+        if (evt_d2h_start)    { cudaEventDestroy(evt_d2h_start);  evt_d2h_start  = nullptr; }
+        if (evt_d2h_done)     { cudaEventDestroy(evt_d2h_done);   evt_d2h_done   = nullptr; }
         if (evt_upload_done)  { cudaEventDestroy(evt_upload_done);  evt_upload_done  = nullptr; }
         if (evt_kernel_start) { cudaEventDestroy(evt_kernel_start); evt_kernel_start = nullptr; }
         if (evt_kernel_done)  { cudaEventDestroy(evt_kernel_done);  evt_kernel_done  = nullptr; }

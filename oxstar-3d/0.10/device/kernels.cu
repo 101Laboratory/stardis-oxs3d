@@ -177,3 +177,158 @@ void countHitsDevice(
     const int gridSize  = (count + blockSize - 1) / blockSize;
     countHitsKernel<<<gridSize, blockSize, 0, stream>>>(d_hits, count, d_count);
 }
+
+/* ---- GPU Postprocess: in-place UV/normal fixup on HitResult ---- */
+
+#define GPU_PP_PI 3.14159265358979323846f
+
+__global__ void postprocessHitsInPlaceKernel(
+    HitResult*        __restrict__ hits,
+    const GpuPpEntry* __restrict__ pp_table,
+    unsigned int pp_table_sz,
+    unsigned int count)
+{
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= count) return;
+
+    HitResult& hr = hits[idx];
+    if (hr.t < 0.0f) return;  /* miss — leave as-is */
+
+    /* Lookup pp_table entry (L2-cached, small table) */
+    unsigned char shape_type = 0;
+    unsigned char flip_surface = 0;
+    if (hr.geom_id < pp_table_sz) {
+        GpuPpEntry e = pp_table[hr.geom_id];
+        shape_type   = e.shape_type;
+        flip_surface = e.flip_surface;
+    }
+
+    if (shape_type == 1) {
+        /* SPHERE: compute spherical UV from normal, store in bary_u/bary_v.
+         * Normal is preserved (already correct from device program). */
+        float nx = hr.normal[0], ny = hr.normal[1], nz = hr.normal[2];
+        if (flip_surface) { nx = -nx; ny = -ny; nz = -nz; }
+        float len = sqrtf(nx * nx + ny * ny + nz * nz);
+        if (len > 0.0f) { nx /= len; ny /= len; nz /= len; }
+        nz = fminf(fmaxf(nz, -1.0f), 1.0f);
+        float theta = acosf(nz);
+        float phi   = atan2f(ny, nx);
+        if (phi < 0.0f) phi += 2.0f * GPU_PP_PI;
+        hr.bary_u = theta / GPU_PP_PI;
+        hr.bary_v = phi   / (2.0f * GPU_PP_PI);
+    } else {
+        /* MESH: UV swap (bary → w,u) + clamp; normal negation (CCW→CW) */
+        float u = hr.bary_u;
+        float w = 1.0f - hr.bary_u - hr.bary_v;
+        hr.bary_u = fminf(fmaxf(w, 0.0f), 1.0f);
+        hr.bary_v = fminf(fmaxf(u, 0.0f), 1.0f);
+        hr.normal[0] = -hr.normal[0];
+        hr.normal[1] = -hr.normal[1];
+        hr.normal[2] = -hr.normal[2];
+    }
+}
+
+void postprocessHitsInPlaceDevice(
+    HitResult*        d_hits,
+    const GpuPpEntry* d_pp_table,
+    unsigned int      pp_table_sz,
+    unsigned int      count,
+    cudaStream_t      stream)
+{
+    if (count == 0) return;
+    const int blockSize = 256;
+    const int gridSize  = (count + blockSize - 1) / blockSize;
+    postprocessHitsInPlaceKernel<<<gridSize, blockSize, 0, stream>>>(
+        d_hits, d_pp_table, pp_table_sz, count);
+}
+
+/* ---- Plan-D: HitResult + GpuPpEntry → GpuS3dHit (56B) kernel ---- */
+__global__ void postprocessToS3dHitKernel(
+    const HitResult*  __restrict__ hits,
+    const GpuPpEntry* __restrict__ pp_table,
+    GpuS3dHit*        __restrict__ out,
+    unsigned int pp_table_sz,
+    unsigned int count)
+{
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= count) return;
+
+    const HitResult& hr = hits[idx];
+    GpuS3dHit& o = out[idx];
+
+    if (hr.t < 0.0f) {
+        /* Miss → S3D_HIT_NULL sentinel (distance = FLT_MAX, IDs = 0xFFFFFFFF) */
+        o.prim_id       = 0xFFFFFFFFu;
+        o.geom_id       = 0xFFFFFFFFu;
+        o.inst_id       = 0xFFFFFFFFu;
+        o.scene_prim_id = 0xFFFFFFFFu;
+        o.shape_ptr     = 0;
+        o.inst_ptr      = 0;
+        o.normal[0] = 0.0f; o.normal[1] = 0.0f; o.normal[2] = 0.0f;
+        o.uv[0]     = 0.0f; o.uv[1]     = 0.0f;
+        o.distance  = 3.402823466e+38f;  /* FLT_MAX */
+        return;
+    }
+
+    /* pp_table lookup (L2-cached, small table) */
+    unsigned int shape_id   = 0;
+    unsigned int pp_inst_id = 0xFFFFFFFFu;
+    unsigned char shape_type   = 0;
+    unsigned char flip_surface = 0;
+    if (hr.geom_id < pp_table_sz) {
+        GpuPpEntry e = pp_table[hr.geom_id];
+        shape_id     = e.shape_id;
+        pp_inst_id   = e.inst_id;
+        shape_type   = e.shape_type;
+        flip_surface = e.flip_surface;
+    }
+
+    /* Primitive fields */
+    o.prim_id       = hr.prim_idx;
+    o.geom_id       = shape_id;
+    o.inst_id       = pp_inst_id;
+    o.scene_prim_id = hr.prim_idx;
+    o.shape_ptr     = 0;
+    o.inst_ptr      = 0;
+    o.distance      = hr.t;
+
+    /* UV / normal transform (same logic as in-place kernel) */
+    if (shape_type == 1) {
+        float nx = hr.normal[0], ny = hr.normal[1], nz = hr.normal[2];
+        if (flip_surface) { nx = -nx; ny = -ny; nz = -nz; }
+        float len = sqrtf(nx * nx + ny * ny + nz * nz);
+        if (len > 0.0f) { nx /= len; ny /= len; nz /= len; }
+        nz = fminf(fmaxf(nz, -1.0f), 1.0f);
+        float theta = acosf(nz);
+        float phi   = atan2f(ny, nx);
+        if (phi < 0.0f) phi += 2.0f * GPU_PP_PI;
+        o.uv[0]     = theta / GPU_PP_PI;
+        o.uv[1]     = phi   / (2.0f * GPU_PP_PI);
+        o.normal[0] = hr.normal[0];
+        o.normal[1] = hr.normal[1];
+        o.normal[2] = hr.normal[2];
+    } else {
+        float u = hr.bary_u;
+        float w = 1.0f - hr.bary_u - hr.bary_v;
+        o.uv[0]     = fminf(fmaxf(w, 0.0f), 1.0f);
+        o.uv[1]     = fminf(fmaxf(u, 0.0f), 1.0f);
+        o.normal[0] = -hr.normal[0];
+        o.normal[1] = -hr.normal[1];
+        o.normal[2] = -hr.normal[2];
+    }
+}
+
+void postprocessToS3dHitDevice(
+    const HitResult*  d_hits,
+    const GpuPpEntry* d_pp_table,
+    GpuS3dHit*        d_out,
+    unsigned int      pp_table_sz,
+    unsigned int      count,
+    cudaStream_t      stream)
+{
+    if (count == 0) return;
+    const int blockSize = 256;
+    const int gridSize  = (count + blockSize - 1) / blockSize;
+    postprocessToS3dHitKernel<<<gridSize, blockSize, 0, stream>>>(
+        d_hits, d_pp_table, d_out, pp_table_sz, count);
+}

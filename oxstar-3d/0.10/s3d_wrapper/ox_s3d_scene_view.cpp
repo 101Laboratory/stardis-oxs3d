@@ -18,6 +18,7 @@
 
 #include "ox_s3d_internal.h"
 #include "../include/unified_params.h"  /* P1: sizeof(UnifiedParams) for per-ctx params alloc */
+#include "../device/kernels.h"           /* GPU postprocess kernel */
 #include <chrono>
 #include <cstdlib>   /* getenv, atoi — OMP env-var checks */
 #ifdef _OPENMP
@@ -616,6 +617,24 @@ static res_T rebuild_tracer(s3d_scene_view* sv) {
                 }
             }
             e.flip_surface = e.shape ? e.shape->flip_surface : false;
+        }
+    }
+
+    /* Upload GPU postprocess table (mirrors pp_table for device-side conversion) */
+    {
+        const size_t n = sv->pp_table.size();
+        if (n > 0) {
+            std::vector<GpuPpEntry> gpu_pp(n);
+            for (size_t i = 0; i < n; i++) {
+                const auto& src = sv->pp_table[i];
+                GpuPpEntry& dst = gpu_pp[i];
+                dst.shape_id     = src.shape_id;
+                dst.inst_id      = src.inst ? src.inst->id : 0xFFFFFFFFu;
+                dst.shape_type   = (src.shape && src.shape->type == OX_SHAPE_SPHERE) ? 1 : 0;
+                dst.flip_surface = src.flip_surface ? 1 : 0;
+                dst.pad[0] = dst.pad[1] = 0;
+            }
+            sv->d_pp_table.upload(gpu_pp.data(), n);
         }
     }
 
@@ -2574,6 +2593,7 @@ static res_T batch_trace_filtered_async_impl(
 
     /* H2D uploads on transfer_stream */
     unsigned int count = static_cast<unsigned int>(nrays);
+    CUDA_CHECK(cudaEventRecord(ctx->evt_h2d_start, ctx->transfer_stream));
     ctx->d_rays.uploadAsync(ctx->h_rays_pinned, count, ctx->transfer_stream);
     ctx->d_filter_data.uploadAsync(
         reinterpret_cast<FilterPerRayData*>(ctx->h_filter_pinned),
@@ -2598,6 +2618,15 @@ static res_T batch_trace_filtered_async_impl(
         count,
         ctx->compute_stream,
         ctx->params_ptr);
+
+    /* GPU postprocess: HitResult → GpuS3dHit (Plan D, 56B output) */
+    postprocessToS3dHitDevice(
+        ctx->d_hits_filtered.get(),
+        sv->d_pp_table.get(),
+        ctx->d_s3d_hits.get(),
+        static_cast<unsigned int>(sv->pp_table.size()),
+        count,
+        ctx->compute_stream);
     CUDA_CHECK(cudaEventRecord(ctx->evt_kernel_done, ctx->compute_stream));
 
     ctx->async_pending = true;
@@ -2626,6 +2655,7 @@ static res_T batch_trace_filtered_pinned_async_impl(
 
     /* H2D uploads on transfer_stream */
     unsigned int count = static_cast<unsigned int>(nrays);
+    CUDA_CHECK(cudaEventRecord(ctx->evt_h2d_start, ctx->transfer_stream));
     ctx->d_rays.uploadAsync(ctx->h_rays_pinned, count, ctx->transfer_stream);
     ctx->d_filter_data.uploadAsync(
         reinterpret_cast<FilterPerRayData*>(ctx->h_filter_pinned),
@@ -2650,6 +2680,15 @@ static res_T batch_trace_filtered_pinned_async_impl(
         count,
         ctx->compute_stream,
         ctx->params_ptr);
+
+    /* GPU postprocess: HitResult → GpuS3dHit (Plan D, 56B output) */
+    postprocessToS3dHitDevice(
+        ctx->d_hits_filtered.get(),
+        sv->d_pp_table.get(),
+        ctx->d_s3d_hits.get(),
+        static_cast<unsigned int>(sv->pp_table.size()),
+        count,
+        ctx->compute_stream);
     CUDA_CHECK(cudaEventRecord(ctx->evt_kernel_done, ctx->compute_stream));
 
     ctx->async_pending = true;
@@ -2662,7 +2701,8 @@ static void get_pinned_buffers_impl(
     s3d_batch_trace_context* ctx,
     s3d_ray_pinned** out_rays,
     s3d_filter_per_ray** out_filter,
-    size_t* out_capacity)
+    size_t* out_capacity,
+    s3d_hit** out_hits)
 {
     /* Ray and s3d_ray_pinned are both 32 bytes of plain floats.
      * The layout is verified by static_assert in ray_types.h. */
@@ -2672,6 +2712,9 @@ static void get_pinned_buffers_impl(
         *out_filter = reinterpret_cast<s3d_filter_per_ray*>(ctx->h_filter_pinned);
     if (out_capacity)
         *out_capacity = ctx->pinned_capacity;
+    /* Plan D: GpuS3dHit is binary-compatible with s3d_hit (verified in wait_d2h) */
+    if (out_hits)
+        *out_hits = reinterpret_cast<s3d_hit*>(ctx->h_s3d_hits_pinned);
 }
 
 /* L4: sync filtered compute kernel */
@@ -2691,23 +2734,28 @@ static res_T batch_trace_filtered_sync_kernel_impl(
     return RES_OK;
 }
 
-/* L4: start filtered D2H — downloads HitResult (40B/ray) */
+/* L4: start filtered D2H — downloads GpuHitResult (s3d_hit-compatible, 56B/ray) */
+/* L4: start filtered D2H — downloads HitResult (40B/ray, UV/normal already fixed up) */
 static res_T batch_trace_filtered_start_d2h_impl(
     s3d_batch_trace_context* ctx,
     size_t nrays)
 {
     if (nrays == 0) { ctx->d2h_pending = false; return RES_OK; }
     unsigned int count = static_cast<unsigned int>(nrays);
+
     /* Stream auto-order: transfer_stream waits for kernel completion */
     CUDA_CHECK(cudaStreamWaitEvent(ctx->transfer_stream, ctx->evt_kernel_done, 0));
-    ctx->d_hits_filtered.downloadAsync(
-        reinterpret_cast<HitResult*>(ctx->h_hits_pinned),
+    CUDA_CHECK(cudaEventRecord(ctx->evt_d2h_start, ctx->transfer_stream));
+    ctx->d_s3d_hits.downloadAsync(
+        ctx->h_s3d_hits_pinned,
         count, ctx->transfer_stream);
+    CUDA_CHECK(cudaEventRecord(ctx->evt_d2h_done, ctx->transfer_stream));
     ctx->d2h_pending = true;
     return RES_OK;
 }
 
-/* L4: wait filtered D2H, convert HitResult → s3d_hit (NO retrace!) */
+/* L4: wait filtered D2H — Plan D: GpuS3dHit arrives ready-to-use.
+ * Binary-compatible with s3d_hit; just memcpy or zero-copy pointer. */
 static res_T batch_trace_filtered_wait_d2h_impl(
     s3d_scene_view* sv,
     s3d_batch_trace_context* ctx,
@@ -2716,6 +2764,9 @@ static res_T batch_trace_filtered_wait_d2h_impl(
     s3d_hit* hits,
     s3d_batch_trace_stats* stats)
 {
+    (void)requests;
+    (void)sv;
+
     if (stats) memset(stats, 0, sizeof(*stats));
     if (stats) stats->total_rays = nrays;
 
@@ -2732,106 +2783,94 @@ static res_T batch_trace_filtered_wait_d2h_impl(
     if (ctx->d2h_pending) {
         cudaStreamSynchronize(ctx->transfer_stream);
         ctx->d2h_pending = false;
+
+        /* Query GPU-side H2D / D2H elapsed times */
+        float h2d_ms = 0.0f, d2h_ms = 0.0f;
+        cudaEventElapsedTime(&h2d_ms, ctx->evt_h2d_start, ctx->evt_upload_done);
+        cudaEventElapsedTime(&d2h_ms, ctx->evt_d2h_start,  ctx->evt_d2h_done);
+        ctx->h2d_ms_sum += h2d_ms;
+        ctx->d2h_ms_sum += d2h_ms;
+        ctx->xfer_sample_count++;
+        if ((ctx->xfer_sample_count & 0xFFFF) == 0) {
+            fprintf(stderr, "[XFER] samples=%llu  H2D_total=%.1f s  D2H_total=%.1f s  "
+                    "H2D_avg=%.3f ms  D2H_avg=%.3f ms\n",
+                    (unsigned long long)ctx->xfer_sample_count,
+                    ctx->h2d_ms_sum * 1e-3,
+                    ctx->d2h_ms_sum * 1e-3,
+                    ctx->h2d_ms_sum / ctx->xfer_sample_count,
+                    ctx->d2h_ms_sum / ctx->xfer_sample_count);
+        }
+
+        /* ── Timeline dump: 3 full cycles (6 half-cycles) after warmup ──
+         *
+         * Method: cudaStreamSynchronize just returned, so evt_d2h_done has
+         * completed.  We measure all 6 events relative to evt_d2h_done via
+         * cudaEventElapsedTime, then anchor them to wall-clock:
+         *   wall_time(evt) = wall_sync - elapsed(evt → d2h_done)
+         * Both views share the same static wall_base, so their coordinates
+         * are on a single timeline.
+         *
+         * Output columns (all in ms, relative to wall_base):
+         *   h2d_s  h2d_e  kern_s  kern_e  d2h_s  d2h_e  sync  nrays
+         */
+        {
+            static int tl_counter = 0;
+            static double tl_wall_base = 0.0;
+            const int TL_WARMUP = 50000;
+            const int TL_DUMP   = 6;
+
+            int seq = tl_counter++;
+            double wall_sync = now_ms();
+
+            if (seq == TL_WARMUP) {
+                tl_wall_base = wall_sync;
+                fprintf(stderr,
+                    "\n[TIMELINE] wall_base set. columns: "
+                    "h2d_s  h2d_e  kern_s  kern_e  d2h_s  d2h_e  sync  (ms)\n");
+            }
+            if (seq >= TL_WARMUP && seq < TL_WARMUP + TL_DUMP) {
+                float e_h2d_s, e_h2d_e, e_kern_s, e_kern_e, e_d2h_s;
+                cudaEventElapsedTime(&e_h2d_s,  ctx->evt_h2d_start,   ctx->evt_d2h_done);
+                cudaEventElapsedTime(&e_h2d_e,  ctx->evt_upload_done,  ctx->evt_d2h_done);
+                cudaEventElapsedTime(&e_kern_s, ctx->evt_kernel_start, ctx->evt_d2h_done);
+                cudaEventElapsedTime(&e_kern_e, ctx->evt_kernel_done,  ctx->evt_d2h_done);
+                cudaEventElapsedTime(&e_d2h_s,  ctx->evt_d2h_start,   ctx->evt_d2h_done);
+
+                double ws = wall_sync - tl_wall_base;
+                fprintf(stderr,
+                    "[TIMELINE %d] ctx=%p  nrays=%5u  "
+                    "h2d=[%8.3f,%8.3f]  kern=[%8.3f,%8.3f]  "
+                    "d2h=[%8.3f,%8.3f]  sync=%8.3f\n",
+                    seq - TL_WARMUP,
+                    (void*)ctx,
+                    (unsigned)nrays,
+                    ws - (double)e_h2d_s,  ws - (double)e_h2d_e,
+                    ws - (double)e_kern_s, ws - (double)e_kern_e,
+                    ws - (double)e_d2h_s,  ws,
+                    ws);
+            }
+        }
     }
 
     double t1 = now_ms();
     if (stats) stats->batch_time_ms = t1 - t0;
 
-    /* Convert HitResult → s3d_hit (no CPU filter, no retrace) */
-    const HitResult* h_hits = reinterpret_cast<const HitResult*>(ctx->h_hits_pinned);
-    unsigned int count = static_cast<unsigned int>(nrays);
-
-    size_t accepted = 0;
-
-#ifdef _OPENMP
-    {
-      int pp_use_omp = 1;
-      int pp_nthreads = omp_get_max_threads();
-      {
-        const char* env = std::getenv("STARDIS_POSTPROCESS_OMP");
-        if (env && env[0] == '0') pp_use_omp = 0;
-      }
-      {
-        const char* thr_env = std::getenv("STARDIS_POSTPROCESS_THREADS");
-        if (thr_env) {
-          int ct = std::atoi(thr_env);
-          if (ct > 0) pp_nthreads = ct;
-        }
-      }
-      if ((int)nrays < 256) pp_use_omp = 0;
-      if (pp_nthreads < 2)  pp_use_omp = 0;
-
-      if (pp_use_omp) {
-        size_t omp_accepted = 0;
-        const size_t pp_sz = sv->pp_table.size();
-        const s3d_scene_view::pp_entry* pp = pp_sz ? sv->pp_table.data() : nullptr;
-
-        #pragma omp parallel for num_threads(pp_nthreads) \
-          schedule(static) reduction(+: omp_accepted)
-        for (int ii = 0; ii < (int)count; ii++) {
-            const HitResult& hr = h_hits[ii];
-            if (hr.t < 0.0f) {
-                hits[ii] = S3D_HIT_NULL;
-                continue;
-            }
-            unsigned int shape_id = 0;
-            s3d_shape* shape = nullptr;
-            s3d_shape* inst  = nullptr;
-            if (pp && hr.geom_id < (unsigned)pp_sz) {
-                const s3d_scene_view::pp_entry& e = pp[hr.geom_id];
-                shape    = e.shape;
-                shape_id = e.shape_id;
-                inst     = e.inst;
-            } else {
-                shape = resolve_shape(sv, hr.geom_id, shape_id);
-                if (sv->geom_to_inst.count(hr.geom_id))
-                    inst = sv->geom_to_inst.at(hr.geom_id);
-            }
-            hitresult_to_s3d_hit(sv, hr, shape, shape_id, hr.prim_idx,
-                                 &hits[ii], inst);
-            omp_accepted++;
-        }
-        accepted = omp_accepted;
-        goto postprocess_done_filtered;
-      }
-    }
-#endif
-
-    {
-        const size_t pp_sz = sv->pp_table.size();
-        const s3d_scene_view::pp_entry* pp = pp_sz ? sv->pp_table.data() : nullptr;
-        for (unsigned int i = 0; i < count; i++) {
-            const HitResult& hr = h_hits[i];
-            if (hr.t < 0.0f) {
-                hits[i] = S3D_HIT_NULL;
-                continue;
-            }
-            unsigned int shape_id = 0;
-            s3d_shape* shape = nullptr;
-            s3d_shape* inst  = nullptr;
-            if (pp && hr.geom_id < (unsigned)pp_sz) {
-                const s3d_scene_view::pp_entry& e = pp[hr.geom_id];
-                shape    = e.shape;
-                shape_id = e.shape_id;
-                inst     = e.inst;
-            } else {
-                shape = resolve_shape(sv, hr.geom_id, shape_id);
-                if (sv->geom_to_inst.count(hr.geom_id))
-                    inst = sv->geom_to_inst.at(hr.geom_id);
-            }
-            hitresult_to_s3d_hit(sv, hr, shape, shape_id, hr.prim_idx, &hits[i], inst);
-            accepted++;
-        }
+    /* Plan D: GpuS3dHit has identical binary layout to s3d_hit.
+     * If caller's buffer IS the pinned buffer → zero-copy (no memcpy).
+     * Otherwise → flat memcpy (no per-ray pp_table lookup). */
+    static_assert(sizeof(GpuS3dHit) == sizeof(s3d_hit),
+                  "GpuS3dHit must match s3d_hit size for binary compatibility");
+    if (reinterpret_cast<void*>(hits) !=
+        reinterpret_cast<void*>(ctx->h_s3d_hits_pinned)) {
+        memcpy(hits, ctx->h_s3d_hits_pinned, nrays * sizeof(s3d_hit));
     }
 
-postprocess_done_filtered:
-    double t2 = now_ms();
     if (stats) {
-        stats->batch_accepted      = accepted;
-        stats->filter_rejected     = 0;     /* GPU filter, not tracked here */
+        stats->batch_accepted      = nrays;
+        stats->filter_rejected     = 0;
         stats->retrace_accepted    = 0;
         stats->retrace_missed      = 0;
-        stats->postprocess_time_ms = t2 - t1;
+        stats->postprocess_time_ms = now_ms() - t1;
         stats->retrace_time_ms     = 0.0;
     }
     return RES_OK;
@@ -2920,10 +2959,11 @@ void s3d_batch_trace_context_get_pinned_buffers(
     s3d_batch_trace_context* ctx,
     s3d_ray_pinned** out_rays,
     s3d_filter_per_ray** out_filter,
-    size_t* out_capacity)
+    size_t* out_capacity,
+    s3d_hit** out_hits)
 {
     if (!ctx) return;
-    get_pinned_buffers_impl(ctx, out_rays, out_filter, out_capacity);
+    get_pinned_buffers_impl(ctx, out_rays, out_filter, out_capacity, out_hits);
 }
 
 /* Plan E: public API for pinned direct-write async launch */
