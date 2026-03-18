@@ -612,6 +612,13 @@ pool_create(struct wavefront_pool* pool, size_t per_view_size,
     }
   }
 
+  /* O14: per-thread partition structures — lazily sized on first merged_pass */
+  pool->tl_done_indices   = NULL;
+  pool->tl_done_count     = NULL;
+  pool->tl_done_capacity  = 0;
+  pool->o14_partition_size = 0;
+  pool->o14_nthreads       = 0;
+
   return RES_OK;
 }
 
@@ -683,6 +690,15 @@ pool_destroy(struct wavefront_pool* pool)
       free(pool->tl_ray_bufs[ti]);
     free(pool->tl_ray_bufs);
   }
+
+  /* O14: per-thread done lists */
+  if(pool->tl_done_indices) {
+    int ti;
+    for(ti = 0; ti < pool->o14_nthreads; ti++)
+      free(pool->tl_done_indices[ti]);
+    free(pool->tl_done_indices);
+  }
+  free(pool->tl_done_count);
 
   memset(pool, 0, sizeof(*pool));
 }
@@ -1384,17 +1400,17 @@ fill_pool(struct wavefront_pool* pool)
 }
 
 /*******************************************************************************
- * Stream Compaction (M2.5 + P1 SoA) -- rebuild compact index arrays each step.
+ * Stream Compaction (M2.5 + P1 SoA + O14 per-thread partition)
  *
- * P0_OPT: reads phase/active/needs_ray from hot_arr (8B AoS) instead of
- * path_state (~2KB AoS), reducing cache footprint.  8 slots / cache line.
+ * P0_OPT: reads phase/active from hot_arr (8B AoS), 8 slots / cache line.
+ *
+ * O14: done_indices are merged from per-thread tl_done lists (populated by
+ * merged_pass Phase D), replacing the hot_arr scan for done/harvested slots.
+ * active_indices is still built from hot_arr (serial fallback + diagnostics).
  *
  * After this function:
  *   active_indices[0..active_compact-1]   = indices of active, non-done slots
- *   need_ray_indices[0..need_ray_count-1] = active slots needing ray trace
- *   done_indices[0..done_count-1]         = slots with PATH_DONE
- *   bucket_radiative[0..n-1]              = need_ray + radiative phase
- *   bucket_conductive[0..n-1]             = need_ray + conductive phase
+ *   done_indices[0..done_count-1]         = O14 tl_done merge (or 0 before first merged_pass)
  ******************************************************************************/
 static void
 compact_active_paths(struct wavefront_pool* pool, struct pool_view* pv)
@@ -1403,28 +1419,43 @@ compact_active_paths(struct wavefront_pool* pool, struct pool_view* pv)
   size_t end  = base + pv->view_size;
   size_t i;
 
-  pv->active_compact      = 0;
-  pv->done_count          = 0;
+  pv->active_compact = 0;
 
-  /* O12: In merged architecture, need_ray_indices and bucket arrays are
-   * not used — merged_pass handles collect inline.  Compact now only scans
-   * hot_arr (80KB, fits in L2) without touching path_state (20MB). */
+  /* O14: merge per-thread done lists (populated by merged_pass Phase D).
+   * Before first merged_pass (tl_done_indices==NULL), done_count stays 0. */
+  {
+    size_t total_done = 0;
+    if(pool->tl_done_indices) {
+      int t;
+      for(t = 0; t < pool->o14_nthreads; t++) {
+        size_t cnt = pool->tl_done_count[t];
+        if(cnt > 0) {
+          memcpy(&pv->done_indices[total_done],
+                 pool->tl_done_indices[t],
+                 cnt * sizeof(uint32_t));
+          total_done += cnt;
+        }
+      }
+    }
+    pv->done_count = total_done;
+  }
+
+  /* Scan hot_arr for active_indices + active_compact
+   * (still needed for serial fallback path in merged_pass + diagnostics) */
   for(i = base; i < end; i++) {
     enum path_phase ph = (enum path_phase)pool->hot_arr[i].phase;
     int act = pool->hot_arr[i].active;
 
     if(ph == PATH_DONE || ph == PATH_ERROR
     || ph == PATH_HARVESTED) {
-      /* M8: if sfn_stack_depth > 0, the sub-path finished but the
-       * parent picardN frame still needs to resume.  Re-activate.
-       * Need to access SoA for sfn_stack_depth (rare path). */
+      /* M8: sfn_stack_depth > 0 → resume (safety net; O14 merged_pass
+       * Phase D handles this, but guard against edge cases). */
       if(ph == PATH_DONE && pool->sfn_arr[i].depth > 0) {
         pool->hot_arr[i].phase = (uint8_t)PATH_BND_SFN_COMPUTE_Ti_RESUME;
         pool->hot_arr[i].active = 1;
         act = 1;
         /* Fall through to treat as active path */
       } else {
-        pv->done_indices[pv->done_count++] = (uint32_t)i;
         continue;
       }
     }
@@ -3928,7 +3959,37 @@ merged_pass(struct wavefront_pool* pool,
     }
   }
 
-  /* ════════ OMP parallel merged_pass ════════ */
+  /* O14: Lazy-init per-thread done lists + partition size */
+  if(!pool->tl_done_indices || pool->o14_nthreads < omp_nthreads) {
+    int ti;
+    size_t part_sz = pv->view_size / (size_t)omp_nthreads;
+    if(part_sz < 1) part_sz = 1;
+    /* Free old (if nthreads grew) */
+    if(pool->tl_done_indices) {
+      for(ti = 0; ti < pool->o14_nthreads; ti++)
+        free(pool->tl_done_indices[ti]);
+      free(pool->tl_done_indices);
+      free(pool->tl_done_count);
+    }
+    pool->o14_nthreads = omp_nthreads;
+    pool->o14_partition_size = part_sz;
+    pool->tl_done_capacity = part_sz;
+    pool->tl_done_indices = (uint32_t**)calloc(
+      (size_t)omp_nthreads, sizeof(uint32_t*));
+    pool->tl_done_count = (size_t*)calloc(
+      (size_t)omp_nthreads, sizeof(size_t));
+    if(!pool->tl_done_indices || !pool->tl_done_count) return RES_MEM_ERR;
+    for(ti = 0; ti < omp_nthreads; ti++) {
+      /* Last thread may get remainder, so allocate view_size/nthreads + remainder */
+      size_t cap = part_sz;
+      if(ti == omp_nthreads - 1)
+        cap = pv->view_size - (size_t)ti * part_sz;
+      pool->tl_done_indices[ti] = (uint32_t*)malloc(cap * sizeof(uint32_t));
+      if(!pool->tl_done_indices[ti]) return RES_MEM_ERR;
+    }
+  }
+
+  /* ════════ OMP parallel merged_pass (O14: per-thread partition) ════════ */
   #pragma omp parallel num_threads(omp_nthreads)
   {
     /* Thread-local accumulators */
@@ -3938,9 +3999,11 @@ merged_pass(struct wavefront_pool* pool,
     size_t tl_max_depth = 0;
     int tl_fatal = 0;
 
+    int tid = omp_get_thread_num();
+
     /* Per-thread ray buffer from pre-allocated pool */
     struct tl_ray_entry* tl_rays =
-      (struct tl_ray_entry*)pool->tl_ray_bufs[omp_get_thread_num()];
+      (struct tl_ray_entry*)pool->tl_ray_bufs[tid];
     size_t tl_ray_count = 0;
 
     /* Thread-local pending ray stats */
@@ -3949,20 +4012,28 @@ merged_pass(struct wavefront_pool* pool,
     size_t tl_rays_enclosure = 0, tl_rays_startup = 0;
     size_t tl_rays_other = 0;
 
-    int ph;
+    /* O14: per-thread partition bounds */
+    size_t p_begin = pv->base + (size_t)tid * pool->o14_partition_size;
+    size_t p_end   = p_begin + pool->o14_partition_size;
+    /* Last thread takes remainder */
+    if(tid == omp_nthreads - 1)
+      p_end = pv->base + pv->view_size;
 
-    #pragma omp for schedule(dynamic, 64)
-    for(ph = 0; ph < (int)n; ph++) {
-      uint32_t slot = pv->active_indices[ph];
-      struct path_state* p = &pool->slots[slot];
+    uint32_t slot;
+
+    pool->tl_done_count[tid] = 0;
+
+    for(slot = (uint32_t)p_begin; slot < (uint32_t)p_end; slot++) {
       struct path_hot* hot = &pool->hot_arr[slot];
 
       if(!hot->active) continue;
 
-      /* O7: prefetch 4 iterations ahead */
-      if(ph + 4 < (int)n) {
-        PREFETCH_T0(&pool->slots[pv->active_indices[ph + 4]]);
-        PREFETCH_T0(&pool->hot_arr[pv->active_indices[ph + 4]]);
+      struct path_state* p = &pool->slots[slot];
+
+      /* O14: sequential prefetch (replaces O7 active_indices indirect) */
+      if(slot + 4 < p_end) {
+        PREFETCH_T0(&pool->slots[slot + 4]);
+        PREFETCH_T0(&pool->hot_arr[slot + 4]);
       }
 
       /* ── Phase A: Distribute+Step ── */
@@ -3976,7 +4047,7 @@ merged_pass(struct wavefront_pool* pool,
       && (enum path_phase)hot->phase != PATH_DONE
       && (enum path_phase)hot->phase != PATH_ERROR) {
         if(cascade_advance_single_path(
-              p, scn, pool, (size_t)slot,
+              p, scn, pool, slot,
               &tl_iterations, &tl_advances,
               &tl_paths_failed, &tl_enc_degenerate_null
 #ifdef SDIS_CASCADE_PROFILE
@@ -4004,7 +4075,7 @@ merged_pass(struct wavefront_pool* pool,
         }
 
         {
-          added = merged_pass_collect_ray(pool, pv, p, hot, slot,
+          added = merged_pass_collect_ray(pool, pv, p, hot, (uint32_t)slot,
                                            tl_rays, tl_ray_count);
           /* Ray stats */
           {
@@ -4053,8 +4124,8 @@ merged_pass(struct wavefront_pool* pool,
           req->pos[0] = (float)pool->enc_arr[slot].locate.query_pos[0];
           req->pos[1] = (float)pool->enc_arr[slot].locate.query_pos[1];
           req->pos[2] = (float)pool->enc_arr[slot].locate.query_pos[2];
-          req->user_id = slot;
-          pv->enc_locate_to_slot[idx] = slot;
+          req->user_id = (uint32_t)slot;
+          pv->enc_locate_to_slot[idx] = (uint32_t)slot;
           pool->enc_arr[slot].locate.batch_idx = (uint32_t)idx;
         }
       }
@@ -4073,13 +4144,13 @@ merged_pass(struct wavefront_pool* pool,
           req->pos[2] = (float)p->locals.cnd_wos.query_pos[2];
           req->radius = p->locals.cnd_wos.query_radius;
           req->query_data = NULL;
-          req->user_id = slot;
-          pv->cp_to_slot[idx] = slot;
+          req->user_id = (uint32_t)slot;
+          pv->cp_to_slot[idx] = (uint32_t)slot;
           p->locals.cnd_wos.batch_cp_idx = (uint32_t)idx;
         }
       }
 
-      /* ── Phase D: Harvest ── */
+      /* ── Phase D: Harvest (O14: per-thread done list) ── */
       if(!tl_fatal
       && ((enum path_phase)hot->phase == PATH_DONE
        || (enum path_phase)hot->phase == PATH_ERROR)
@@ -4122,16 +4193,11 @@ merged_pass(struct wavefront_pool* pool,
           hot->active = 0;
           hot->phase  = (uint8_t)PATH_HARVESTED;
 
-          /* Record done slot for refill (atomic append) */
-          {
-            size_t di;
-            di = (size_t)_InterlockedExchangeAdd64(
-              (volatile long long*)&pv->done_count, 1);
-            pv->done_indices[di] = slot;
-          }
+          /* O14: write to per-thread done list (no atomic) */
+          pool->tl_done_indices[tid][pool->tl_done_count[tid]++] = (uint32_t)slot;
         }
       }
-    } /* end omp for */
+    } /* end O14 partition loop */
 
     /* ── Thread-local ray buffer → pinned merge ── */
     if(tl_ray_count > 0) {

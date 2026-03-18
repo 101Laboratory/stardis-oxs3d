@@ -448,6 +448,13 @@ struct wavefront_pool {
   void** tl_ray_bufs;   /* [tl_ray_nbufs], cast to struct tl_ray_entry* */
   int tl_ray_nbufs;     /* number of allocated buffers   */
 
+  /* === O14: per-thread done list (partition-based harvest) === */
+  uint32_t** tl_done_indices;   /* [nthreads][0..tl_done_count[tid])   */
+  size_t*    tl_done_count;     /* per-thread done slot count           */
+  size_t     tl_done_capacity;  /* per-thread capacity = partition_size */
+  size_t     o14_partition_size;/* pool_size / nthreads (floor)         */
+  int        o14_nthreads;      /* thread count used for O14 partition  */
+
   /* === O13: Async submit thread (per-view channels) === */
   void*  submit_thread_handle;   /* HANDLE from _beginthreadex       */
   void*  submit_evt_go[2];       /* per-view auto-reset triggers     */
