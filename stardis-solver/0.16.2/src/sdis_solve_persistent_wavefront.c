@@ -615,6 +615,8 @@ pool_create(struct wavefront_pool* pool, size_t per_view_size,
   /* O14: per-thread partition structures — lazily sized on first merged_pass */
   pool->tl_done_indices   = NULL;
   pool->tl_done_count     = NULL;
+  pool->tl_active_indices = NULL;
+  pool->tl_active_count   = NULL;
   pool->tl_done_capacity  = 0;
   pool->o14_partition_size = 0;
   pool->o14_nthreads       = 0;
@@ -691,7 +693,7 @@ pool_destroy(struct wavefront_pool* pool)
     free(pool->tl_ray_bufs);
   }
 
-  /* O14: per-thread done lists */
+  /* O14: per-thread done + active lists */
   if(pool->tl_done_indices) {
     int ti;
     for(ti = 0; ti < pool->o14_nthreads; ti++)
@@ -699,6 +701,13 @@ pool_destroy(struct wavefront_pool* pool)
     free(pool->tl_done_indices);
   }
   free(pool->tl_done_count);
+  if(pool->tl_active_indices) {
+    int ti;
+    for(ti = 0; ti < pool->o14_nthreads; ti++)
+      free(pool->tl_active_indices[ti]);
+    free(pool->tl_active_indices);
+  }
+  free(pool->tl_active_count);
 
   memset(pool, 0, sizeof(*pool));
 }
@@ -1400,27 +1409,22 @@ fill_pool(struct wavefront_pool* pool)
 }
 
 /*******************************************************************************
- * Stream Compaction (M2.5 + P1 SoA + O14 per-thread partition)
+ * Stream Compaction (M2.5 + P1 SoA + O14 per-thread partition compact)
  *
  * P0_OPT: reads phase/active from hot_arr (8B AoS), 8 slots / cache line.
  *
  * O14: done_indices are merged from per-thread tl_done lists (populated by
- * merged_pass Phase D), replacing the hot_arr scan for done/harvested slots.
- * active_indices is still built from hot_arr (serial fallback + diagnostics).
+ * merged_pass Phase D).  Per-thread active lists are built in parallel:
+ * each thread scans its own partition of hot_arr → tl_active_indices[tid].
  *
  * After this function:
- *   active_indices[0..active_compact-1]   = indices of active, non-done slots
- *   done_indices[0..done_count-1]         = O14 tl_done merge (or 0 before first merged_pass)
+ *   tl_active_indices[tid][0..tl_active_count[tid]-1] = active slots in partition
+ *   active_indices[0..active_compact-1] = global active list (serial fallback)
+ *   done_indices[0..done_count-1]       = O14 tl_done merge
  ******************************************************************************/
 static void
 compact_active_paths(struct wavefront_pool* pool, struct pool_view* pv)
 {
-  size_t base = pv->base;
-  size_t end  = base + pv->view_size;
-  size_t i;
-
-  pv->active_compact = 0;
-
   /* O14: merge per-thread done lists (populated by merged_pass Phase D).
    * Before first merged_pass (tl_done_indices==NULL), done_count stays 0. */
   {
@@ -1440,28 +1444,83 @@ compact_active_paths(struct wavefront_pool* pool, struct pool_view* pv)
     pv->done_count = total_done;
   }
 
-  /* Scan hot_arr for active_indices + active_compact
-   * (still needed for serial fallback path in merged_pass + diagnostics) */
-  for(i = base; i < end; i++) {
-    enum path_phase ph = (enum path_phase)pool->hot_arr[i].phase;
-    int act = pool->hot_arr[i].active;
+  /* O14: parallel per-thread partition compact.
+   * Each thread scans its own hot_arr segment and builds tl_active_indices[tid].
+   * Also builds the global active_indices/active_compact for serial fallback. */
+  if(pool->tl_active_indices && pool->o14_nthreads > 1) {
+    int omp_nt = pool->o14_nthreads;
+    size_t global_active = 0;
 
-    if(ph == PATH_DONE || ph == PATH_ERROR
-    || ph == PATH_HARVESTED) {
-      /* M8: sfn_stack_depth > 0 → resume (safety net; O14 merged_pass
-       * Phase D handles this, but guard against edge cases). */
-      if(ph == PATH_DONE && pool->sfn_arr[i].depth > 0) {
-        pool->hot_arr[i].phase = (uint8_t)PATH_BND_SFN_COMPUTE_Ti_RESUME;
-        pool->hot_arr[i].active = 1;
-        act = 1;
-        /* Fall through to treat as active path */
-      } else {
-        continue;
+    #pragma omp parallel num_threads(omp_nt)
+    {
+      int tid = omp_get_thread_num();
+      size_t p_begin = pv->base + (size_t)tid * pool->o14_partition_size;
+      size_t p_end   = p_begin + pool->o14_partition_size;
+      if(tid == omp_nt - 1)
+        p_end = pv->base + pv->view_size;
+
+      size_t cnt = 0;
+      uint32_t* out = pool->tl_active_indices[tid];
+      size_t i;
+
+      for(i = p_begin; i < p_end; i++) {
+        enum path_phase ph = (enum path_phase)pool->hot_arr[i].phase;
+        int act = pool->hot_arr[i].active;
+
+        if(ph == PATH_DONE || ph == PATH_ERROR
+        || ph == PATH_HARVESTED) {
+          if(ph == PATH_DONE && pool->sfn_arr[i].depth > 0) {
+            pool->hot_arr[i].phase = (uint8_t)PATH_BND_SFN_COMPUTE_Ti_RESUME;
+            pool->hot_arr[i].active = 1;
+            act = 1;
+          } else {
+            continue;
+          }
+        }
+        if(!act) continue;
+        out[cnt++] = (uint32_t)i;
+      }
+      pool->tl_active_count[tid] = cnt;
+    } /* end omp parallel */
+
+    /* Serial merge into global active_indices (for serial fallback + diagnostics) */
+    {
+      int t;
+      for(t = 0; t < omp_nt; t++) {
+        size_t cnt = pool->tl_active_count[t];
+        if(cnt > 0) {
+          memcpy(&pv->active_indices[global_active],
+                 pool->tl_active_indices[t],
+                 cnt * sizeof(uint32_t));
+          global_active += cnt;
+        }
       }
     }
-    if(!act) continue;
+    pv->active_compact = global_active;
+  } else {
+    /* Fallback: serial compact (before first merged_pass or nthreads==1) */
+    size_t base = pv->base;
+    size_t end  = base + pv->view_size;
+    size_t i;
 
-    pv->active_indices[pv->active_compact++] = (uint32_t)i;
+    pv->active_compact = 0;
+    for(i = base; i < end; i++) {
+      enum path_phase ph = (enum path_phase)pool->hot_arr[i].phase;
+      int act = pool->hot_arr[i].active;
+
+      if(ph == PATH_DONE || ph == PATH_ERROR
+      || ph == PATH_HARVESTED) {
+        if(ph == PATH_DONE && pool->sfn_arr[i].depth > 0) {
+          pool->hot_arr[i].phase = (uint8_t)PATH_BND_SFN_COMPUTE_Ti_RESUME;
+          pool->hot_arr[i].active = 1;
+          act = 1;
+        } else {
+          continue;
+        }
+      }
+      if(!act) continue;
+      pv->active_indices[pv->active_compact++] = (uint32_t)i;
+    }
   }
 }
 
@@ -3959,7 +4018,7 @@ merged_pass(struct wavefront_pool* pool,
     }
   }
 
-  /* O14: Lazy-init per-thread done lists + partition size */
+  /* O14: Lazy-init per-thread done + active lists + partition size */
   if(!pool->tl_done_indices || pool->o14_nthreads < omp_nthreads) {
     int ti;
     size_t part_sz = pv->view_size / (size_t)omp_nthreads;
@@ -3971,14 +4030,30 @@ merged_pass(struct wavefront_pool* pool,
       free(pool->tl_done_indices);
       free(pool->tl_done_count);
     }
+    if(pool->tl_active_indices) {
+      for(ti = 0; ti < pool->o14_nthreads; ti++)
+        free(pool->tl_active_indices[ti]);
+      free(pool->tl_active_indices);
+      free(pool->tl_active_count);
+    }
     pool->o14_nthreads = omp_nthreads;
     pool->o14_partition_size = part_sz;
     pool->tl_done_capacity = part_sz;
+
+    /* Per-thread done lists */
     pool->tl_done_indices = (uint32_t**)calloc(
       (size_t)omp_nthreads, sizeof(uint32_t*));
     pool->tl_done_count = (size_t*)calloc(
       (size_t)omp_nthreads, sizeof(size_t));
     if(!pool->tl_done_indices || !pool->tl_done_count) return RES_MEM_ERR;
+
+    /* Per-thread active lists */
+    pool->tl_active_indices = (uint32_t**)calloc(
+      (size_t)omp_nthreads, sizeof(uint32_t*));
+    pool->tl_active_count = (size_t*)calloc(
+      (size_t)omp_nthreads, sizeof(size_t));
+    if(!pool->tl_active_indices || !pool->tl_active_count) return RES_MEM_ERR;
+
     for(ti = 0; ti < omp_nthreads; ti++) {
       /* Last thread may get remainder, so allocate view_size/nthreads + remainder */
       size_t cap = part_sz;
@@ -3986,6 +4061,8 @@ merged_pass(struct wavefront_pool* pool,
         cap = pv->view_size - (size_t)ti * part_sz;
       pool->tl_done_indices[ti] = (uint32_t*)malloc(cap * sizeof(uint32_t));
       if(!pool->tl_done_indices[ti]) return RES_MEM_ERR;
+      pool->tl_active_indices[ti] = (uint32_t*)malloc(cap * sizeof(uint32_t));
+      if(!pool->tl_active_indices[ti]) return RES_MEM_ERR;
     }
   }
 
@@ -4012,28 +4089,28 @@ merged_pass(struct wavefront_pool* pool,
     size_t tl_rays_enclosure = 0, tl_rays_startup = 0;
     size_t tl_rays_other = 0;
 
-    /* O14: per-thread partition bounds */
-    size_t p_begin = pv->base + (size_t)tid * pool->o14_partition_size;
-    size_t p_end   = p_begin + pool->o14_partition_size;
-    /* Last thread takes remainder */
-    if(tid == omp_nthreads - 1)
-      p_end = pv->base + pv->view_size;
-
     uint32_t slot;
+    size_t k;
+
+    /* O14 v2: per-thread active list from compact_active_paths */
+    uint32_t* my_active = pool->tl_active_indices[tid];
+    size_t    my_active_n = pool->tl_active_count[tid];
 
     pool->tl_done_count[tid] = 0;
 
-    for(slot = (uint32_t)p_begin; slot < (uint32_t)p_end; slot++) {
+    for(k = 0; k < my_active_n; k++) {
+      slot = my_active[k];
       struct path_hot* hot = &pool->hot_arr[slot];
 
-      if(!hot->active) continue;
+      /* hot->active guaranteed by compact list — no skip check needed */
 
       struct path_state* p = &pool->slots[slot];
 
-      /* O14: sequential prefetch (replaces O7 active_indices indirect) */
-      if(slot + 4 < p_end) {
-        PREFETCH_T0(&pool->slots[slot + 4]);
-        PREFETCH_T0(&pool->hot_arr[slot + 4]);
+      /* O14 v2: prefetch next active slot from compact list */
+      if(k + 4 < my_active_n) {
+        uint32_t pf_slot = my_active[k + 4];
+        PREFETCH_T0(&pool->slots[pf_slot]);
+        PREFETCH_T0(&pool->hot_arr[pf_slot]);
       }
 
       /* ── Phase A: Distribute+Step ── */
@@ -4197,7 +4274,7 @@ merged_pass(struct wavefront_pool* pool,
           pool->tl_done_indices[tid][pool->tl_done_count[tid]++] = (uint32_t)slot;
         }
       }
-    } /* end O14 partition loop */
+    } /* end O14 v2 per-thread compact list loop */
 
     /* ── Thread-local ray buffer → pinned merge ── */
     if(tl_ray_count > 0) {
