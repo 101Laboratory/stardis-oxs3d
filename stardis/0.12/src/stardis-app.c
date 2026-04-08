@@ -640,6 +640,37 @@ error:
   goto exit;
 }
 
+/* Helper: return a human-readable label for a property slot */
+static const char*
+prop_label(const struct description* descs, unsigned prop_id)
+{
+  if(prop_id == SG3D_UNSPECIFIED_PROPERTY) return "(undef)";
+  return str_cget(get_description_name(descs + prop_id));
+}
+
+static const char*
+prop_kind(const struct description* descs, unsigned prop_id)
+{
+  if(prop_id == SG3D_UNSPECIFIED_PROPERTY) return "";
+  if(DESC_IS_SOLID(descs + prop_id)) return "SOLID";
+  if(DESC_IS_FLUID(descs + prop_id)) return "FLUID";
+  return "INTERFACE";
+}
+
+/* Log a detailed property conflict message */
+#define LOG_CONFLICT(stardis, itri, descs, props, intface, reason) \
+  logger_print((stardis)->logger, LOG_ERROR, \
+    "  Triangle %u: front='%s'(%s), back='%s'(%s), intface='%s' -- %s\n", \
+    (itri), \
+    prop_label((descs), (props)[SG3D_FRONT]), \
+    prop_kind((descs), (props)[SG3D_FRONT]), \
+    prop_label((descs), (props)[SG3D_BACK]), \
+    prop_kind((descs), (props)[SG3D_BACK]), \
+    (props)[SG3D_INTFACE] == SG3D_UNSPECIFIED_PROPERTY \
+      ? "(none)" \
+      : str_cget(get_description_name((descs) + (props)[SG3D_INTFACE])), \
+    (reason))
+
 #define COUNT_SIDE(Rank) {\
   if(properties[(Rank)] == SG3D_UNSPECIFIED_PROPERTY) undef_count++;\
   else {\
@@ -663,7 +694,6 @@ validate_properties
   const struct description* descs;
   const struct description* intface = NULL;
 
-  (void)itri;
   ASSERT(stardis && properties_conflict_status);
   descs = darray_descriptions_cdata_get(&stardis->descriptions);
   *properties_conflict_status = NO_PROPERTY_CONFLICT;
@@ -692,6 +722,8 @@ validate_properties
         else if(solid_count == 1)
           *properties_conflict_status = BOUND_H_FOR_FLUID_ENCLOSING_SOLID;
         else FATAL("error:" STR(__FILE__) ":" STR(__LINE__)"\n");
+        LOG_CONFLICT(stardis, itri, descs, properties, intface,
+          "H_BOUNDARY_FOR_FLUID requires fluid+undef");
         goto end;
       }
       break;
@@ -705,6 +737,8 @@ validate_properties
         else if(fluid_count == 1)
           *properties_conflict_status = BOUND_H_FOR_SOLID_ENCLOSING_FLUID;
         else FATAL("error:" STR(__FILE__) ":" STR(__LINE__)"\n");
+        LOG_CONFLICT(stardis, itri, descs, properties, intface,
+          "H_BOUNDARY_FOR_SOLID requires solid+undef");
         goto end;
       }
       break;
@@ -718,6 +752,8 @@ validate_properties
         else if(fluid_count == 1)
           *properties_conflict_status = BOUND_HF_FOR_SOLID_ENCLOSING_FLUID;
         else FATAL("error:" STR(__FILE__) ":" STR(__LINE__)"\n");
+        LOG_CONFLICT(stardis, itri, descs, properties, intface,
+          "HF_BOUNDARY_FOR_SOLID requires solid+undef");
         goto end;
       }
       break;
@@ -731,6 +767,8 @@ validate_properties
         else if(fluid_count == 1)
           *properties_conflict_status = BOUND_T_FOR_SOLID_ENCLOSING_FLUID;
         else FATAL("error:" STR(__FILE__) ":" STR(__LINE__)"\n");
+        LOG_CONFLICT(stardis, itri, descs, properties, intface,
+          "T_BOUNDARY_FOR_SOLID requires solid+undef");
         goto end;
       }
       break;
@@ -744,6 +782,8 @@ validate_properties
         else if(fluid_count == 1)
           *properties_conflict_status = BOUND_F_FOR_SOLID_ENCLOSING_FLUID;
         else FATAL("error:" STR(__FILE__) ":" STR(__LINE__)"\n");
+        LOG_CONFLICT(stardis, itri, descs, properties, intface,
+          "F_BOUNDARY_FOR_SOLID requires solid+undef");
         goto end;
       }
       break;
@@ -759,6 +799,8 @@ validate_properties
         else if(solid_count + fluid_count == 0)
           *properties_conflict_status = SFCONNECT_BETWEEN_2_UNDEFS;
         else FATAL("error:" STR(__FILE__) ":" STR(__LINE__)"\n");
+        LOG_CONFLICT(stardis, itri, descs, properties, intface,
+          "SOLID_FLUID_CONNECT requires 1 solid + 1 fluid");
         goto end;
       }
       break;
@@ -767,6 +809,8 @@ validate_properties
       if(solid_count != 2) {
         /*if(soli_count == 1 && fluid_count == 1)*/
           /**properties_conflict_status = SSCONNECT_BETWEEN_SOLID_AND_FLUID;*/
+        LOG_CONFLICT(stardis, itri, descs, properties, intface,
+          "SOLID_SOLID_CONNECT requires 2 solids");
         goto end;
       }
       break;
@@ -778,10 +822,14 @@ validate_properties
     ASSERT(intface_count == 0 && undef_count >= 1);
     if(undef_count == 3) {
       *properties_conflict_status = TRG_WITH_NO_PROPERTY;
+      LOG_CONFLICT(stardis, itri, descs, properties, intface,
+        "triangle has no property at all");
       goto end;
     }
     if(fluid_count == 2) {
       *properties_conflict_status = NO_CONNECTION_BETWEEN_2_FLUIDS;
+      LOG_CONFLICT(stardis, itri, descs, properties, intface,
+        "2 fluids share a face without a connection interface");
       goto end;
     }
     if(undef_count == 2) {
@@ -789,10 +837,14 @@ validate_properties
       if(fluid_count)
         *properties_conflict_status = NO_BOUND_BETWEEN_FLUID_AND_UNDEF;
       else *properties_conflict_status = NO_BOUND_BETWEEN_SOLID_AND_UNDEF;
+      LOG_CONFLICT(stardis, itri, descs, properties, intface,
+        "medium borders undef without boundary condition");
       goto end;
     }
     if(undef_count == 1 && solid_count == 1 && fluid_count == 1) {
       *properties_conflict_status = NO_CONNECTION_BETWEEN_SOLID_AND_FLUID;
+      LOG_CONFLICT(stardis, itri, descs, properties, intface,
+        "solid and fluid share a face without a connection interface");
       goto end;
     }
     /* Undef interface between solids is OK */
@@ -804,6 +856,7 @@ end:
 }
 
 #undef COUNT_SIDE
+#undef LOG_CONFLICT
 
 res_T
 init_geometry
