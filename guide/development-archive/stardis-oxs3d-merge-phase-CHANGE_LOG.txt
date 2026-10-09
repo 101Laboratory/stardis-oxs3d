@@ -1,0 +1,54 @@
+# CHANGE_LOG — stardis-oxs3d-merge-phase 本地工作日志
+#
+# 此文件由 LLM 自动维护，记录两次 Git 提交之间的累积变更。
+# 需要在 `.gitignore` 中忽略，不进入版本控制。
+#
+# ── 维护规则 ──────────────────────────────────────────
+#
+# 1. 每完成一项变更，立即在本段注释后追加一条记录，标签如下：
+#      - [FEAT]     新增功能
+#      - [FIX]      修复问题
+#      - [REFACTOR] 重构
+#      - [TEST]     新增/修改测试
+#      - [DOCS]     文档变更
+#
+# 2. Git 提交后，追加提交锚点：
+#      ## >>> COMMITTED: <commit-hash> (<日期>)
+#
+# ── 变更记录 ──────────────────────────────────────────
+
+- [DOCS] 启动 PCIe 全双工串行化问题追踪（debug_issues/[TODO]pcie_full_duplex_serialization/）：GPU 事件计时证明 254 次测量全为 overlap=0，D2H-H2D 串行化间隙 1.6µs，潜在 29% 性能提升未实现。完成文档：README/HYPOTHESES/INSTRUMENTATION/DATA_SUMMARY/ACTION_PLAN，待 GPU 能力诊断确认硬件限制或软件配置问题。
+- [FIX] merge_to_single_pool(): 在合并前将 V1 路径的 batch_idx 设为 sentinel，修复 dual-pool merge 后批量 M5_SF_FAIL（batch_idx 跨 per-view ray_hits 缓冲区失效）。见 debug_issues/merge_phase_M5_SF_FAIL_on_merge/AGENTS.md。
+- [DOCS] 更新 debug_issues/merge_phase_M5_SF_FAIL_on_merge/AGENTS.md，标记状态为已修复 (F6)，记录修复机制分析。
+- [TEST] 验证通过：porous 场景运行后 post-merge M5_SF_FAIL + enc invalid 全部消失。
+
+## >>> COMMITTED: 6dada61 (2026-03-13)
+
+- [REFACTOR] enc/cp distribute 从 gpu_wait_d2h_all() 移至 merged_pass() Phase A，与 RT distribute 对齐。D2H 函数现在仅负责下载，distribute 统一在 merged_pass Phase A 执行。
+- [TEST] 验证通过：porous 场景运行，性能无回归，构建零错误。
+- [DOCS] 关闭 debug_issues/[RESOLVED]d2h_enc_cp_distribute_misalignment/。更新 guide/pwf_design/ 文档（DATA_FLOW/STRUCTURE/FUNCTIONS/AGENTS），merged_pass 三相→四相。
+
+## >>> COMMITTED: 185d124 (2026-03-13)
+
+- [REFACTOR] 删除 835 行旧 P4 管线死代码：pool_collect_enc_locate_requests、pool_collect_cp_requests、pool_distribute_ray_results、harvest_completed_paths、P4 块（cpu_pre_gpu/gpu_launch_async/gpu_wait_download/gpu_postprocess/gpu_wait_and_postprocess + VIEW_TAG 宏）、post_merged_enc_cp、cpu_between。6376→5541 行。
+- [TEST] 验证通过：Release 构建零错误。
+
+## >>> COMMITTED: 51311e9 (2026-03-13)
+
+- [FEAT] O12: gpu_submit_all 按 H2D→Kernel→D2H 顺序连续发出异步调用，cudaStreamWaitEvent 门控 D2H。gpu_wait_d2h_all 仅等待 D2H 完成事件。5 相互斥计时系统（submit, wait_d2h, merged_pass, compact+rfill, housekeeping）。
+- [FEAT] O13: 异步 submit 线程。_beginthreadex + per-view 独立通道（go[2] auto-reset + done[2] manual-reset），WaitForMultipleObjects 多路复用。pool_run_dual 和 camera-mode verbose loop 均已改造。
+- [FIX] O13 per-view 通道修复：旧单通道+idle 互斥设计在线程数<32 时死锁。改为 per-view 独立参数槽 + 独立触发事件，消除所有共享可变状态。
+- [DOCS] 关闭 debug_issues/[RESOLVED]pcie_full_duplex_serialization/（O12+O13 修复 H6 根因）。标记 optimization/ 下 4 个分析目录为 [DONE]（2-stream_solver, cpu_wait_for_gpu_issue, gpu_launch_overhead, wf_pipeline）。
+- [DOCS] 更新 guide/pwf_design/ 全部 7 个文档（AGENTS/STRUCTURE/DATA_FLOW/FUNCTIONS/OPTIMIZATION/TIMING_GANTT/TIMELINE_USAGE）反映 O12/O13 架构变更和新时序数据。
+- [TEST] 验证通过：wall=119.5s, coverage=129.8%, submit=29.8s 完全隐藏, 任意线程数无死锁。
+
+## >>> COMMITTED: ec873d2 (2026-03-14)
+
+- [FEAT] GPU Postprocess (GPU_PP): 将 cpu_postprocess 的 HitResult→s3d_hit 格式转换全部移至 GPU 执行，消除 20s OMP 后处理瓶颈。
+  - ray_types.h: 新增 GpuPpEntry (12B) + GpuHitResult (56B, s3d_hit 二进制兼容) 结构体
+  - ox_s3d_internal.h: batch_trace_context 增加 d_gpu_hits / h_gpu_hits_pinned 缓冲区；s3d_scene_view 增加 d_pp_table
+  - kernels.cu/h: 实现 postprocessHitsKernel（miss→NULL, sphere UV via atan2/acos, mesh UV+normal 转换）+ postprocessHitsDevice 主机包装
+  - ox_s3d_scene_view.cpp: 场景重建时上传 pp_table 到 GPU；两条 filtered_async 路径均追加 postprocessHitsDevice 调用；D2H 源改为 d_gpu_hits→h_gpu_hits_pinned；wait_d2h 移除 ~90 行 OMP 后处理循环，替换为 memcpy（带 self-copy guard）
+  - s3d.h: get_pinned_buffers API 新增 out_hits 参数
+  - sdis_solve_persistent_wavefront.c: ray_hits 改为从 pinned buffer 借用（零拷贝），移除 calloc/free
+- [FIX] CMakeLists.txt: 注释掉未定义目标 test_sdis_dispatch_soa 的 deploy_runtime_dependencies 调用

@@ -1,0 +1,42 @@
+# CHANGE_LOG — Stardis-GPU 本地工作日志
+#
+# 此文件由 LLM 自动维护，记录两次 Git 提交之间的累积变更。
+# 需要在 `.gitignore` 中忽略，不进入版本控制（避免「更新日志→产生新变动→需要再次记录」的循环）。
+# 这是面向 LLM 的本地工作记忆，不是正式发布日志。
+#
+# ── 维护规则 ──────────────────────────────────────────
+#
+# 1. 每完成一项变更，立即在本段注释后（L26之后）追加一条记录，标签如下：
+#      - [FEAT]     新增功能
+#      - [FIX]      修复问题
+#      - [REFACTOR] 重构
+#      - [TEST]     新增/修改测试
+#      - [DOCS]     文档变更
+#    示例：
+#      - [FEAT] SceneParser 支持 HF_BOUNDARY_FOR_FLUID 关键字解析
+#      - [FIX] SurfacePainter 撤销栈在空操作时不再崩溃
+#
+# 2. Git 提交后，在本段注释后（L26之后）追加提交锚点：
+#      ## >>> COMMITTED: <commit-hash> (<日期>)
+#    锚点下方的变更即已包含在该提交中。
+#
+# 3. 若此文件丢失（git clean / 重新克隆），LLM 应自动重建此文件（含本头部）。
+#
+# ─────────────────────────────────────────────────────
+
+- [DOCS] 新建 debug_issues/merge_phase_M5_SF_FAIL_on_merge/ issue：双池 merge 触发批量 M5_SF_FAIL（残留任务未清理→垃圾值→chosen_dst≤0），含根因分析、因果链、修复方案 F1/F2/F3 和验证计划
+- [DOCS] 更新 debug_issues/AGENTS.md 追踪状态描述：将 TODO 项改为“静态仍存在/框架阻塞/待复核”具体状态，并登记 enc_rot_matrix_mismatch 为 RESOLVED
+- [DOCS] 更新 wf_c3_picard_systematic_bias 追踪状态说明，新增 2026-03-13 框架阻塞说明；将 [TODO]enc_rot_matrix_mismatch 迁移为 [RESOLVED]enc_rot_matrix_mismatch 并在 investigation.md 标记已解决
+- [DOCS] 根据“B4无需测试、WF改动大但数据已收集”决策，将活跃 issue merge_phase_test_framework_incompatibility 在索引与详情页统一降级为低优先级跟踪
+- [DOCS] 同步更新 [TODO]wf_c3_picard_systematic_bias 追踪口径：由“框架阻塞无法复测”改为“WF链路不作为阻塞项，基于既有数据持续跟踪”
+- [DOCS] 新建 debug_issues/[TODO]solver_loop_duplication/：camera 入口内联双流/单流求解循环与 pool_run 重复，含逐阶段对比表、目标架构、方案 A（回调式 pool_run_ex）、已知风险（gpu_wait_d2h_all vs _only 语义差异、DIAG_V3 缺失、env_tl 硬编码）和验收标准
+- [REFACTOR] persistent wavefront 移除 d2h 双后缀封装：统一 `gpu_wait_d2h`，删除 `gpu_wait_d2h_only/gpu_wait_d2h_all` 命名歧义；同时移除 `STARDIS_DIAG_V3` 假说遗留分支，单流路径回归 CPU 基线语义
+- [REFACTOR] 以 camera 验证循环为基线重构执行层：将双流/单流统一封装为 `run_pool`，入口仅负责任务初始化；camera/probe/probe_batch 全部改为调用 `run_pool`，并通过 `pool_run_cfg` 控制进度、诊断、周期日志与 timeline 输出
+- [FEAT] O14: per-thread fixed partition for merged_pass（stardis-oxs3d-o14 worktree, branch opt/o14-partition, commit f64ea07）。wavefront_pool 新增 tl_done_indices/tl_done_count/o14_partition_size/o14_nthreads；merged_pass 替换 omp for schedule(dynamic,64)+active_indices 为线程固定分区直扫；Phase D harvest 写 per-thread done list 替代全局原子 done_count；compact_active_paths 改为合并 tl_done lists → done_indices
+- [DOCS] O16 访存瓶颈分析完成：补充内存占用全景表（P=8192: 42MB / P=32768: 169MB vs L3 36MB）、VTune 关键信号对比、4 热点逐一归因（flush NT 写、distribute 随机读/AoS 步幅/双重间接、cnd enc_id 利用率、scene_view 容量争用）、综合优先级排序
+- [DOCS] 新建 O16_dev_plan.md：4 热点各提出推荐方案与备选（P0: NT store flush, P1: 热字段提取+prefetch, P2: enc pre-gather, P3: enc_id→hot, P4: ray_hits slot 重排, P5: scene_view prefetch），含实施优先级表与验证方法
+- [DOCS] 审计并全面更新 guide/pwf_design/ 文档体系，使其反映 O16 工作树架构：修正全部7个文档中的源代码路径（stardis-oxs3d → stardis-oxs3d-o16）、版本标记（Phase B-3 M3 + O12/O13 → + O12/O13/O16 + Plan E·P0_OPT·P1·P2）、优化标记表（新增 O16/Plan E/P0_OPT/P1/P2 条目与详细描述）；修正 OPTIMIZATION.md 中将 O16 误记为"SIMD级联"的错误，改为实际的 NT Store Pinned Writes；更新 FUNCTIONS.md 函数名（pool_view_create→pool_view_init, pool_collect_ray_requests→pool_collect_ray_requests_bucketed）并补充 merged_pass_flush_tl_rays O16 注解；TIMING_GANTT.md 性能历史表新增 O16 行
+- [FEAT] O16 实现落地：tl_ray_entry 从 104B 瘦身至 64B（1 cacheline），嵌入 s3d_ray_pinned/s3d_filter_per_ray 直接格式、消除 double 中转；merged_pass_flush_tl_rays 改为两次 _mm_stream_si128 NT store（bypass cache写 pinned buffer）；tl_ray_bufs 改用 _aligned_free；新增对齐断言（f6d421f, opt/o16-mem-access）
+- [REFACTOR] 修复 stardis-oxs3d-merge-phase worktree detached HEAD，切回 opt/merge-phase 分支；提交 CMakeLists 中移除已废弃 deploy target（dispatch_soa layer eliminated，2f874d5）
+- [MERGE] opt/o16-mem-access → opt/merge-phase（合并提交 d89963a），解决 CMakeLists.txt 注释冲突（保留 merge-phase 侧注释）
+- [MERGE] opt/merge-phase → main（fast-forward 至 d89963a），main 现与 opt/merge-phase 同步，包含 O13~O16 及 run_pool 重构

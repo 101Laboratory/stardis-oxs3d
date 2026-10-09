@@ -1,0 +1,72 @@
+[
+  {
+    "source": "D:\\Stardis-GPU\\CHANGE_LOG",
+    "path": "guide/development-archive/workspace-CHANGE_LOG.txt",
+    "sha256": "571fa570792f049225797bbe23a032edd42ffdeed917e3fc4297e3684a7c7d46"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\AGENTS.md",
+    "path": "guide/development-archive/workspace-AGENTS.md.txt",
+    "sha256": "811b3e13aee0bcea73e89b7c12c04d4cf4993b19a17c3ab2bd5a89a273a9ffa3"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-merge-phase\\CHANGE_LOG",
+    "path": "guide/development-archive/stardis-oxs3d-merge-phase-CHANGE_LOG.txt",
+    "sha256": "247cd92ef3777dacd534a9f6db115812263d1f78f801f122248ef2057a10e00d"
+  },
+  {
+    "source": "D:\\stardis-editor\\CHANGE_LOG",
+    "path": "guide/development-archive/stardis-editor-CHANGE_LOG.txt",
+    "sha256": "59bfb25027fdbea56dfdbae63cb858ce19cfc1b5f9e80b9bd788c8d58a8cdf08"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\cus3d-interface-audit.skill",
+    "path": "guide/development-archive/development-skills/cus3d-interface-audit.skill",
+    "sha256": "8260f58fabe1471170a9efbe9cbd7dc4bad366dcc1d0aa743072b47e5083bddc"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\SKILL.md",
+    "path": "guide/development-archive/development-skills/SKILL.md",
+    "sha256": "9166267cc4b6b26996797191603aab7799380d108687b0d0d36d5a9319cad87c"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\star3d-embree-to-cubql-migration.skill",
+    "path": "guide/development-archive/development-skills/star3d-embree-to-cubql-migration.skill",
+    "sha256": "271acdf0513c1474803d1d25bf9effc68f6cee7edaeb14f8fd4c230d4f3a6f91"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\references\\report_template.md",
+    "path": "guide/development-archive/development-skills/references/report_template.md",
+    "sha256": "89863d25194be8edbbc7ecdab325a1f5d6445ffc093128a1411cbb0c694beaef"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\star3d-embree-to-cubql-migration\\SKILL.md",
+    "path": "guide/development-archive/development-skills/star3d-embree-to-cubql-migration/SKILL.md",
+    "sha256": "9456e1b6b58bd6821d45595150c55d8dc611fc408622231bd91816bf2ba9c2bd"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\star3d-embree-to-cubql-migration\\references\\function-hierarchy.md",
+    "path": "guide/development-archive/development-skills/star3d-embree-to-cubql-migration/references/function-hierarchy.md",
+    "sha256": "a2c9160dde776e81af2f1a53db79412f6433bf919b8889529f41fab8716e8a61"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\star3d-embree-to-cubql-migration\\references\\interface_incompetibility.md",
+    "path": "guide/development-archive/development-skills/star3d-embree-to-cubql-migration/references/interface_incompetibility.md",
+    "sha256": "2099c1a5aa532ac56ee2d91876da4f78851da02a614080e1ea7fc0e654049402"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\star3d-embree-to-cubql-migration\\references\\migration-protocol.md",
+    "path": "guide/development-archive/development-skills/star3d-embree-to-cubql-migration/references/migration-protocol.md",
+    "sha256": "536b7d343cedfbd5df9f1df06878ea1bef58e96e8067a9d68c184846e8cd6583"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\star3d-embree-to-cubql-migration\\references\\tool-restrictions.md",
+    "path": "guide/development-archive/development-skills/star3d-embree-to-cubql-migration/references/tool-restrictions.md",
+    "sha256": "353478083c3bbec6ec773fe09bb9060e6fcb158faa9bab8867c767b5b28c339d"
+  },
+  {
+    "source": "D:\\Stardis-GPU\\.opencode\\skills\\star3d-embree-to-cubql-migration\\scripts\\track_migration.py",
+    "path": "guide/development-archive/development-skills/star3d-embree-to-cubql-migration/scripts/track_migration.py",
+    "sha256": "8b6619992ea9601d3de3f1042b3b4b090b028a12f2dcd2e56758395192601c24"
+  }
+]

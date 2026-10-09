@@ -19,4 +19,4 @@
 - https://github.com/101Laboratory/stardis-editor
 - https://github.com/101Laboratory/stardis-thesis
 
-上传和递归克隆验证完成后在本文件追加最终结果。早期嵌套历史的 27 个缺失 SHA 仍作为已知档案缺口保留。
+此文件保存发布准备阶段快照；实时完成情况以 [总仓库发布状态](https://github.com/101Laboratory/stardis-research/blob/main/RELEASE_STATUS.md) 为准。早期嵌套历史的 27 个缺失 SHA 仍作为已知档案缺口保留。

@@ -1,0 +1,242 @@
+# CHANGE_LOG — StardisEditor 本地工作日志
+#
+# 此文件由 LLM 自动维护，记录两次 Git 提交之间的累积变更。
+# 已被 .gitignore 忽略，不进入版本控制（避免「更新日志→产生新变动→需要再次记录」的循环）。
+# 这是面向 LLM 的本地工作记忆，不是正式发布日志（正式版本记录见 CHANGELOG_V1.1.md）。
+#
+# ── 维护规则 ──────────────────────────────────────────
+#
+# 1. 每完成一项变更，立即在末尾追加一条记录，标签如下：
+#      - [FEAT]     新增功能
+#      - [FIX]      修复问题
+#      - [REFACTOR] 重构
+#      - [TEST]     新增/修改测试
+#      - [DOCS]     文档变更
+#    示例：
+#      - [FEAT] SceneParser 支持 HF_BOUNDARY_FOR_FLUID 关键字解析
+#      - [FIX] SurfacePainter 撤销栈在空操作时不再崩溃
+#
+# 2. Git 提交后，追加提交锚点：
+#      ## >>> COMMITTED: <commit-hash> (<日期>)
+#    锚点上方的变更即已包含在该提交中。
+#
+# 3. 若此文件丢失（git clean / 重新克隆），LLM 应自动重建此文件（含本头部）。
+#
+# ─────────────────────────────────────────────────────
+
+- [FEAT] Scene Editor v2 完整实现（几何中心化场景编辑器）
+  - run_scene_editor.py: v2 启动入口
+  - src/scene_editor.py: 主窗口 SceneEditor，QSplitter 组合场景树/3D 视口/属性面板
+  - src/models/scene_model.py: 几何中心化数据模型 (SceneModel, Body, SurfaceZone, PaintedRegion, ImportedSTL, 边界条件 dataclass)
+  - src/panels/scene_tree_panel.py: SceneTreePanel — 场景层级树，按边界类型着色
+  - src/panels/property_panel.py: PropertyPanel — 动态属性编辑器 (GlobalSettingsEditor, BodyEditor, SurfaceZoneEditor)
+  - src/viewport/scene_viewport.py: SceneViewport — 多物体 VTK 3D 视口，导航/画笔模式切换
+  - src/viewport/surface_painter.py: SurfacePainter — BoundaryLabel 画笔系统，50 步撤销/重做栈
+  - src/parsers/scene_parser.py: SceneParser — .txt 场景文件解析为 SceneModel
+  - src/parsers/scene_writer.py: SceneWriter — SceneModel 写出为 .txt + STL + .stardis_project.json
+- [FEAT] 涂选持久化：三角形哈希匹配方案
+  - src/parsers/triangle_hash_matcher.py: 新增核心模块 — SHA-256 三角形哈希，O(n) 父子网格匹配
+  - src/models/scene_model.py: save_project() 写出 zone_parent_map（不再存 cell_ids）
+  - src/parsers/scene_parser.py: _recover_paint_state_by_hash() 从 B_*.stl 恢复涂选状态
+  - src/parsers/scene_parser.py: _load_zone_parent_map() + _assign_boundaries_to_bodies() 支持 JSON 优先 / 启发式 / 用户对话框
+  - src/parsers/scene_writer.py: PaintedRegion → vtkThreshold 导出 B_*.stl，ImportedSTL → 拷贝并统一命名
+  - src/viewport/scene_viewport.py: isinstance(zone.source, PaintedRegion) 替换 hasattr 检查
+  - src/scene_editor.py: _resolve_boundary_parents() — 未解析边界的用户选择对话框
+- [DOCS] 创建 AGENTS.md 项目指南
+- [DOCS] 创建 design/scene_editor/ 设计文档（5 篇）
+  - 01_概念与数据模型.md: PaintedRegion 运行时注解、zone_parent_map、反序列化路径
+  - 02_UI行为规约.md: 涂选持久化声明
+  - 03_组件通信协议.md: 信号/槽协议
+  - 04_VTK实现方案.md: §9 三角形哈希匹配算法完整设计
+  - 05_工程规划.md: S7/S8 交付标准 + §3 测试设计
+- [TEST] 创建 tests/paint_tests/ 正式 pytest 测试套件（29 用例全部通过）
+  - conftest.py: 共享 fixtures (parent_poly, scene_dir, scene_dir_with_json)
+  - test_triangle_hash_matcher.py: 12 用例 — 哈希确定性、hash_map 构建、子→父匹配、STL 往返
+  - test_save_project.py: 5 用例 — save_project 序列化、zone_parent_map、multi-body
+  - test_scene_writer.py: 5 用例 — PaintedRegion/ImportedSTL 统一 B_*.stl 导出
+  - test_roundtrip.py: 7 用例 — 有/无 JSON 往返恢复、保存→重加载完整往返
+- [DOCS] 更新测试设计文档
+  - design/scene_editor/05_工程规划.md: 新增 §3 测试设计（结构、fixtures、覆盖矩阵、运行命令）
+  - AGENTS.md: 更新测试覆盖矩阵（详细到测试类级别）
+
+## >>> COMMITTED: eeb9b31 (2026-03-10)
+
+- [FEAT] 场景树右键菜单「打开场景文件目录」
+  - src/panels/scene_tree_panel.py: 新增 set_scene_file()、_append_open_folder_action()，任意位置右键均显示"打开场景文件目录"选项
+  - src/scene_editor.py: open_scene / save_scene_as / new_scene 同步场景路径到 SceneTreePanel
+- [DOCS] design/scene_editor/02_UI行为规约.md: 新增「全局右键菜单」段落，描述打开场景文件目录行为
+
+- [FEAT] EditorPreferences 偏好设置系统
+  - src/models/editor_preferences.py: 新增 EditorPreferences 数据模型（搜索目录、最近 exe/工作目录、最近工程、启动行为、从 v1 user_settings.json 迁移）
+  - src/panels/preferences_dialog.py: 新增 PreferencesDialog 对话框（常规/Stardis/最近工程 三标签页）
+  - src/scene_editor.py: 集成偏好设置 — 启动行为（无操作/打开上次工程）、最近工程子菜单、编辑→偏好设置、关闭时记忆当前工程路径
+
+- [DOCS] Task Runner 系统设计文档
+  - design/task_runner/README.md: 设计决策摘要与文档索引
+  - design/task_runner/01_数据模型.md: Task/TaskQueue 数据结构、枚举、引用语义、错误处理策略、验证模式文档
+  - design/task_runner/02_UI交互设计.md: 场景树 Tasks 节点、PropertyPanel 队列/任务编辑器、右键快捷创建、信号定义、场景验证入口、EditorPreferences HTPP Tab
+  - design/task_runner/03_执行引擎.md: CommandBuilder 命令行构建、引用求值/快照、TaskRunner 队列调度、错误处理/重试/暂停、SceneValidator
+  - design/task_runner/04_持久化与序列化.md: .stardis_project.json task_queue 字段、序列化规则、引用完整性维护
+  - AGENTS.md: 新增 Task Runner 章节描述，更新数据流图
+
+- [DOCS] Task Runner 设计迭代 — 标签化 exe 管理 + 相对路径序列化
+  - design/task_runner/01_数据模型.md: exe_path → exe_ref（标签名或绝对路径回退）、过程/结果文件使用相对路径、新增 §3.1 路径与可执行文件引用约定
+  - design/task_runner/02_UI交互设计.md: exe 选择器改为标签下拉框、EditorPreferences 改为标签化管理（exe_tags: Dict[str, str]）、PreferencesDialog Tab 合并为"可执行文件"标签页
+  - design/task_runner/03_执行引擎.md: 新增 _resolve_exe_ref() 标签→绝对路径解析、resolve_all 注入 prefs 参数、HTPP 输入相对路径解析、校验清单更新
+  - design/task_runner/04_持久化与序列化.md: 序列化规则表新增 exe_ref 和过程文件路径规则、JSON 示例使用标签名、EditorPreferences 新增 exe_tags 字段格式、旧版 recent_exes 迁移说明
+
+- [FEAT] Task Runner 系统完整实现
+  - src/models/task_model.py: 新增任务数据模型 — Task, TaskQueue, StardisParams, HtppParams, AdvancedOptions, FieldSolveConfig, ErrorPolicy, InputFromTask/InputFromFile，完整 JSON 序列化/反序列化，工厂方法 create_stardis_task/create_htpp_task
+  - src/models/scene_model.py: SceneModel 新增 task_queue: TaskQueue 字段，save_project/load_project 支持 task_queue 持久化（向后兼容）
+  - src/models/editor_preferences.py: 新增 exe_tags: Dict[str, str] 字段，to_dict/from_dict 支持（向后兼容）
+  - src/models/__init__.py: 导出所有 task_model 类型
+  - src/task_runner/__init__.py: 新增包，导出 CommandBuilder, TaskRunner, ValidationError, ResolvedTask
+  - src/task_runner/command_builder.py: CommandBuilder — 将任务参数转为 stardis/htpp CLI 参数列表
+  - src/task_runner/task_runner.py: TaskRunner(QObject) 队列调度器 + resolve_exe_ref + resolve_all 引用求值 + 错误处理（重试/跳过/暂停/取消）+ HTPP 依赖链
+  - src/panels/scene_tree_panel.py: 新增 task_group/task 节点类型、13 个任务相关信号、右键菜单（Camera→创建渲染任务、Probe→创建探针任务、Tasks→增删运行）
+  - src/panels/task_editors.py: 新增 TaskQueueEditor（错误策略/环境变量/运行按钮）+ TaskEditor（Stardis/HTPP 参数配置/命令预览）
+  - src/panels/property_panel.py: 新增 PAGE_TASK_QUEUE=9, PAGE_TASK=10，集成 TaskQueueEditor/TaskEditor
+  - src/scene_editor.py: 集成 TaskRunner + 20+ 信号连接 + 任务 CRUD 处理器 + 右键创建渲染任务组/探针任务
+- [TEST] 新增 tests/task_runner_tests/ 测试套件（47 用例全部通过）
+  - test_task_model.py: 序列化往返（IR/Probe/HTPP/FieldSolve/Advanced）、工厂方法、InputSource 多态
+  - test_command_builder.py: Stardis IR/Probe/Field 命令生成、HTPP Image/Map、高级选项
+  - test_task_runner.py: resolve_exe_ref（标签/路径）、resolve_all（IR/Probe/Field/HTPP 依赖链/环境变量合并/禁用跳过/校验错误）
+  - test_scene_model_tasks.py: SceneModel save/load 含 task_queue 往返、向后兼容（无 task_queue 字段）
+- [DOCS] 更新 AGENTS.md — 新增 src/task_runner/ 和 task_editors.py 目录描述，更新 models/panels 表格
+
+- [DOCS] EditorPreferences 文档独立归档
+  - design/editor_preferences/01_偏好设置.md: 新建独立文档，整合 scene_editor/02 §6 + task_runner/02 §6 + task_runner/04 §6 的 EditorPreferences 内容
+  - design/scene_editor/02_UI行为规约.md: §6 替换为交叉引用指向新文档
+  - design/task_runner/02_UI交互设计.md: §6 替换为交叉引用指向新文档
+  - design/task_runner/04_持久化与序列化.md: §6 替换为交叉引用指向新文档
+- [FEAT] PreferencesDialog 升级为标签化可执行文件管理
+  - src/panels/preferences_dialog.py: Stardis 标签页→「可执行文件」标签页，QListWidget→QTableWidget 标签表格（标签名+路径），新增添加/删除/修改路径/扫描发现功能
+- [DOCS] 更新 AGENTS.md — 偏好设置持久化描述添加 exe_tags 和 design/editor_preferences/ 引用，PreferencesDialog Tab 描述更新
+
+- [FEAT] 任务创建默认值优化
+  - src/scene_editor.py: 新增 _default_model_file()/_default_exe_ref() 辅助方法，创建任务时自动填入当前场景文件名(-M)和匹配的 exe 标签
+  - _add_task_by_type / _on_create_render_tasks / _on_create_probe_task 均使用默认值
+- [FIX] 任务可执行文件选取改为下拉框（与设计文档一致）
+  - src/panels/task_editors.py: exe_ref 从 QLineEdit 改为 QComboBox，列出 EditorPreferences.exe_tags 标签 + "浏览…"文件选择器回退
+  - 新增 set_preferences() / _populate_exe_combo() / _on_exe_ref_activated() 方法
+  - src/scene_editor.py: 初始化时及偏好设置变更后同步 prefs 到 TaskEditor
+- [FIX] IR 渲染默认输出文件名格式
+  - src/task_runner/command_builder.py: build_ir_output_filename 从 IR_rendering_{w}x{h}x{spp}.ht 改为 IRR_{w}x{h}x{spp}.ht
+- [FEAT] HTPP 默认输出文件名
+  - src/task_runner/task_runner.py: resolve_all 中 HTPP 任务若未指定 output_file，自动从输入文件名推导为 {inputname}.ppm
+- [TEST] 更新 tests/task_runner_tests/test_command_builder.py: IR 输出文件名断言适配新格式
+
+- [DOCS] Task Runner 设计文档细化 — HTPP 参数对齐补充
+  - design/task_runner/01_数据模型.md: §5.2 + §5.3 新增与 C 源码对齐详情（exposure/white_scale/palette/range 映射、仅生成非默认值原则、完整参数表）
+  - design/task_runner/03_执行引擎.md: §2.3 完全重写 HTPP 命令构建规则（标志顺序、_build_image_options/_build_map_options 伪代码、参数组合示例表、完整构建流程）
+  - design/task_runner/README.md: 更新文档地图和推荐路径（移除对单独 05 文件的引用，将 HTPP 参数内容关联到 01 和 03）
+
+- [FIX] HTPP 调色板列表修正（scmap 库全量）
+  - src/panels/task_editors.py: HTTP_PALETTES 从错误的 matplotlib 名称（18 个）改为 scmap 库全部 48 个调色板（accent/blues/brbg/.../ylrd 按字母序）
+  - src/HtppControlPanel.py: PALETTES 同步更新为 scmap 库全部 48 个调色板
+  - design/task_runner/01_数据模型.md: §5.2 中调色板预设数量 18 → 48
+  - design/task_runner/README.md: 版本历史中 "8/18 options" → "8/48 options"，"18 预设" → "48 预设（scmap 库全量）"
+
+- [FIX] CameraEditor 属性编辑后切换对象不保存问题
+  - src/panels/property_panel.py (CameraEditor.__init__): 补充所有 13 个控件的信号连接（cam_name.textChanged + pos/tgt/up/fov/spp/res_w/res_h 的 valueChanged → property_changed），对标 BodyEditor/ProbeEditor 的实现模式
+  - src/scene_editor.py (_connect_signals): 新增 props.camera_editor.property_changed → _apply_and_refresh_tree() 订阅，与其他所有编辑器保持一致
+  - 修复前：相机属性仅在 Ctrl+S 保存时写回 SceneModel，切换对象后修改丢失
+  - 修复后：任意控件编辑即时写回内存，切换对象不丢失，与意图行为一致
+- [FIX] TaskEditor 中 Stardis/HTPP 参数控件编辑后切换任务不保存问题
+  - src/panels/task_editors.py (TaskEditor.__init__): 信号连接块从 5 行扩充至 30+ 行，覆盖所有 Stardis 参数（_model_file/_samples/_threads/_verbosity/_camera_ref/_probe_list/_field_type/_medium_name/_solve_file/_output_redirect/_stderr_redirect）和所有 HTPP 参数（_input_group/_input_task_combo/_input_file_edit/_htpp_threads/_force_overwrite/_htpp_verbose/_htpp_output/_exposure/_white_scale/_pixel_comp/_palette/_range_min/_range_max/_gnuplot）
+  - 注：_white_auto 和 _range_auto 的 toggled 信号不重复连接，因其专用处理器（_on_white_auto_toggled/_on_range_auto_toggled）已在内部调用 property_changed.emit()
+
+- [FIX] 相机右键创建任务组时 HTPP 任务类型错误
+  - src/scene_editor.py (_on_create_render_tasks): HTPP 任务的 htpp_mode 从 HtppMode.IMAGE（图像）修正为 HtppMode.MAP（映射），与 Stardis IR 渲染输出的后处理语义一致
+
+## >>> COMMITTED: 2e3b229 (2026-03-10)
+
+- [FIX] FieldSolveConfig 参数语义对齐 stardis 源码
+  - src/models/task_model.py: `solve_file` → `surface_stl`（输入 STL 文件路径，非输出），新增 `time_start`/`time_end` 可选时间范围字段，`_field_solve_to_dict`/`_dict_to_field_solve` 序列化更新（向后兼容旧 `solve_file` 键名）
+  - src/task_runner/command_builder.py: `_build_field_args` 使用 `surface_stl` 字段，追加可选时间参数 `-S surface.stl,t1,t2` 格式
+  - src/panels/task_editors.py: `_solve_file` → `_surface_stl`，标签改为「表面 STL (-s/-S/-F)」+ tooltip 说明输入语义，新增时间范围控件（checkbox + `_field_time_start`/`_field_time_end` QDoubleSpinBox），新增 `_on_field_time_toggled` 联动槽
+- [DOCS] design/task_runner/01_数据模型.md: §2.2 FIELD_SOLVE 表格修正产出与 CLI 格式，§2.3 FieldSolveType 注释更新，§4.2 FieldSolveConfig 字段重命名 + time_start/time_end + 语义说明
+- [DOCS] design/task_runner/03_执行引擎.md: §2.2 FIELD_SOLVE 构建规则更新为 `surface[,t1[,t2]]` 格式
+- [TEST] tests/task_runner_tests/test_command_builder.py: `TestBuildStardisField` 适配字段重命名，新增 3 个时间范围测试用例（`test_medium_temp_with_time_start`/`test_surf_temp_map_with_time_range`/`test_surf_mean_temp_no_time`）
+- [TEST] tests/task_runner_tests/test_task_model.py: `test_field_solve_roundtrip` 适配新字段 + time_start/time_end 验证，新增 `test_field_solve_backward_compat` 旧版 JSON 兼容性测试
+
+## >>> COMMITTED: 2e3b229 (2026-03-10)
+
+- [DOCS] design/task_runner/01_数据模型.md: 修正 FIELD_SOLVE stdout 输出格式描述（基于 stardis 0.12 C 源码 stardis-output.c 实证分析）
+  - §2.2 ComputeMode 表格：PROBE_SOLVE 产出补充格式说明；FIELD_SOLVE 产出从错误的「-S→数值/-F→VTK」修正为「-m/-s/-F→数值 / -S→VTK POLYDATA ASCII」
+  - §2.3 FieldSolveType：每个枚举注释补充 stdout 格式（MEDIUM_TEMP/SURF_MEAN_TEMP: 4值一行；SURF_FLUX: 12值一行含4通量分量; SURF_TEMP_MAP: VTK POLYDATA ASCII per-triangle）
+  - §4.2 FieldSolveConfig：新增「stdout 输出格式」子节（4 行详细对照表 + `-e` 扩展模式说明，数据来自 print_single_MC_result()/dump_map() 函数实现）
+
+## >>> COMMITTED: 098336e (2026-03-12)
+
+- [FEAT] 物理材质数据库管理系统
+  - src/models/material_database.py: 新增核心模块 — Material(dataclass) + MaterialDatabase(QObject)，内置 25 种常用材质（金属/绝缘体/流体/其他 4 分类），CRUD 操作，JSON 持久化到 material_database.json，导入/导出，material_added/removed/updated 信号
+  - src/models/scene_model.py: MaterialRef 新增 source_material: str 字段，save_project/load_project 支持 body_materials 映射（向后兼容）
+  - src/models/__init__.py: 导出 Material, MaterialDatabase, is_valid_material_name
+  - src/panels/property_panel.py: BodyEditor 新增材质选择器（QComboBox 按分类分组 + 管理按钮），值拷贝语义（选择时复制 λ/ρ/cp，手动编辑自动解除材质关联）
+  - src/panels/material_manager_dialog.py: 新增 MaterialManagerDialog（分类筛选/表格浏览/详情编辑/新建/复制/删除/导入/导出）+ SaveMaterialDialog（从 Body 快速保存）
+  - src/panels/scene_tree_panel.py: Body 右键新增「应用材质」子菜单 + 「保存当前材质到库…」操作
+  - src/scene_editor.py: 集成 MaterialDatabase 生命周期（创建/加载/保存）、编辑→材质库管理 Ctrl+M、信号连接与处理器
+- [TEST] 新增 tests/material_tests/ 测试套件（30 用例全部通过）
+  - test_material_database.py: 25 用例 — 名称验证、数据库创建、CRUD 操作、JSON 持久化、导入导出、信号触发
+  - test_material_roundtrip.py: 5 用例 — source_material 字段、工程 JSON body_materials 往返、旧版向后兼容
+- [DOCS] 新增 design/material_database/ 设计文档
+  - 01_数据模型与存储.md: Material/MaterialDatabase 数据结构、内置材质表、持久化格式、生命周期、交互协议
+  - 02_UI交互设计.md: BodyEditor 材质选择器、MaterialManagerDialog 布局、右键菜单、交互流程图
+- [DOCS] 更新 AGENTS.md — 新增 material_database.py/material_manager_dialog.py 描述、物理材质数据库设计模式、测试分层表
+
+- [FEAT] 法线朝向自动检测与语义化 Inner/Outer 编辑
+  - src/models/scene_model.py: 新增 NormalOrientation 枚举 (UNKNOWN/OUTWARD/INWARD)、Body.normal_orientation 字段、detect_normal_orientation(stl_path) 和 detect_normal_orientation_from_polydata(poly) 函数（有符号体积算法 + vtkCleanPolyData 拓扑修复 + vtkFeatureEdges 封闭性检测）、save_project/load_project 支持 normal_orientations 映射
+  - src/panels/property_panel.py: BodyEditor 新增「法线与邻域」分组框 — 法线状态标签、手动覆盖开关、法线方向下拉框、语义化侧面选择（外侧/内侧/两侧）；新增 _semantic_to_side()/_side_to_semantic() 映射方法
+  - src/parsers/scene_parser.py: parse_file 后自动检测 UNKNOWN 法线朝向
+  - src/scene_editor.py: _on_add_body() 新增法线朝向自动检测
+- [FIX] detect_normal_orientation_from_polydata 添加 vtkCleanPolyData 合并重复顶点，修复 STL 网格（每三角面独立顶点）被误判为开放网格的问题
+- [TEST] 新增 tests/normal_orientation_tests/ 测试套件（31 用例全部通过）
+  - test_detect_orientation.py: 8 用例 — 封闭/开放/空/None/翻转法线检测
+  - test_semantic_mapping.py: 18 用例 — semantic↔side 映射（3 种 orientation × 3 种 side + 往返）
+  - test_roundtrip.py: 5 用例 — JSON 持久化往返、无 JSON 自动检测
+- [DOCS] 新增 design/surface_centric_refactor/01_设计方案.md — 法线语义化重构设计文档
+
+- [REFACTOR] BodyEditor 腔体中心化 UI 重构
+  - src/panels/property_panel.py: 新增 CavityGroupBox(QGroupBox) — 可折叠单侧腔体材质/体积属性编辑器（勾选展开/取消折叠），包含完整的类型/材质选择器/λρcp/δ/温度/热源控件和材质数据库集成
+  - src/panels/property_panel.py: BodyEditor 重构 — 顶层布局改为「法线朝向 → 内侧腔体 → 外侧腔体 → 几何信息 → 表面区域概览」，材质属性从几何体层级下沉到腔体层级
+  - 新增 _side_to_cavities/_inner_to_side/_outer_to_side 静态方法，Side + NormalOrientation ↔ (inner_on, outer_on) 双向映射
+  - 法线朝向变化时动态更新腔体标题（已知: 内侧/外侧，未知: BACK侧/FRONT侧）
+  - 取消手动覆盖时恢复自动检测结果（新增 _auto_orientation 字段）
+  - 保留 _semantic_to_side/_side_to_semantic 向后兼容接口
+- [TEST] 扩展 test_semantic_mapping.py — 新增 TestSideToCavities(9)、TestInnerOuterToSide(6)、TestCavityRoundtrip(3) 共 18 用例，全部 169 用例通过
+
+- [FEAT] 任务变量模板系统 — 支持在输出文件名中使用 {VAR} 语法引用任务参数
+  - src/task_runner/variable_expander.py: 新增核心模块 — build_variable_registry() 收集变量、expand_variables() 正则替换、list_available_variables() 上下文过滤、VariableError 异常、{{ 转义
+  - src/task_runner/task_runner.py: resolve_all() 集成变量展开 — 在引用求值后、命令构建前展开 output_redirect/stderr_redirect/htpp output_file
+  - src/task_runner/__init__.py: 导出 VariableError/expand_variables/build_variable_registry/inject_input_variable/list_available_variables
+  - src/panels/task_editors.py: 新增 VariableLineEdit(QLineEdit) — 输入 '{' 触发变量补全弹窗（过滤/方向键导航/Enter 插入），替换 output_redirect/stderr_redirect/htpp_output 三处 QLineEdit
+  - src/panels/task_editors.py: TaskEditor._update_preview() — 实时命令预览（property_changed 信号驱动），加载任务时初始化
+- [TEST] 新增 tests/task_runner_tests/test_variable_expander.py — 27 用例全部通过
+  - TestExpandVariables(11): 基本替换/多变量/环境变量/无变量/空模板/未知变量/转义大括号
+  - TestBuildVariableRegistry(6): IR_RENDER/PROBE_SOLVE/HTPP/环境变量/元数据
+  - TestInjectInputVariable(3): 路径/None/basename
+  - TestListAvailableVariables(4): 上下文过滤/env 提示
+  - TestIntegration(4): 端到端变量展开
+
+- [DOCS] 新增 design/task_runner/05_变量展开.md — 变量模板展开系统设计文档
+  - §2 语法（{VAR}、{env.XXX}、{{ 转义）
+  - §3 完整变量清单（元数据/Stardis/相机/HTPP/环境）、EXE_TAG 路径安全、SPP 数据源区分
+  - §4 适用字段（output_redirect/stderr_redirect/htpp output_file）
+  - §5 展开引擎架构（build_variable_registry → expand_variables 流程、resolve_all 集成位置）
+  - §6 UI 自动补全（VariableLineEdit 控件、上下文感知变量列表）
+  - §7-8 向后兼容性与使用示例
+  - design/task_runner/README.md: 文档地图新增 05、阅读路径新增变量模板、版本历史新增 v2.2.0
+
+- [FIX] body_materials 序列化适配腔体模型
+  - src/models/scene_model.py: save_project body_materials 仅序列化启用侧（front_enabled/back_enabled），单侧材质简写为字符串格式
+
+## >>> COMMITTED: 89b66b1 (2026-03-31)
+
+- [FEAT] 重命名"连接"为"耦合界面"并添加创建操作
+  - src/models/scene_model.py: 新增 next_connection_name(prefix) 方法，自动生成唯一耦合界面名称
+  - src/panels/scene_tree_panel.py: 组节点 "🔗 连接" → "🔗 耦合界面"，子节点类型标签 "[固流]" → "[固流耦合]"、"[固固]" → "[固固接触]"
+  - src/panels/scene_tree_panel.py: 新增 request_add_sf_connection / request_add_ss_connection 信号，NODE_CONN_GRP 右键菜单添加两种界面类型
+  - src/panels/property_panel.py: ConnectionEditor body_a/body_b 从只读 QLabel 改为 QComboBox 下拉框，支持从 Body 列表选择
+  - src/panels/property_panel.py: 类型显示 "SOLID_FLUID" → "固流耦合"、"SOLID_SOLID" → "固固接触"；标题 "连接:" → "耦合界面:"
+  - src/scene_editor.py: 实现 _on_add_sf_connection() / _on_add_ss_connection()，通过 STL 文件选择对话框创建耦合界面

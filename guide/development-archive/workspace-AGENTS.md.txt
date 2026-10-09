@@ -1,0 +1,70 @@
+# STARDIS-GPU 项目知识库
+
+**项目**: GPU加速辐射传输求解器  
+**核心栈**: C/C++/CUDA + OptiX  
+**状态**: 迁移完成（CPU Embree → GPU OptiX），求解器波前并行化完成，在行优化。
+
+## 概述
+使用CUDA + OptiX GPU加速的蒙特卡洛辐射传输求解器，用于热模拟（红外辐射传输）。
+
+## 结构
+项目状态和特征以开发目录下的AGENTS.md和源码为准。
+```
+stardis-gpu/
+├── stardis-cpu/          # CPU参考实现→ 见 stardis-cpu/AGENTS.md
+├── stardis-cus3d/        # GPU实现（OptiX光追后端 + 并行化求解器）→ 见 stardis-cus3d/AGENTS.md
+├── guide/                # 技术指南与设计文档→ 见 guide/AGENTS.md
+├── debug_issues/         # 程序问题与解决方案记录 → 见 debug_issues/AGENTS.md
+├── optimization/         # 性能优化历史记录 → 见 optimization/AGENTS.md
+├── perf_diag/            # 性能剖析数据（Nsight、吞吐量测试）
+├── physical_consistency_stats/ # GPU/CPU对比测试结果（3σ一致性验证数据）
+├── Stardis-Starter-Pack/ # 示例场景和测试数据
+```
+
+## 命令
+
+```bash
+# CPU构建（stardis-cpu/）
+cd stardis-cpu && mkdir build && cd build
+cmake -G "Visual Studio 17 2022" -A x64 ..
+cmake --build . --config Release > build.log 2>&1
+ctest -C Release --output-on-failure
+
+# GPU构建（stardis-cus3d/）
+cd stardis-cus3d && mkdir build && cd build
+cmake -G "Visual Studio 17 2022" -A x64 -DS3D_BACKEND=optix ..
+cmake --build . --config Release > build.log 2>&1
+ctest -C Release --output-on-failure
+
+# IR渲染测试
+cd Stardis-Starter-Pack/porous
+<stardis-executable> -M porous.txt -t 4 -V 3 -R spp=32:img=320x320:fov=30.0:pos=0.05,0.01,0.0:tgt=0.0,0.0,0.0:up=0.0,0.0,1.0 > "IR_rendering_320x320x32.ht"
+```
+
+若要从编译产物中收集运行时数据，只收集 `2>` 流，`>` 流是计算结果。
+
+## 反模式（本项目）
+
+- **避免数值精度损失** - 使用双精度，注意浮点误差累积
+- **避免在热路径中使用动态内存分配** - 性能关键代码预分配
+- **避免终端淹没** - 构建耗时较长，输出很多，始终用 `> build.log 2>&1` 重定向，避免大量输出干扰
+- **避免混流输出** - stardis 使用 `>` 流输出计算结果，若要收集运行时数据，不要使用 `2>&1`，直接用 `2>`
+- **避免全量测试** - 使用测试标签和过滤器，针对性验证
+- **不释放内存空间**（某些情况下） - 特定上下文中内存由上层管理
+- **不要假设指针对齐** - 显式对齐检查
+
+## 更新与维护
+
+毕业成果盘点与 101Lab 发布规划见 [`guide/publication_101lab/README.md`](guide/publication_101lab/README.md)。该目录记录本地与远端对应、上游归属、统一 `stardis-oxs3d` 主仓库方案、论文源码发布范围及嵌套仓库历史缺口；发布状态以其中的证据日期和检查清单为准。
+
+项目开发目录下的 `CHANGE_LOG` 文件是 LLM 的本地工作日志，记录两次 Git 提交之间的累积变更。需要在 `.gitignore` 中忽略以打破循环依赖。每完成一项变更或 Git 提交后，按 `CHANGE_LOG` 文件头部的规则追加记录。若文件丢失，LLM 应根据根目录下的模板自动重建，禁止修改根目录下的模板。
+
+当更新涉及新系统或模块时，要在 `/guide/` 下创建新的设计文档目录，详细记录设计细节。按**渐进式披露**原则分层组织信息，保持每个文档的聚焦和可读性。并在项目开发目录下的 `AGENTS.md` 中添加对应条目，交叉引用相关文档。
+
+## Debug 流程
+
+见 `debug_issues/AGENTS.md`，每个问题单独一个目录，包含问题描述、分析过程、假说列表、验证结果和最终结论。保持问题记录的系统性和可追溯性。
+
+---
+
+*更新: 2026-03-11*
