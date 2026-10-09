@@ -1,0 +1,72 @@
+.\" Copyright (C) 2015-2018, 2021, 2024 |Méso|Star> (contact@meso-star.com)
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program. If not, see <http://www.gnu.org/licenses/>.
+.Dd October 13, 2024
+.Dt S4VS 1
+.Os
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh NAME
+.Nm s4vs
+.Nd invariant property of diffuse random walks
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SYNOPSIS
+.Nm
+.Op Fl n Ar realisations_count
+.Op Fl s Ar scattering_coeff
+.Op Ar file
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh DESCRIPTION
+.Nm
+statically calculates the average length of diffused paths in the volume
+bounded by the input geometry.
+The calculated value is an invariant property of diffuse random walks:
+it is equal to 4V/S, where V is the volume of the geometry and S its
+surface area.
+.Pp
+The input geometry is assumed to be polygonal, in Obj format, with
+normals pointing to the interior of the volume according to the
+left-hand convention.
+If the file is not defined, the input geometry is read from the standard
+input.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl n Ar realisations_count
+Number of Monte Carlo realisations.
+Default is 10000.
+.It Fl s Ar scattering_coeff
+Scattering coefficient of the medium within the geometry.
+The default value is 0, i.e. the medium does not diffuse.
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXAMPLES
+Estimate the average length of diffusive random walks in
+.Pa bunny.obj
+whose internal medium has a scattering coefficient of 10.
+Use 1,000,000 Monte Carlo realisations:
+.Bd -literal -offset Ds
+s4vs -n 1000000 -s 10 bunny.obj
+.Ed
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SEE ALSO
+.Rs
+.%A Stéphane Blanco
+.%A Richard Fourner
+.%T \&An invariant property of diffuse random walks
+.%J Europhysics Letters
+.%V 61
+.%N 2
+.%D 2003
+.%U https://doi.org/10.1209/epl/i2003-00208-x
+.Re

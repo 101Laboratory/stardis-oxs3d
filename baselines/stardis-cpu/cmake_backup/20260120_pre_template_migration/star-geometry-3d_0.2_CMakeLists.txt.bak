@@ -1,0 +1,282 @@
+# star-geometry-3d (sg3d) Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: star-geometry-3d - 3D Geometry Helper Library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-19
+
+cmake_minimum_required(VERSION 3.15)
+project(star-geometry-3d
+    VERSION 0.2.0
+    DESCRIPTION "star-geometry-3d: 3D geometry helper library"
+    LANGUAGES C
+)
+
+# Options
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+option(SG3D_BUILD_TESTS "Build tests" ON)
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - C89 from config.mk, but MSVC needs C99
+if(MSVC)
+    set(CMAKE_C_STANDARD 99)
+    add_compile_options(/TC)
+else()
+    set(CMAKE_C_STANDARD 89)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
+
+# Platform-specific Warning Flags
+if(MSVC)
+    set(WARNING_FLAGS /W4 /wd4200 /wd4204)
+    set(HARDENING_FLAGS /GS /guard:cf)
+else()
+    set(WARNING_FLAGS
+        -Wall -Wcast-align -Wconversion -Wextra
+        -Wmissing-declarations -Wmissing-prototypes -Wshadow -pedantic
+    )
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2 -fcf-protection=full
+        -fstack-clash-protection -fstack-protector-strong
+        -fvisibility=hidden -fstrict-aliasing
+    )
+endif()
+
+add_compile_options(${WARNING_FLAGS} ${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG")
+    endif()
+endif()
+
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# Linker flags (Linux only)
+if(NOT WIN32 AND NOT MSVC)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+set(RSYS_INCLUDE_DIR "${RSYS_ROOT}/src" CACHE PATH "rsys include directory")
+
+set(S3D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-3d/0.10" CACHE PATH "Path to star-3d library")
+if(NOT TARGET s3d)
+    if(EXISTS "${S3D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-3d from: ${S3D_ROOT}")
+        if(NOT DEFINED S3D_BUILD_TESTS)
+            set(S3D_BUILD_TESTS OFF CACHE BOOL "Disable star-3d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${S3D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/s3d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-3d not found at ${S3D_ROOT}")
+    endif()
+endif()
+
+if(NOT MSVC)
+    set(MATH_LIBRARY m)
+endif()
+
+################################################################################
+# Source Files
+################################################################################
+
+set(SG3D_SOURCES
+    src/sg3d_device.c
+    src/sg3d_geometry.c
+)
+
+set(SG3D_PUBLIC_HEADERS
+    src/sg3d.h
+    src/sg3d_sXd_helper.h
+    src/sg3d_sencXd_helper.h
+    src/sg3d_sdisXd_helper.h
+    src/sgX3d.h
+    src/sgX3d_undefs.h
+)
+
+################################################################################
+# Create Library
+################################################################################
+
+if(BUILD_SHARED_LIBS)
+    add_library(sg3d SHARED ${SG3D_SOURCES})
+    target_compile_definitions(sg3d PRIVATE SG3D_SHARED_BUILD)
+else()
+    add_library(sg3d STATIC ${SG3D_SOURCES})
+endif()
+
+add_library(sg3d::sg3d ALIAS sg3d)
+
+set_target_properties(sg3d PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0
+    OUTPUT_NAME "sg3d"
+    PUBLIC_HEADER "${SG3D_PUBLIC_HEADERS}"
+)
+
+target_include_directories(sg3d
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include/star>
+    PRIVATE
+        ${RSYS_INCLUDE_DIR}
+)
+
+target_link_libraries(sg3d
+    PUBLIC rsys s3d
+    PRIVATE ${MATH_LIBRARY}
+)
+
+if(MSVC)
+    target_compile_definitions(sg3d PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        NOMINMAX
+    )
+endif()
+
+################################################################################
+# Tests
+################################################################################
+
+if(SG3D_BUILD_TESTS)
+    enable_testing()
+    
+    # Regular tests (no additional dependencies)
+    set(SG3D_REGULAR_TESTS
+        test_sg3d_cube_behind_cube
+        test_sg3d_cube_in_cube
+        test_sg3d_cube_on_cube
+        test_sg3d_device
+        test_sg3d_geometry_2
+        test_sg3d_geometry
+        test_sg3d_invalid_models
+        test_sg3d_multi_media
+        test_sg3d_unspecified_properties
+    )
+    
+    # Helper function for regular tests
+    function(add_sg3d_test TEST_NAME)
+        add_executable(${TEST_NAME} src/${TEST_NAME}.c)
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${RSYS_INCLUDE_DIR}
+        )
+        target_link_libraries(${TEST_NAME} PRIVATE sg3d rsys s3d ${MATH_LIBRARY})
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+        
+        set_tests_properties(${TEST_NAME} PROPERTIES
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:${TEST_NAME}>
+        )
+        
+        if(WIN32 AND BUILD_SHARED_LIBS)
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:sg3d>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying sg3d.dll to ${TEST_NAME} directory"
+            )
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:rsys>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying rsys.dll to ${TEST_NAME} directory"
+            )
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:s3d>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying s3d.dll to ${TEST_NAME} directory"
+            )
+            # Copy Embree DLLs (s3d dependency)
+            if(TARGET embree)
+                add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        $<TARGET_FILE:embree>
+                        $<TARGET_FILE_DIR:${TEST_NAME}>
+                    COMMENT "Copying embree.dll to ${TEST_NAME} directory"
+                )
+            endif()
+            if(TARGET tbb)
+                add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        $<TARGET_FILE:tbb>
+                        $<TARGET_FILE_DIR:${TEST_NAME}>
+                    COMMENT "Copying tbb.dll to ${TEST_NAME} directory"
+                )
+            endif()
+        endif()
+    endfunction()
+    
+    foreach(test ${SG3D_REGULAR_TESTS})
+        add_sg3d_test(${test})
+    endforeach()
+    
+    # Tests requiring s3dut (optional - disabled for now)
+    # test_sg3d_many_enclosures, test_sg3d_many_triangles
+    # test_sg3d_some_enclosures, test_sg3d_some_triangles
+    message(STATUS "Note: 4 s3dut-dependent tests disabled (s3dut not migrated)")
+endif()
+
+################################################################################
+# Installation
+################################################################################
+
+include(GNUInstallDirs)
+
+install(TARGETS sg3d
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/star
+)
+
+# Package config
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/sg3dConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/sg3dConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sg3d
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/sg3dConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/sg3dConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/sg3dConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sg3d
+)
+
+message(STATUS "star-geometry-3d (sg3d) v${PROJECT_VERSION} - Tests: ${SG3D_BUILD_TESTS} (9 regular, 4 s3dut-dependent disabled)")

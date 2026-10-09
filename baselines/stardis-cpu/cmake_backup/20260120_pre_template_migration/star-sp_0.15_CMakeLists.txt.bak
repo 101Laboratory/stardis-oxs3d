@@ -1,0 +1,412 @@
+# star-sp Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: star-sp - Sampling and Random Number Generation Library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-18
+
+cmake_minimum_required(VERSION 3.15)
+project(star-sp
+    VERSION 0.15.0
+    DESCRIPTION "star-sp: Sampling library and RNG abstraction"
+    LANGUAGES C CXX
+)
+
+
+# Inherit options from root CMakeLists.txt if exists
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+if(NOT DEFINED SSP_BUILD_TESTS)
+    option(SSP_BUILD_TESTS "Build tests" OFF)
+endif()
+
+if(NOT DEFINED SSP_ENABLE_AES)
+    option(SSP_ENABLE_AES "Enable AES random number generator (requires AES CPU instruction)" ON)
+endif()
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - MSVC requires C99 minimum (original uses C89)
+# C++ Standard - C++11
+#if(MSVC)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+#else()
+#    set(CMAKE_C_STANDARD 89)
+#    set(CMAKE_CXX_STANDARD 11)
+#    set(CMAKE_C_STANDARD_REQUIRED ON)
+#    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#    set(CMAKE_C_EXTENSIONS OFF)
+#   set(CMAKE_CXX_EXTENSIONS OFF)
+#endif()
+
+# Platform-specific Warning Flags
+set(WARNING_FLAGS "")
+set(HARDENING_FLAGS "")
+
+if(MSVC)
+    set(WARNING_FLAGS
+        /W4
+        /wd4200
+        /wd4204
+        /permissive-
+        /Zc:__cplusplus
+    )
+    
+    set(HARDENING_FLAGS
+        /GS
+        /guard:cf
+    )
+else()
+    set(WARNING_FLAGS
+        -Wall
+        -Wconversion
+        -Wextra
+        -Wmissing-declarations
+        -Wshadow
+        -pedantic
+    )
+    
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2
+        -fcf-protection=full
+        -fstack-clash-protection
+        -fstack-protector-strong
+        -fvisibility=hidden
+        -fstrict-aliasing
+    )
+endif()
+
+add_compile_options(${WARNING_FLAGS})
+add_compile_options(${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi /Od")
+    else()
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -DNDEBUG")
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -DNDEBUG")
+    endif()
+endif()
+
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+# Find rsys (required dependency)
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+
+# Find random123 (required dependency - header-only library)
+set(RANDOM123_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../random123/v1.14.0" CACHE PATH "Path to random123 library")
+if(EXISTS "${RANDOM123_ROOT}/include/Random123")
+    message(STATUS "Found random123 at: ${RANDOM123_ROOT}")
+    set(RANDOM123_INCLUDE_DIR "${RANDOM123_ROOT}/include")
+else()
+    message(FATAL_ERROR "random123 not found at ${RANDOM123_ROOT}. Please configure random123 before continuing.")
+endif()
+
+# AES instruction set support
+if(SSP_ENABLE_AES)
+    if(MSVC)
+        # MSVC AES support - check if CPU supports it
+        include(CheckCXXSourceCompiles)
+        set(CMAKE_REQUIRED_FLAGS "")
+        check_cxx_source_compiles("
+            #include <wmmintrin.h>
+            int main() { 
+                __m128i a, b; 
+                __m128i c = _mm_aesenc_si128(a, b); 
+                return 0; 
+            }" 
+            HAVE_AES_INTRINSICS
+        )
+        if(HAVE_AES_INTRINSICS)
+            message(STATUS "AES intrinsics available (MSVC)")
+            set(AES_COMPILE_FLAGS "")
+            set(AES_COMPILE_DEFS "WITH_R123_AES")
+        else()
+            message(WARNING "AES intrinsics not available, disabling AES RNG")
+            set(SSP_ENABLE_AES OFF)
+        endif()
+    else()
+        # GCC/Clang AES support
+        set(AES_COMPILE_FLAGS "-maes")
+        set(AES_COMPILE_DEFS "WITH_R123_AES")
+        message(STATUS "AES enabled with -maes flag")
+    endif()
+endif()
+
+################################################################################
+# Library Source Files
+################################################################################
+
+set(SSP_SOURCES
+    src/ssp_ran.c
+    src/ssp_ranst_discrete.c
+    src/ssp_ranst_gaussian.c
+    src/ssp_ranst_piecewise_linear.c
+    src/ssp_rng.c
+    src/ssp_rng_proxy.c
+)
+
+set(SSP_PUBLIC_HEADERS
+    src/ssp.h
+)
+
+################################################################################
+# Library Target
+################################################################################
+
+if(BUILD_SHARED_LIBS)
+    add_library(ssp SHARED ${SSP_SOURCES} ${SSP_PUBLIC_HEADERS})
+    target_compile_definitions(ssp PRIVATE SSP_SHARED_BUILD)
+    
+    if(WIN32)
+        target_compile_definitions(ssp PRIVATE SSP_EXPORTS)
+        target_compile_definitions(ssp INTERFACE SSP_IMPORTS)
+    endif()
+else()
+    add_library(ssp STATIC ${SSP_SOURCES} ${SSP_PUBLIC_HEADERS})
+endif()
+
+# IMPORTANT: Compile .c files with C++ compiler (as per original Makefile line 53, 70, 73)
+# This is required because random123 uses C++ features and ssp_rng.c uses <sstream>
+set_source_files_properties(${SSP_SOURCES} PROPERTIES LANGUAGE CXX)
+
+# MSVC-specific: Add definitions to fix C math functions in C++ mode
+if(MSVC)
+    target_compile_definitions(ssp PRIVATE
+        _CRT_DECLARE_NONSTDC_NAMES=1
+    )
+endif()
+
+add_library(star::ssp ALIAS ssp)
+
+# Include directories
+# Support both #include <ssp.h> and #include <star/ssp.h>
+target_include_directories(ssp
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>        # For #include <ssp.h>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>             # For #include <star/ssp.h>
+        $<INSTALL_INTERFACE:include/star>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${RSYS_INCLUDE_DIR}
+        ${RANDOM123_INCLUDE_DIR}
+)
+
+# Link dependencies
+target_link_libraries(ssp
+    PUBLIC
+        rsys
+)
+
+# AES support
+if(SSP_ENABLE_AES)
+    if(AES_COMPILE_FLAGS)
+        target_compile_options(ssp PRIVATE ${AES_COMPILE_FLAGS})
+    endif()
+    if(AES_COMPILE_DEFS)
+        target_compile_definitions(ssp PRIVATE ${AES_COMPILE_DEFS})
+    endif()
+endif()
+
+# Platform-specific libraries
+if(UNIX)
+    target_link_libraries(ssp PUBLIC m)
+endif()
+
+set_target_properties(ssp PROPERTIES
+    OUTPUT_NAME "star-sp"
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
+if(WIN32)
+    set_target_properties(ssp PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    )
+endif()
+
+################################################################################
+# Tests
+################################################################################
+
+if(SSP_BUILD_TESTS)
+    enable_testing()
+    
+    # Main test sources (excluding test_ssp_rng which has special handling)
+    set(TEST_SOURCES_SIMPLE
+        test_ssp_ran_circle
+        test_ssp_ran_discrete
+        test_ssp_ran_gaussian
+        test_ssp_ran_hemisphere
+        test_ssp_ran_hg
+        test_ssp_ran_piecewise_linear
+        test_ssp_ran_sphere
+        test_ssp_ran_sphere_cap
+        test_ssp_ran_spherical_zone
+        test_ssp_ran_tetrahedron
+        test_ssp_ran_triangle
+        test_ssp_ran_uniform_disk
+        test_ssp_rng_proxy
+    )
+    
+    foreach(TEST_NAME ${TEST_SOURCES_SIMPLE})
+        add_executable(${TEST_NAME} src/${TEST_NAME}.c)
+        
+        target_include_directories(${TEST_NAME}
+            PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+                ${RSYS_ROOT}
+                ${RANDOM123_INCLUDE_DIR}
+        )
+        
+        target_link_libraries(${TEST_NAME}
+            PRIVATE
+                ssp
+                rsys
+        )
+        
+        if(UNIX)
+            target_link_libraries(${TEST_NAME} PRIVATE m)
+        endif()
+        
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+        
+        if(WIN32)
+            set_tests_properties(${TEST_NAME} PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                ENVIRONMENT "PATH=${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>;${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys/$<CONFIG>;$ENV{PATH}"
+            )
+        else()
+            set_tests_properties(${TEST_NAME} PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            )
+        endif()
+    endforeach()
+    
+    # Special test: test_ssp_rng (multiple RNG variants as command-line arguments)
+    add_executable(test_ssp_rng src/test_ssp_rng.c)
+    
+    target_include_directories(test_ssp_rng
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${RSYS_ROOT}
+            ${RANDOM123_INCLUDE_DIR}
+    )
+    
+    target_link_libraries(test_ssp_rng
+        PRIVATE
+            ssp
+            rsys
+    )
+    
+    if(UNIX)
+        target_link_libraries(test_ssp_rng PRIVATE m)
+    endif()
+    
+    # Add tests for each RNG variant
+    if(SSP_ENABLE_AES)
+        add_test(NAME test_ssp_rng_aes COMMAND test_ssp_rng aes)
+    endif()
+    add_test(NAME test_ssp_rng_kiss COMMAND test_ssp_rng kiss)
+    add_test(NAME test_ssp_rng_mt19937_64 COMMAND test_ssp_rng mt19937_64)
+    add_test(NAME test_ssp_rng_ranlux48 COMMAND test_ssp_rng ranlux48)
+    add_test(NAME test_ssp_rng_random_device COMMAND test_ssp_rng random_device)
+    add_test(NAME test_ssp_rng_threefry COMMAND test_ssp_rng threefry)
+    
+    if(WIN32)
+        set(RNG_TEST_NAMES "")
+        if(SSP_ENABLE_AES)
+            list(APPEND RNG_TEST_NAMES test_ssp_rng_aes)
+        endif()
+        list(APPEND RNG_TEST_NAMES 
+            test_ssp_rng_kiss
+            test_ssp_rng_mt19937_64
+            test_ssp_rng_ranlux48
+            test_ssp_rng_random_device
+            test_ssp_rng_threefry
+        )
+        
+        foreach(RNG_TEST ${RNG_TEST_NAMES})
+            set_tests_properties(${RNG_TEST} PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                ENVIRONMENT "PATH=${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>;${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys/$<CONFIG>;$ENV{PATH}"
+            )
+        endforeach()
+    endif()
+    
+    message(STATUS "star-sp: Tests enabled - ${CMAKE_CURRENT_LIST_LENGTH} test executables configured")
+endif()
+
+################################################################################
+# Package Config
+################################################################################
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/star-spConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/star-spConfig.cmake"
+    INSTALL_DESTINATION lib/cmake/star-sp
+    NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/star-spConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+################################################################################
+# Summary
+################################################################################
+
+message(STATUS "=== star-sp Configuration Summary ===")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Shared library: ${BUILD_SHARED_LIBS}")
+message(STATUS "C Compiler: ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+message(STATUS "CXX Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "C Standard: C${CMAKE_C_STANDARD}")
+message(STATUS "CXX Standard: C++${CMAKE_CXX_STANDARD}")
+message(STATUS "Build tests: ${SSP_BUILD_TESTS}")
+message(STATUS "AES RNG enabled: ${SSP_ENABLE_AES}")
+message(STATUS "Dependencies:")
+message(STATUS "  - rsys: 0.14+")
+message(STATUS "  - random123: ${RANDOM123_ROOT}")
+message(STATUS "=========================================")

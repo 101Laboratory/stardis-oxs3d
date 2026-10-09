@@ -1,0 +1,256 @@
+# star-stl (sstl) Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: star-stl - STL file format library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-19
+
+cmake_minimum_required(VERSION 3.15)
+project(star-stl
+    VERSION 0.7.0
+    DESCRIPTION "star-stl: STL file format library"
+    LANGUAGES C
+)
+
+# Options
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+option(SSTL_BUILD_TESTS "Build tests" ON)
+option(SSTL_BUILD_UTIL "Build sstl utility executable" OFF)
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - C99 from Makefile
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
+# Platform-specific Warning Flags
+if(MSVC)
+    set(WARNING_FLAGS /W4 /wd4200 /wd4204)
+    set(HARDENING_FLAGS /GS /guard:cf)
+else()
+    set(WARNING_FLAGS
+        -Wall -Wcast-align -Wconversion -Wextra
+        -Wmissing-declarations -Wmissing-prototypes -Wshadow -pedantic
+    )
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2 -fcf-protection=full
+        -fstack-clash-protection -fstack-protector-strong
+        -fvisibility=hidden -fstrict-aliasing
+    )
+endif()
+
+add_compile_options(${WARNING_FLAGS} ${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -DNDEBUG")
+    endif()
+endif()
+
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# Linker flags (Linux only)
+if(NOT WIN32 AND NOT MSVC)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+set(RSYS_INCLUDE_DIR "${RSYS_ROOT}/src" CACHE PATH "rsys include directory")
+
+if(NOT MSVC)
+    set(MATH_LIBRARY m)
+endif()
+
+################################################################################
+# Source Files
+################################################################################
+
+set(SSTL_SOURCES
+    src/sstl.c
+    src/sstl_ascii.c
+    src/sstl_binary.c
+    src/sstl_writer.c
+)
+
+set(SSTL_PUBLIC_HEADERS
+    src/sstl.h
+)
+
+################################################################################
+# Create Library
+################################################################################
+
+if(BUILD_SHARED_LIBS)
+    add_library(sstl SHARED ${SSTL_SOURCES})
+    target_compile_definitions(sstl PRIVATE SSTL_SHARED_BUILD)
+else()
+    add_library(sstl STATIC ${SSTL_SOURCES})
+endif()
+
+add_library(sstl::sstl ALIAS sstl)
+
+set_target_properties(sstl PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0
+    OUTPUT_NAME "sstl"
+    PUBLIC_HEADER "${SSTL_PUBLIC_HEADERS}"
+)
+
+target_include_directories(sstl
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include/star>
+    PRIVATE
+        ${RSYS_INCLUDE_DIR}
+)
+
+target_link_libraries(sstl
+    PUBLIC rsys
+    PRIVATE ${MATH_LIBRARY}
+)
+
+if(MSVC)
+    target_compile_definitions(sstl PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        NOMINMAX
+    )
+endif()
+
+################################################################################
+# Tests
+################################################################################
+
+if(SSTL_BUILD_TESTS)
+    enable_testing()
+    
+    set(SSTL_TEST_SOURCES
+        test_sstl
+        test_sstl_desc
+        test_sstl_load_ascii
+        test_sstl_load_binary
+        test_sstl_writer
+    )
+    
+    # Helper function for tests
+    function(add_sstl_test TEST_NAME)
+        add_executable(${TEST_NAME} src/${TEST_NAME}.c)
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${RSYS_INCLUDE_DIR}
+        )
+        target_link_libraries(${TEST_NAME} PRIVATE sstl rsys ${MATH_LIBRARY})
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+        
+        set_tests_properties(${TEST_NAME} PROPERTIES
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:${TEST_NAME}>
+        )
+        
+        if(WIN32 AND BUILD_SHARED_LIBS)
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:sstl>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying sstl.dll to ${TEST_NAME} directory"
+            )
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:rsys>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying rsys.dll to ${TEST_NAME} directory"
+            )
+        endif()
+    endfunction()
+    
+    foreach(test ${SSTL_TEST_SOURCES})
+        add_sstl_test(${test})
+    endforeach()
+endif()
+
+################################################################################
+# Utility Executable (optional)
+################################################################################
+
+if(SSTL_BUILD_UTIL)
+    add_executable(sstl_util src/sstl_main.c)
+    set_target_properties(sstl_util PROPERTIES OUTPUT_NAME "sstl")
+    
+    target_include_directories(sstl_util PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${RSYS_INCLUDE_DIR}
+    )
+    
+    target_link_libraries(sstl_util PRIVATE sstl rsys ${MATH_LIBRARY})
+    
+    if(MSVC)
+        target_compile_definitions(sstl_util PRIVATE
+            _CRT_SECURE_NO_WARNINGS
+            NOMINMAX
+        )
+    endif()
+    
+    install(TARGETS sstl_util
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif()
+
+################################################################################
+# Installation
+################################################################################
+
+include(GNUInstallDirs)
+
+install(TARGETS sstl
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/star
+)
+
+# Package config
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/sstlConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/sstlConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sstl
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/sstlConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/sstlConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/sstlConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sstl
+)
+
+message(STATUS "star-stl (sstl) v${PROJECT_VERSION} - Tests: ${SSTL_BUILD_TESTS}, Util: ${SSTL_BUILD_UTIL}")

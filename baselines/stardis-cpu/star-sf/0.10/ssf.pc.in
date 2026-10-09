@@ -1,0 +1,12 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Requires.private: @SIMD@ star-sp >= @SSP_VERSION@
+Name: Star Scattering Functions
+Description: Star-SF library
+Version: @VERSION@
+Libs: -L${libdir} -lssf
+Libs.private: -lm
+CFlags: -I${includedir}

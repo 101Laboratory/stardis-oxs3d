@@ -1,0 +1,19 @@
+# ===== build artifacts =====
+/build/
+/build-*/
+
+# ===== CMake =====
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+
+# ===== IDE =====
+**/.vs/
+**/.vscode/
+**/.idea/
+
+# ===== temp =====
+**/*~
+**/*.log

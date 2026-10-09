@@ -1,0 +1,438 @@
+# Rsys库 - CMake构建配置
+# 版本: 1.0.0 (基于Makefile到CMake迁移SOP)
+# 项目: rsys - 基础系统库
+# 原始Makefile: Makefile
+# 原始配置: config.mk
+# 创建日期: 2026-01-16
+
+cmake_minimum_required(VERSION 3.15)
+project(rsys
+    VERSION 0.15.0
+    DESCRIPTION "Rsys: 基础系统库 - 内存管理、数据结构、线程、日志等"
+    LANGUAGES C
+)
+
+# =============================================================================
+# CMake配置规范v1.1合规性检查
+# =============================================================================
+
+# 1. 生成器检查 - 强制使用Visual Studio 17 2022（规范1.0）
+if(NOT CMAKE_GENERATOR STREQUAL "Visual Studio 17 2022")
+    message(FATAL_ERROR "此项目仅支持Visual Studio 17 2022生成器。检测到: ${CMAKE_GENERATOR}")
+endif()
+
+# 2. 平台检查 - 强制x64（规范1.0）
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "此项目仅支持64位(x64)平台")
+endif()
+
+# =============================================================================
+# 项目选项
+# =============================================================================
+
+# 从根CMakeLists.txt继承选项（如果存在）
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "构建共享库而非静态库" ON)
+endif()
+
+# 测试选项 - 符合规范10.1 (ENABLE_TESTS)
+if(NOT DEFINED ENABLE_TESTS)
+    option(ENABLE_TESTS "构建测试" ON)
+endif()
+# 向后兼容：设置RSYS_BUILD_TESTS为ENABLE_TESTS的值
+set(RSYS_BUILD_TESTS ${ENABLE_TESTS} CACHE BOOL "构建测试（向后兼容别名）" FORCE)
+
+if(NOT DEFINED RSYS_VERBOSE_BUILD)
+    option(RSYS_VERBOSE_BUILD "启用详细构建输出" OFF)
+endif()
+
+# 构建类型
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "构建类型: Debug或Release" FORCE)
+endif()
+
+# C标准处理 - 根据SOP处理MSVC兼容性
+# 原始Makefile使用C89，但MSVC不支持，需要升级到C99
+if(MSVC)
+    set(CMAKE_C_STANDARD 99)  # MSVC最低支持C99
+    add_compile_options(/TC)  # 编译为C代码
+else()
+    set(CMAKE_C_STANDARD 89)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
+
+# 从config.mk映射警告标志
+set(WARNING_FLAGS "")
+set(HARDENING_FLAGS "")
+
+if(MSVC)
+    # MSVC警告标志（等效于GCC的-Wall -Wextra等）
+    set(WARNING_FLAGS 
+        /W4          # 警告级别4
+        /wd4201      # 禁用：非标准扩展: 无名结构/联合
+        /wd4204      # 禁用：非标准扩展: 非标准常量表达式
+        /wd4221      # 禁用：非标准扩展: 使用可变参数
+    )
+    
+    # MSVC安全加固标志
+    set(HARDENING_FLAGS
+        /GS          # 缓冲区安全检查
+        /guard:cf    # 控制流防护
+    )
+else()
+    # GCC/Clang警告标志（从config.mk的WFLAGS提取）
+    set(WARNING_FLAGS
+        -Wall
+        -Wextra
+        -Wmissing-declarations
+        -Wmissing-prototypes
+        -Wconversion
+        -Wshadow
+    )
+    
+    # GCC/Clang安全加固标志（从config.mk的CFLAGS_HARDENED提取）
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2
+        -fcf-protection=full
+        -fstack-clash-protection
+        -fstack-protector-strong
+        -fvisibility=hidden
+        -fstrict-aliasing
+    )
+    
+    # 对于非MSVC编译器，添加pedantic标志
+    list(APPEND WARNING_FLAGS -pedantic)
+endif()
+
+# 使用add_compile_options添加警告标志
+add_compile_options(${WARNING_FLAGS})
+
+# 添加安全标志
+add_compile_options(${HARDENING_FLAGS})
+
+# 构建类型特定标志
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        # MSVC调试标志
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi")
+    else()
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -DNDEBUG")
+    endif()
+endif()
+
+# 位置无关代码设置
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# 链接器标志 - 平台特定
+if(NOT WIN32 AND NOT MSVC)
+    # Unix/Linux链接器标志（从config.mk的LDFLAGS_HARDENED提取）
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro,-z,now")
+endif()
+
+# 库依赖
+if(MSVC)
+    # Windows库依赖
+    # dl库在Windows上不需要，pthread功能通过Windows线程API实现
+    # math库已包含在MSVCRT中
+    # kernel32提供线程同步API（CRITICAL_SECTION, CONDITION_VARIABLE, SRWLOCK）
+    set(RSYS_EXTERNAL_LIBS kernel32)
+else()
+    # Unix/Linux库依赖（从config.mk的LIBS提取）
+    set(RSYS_EXTERNAL_LIBS dl pthread m)
+endif()
+
+# 源文件列表（从Makefile的SRC变量提取）
+if(MSVC)
+    # Windows平台使用原生线程API实现
+    set(RSYS_SOURCES
+        src/clock_time.c
+        src/cstr.c
+        src/hash.c
+        src/image.c
+        src/library.c
+        src/logger.c
+        src/mem_allocator.c
+        src/mem_lifo_allocator.c
+        src/mem_proxy_allocator.c
+        src/windows/windows_condition.c
+        src/windows/windows_mutex.c
+        src/quaternion.c
+        src/str.c
+        src/text_reader.c
+    )
+else()
+    # Unix/Linux平台使用pthread实现
+    set(RSYS_SOURCES
+        src/clock_time.c
+        src/cstr.c
+        src/hash.c
+        src/image.c
+        src/library.c
+        src/logger.c
+        src/mem_allocator.c
+        src/mem_lifo_allocator.c
+        src/mem_proxy_allocator.c
+        src/pthread/pthread_condition.c
+        src/pthread/pthread_mutex.c
+        src/quaternion.c
+        src/str.c
+        src/text_reader.c
+    )
+endif()
+
+# 头文件列表（从Makefile的API变量提取，用于安装）
+set(RSYS_HEADERS
+    src/algorithm.h
+    src/binary_heap.h
+    src/clock_time.h
+    src/condition.h
+    src/cstr.h
+    src/double2.h
+    src/double3.h
+    src/double4.h
+    src/double22.h
+    src/double33.h
+    src/double44.h
+    src/dynamic_array.h
+    src/dynamic_array_char.h
+    src/dynamic_array_double.h
+    src/dynamic_array_float.h
+    src/dynamic_array_int.h
+    src/dynamic_array_uchar.h
+    src/dynamic_array_u32.h
+    src/dynamic_array_u64.h
+    src/dynamic_array_uint.h
+    src/dynamic_array_size_t.h
+    src/dynamic_array_str.h
+    src/endianness.h
+    src/float2.h
+    src/float3.h
+    src/float4.h
+    src/float22.h
+    src/float33.h
+    src/float44.h
+    src/free_list.h
+    src/hash.h
+    src/hash_table.h
+    src/image.h
+    src/library.h
+    src/list.h
+    src/logger.h
+    src/math.h
+    src/mem_allocator.h
+    src/morton.h
+    src/mutex.h
+    src/quaternion.h
+    src/real2.h
+    src/real3.h
+    src/realX.h
+    src/realX_begin.h
+    src/realX_end.h
+    src/real22.h
+    src/real33.h
+    src/real44.h
+    src/realXY.h
+    src/realXY_begin.h
+    src/realXY_end.h
+    src/ref_count.h
+    src/rsys.h
+    src/rsys_math.h
+    src/signal.h
+    src/str.h
+    src/stretchy_array.h
+    src/text_reader.h
+)
+
+# 创建库
+if(BUILD_SHARED_LIBS)
+    add_library(rsys SHARED ${RSYS_SOURCES})
+    target_compile_definitions(rsys PRIVATE RSYS_SHARED_BUILD)
+else()
+    add_library(rsys STATIC ${RSYS_SOURCES})
+endif()
+
+# 设置库属性
+set_target_properties(rsys PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0.15
+    OUTPUT_NAME "rsys"
+)
+
+# 包含目录
+target_include_directories(rsys 
+    PUBLIC 
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>        # For #include <rsys.h>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>             # For #include <rsys/rsys.h> (via rsys->src symlink)
+        $<INSTALL_INTERFACE:include/rsys>
+)
+
+# 链接库依赖
+if(MSVC)
+    # Windows特定库链接
+    # 注意：需要处理pthread功能，可能需要Windows线程API或pthreads-win32
+else()
+    target_link_libraries(rsys ${RSYS_EXTERNAL_LIBS})
+endif()
+
+# 平台特定定义
+if(WIN32)
+    target_compile_definitions(rsys PRIVATE _WIN32)
+    if(MSVC)
+        target_compile_definitions(rsys PRIVATE 
+            _MSC_VER 
+            _CRT_SECURE_NO_WARNINGS
+            _WIN32_WINNT=0x0A00  # Windows 10
+            NOMINMAX             # 防止 min/max 宏冲突
+        )
+    endif()
+else()
+    target_compile_definitions(rsys PRIVATE __unix__)
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        target_compile_definitions(rsys PRIVATE __GNUC__)
+    endif()
+endif()
+
+# 创建pkg-config文件（仅Unix/Linux）
+if(NOT WIN32 AND NOT MSVC)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/rsys.pc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/rsys.pc
+        @ONLY
+    )
+    
+    # 安装pkg-config文件
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/rsys.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+    )
+endif()
+
+# 安装配置
+include(GNUInstallDirs)
+
+install(TARGETS rsys
+    EXPORT rsys-targets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(FILES ${RSYS_HEADERS}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rsys
+)
+
+# 测试构建（可选）
+if(RSYS_BUILD_TESTS)
+    enable_testing()
+    message(STATUS "配置rsys测试系统...")
+    
+    # 测试源文件列表（从Makefile的TEST_SRC变量提取）
+    set(RSYS_TEST_SOURCES
+        src/test_algorithm.c
+        src/test_atomic.c
+        src/test_binary_heap.c
+        src/test_condition.c
+        src/test_cstr.c
+        src/test_double22.c
+        src/test_double2.c
+        src/test_double33.c
+        src/test_double3.c
+        src/test_double44.c
+        src/test_double4.c
+        src/test_dynamic_array.c
+        src/test_endianness.c
+        src/test_float22.c
+        src/test_float2.c
+        src/test_float33.c
+        src/test_float3.c
+        src/test_float44.c
+        src/test_float4.c
+        src/test_free_list.c
+        src/test_func_name.c
+        src/test_hash_table.c
+        src/test_hash_sha256.c
+        src/test_image.c
+        src/test_library.c
+        src/test_list.c
+        src/test_logger.c
+        src/test_math.c
+        src/test_mem_allocator.c
+        src/test_misc.c
+        src/test_morton.c
+        src/test_mutex.c
+        src/test_quaternion.c
+        src/test_ref.c
+        src/test_signal.c
+        src/test_str.c
+        src/test_stretchy_array.c
+        src/test_text_reader.c
+        src/test_time.c
+        src/test_vmacros.c
+    )
+    
+    # 首先构建 test_lib 共享库（供 test_library 测试使用）
+    # 注意：测试代码按名称加载 ./test_lib.<suffix>，因此输出文件名必须是 test_lib
+    add_library(test_lib SHARED src/test_library.c)
+    target_compile_definitions(test_lib PRIVATE TEST_LIBRARY_BUILD_LIB)
+    target_link_libraries(test_lib rsys)
+
+    # 设置输出目录，确保 DLL/so 与测试可执行文件在同一目录
+    set_target_properties(test_lib PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/Debug
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/Release
+        RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo
+        RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_CURRENT_BINARY_DIR}/MinSizeRel
+        LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/Debug
+        LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/Release
+        LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo
+        LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_CURRENT_BINARY_DIR}/MinSizeRel
+    )
+    
+    # 为每个测试创建可执行文件
+    foreach(test_source ${RSYS_TEST_SOURCES})
+        get_filename_component(test_name ${test_source} NAME_WE)
+        
+        add_executable(${test_name} ${test_source})
+        target_link_libraries(${test_name} rsys)
+        
+        # 对于 test_library 测试，确保 test_lib 先构建
+        if(test_name STREQUAL "test_library")
+            add_dependencies(${test_name} test_lib)
+            # 设置测试环境变量或工作目录（可选）
+        endif()
+        
+        # 添加测试
+        add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+        
+        if(RSYS_VERBOSE_BUILD)
+            message(STATUS "  添加测试: ${test_name}")
+        endif()
+    endforeach()
+    
+    message(STATUS "  配置了 ${RSYS_TEST_SOURCES} 个rsys测试")
+endif()
+
+message(STATUS "==========================================")
+message(STATUS "Rsys库CMake配置完成")
+message(STATUS "  版本: ${PROJECT_VERSION}")
+message(STATUS "  构建类型: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  共享库: ${BUILD_SHARED_LIBS}")
+message(STATUS "  源文件数量: ${RSYS_SOURCES}")
+message(STATUS "  头文件数量: ${RSYS_HEADERS}")
+if(RSYS_BUILD_TESTS)
+    message(STATUS "  测试数量: ${RSYS_TEST_SOURCES}")
+endif()
+message(STATUS "  平台: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "  编译器: ${CMAKE_C_COMPILER_ID}")
+message(STATUS "==========================================")
+
+
+

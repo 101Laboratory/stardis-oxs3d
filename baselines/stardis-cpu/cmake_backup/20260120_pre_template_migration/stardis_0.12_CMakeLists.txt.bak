@@ -1,0 +1,501 @@
+# stardis Application - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: stardis - Main Application Executable
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-19
+# Note: MPI support temporarily disabled for Windows migration
+
+cmake_minimum_required(VERSION 3.15)
+project(stardis
+    VERSION 0.12.0
+    DESCRIPTION "stardis: Monte Carlo radiation transfer application"
+    LANGUAGES C
+)
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - MSVC requires C99 minimum
+if(MSVC)
+    set(CMAKE_C_STANDARD 99)
+    add_compile_options(/TC)  # Compile as C code
+else()
+    set(CMAKE_C_STANDARD 89)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
+
+# Platform-specific Warning Flags
+set(WARNING_FLAGS "")
+set(HARDENING_FLAGS "")
+
+if(MSVC)
+    # MSVC warning flags (equivalent to GCC -Wall -Wextra)
+    set(WARNING_FLAGS
+        /W4          # Warning level 4
+        /wd4200      # Disable: non-standard extension: zero-sized array
+        /wd4204      # Disable: non-standard extension: non-constant aggregate initializer
+    )
+    
+    # MSVC security hardening
+    set(HARDENING_FLAGS
+        /GS          # Buffer security check
+        /guard:cf    # Control flow guard
+    )
+else()
+    # GCC/Clang warning flags (from config.mk WFLAGS)
+    set(WARNING_FLAGS
+        -Wall
+        -Wcast-align
+        -Wconversion
+        -Wextra
+        -Wmissing-declarations
+        -Wmissing-prototypes
+        -Wshadow
+        -pedantic
+    )
+    
+    # GCC/Clang hardening flags (from config.mk CFLAGS_HARDENED)
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2
+        -fcf-protection=full
+        -fstack-clash-protection
+        -fstack-protector-strong
+        -fvisibility=hidden
+        -fstrict-aliasing
+    )
+endif()
+
+# Apply warning and hardening flags
+add_compile_options(${WARNING_FLAGS})
+add_compile_options(${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od")
+    else()
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG")
+    endif()
+endif()
+
+# Position Independent Executable
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Linker flags - Platform specific
+if(NOT WIN32 AND NOT MSVC)
+    # Unix/Linux linker hardening flags
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro,-z,now")
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+# Find rsys (required)
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+set(RSYS_INCLUDE_DIR "${RSYS_ROOT}/src" CACHE PATH "rsys include directory")
+
+# Find star-3d (required)
+set(S3D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-3d/0.10" CACHE PATH "Path to star-3d library")
+if(NOT TARGET s3d)
+    if(EXISTS "${S3D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-3d from: ${S3D_ROOT}")
+        if(NOT DEFINED S3D_BUILD_TESTS)
+            set(S3D_BUILD_TESTS OFF CACHE BOOL "Disable star-3d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${S3D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/s3d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-3d not found at ${S3D_ROOT}")
+    endif()
+endif()
+set(S3D_INCLUDE_DIR "${S3D_ROOT}/src" CACHE PATH "star-3d include directory")
+
+# Find stardis-solver (required)
+set(SDIS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../stardis-solver/0.16.2" CACHE PATH "Path to stardis-solver library")
+if(NOT TARGET sdis)
+    if(EXISTS "${SDIS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding stardis-solver from: ${SDIS_ROOT}")
+        if(NOT DEFINED SDIS_BUILD_TESTS)
+            set(SDIS_BUILD_TESTS OFF CACHE BOOL "Disable stardis-solver tests when included as subdirectory")
+        endif()
+        add_subdirectory("${SDIS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/sdis" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "stardis-solver not found at ${SDIS_ROOT}")
+    endif()
+endif()
+set(SDIS_INCLUDE_DIR "${SDIS_ROOT}/src" CACHE PATH "stardis-solver include directory")
+
+# Find star-enclosures-2d (required)
+set(SENC2D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-enclosures-2d/0.7" CACHE PATH "Path to star-enclosures-2d library")
+if(NOT TARGET senc2d)
+    if(EXISTS "${SENC2D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-enclosures-2d from: ${SENC2D_ROOT}")
+        if(NOT DEFINED SENC2D_BUILD_TESTS)
+            set(SENC2D_BUILD_TESTS OFF CACHE BOOL "Disable star-enclosures-2d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${SENC2D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/senc2d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-enclosures-2d not found at ${SENC2D_ROOT}")
+    endif()
+endif()
+set(SENC2D_INCLUDE_DIR "${SENC2D_ROOT}/src" CACHE PATH "star-enclosures-2d include directory")
+
+# Find star-enclosures-3d (required)
+set(SENC3D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-enclosures-3d/0.7.2" CACHE PATH "Path to star-enclosures-3d library")
+if(NOT TARGET senc3d)
+    if(EXISTS "${SENC3D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-enclosures-3d from: ${SENC3D_ROOT}")
+        if(NOT DEFINED SENC3D_BUILD_TESTS)
+            set(SENC3D_BUILD_TESTS OFF CACHE BOOL "Disable star-enclosures-3d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${SENC3D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/senc3d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-enclosures-3d not found at ${SENC3D_ROOT}")
+    endif()
+endif()
+set(SENC3D_INCLUDE_DIR "${SENC3D_ROOT}/src" CACHE PATH "star-enclosures-3d include directory")
+
+# Find sg3d (required) - Actually star-geometry-3d
+set(SG3D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-geometry-3d/0.2" CACHE PATH "Path to sg3d library")
+if(EXISTS "${SG3D_ROOT}/CMakeLists.txt")
+    message(STATUS "Adding sg3d from: ${SG3D_ROOT}")
+    if(NOT DEFINED SG3D_BUILD_TESTS)
+        set(SG3D_BUILD_TESTS OFF CACHE BOOL "Disable sg3d tests when included as subdirectory")
+    endif()
+    add_subdirectory("${SG3D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/sg3d" EXCLUDE_FROM_ALL)
+    set(SG3D_INCLUDE_DIR "${SG3D_ROOT}/src" CACHE PATH "sg3d include directory")
+    set(SG3D_AVAILABLE TRUE)
+else()
+    message(WARNING "sg3d library not found at ${SG3D_ROOT}, continuing without it")
+    set(SG3D_AVAILABLE FALSE)
+endif()
+
+# Find star-sp (required)
+set(SSP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-sp/0.15" CACHE PATH "Path to star-sp library")
+if(NOT TARGET ssp)
+    if(EXISTS "${SSP_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-sp from: ${SSP_ROOT}")
+        if(NOT DEFINED SSP_BUILD_TESTS)
+            set(SSP_BUILD_TESTS OFF CACHE BOOL "Disable star-sp tests when included as subdirectory")
+        endif()
+        add_subdirectory("${SSP_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/ssp" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-sp not found at ${SSP_ROOT}")
+    endif()
+endif()
+set(SSP_INCLUDE_DIR "${SSP_ROOT}/src" CACHE PATH "star-sp include directory")
+
+# Find sstl (required) - Actually star-stl version 0.7
+set(SSTL_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-stl/0.7" CACHE PATH "Path to sstl library")
+if(EXISTS "${SSTL_ROOT}/CMakeLists.txt")
+    message(STATUS "Adding sstl from: ${SSTL_ROOT}")
+    if(NOT DEFINED SSTL_BUILD_TESTS)
+        set(SSTL_BUILD_TESTS OFF CACHE BOOL "Disable sstl tests when included as subdirectory")
+    endif()
+    add_subdirectory("${SSTL_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/sstl" EXCLUDE_FROM_ALL)
+    set(SSTL_INCLUDE_DIR "${SSTL_ROOT}/src" CACHE PATH "sstl include directory")
+    set(SSTL_AVAILABLE TRUE)
+else()
+    message(WARNING "sstl library not found at ${SSTL_ROOT}, continuing without it")
+    set(SSTL_AVAILABLE FALSE)
+endif()
+
+# Math library (automatic on MSVC)
+if(NOT MSVC)
+    set(MATH_LIBRARY m)
+endif()
+
+################################################################################
+# Source Files (from Makefile SRC variable)
+################################################################################
+
+set(STARDIS_SOURCES
+    src/stardis-app.c
+    src/stardis-args.c
+    src/stardis-compute.c
+    src/stardis-compute-probe-boundary.c
+    src/stardis-description.c
+    src/stardis-extern-source.c
+    src/stardis-fluid.c
+    src/stardis-fluid-prog.c
+    src/stardis-fbound.c
+    src/stardis-fbound-prog.c
+    src/stardis-hbound.c
+    src/stardis-hbound-prog.c
+    src/stardis-hfbound.c
+    src/stardis-hfbound-prog.c
+    src/stardis-intface.c
+    src/stardis-main.c
+    src/stardis-output.c
+    src/stardis-parsing.c
+    src/stardis-program.c
+    src/stardis-radiative-env.c
+    src/stardis-sfconnect.c
+    src/stardis-sfconnect-prog.c
+    src/stardis-ssconnect.c
+    src/stardis-ssconnect-prog.c
+    src/stardis-solid.c
+    src/stardis-solid-prog.c
+    src/stardis-tbound.c
+    src/stardis-tbound-prog.c
+    src/getopt.c
+    src/wordexp.c
+)
+
+################################################################################
+# Generate Configuration Headers
+# Using configure_file() to process .in templates (CMake standard method)
+################################################################################
+
+# Configuration values from config.mk
+set(STARDIS_ARGS_DEFAULT_TRAD "300")
+set(STARDIS_ARGS_DEFAULT_TRAD_REFERENCE "300")
+set(STARDIS_ARGS_DEFAULT_COMPUTE_TIME "INF")
+set(STARDIS_ARGS_DEFAULT_PICARD_ORDER "1")
+set(STARDIS_ARGS_DEFAULT_RENDERING_FOV "70")
+set(STARDIS_ARGS_DEFAULT_RENDERING_IMG_HEIGHT "480")
+set(STARDIS_ARGS_DEFAULT_RENDERING_IMG_WIDTH "640")
+set(STARDIS_ARGS_DEFAULT_RENDERING_OUTPUT_FILE_FMT "HT")
+set(STARDIS_ARGS_DEFAULT_RENDERING_POS "1,1,1")
+set(STARDIS_ARGS_DEFAULT_RENDERING_SPP "4")
+set(STARDIS_ARGS_DEFAULT_RENDERING_TGT "0,0,0")
+set(STARDIS_ARGS_DEFAULT_RENDERING_TIME "INF,INF")
+set(STARDIS_ARGS_DEFAULT_RENDERING_UP "0,0,1")
+set(STARDIS_ARGS_DEFAULT_SAMPLES_COUNT "10000")
+set(STARDIS_ARGS_DEFAULT_SCALE_FACTOR "1")
+set(STARDIS_ARGS_DEFAULT_VERBOSE_LEVEL "1")
+set(STARDIS_MAX_NAME_LENGTH "64")
+set(STARDIS_GREEN_TYPES_VERSION "4")
+set(STARDIS_PROG_PROPERTIES_VERSION "2")
+
+# Version information
+set(STARDIS_APP_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(STARDIS_APP_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(STARDIS_APP_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+
+# Generate headers from .in templates using configure_file()
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-default.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-default.h"
+    @ONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-args.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-args.h"
+    @ONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-version.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-version.h"
+    @ONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-green-types.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-green-types.h"
+    @ONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-prog-properties.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/stardis-prog-properties.h"
+    @ONLY
+)
+
+message(STATUS "Generated configuration headers:")
+message(STATUS "  - stardis-default.h")
+message(STATUS "  - stardis-args.h")
+message(STATUS "  - stardis-version.h")
+message(STATUS "  - stardis-green-types.h")
+message(STATUS "  - stardis-prog-properties.h")
+
+################################################################################
+# Create Executable
+################################################################################
+
+add_executable(stardis ${STARDIS_SOURCES})
+
+# Include directories
+target_include_directories(stardis
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${RSYS_INCLUDE_DIR}
+        ${S3D_INCLUDE_DIR}
+        ${SDIS_INCLUDE_DIR}
+        ${SENC3D_INCLUDE_DIR}
+        ${SSP_INCLUDE_DIR}
+)
+
+if(SG3D_AVAILABLE)
+    target_include_directories(stardis PRIVATE ${SG3D_INCLUDE_DIR})
+endif()
+
+if(SSTL_AVAILABLE)
+    target_include_directories(stardis PRIVATE ${SSTL_INCLUDE_DIR})
+endif()
+
+# Link libraries
+target_link_libraries(stardis
+    PRIVATE
+        rsys
+        s3d
+        sdis
+	senc2d
+        senc3d
+        ssp
+        ${MATH_LIBRARY}
+)
+
+if(SG3D_AVAILABLE)
+    target_link_libraries(stardis PRIVATE sg3d)
+endif()
+
+if(SSTL_AVAILABLE)
+    target_link_libraries(stardis PRIVATE sstl)
+endif()
+
+# Windows-specific definitions
+if(MSVC)
+    target_compile_definitions(stardis PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        _WIN32_WINNT=0x0A00  # Windows 10
+        NOMINMAX             # Prevent min/max macro conflicts
+    )
+endif()
+
+################################################################################
+# Windows DLL Deployment
+################################################################################
+# Copy all required DLLs to executable directory for runtime loading
+if(WIN32)
+    # Core dependencies (always required)
+    set(REQUIRED_DLLS rsys s3d sdis swf senc2d senc3d ssp)
+    
+    # Optional dependencies
+    if(SG3D_AVAILABLE)
+        list(APPEND REQUIRED_DLLS sg3d)
+    endif()
+    
+    if(SSTL_AVAILABLE)
+        list(APPEND REQUIRED_DLLS sstl)
+    endif()
+    
+    # Copy each DLL to stardis executable directory
+    foreach(lib ${REQUIRED_DLLS})
+        add_custom_command(TARGET stardis POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:${lib}>
+                $<TARGET_FILE_DIR:stardis>
+            COMMENT "Copying ${lib}.dll to stardis executable directory"
+        )
+    endforeach()
+    
+    # Copy indirect dependency: s2d (via sdis/s3d)
+    if(TARGET s2d)
+        add_custom_command(TARGET stardis POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:s2d>
+                $<TARGET_FILE_DIR:stardis>
+            COMMENT "Copying s2d.dll to stardis executable directory"
+        )
+    endif()
+    
+    # Copy embree4 and tbb12 DLLs (external dependencies from s3d)
+    set(EMBREE4_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../embree4")
+    file(GLOB EMBREE4_DLLS "${EMBREE4_ROOT}/bin/*.dll")
+    if(EMBREE4_DLLS)
+        foreach(dll ${EMBREE4_DLLS})
+            add_custom_command(TARGET stardis POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${dll}
+                    $<TARGET_FILE_DIR:stardis>
+                COMMENT "Copying embree4/tbb12 DLL to stardis executable directory"
+            )
+        endforeach()
+    else()
+        message(WARNING "Embree4 DLLs not found at ${EMBREE4_ROOT}/bin/ - stardis may fail to run")
+    endif()
+    
+    message(STATUS "Windows DLL deployment configured for stardis executable")
+endif()
+
+################################################################################
+# Installation
+################################################################################
+
+include(GNUInstallDirs)
+
+# Install executable
+install(TARGETS stardis
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# Install public headers
+install(FILES
+    src/stardis-green-types.h
+    src/stardis-prog-properties.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stardis
+)
+
+# Install documentation (if exists)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+    install(FILES README.md COPYING
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/stardis
+    )
+endif()
+
+################################################################################
+# Summary
+################################################################################
+
+message(STATUS "")
+message(STATUS "========================================")
+message(STATUS "stardis Application Configuration Summary")
+message(STATUS "========================================")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "C Standard: C${CMAKE_C_STANDARD}")
+message(STATUS "----------------------------------------")
+message(STATUS "Dependencies:")
+message(STATUS "  - rsys: ${RSYS_ROOT}")
+message(STATUS "  - star-3d: ${S3D_ROOT}")
+message(STATUS "  - stardis-solver: ${SDIS_ROOT}")
+message(STATUS "  - star-enclosures-3d: ${SENC3D_ROOT}")
+message(STATUS "  - star-sp: ${SSP_ROOT}")
+if(SG3D_AVAILABLE)
+    message(STATUS "  - sg3d: ${SG3D_ROOT}")
+else()
+    message(STATUS "  - sg3d: NOT FOUND (optional)")
+endif()
+if(SSTL_AVAILABLE)
+    message(STATUS "  - sstl: ${SSTL_ROOT}")
+else()
+    message(STATUS "  - sstl: NOT FOUND (optional)")
+endif()
+message(STATUS "----------------------------------------")
+message(STATUS "MPI Support: DISABLED (Windows migration)")
+message(STATUS "========================================")
+message(STATUS "")

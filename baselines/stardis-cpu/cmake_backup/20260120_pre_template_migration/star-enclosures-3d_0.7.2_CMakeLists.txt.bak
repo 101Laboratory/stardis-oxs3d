@@ -1,0 +1,507 @@
+# star-enclosures-3d Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: star-enclosures-3d - 3D Enclosure Calculation Library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-18
+
+cmake_minimum_required(VERSION 3.15)
+project(star-enclosures-3d
+    VERSION 0.7.2
+    DESCRIPTION "star-enclosures-3d: 3D geometric enclosure calculations"
+    LANGUAGES C
+)
+
+# Inherit options from root CMakeLists.txt if exists
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+if(NOT DEFINED SENC3D_BUILD_TESTS)
+    option(SENC3D_BUILD_TESTS "Build tests" OFF)
+endif()
+
+if(NOT DEFINED SENC3D_BUILD_SSP_TESTS)
+    option(SENC3D_BUILD_SSP_TESTS "Build tests that require star-sp" OFF)
+endif()
+
+if(NOT DEFINED SENC3D_BUILD_S3DUT_TESTS)
+    option(SENC3D_BUILD_S3DUT_TESTS "Build tests that require star-3dut" OFF)
+endif()
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - C89 with pedantic mode (original Makefile setting)
+if(MSVC)
+    set(CMAKE_C_STANDARD 99)  # MSVC requires C99 minimum
+else()
+    set(CMAKE_C_STANDARD 89)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
+
+# Platform-specific Warning Flags
+set(WARNING_FLAGS "")
+set(HARDENING_FLAGS "")
+
+if(MSVC)
+    set(WARNING_FLAGS
+        /W4
+        /wd4200  # nonstandard extension: zero-sized array in struct
+        /wd4204  # nonstandard extension: non-constant aggregate initializer
+        /permissive-
+        /Zc:__cplusplus
+    )
+    
+    set(HARDENING_FLAGS
+        /GS          # Buffer security check
+        /guard:cf    # Control Flow Guard
+    )
+else()
+    set(WARNING_FLAGS
+        -Wall
+        -Wcast-align
+        -Wconversion
+        -Wextra
+        -Wmissing-declarations
+        -Wmissing-prototypes
+        -Wshadow
+        -pedantic
+    )
+    
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2
+        -fcf-protection=full
+        -fstack-clash-protection
+        -fstack-protector-strong
+        -fvisibility=hidden
+        -fstrict-aliasing
+    )
+endif()
+
+add_compile_options(${WARNING_FLAGS})
+add_compile_options(${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od")
+    else()
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG")
+    endif()
+endif()
+
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+# Find rsys (required dependency)
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+
+# For downstream projects: set RSYS_INCLUDE_DIR to parent of src/
+set(RSYS_INCLUDE_DIR "${RSYS_ROOT}/src" CACHE PATH "rsys include directory (parent of src/)" FORCE)
+
+# Find star-3d (required dependency)
+set(S3D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-3d/0.10" CACHE PATH "Path to star-3d library")
+if(NOT TARGET s3d)
+    if(EXISTS "${S3D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding star-3d from: ${S3D_ROOT}")
+        if(NOT DEFINED S3D_BUILD_TESTS)
+            set(S3D_BUILD_TESTS OFF CACHE BOOL "Disable star-3d tests when included as subdirectory")
+        endif()
+        add_subdirectory("${S3D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/s3d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "star-3d not found at ${S3D_ROOT}")
+    endif()
+endif()
+
+# For downstream projects: set S3D_INCLUDE_DIR to parent of src/
+set(S3D_INCLUDE_DIR "${S3D_ROOT}/src" CACHE PATH "s3d include directory (parent of src/)" FORCE)
+
+# Find OpenMP (required dependency)
+find_package(OpenMP REQUIRED)
+if(NOT OpenMP_C_FOUND)
+    message(FATAL_ERROR "OpenMP not found. Please install OpenMP or use a compiler with OpenMP support.")
+endif()
+
+# Optional: star-sp (for test_senc3d_sample_enclosure)
+if(SENC3D_BUILD_SSP_TESTS)
+    set(SSP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-sp/0.15" CACHE PATH "Path to star-sp library")
+    if(NOT TARGET ssp)
+        if(EXISTS "${SSP_ROOT}/CMakeLists.txt")
+            message(STATUS "Adding star-sp from: ${SSP_ROOT}")
+            if(NOT DEFINED SSP_BUILD_TESTS)
+                set(SSP_BUILD_TESTS OFF CACHE BOOL "Disable star-sp tests when included as subdirectory")
+            endif()
+            add_subdirectory("${SSP_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/ssp" EXCLUDE_FROM_ALL)
+        else()
+            message(WARNING "star-sp not found at ${SSP_ROOT}, disabling SSP tests")
+            set(SENC3D_BUILD_SSP_TESTS OFF)
+        endif()
+    endif()
+endif()
+
+# Optional: star-3dut (for test_senc3d_many_enclosures, test_senc3d_many_triangles)
+if(SENC3D_BUILD_S3DUT_TESTS)
+    set(S3DUT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-3dut/0.4" CACHE PATH "Path to star-3dut library")
+    if(NOT TARGET s3dut)
+        if(EXISTS "${S3DUT_ROOT}/CMakeLists.txt")
+            message(STATUS "Adding star-3dut from: ${S3DUT_ROOT}")
+            if(NOT DEFINED S3DUT_BUILD_TESTS)
+                set(S3DUT_BUILD_TESTS OFF CACHE BOOL "Disable star-3dut tests when included as subdirectory")
+            endif()
+            add_subdirectory("${S3DUT_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/s3dut" EXCLUDE_FROM_ALL)
+        else()
+            message(WARNING "star-3dut not found at ${S3DUT_ROOT}, disabling S3DUT tests")
+            set(SENC3D_BUILD_S3DUT_TESTS OFF)
+        endif()
+    endif()
+endif()
+
+################################################################################
+# Library Definition
+################################################################################
+
+set(SENC3D_SOURCES
+    src/senc3d_descriptor.c
+    src/senc3d_device.c
+    src/senc3d_enclosure.c
+    src/senc3d_scene.c
+    src/senc3d_scene_analyze.c
+)
+
+set(SENC3D_PUBLIC_HEADERS
+    src/senc3d.h
+    src/senc3d_sXd_helper.h
+    src/sencX3d.h
+    src/sencX3d_undefs.h
+)
+
+# Create library target
+add_library(senc3d ${SENC3D_SOURCES})
+add_library(senc3d::senc3d ALIAS senc3d)
+
+# Set library properties
+set_target_properties(senc3d PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    PUBLIC_HEADER "${SENC3D_PUBLIC_HEADERS}"
+    OUTPUT_NAME "senc3d"
+)
+
+# Compile definitions
+target_compile_definitions(senc3d PRIVATE SENC3D_SHARED_BUILD)
+
+# Include directories
+# Support both #include <senc3d.h> and #include <star/senc3d.h>
+target_include_directories(senc3d
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>        # For #include <senc3d.h>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>             # For #include <star/senc3d.h>
+        $<INSTALL_INTERFACE:include/star>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${RSYS_INCLUDE_DIR}
+        ${S3D_INCLUDE_DIR}
+)
+
+# Link dependencies
+target_link_libraries(senc3d
+    PUBLIC
+        rsys
+        s3d
+        OpenMP::OpenMP_C
+    PRIVATE
+        $<$<NOT:$<PLATFORM_ID:Windows>>:m>  # Link math library on non-Windows
+)
+
+################################################################################
+# Installation
+################################################################################
+
+include(GNUInstallDirs)
+
+install(TARGETS senc3d
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/star
+)
+
+# Generate and install package config file
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/senc3dConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/senc3dConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/senc3d
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/senc3dConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/senc3dConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/senc3dConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/senc3d
+)
+
+################################################################################
+# Tests
+################################################################################
+
+if(SENC3D_BUILD_TESTS)
+    enable_testing()
+    
+    # Runtime output directory for tests
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    
+    # DLL output directories (for shared libraries on Windows)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/Debug)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/Release)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/Debug)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/Release)
+    
+    # Library output directories for DLLs
+    set_target_properties(senc3d PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>"
+    )
+    
+    # Helper function to create test executables
+    function(add_senc3d_test TEST_NAME)
+        add_executable(${TEST_NAME} src/${TEST_NAME}.c)
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${RSYS_INCLUDE_DIR}
+            ${S3D_INCLUDE_DIR}
+        )
+        target_link_libraries(${TEST_NAME} PRIVATE senc3d rsys)
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+        
+        # Set working directory to test executable location
+        set_tests_properties(${TEST_NAME} PROPERTIES
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:${TEST_NAME}>
+        )
+        
+        # Copy DLLs to test directory on Windows
+        if(WIN32 AND BUILD_SHARED_LIBS)
+            # Copy senc3d DLL
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:senc3d>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying senc3d.dll to ${TEST_NAME} directory"
+            )
+            
+            # Copy rsys DLL
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:rsys>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying rsys.dll to ${TEST_NAME} directory"
+            )
+            
+            # Copy s3d DLL
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:s3d>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying s3d.dll to ${TEST_NAME} directory"
+            )
+            
+            # Copy embree4 and tbb12 DLLs
+            set(EMBREE4_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../embree4")
+            file(GLOB EMBREE4_DLLS "${EMBREE4_ROOT}/bin/*.dll")
+            if(EMBREE4_DLLS)
+                foreach(dll ${EMBREE4_DLLS})
+                    add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            ${dll}
+                            $<TARGET_FILE_DIR:${TEST_NAME}>
+                        COMMENT "Copying embree DLL to ${TEST_NAME} directory"
+                    )
+                endforeach()
+            endif()
+        endif()
+    endfunction()
+    
+    # Standard tests (17 tests)
+    set(STANDARD_TESTS
+        test_senc3d_bad_grouping
+        test_senc3d_bad_grouping2
+        test_senc3d_bad_grouping3
+        test_senc3d_cube_behind_cube
+        test_senc3d_cube_in_cube
+        test_senc3d_cube_on_cube
+        test_senc3d_device
+        test_senc3d_glazing
+        test_senc3d_inconsistant_cube
+        test_senc3d_invalid_scenes
+        test_senc3d_multi_media
+        test_senc3d_scene
+        test_senc3d_some_enclosures
+        test_senc3d_some_triangles
+        test_senc3d_unspecified_medium
+        test_senc3d_zero_distance
+    )
+    
+    foreach(TEST ${STANDARD_TESTS})
+        add_senc3d_test(${TEST})
+    endforeach()
+    
+    # test_senc3d_enclosure (requires s3d linkage)
+    add_executable(test_senc3d_enclosure src/test_senc3d_enclosure.c)
+    target_include_directories(test_senc3d_enclosure PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${RSYS_INCLUDE_DIR}
+        ${S3D_INCLUDE_DIR}
+    )
+    target_link_libraries(test_senc3d_enclosure PRIVATE senc3d rsys s3d)
+    add_test(NAME test_senc3d_enclosure COMMAND test_senc3d_enclosure)
+    
+    # Set working directory
+    set_tests_properties(test_senc3d_enclosure PROPERTIES
+        WORKING_DIRECTORY $<TARGET_FILE_DIR:test_senc3d_enclosure>
+    )
+    
+    # Copy DLLs on Windows
+    if(WIN32 AND BUILD_SHARED_LIBS)
+        add_custom_command(TARGET test_senc3d_enclosure POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:senc3d>
+                $<TARGET_FILE_DIR:test_senc3d_enclosure>
+            COMMENT "Copying senc3d.dll to test_senc3d_enclosure directory"
+        )
+        add_custom_command(TARGET test_senc3d_enclosure POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:rsys>
+                $<TARGET_FILE_DIR:test_senc3d_enclosure>
+            COMMENT "Copying rsys.dll to test_senc3d_enclosure directory"
+        )
+        add_custom_command(TARGET test_senc3d_enclosure POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:s3d>
+                $<TARGET_FILE_DIR:test_senc3d_enclosure>
+            COMMENT "Copying s3d.dll to test_senc3d_enclosure directory"
+        )
+        
+        # Copy embree4 and tbb12 DLLs
+        set(EMBREE4_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../embree4")
+        file(GLOB EMBREE4_DLLS "${EMBREE4_ROOT}/bin/*.dll")
+        if(EMBREE4_DLLS)
+            foreach(dll ${EMBREE4_DLLS})
+                add_custom_command(TARGET test_senc3d_enclosure POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        ${dll}
+                        $<TARGET_FILE_DIR:test_senc3d_enclosure>
+                    COMMENT "Copying embree DLL to test_senc3d_enclosure directory"
+                )
+            endforeach()
+        endif()
+    endif()
+    
+    # Optional: Tests requiring star-sp
+    if(SENC3D_BUILD_SSP_TESTS)
+        add_executable(test_senc3d_sample_enclosure src/test_senc3d_sample_enclosure.c)
+        target_include_directories(test_senc3d_sample_enclosure PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${RSYS_INCLUDE_DIR}
+            ${S3D_INCLUDE_DIR}
+            ${SSP_ROOT}/src
+        )
+        target_link_libraries(test_senc3d_sample_enclosure PRIVATE senc3d rsys s3d star-sp)
+        add_test(NAME test_senc3d_sample_enclosure COMMAND test_senc3d_sample_enclosure)
+        if(WIN32)
+            set_tests_properties(test_senc3d_sample_enclosure PROPERTIES
+                ENVIRONMENT "PATH=${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>\;${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys/$<CONFIG>\;${CMAKE_CURRENT_BINARY_DIR}/_deps/s3d/bin/$<CONFIG>\;${CMAKE_CURRENT_BINARY_DIR}/_deps/ssp/bin/$<CONFIG>\;$ENV{PATH}"
+            )
+        endif()
+    endif()
+    
+    # Optional: Tests requiring star-3dut
+    if(SENC3D_BUILD_S3DUT_TESTS)
+        set(S3DUT_TESTS
+            test_senc3d_many_enclosures
+            test_senc3d_many_triangles
+        )
+        
+        foreach(TEST ${S3DUT_TESTS})
+            add_executable(${TEST} src/${TEST}.c)
+            target_include_directories(${TEST} PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+                ${RSYS_INCLUDE_DIR}
+                ${S3D_INCLUDE_DIR}
+                ${S3DUT_ROOT}/src
+            )
+            target_link_libraries(${TEST} PRIVATE senc3d rsys s3dut)
+            add_test(NAME ${TEST} COMMAND ${TEST})
+            if(WIN32)
+                set_tests_properties(${TEST} PROPERTIES
+                    ENVIRONMENT "PATH=${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>\;${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys/$<CONFIG>\;${CMAKE_CURRENT_BINARY_DIR}/_deps/s3d/bin/$<CONFIG>\;${CMAKE_CURRENT_BINARY_DIR}/_deps/s3dut/bin/$<CONFIG>\;$ENV{PATH}"
+                )
+            endif()
+        endforeach()
+    endif()
+    
+    message(STATUS "senc3d: Tests enabled (${SENC3D_BUILD_TESTS})")
+    message(STATUS "  - Standard tests: 17")
+    message(STATUS "  - star-sp tests: ${SENC3D_BUILD_SSP_TESTS}")
+    message(STATUS "  - star-3dut tests: ${SENC3D_BUILD_S3DUT_TESTS}")
+endif()
+
+################################################################################
+# Summary
+################################################################################
+
+message(STATUS "")
+message(STATUS "========================================")
+message(STATUS "star-enclosures-3d Configuration Summary")
+message(STATUS "========================================")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Shared libs: ${BUILD_SHARED_LIBS}")
+message(STATUS "C Standard: C${CMAKE_C_STANDARD}")
+message(STATUS "----------------------------------------")
+message(STATUS "Dependencies:")
+message(STATUS "  - rsys: ${RSYS_ROOT}")
+message(STATUS "  - star-3d: ${S3D_ROOT}")
+message(STATUS "  - OpenMP: ${OpenMP_C_VERSION}")
+if(SENC3D_BUILD_SSP_TESTS)
+    message(STATUS "  - star-sp: ${SSP_ROOT}")
+endif()
+if(SENC3D_BUILD_S3DUT_TESTS)
+    message(STATUS "  - star-3dut: ${S3DUT_ROOT}")
+endif()
+message(STATUS "----------------------------------------")
+message(STATUS "Tests: ${SENC3D_BUILD_TESTS}")
+message(STATUS "========================================")
+message(STATUS "")

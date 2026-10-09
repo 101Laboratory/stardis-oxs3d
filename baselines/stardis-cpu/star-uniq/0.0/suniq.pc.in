@@ -1,0 +1,10 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Name: Star-Uniq
+Description: Filter out repeated triangles
+Version: @VERSION@
+Libs: -L${libdir} -lsuniq
+CFlags: -I${includedir}

@@ -1,0 +1,106 @@
+.\" Copyright (C) 2020-2023, 2025 |Méso|Star> (contact@meso-star.com)
+.\"
+.\" This program is free software: you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation, either version 3 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program. If not, see <http://www.gnu.org/licenses/>.
+.Dd May 9, 2025
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Dt VTK-CELL-DATA 1
+.Os
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh NAME
+.Nm vtk-data
+.Nd transforms a list of values into cell data in VTK format
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh SYNOPSIS
+.Nm
+.Op Fl n Ar name No ...
+.Op Fl o Ar output
+.Fl c Ar cell_count
+.Op Ar data
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh DESCRIPTION
+.Nm
+formats a list of double precision values in cell data sets as defined in the
+legacy VTK format.
+To describe a valid VTK file, the result must then be concatenated with a VTK
+file storing the geometry of the cells to which this data corresponds.
+.Pp
+As input,
+.Nm
+reads a set of
+.Ar cell_count
+floating-point ASCII values from
+.Ar data
+or from standard input if
+.Ar data
+is not specified.
+This continues until no more data is supplied or 8 sets have been read.
+Each set thus represents a data set associated with each cell.
+If a set doesn't contain enough data
+.Pq i.e. less than Ar cell_count ,
+an error is returned.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl n Ar name
+Name of a data set.
+It cannot contain spaces or tabs.
+This option can be repeated as many times as there are data sets to be
+processed.
+By default, the name of each dataset is
+.Qq data Ns Ar i ,
+with
+.Ar i
+in
+.Bq 0,7
+the dataset index.
+.It Fl o Ar output
+Output file.
+If not defined, VTK output data is written to the standard output.
+.It Fl c Ar cell_count
+Number of cells, i.e. number of floating-point values provided per data set.
+.El
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXIT STATUS
+.Ex -std
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh EXAMPLES
+Formats a list of 200 floating-point ASCII values read from the
+.Pa data.txt
+file into two sets of
+.Ar 100
+values, one value per cell.
+Name the first set of data per cell
+.Qq temperature ,
+and the second
+.Qq flux .
+Output VTK data are written to
+.Pa data.vtk .
+Next, concatenate the cell data with their corresponding geometry stored in the
+.Pa mesh.vtk
+file, and thus define the complete VTK file
+.Pa results.vtk .
+.Bd -literal -offset Ds
+vtk-cell-data -c 100 -n temperature -n flux -o data.vtk data.txt
+cat mesh.vtk data.vtk > result.vtk
+.Ed
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.Sh STANDARDS
+.Rs
+.%B The VTK User's Guide
+.%O Simple Legacy Formats
+.%I Kitware, Inc
+.%N 11
+.%D 2010
+.%P 470--482
+.Re

@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Requires.private: s3d >= @S3D_VERSION@, sstl >= @SSTL_VERSION@
+Name: Star-3DSTL
+Description: Star-3DSTL library
+Version: @VERSION@
+Libs: -L${libdir} -ls3dstl
+CFlags: -I${includedir}

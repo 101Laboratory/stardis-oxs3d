@@ -1,0 +1,198 @@
+/* Copyright (C) 2018-2025 |Méso|Star> (contact@meso-star.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>. */
+
+#ifndef STARDIS_ARGS_H
+#define STARDIS_ARGS_H
+
+#define STARDIS_MAX_NAME_LENGTH @STARDIS_MAX_NAME_LENGTH@
+
+#include <sdis.h>
+
+#include <rsys/rsys.h>
+#include <rsys/dynamic_array_str.h>
+
+struct camera;
+struct logger;
+struct mem_allocator;
+struct stardis;
+
+struct stardis_probe_boundary {
+  double position[3];
+  double time[2]; /* Observation time */
+  char side[STARDIS_MAX_NAME_LENGTH];
+};
+#define STARDIS_PROBE_BOUNDARY_NULL__ {{0,0,0},{0,0},{0}}
+static const struct stardis_probe_boundary STARDIS_PROBE_BOUNDARY_NULL =
+  STARDIS_PROBE_BOUNDARY_NULL__;
+
+/* Define the dynamic array of probes on the boundary */
+#define DARRAY_NAME probe_boundary
+#define DARRAY_DATA struct stardis_probe_boundary
+#include <rsys/dynamic_array.h>
+
+enum stardis_mode {
+  /* Ordered so that print_multiple_modes() prints in alphabetical order */
+  UNDEF_MODE = 0,
+  MODE_DUMP_C_CHUNKS = BIT(0), /* -c */
+  MODE_DUMP_PATHS = BIT(1), /* -D */
+  MODE_DUMP_MODEL = BIT(2), /* -d */
+  MODE_EXTENDED_RESULTS = BIT(3), /* -e */
+  MODE_COMPUTE_FLUX_THROUGH_SURF= BIT(4), /* -F */
+  MODE_COMPUTE_PROBE_FLUX_DNSTY_ON_SURF = BIT(5), /* -f */
+  MODE_GREEN_BIN = BIT(6), /* -G */
+  MODE_GREEN_ASCII = BIT(7), /* -g */
+  MODE_DUMP_HELP = BIT(8), /* -h */
+  MODE_COMPUTE_LIST_PROBE_TEMP_ON_SURF = BIT(9), /* -L */
+  MODE_COMPUTE_LIST_PROBE_FLUX_DNSTY_ON_SURF = BIT(10), /* -l */
+  MODE_COMPUTE_TEMP_MEAN_IN_MEDIUM = BIT(11), /* -m */
+  MODE_COMPUTE_PROBE_TEMP_ON_SURF = BIT(12), /* -P */
+  MODE_COMPUTE_PROBE_TEMP_ON_VOL = BIT(13), /* -p */
+  MODE_COMPUTE_IMAGE_IR = BIT(14), /* -R */
+  MODE_COMPUTE_TEMP_MAP_ON_SURF = BIT(15), /* -S */
+  MODE_COMPUTE_TEMP_MEAN_ON_SURF = BIT(16), /* -s */
+  MODE_VERBOSITY = BIT(17), /* -V */
+  MODE_DUMP_VERSION = BIT(18), /* -v */
+
+  GREEN_COMPATIBLE_MODES =
+    MODE_COMPUTE_PROBE_TEMP_ON_VOL
+  | MODE_COMPUTE_PROBE_TEMP_ON_SURF
+  | MODE_COMPUTE_TEMP_MEAN_IN_MEDIUM
+  | MODE_COMPUTE_TEMP_MEAN_ON_SURF,
+
+  SURFACE_COMPUTE_MODES =
+    MODE_COMPUTE_TEMP_MEAN_ON_SURF
+  | MODE_COMPUTE_FLUX_THROUGH_SURF
+  | MODE_COMPUTE_TEMP_MAP_ON_SURF,
+
+  EXT_COMPATIBLE_MODES =
+    GREEN_COMPATIBLE_MODES
+  | MODE_COMPUTE_TEMP_MEAN_IN_MEDIUM
+  | MODE_COMPUTE_FLUX_THROUGH_SURF
+  | MODE_COMPUTE_PROBE_FLUX_DNSTY_ON_SURF,
+
+  REGION_COMPUTE_MODES =
+    SURFACE_COMPUTE_MODES
+  | MODE_COMPUTE_TEMP_MEAN_IN_MEDIUM,
+
+  COMPUTE_MODES =
+    GREEN_COMPATIBLE_MODES
+  | MODE_COMPUTE_IMAGE_IR
+  | SURFACE_COMPUTE_MODES
+  | MODE_COMPUTE_LIST_PROBE_TEMP_ON_SURF
+  | MODE_COMPUTE_PROBE_FLUX_DNSTY_ON_SURF
+  | MODE_COMPUTE_LIST_PROBE_FLUX_DNSTY_ON_SURF,
+
+  EXCLUSIVE_MODES = COMPUTE_MODES,
+
+  SHORT_EXIT_MODES =
+    MODE_DUMP_HELP
+  | MODE_DUMP_VERSION,
+
+  USE_STDOUT_MODES =
+    MODE_DUMP_C_CHUNKS
+  | MODE_DUMP_HELP
+  | MODE_DUMP_VERSION
+  | MODE_COMPUTE_IMAGE_IR
+  | MODE_GREEN_ASCII,
+
+  RANDOM_RW_MODES =
+    MODE_COMPUTE_PROBE_TEMP_ON_VOL
+  | MODE_COMPUTE_PROBE_TEMP_ON_SURF
+  | MODE_COMPUTE_LIST_PROBE_TEMP_ON_SURF
+  | MODE_COMPUTE_LIST_PROBE_FLUX_DNSTY_ON_SURF
+  | MODE_COMPUTE_TEMP_MEAN_IN_MEDIUM
+  | MODE_COMPUTE_TEMP_MEAN_ON_SURF
+  | MODE_COMPUTE_FLUX_THROUGH_SURF
+  | MODE_COMPUTE_PROBE_FLUX_DNSTY_ON_SURF,
+
+  CAN_DUMP_PATHS =
+    MODE_COMPUTE_PROBE_TEMP_ON_VOL |
+    MODE_COMPUTE_IMAGE_IR |
+    MODE_COMPUTE_TEMP_MEAN_IN_MEDIUM |
+    MODE_COMPUTE_TEMP_MEAN_ON_SURF |
+    MODE_COMPUTE_TEMP_MAP_ON_SURF |
+    MODE_COMPUTE_PROBE_TEMP_ON_SURF
+};
+
+STATIC_ASSERT(GREEN_COMPATIBLE_MODES == (COMPUTE_MODES & GREEN_COMPATIBLE_MODES),
+  Cannot_have_a_GREEN_COMPATIBLE_MODE_that_is_not_a_COMPUTE_MODE);
+
+enum dump_path_type {
+  DUMP_NONE = 0,
+  DUMP_SUCCESS = BIT(0),
+  DUMP_ERROR = BIT(1),
+  DUMP_ALL = DUMP_SUCCESS | DUMP_ERROR
+};
+
+struct args {
+  struct logger* logger;
+  struct mem_allocator* allocator;
+  struct darray_str model_files;
+  char* medium_name;
+  char* solve_filename;
+  char* bin_green_filename;
+  char* end_paths_filename;
+  char* dump_model_filename;
+  char* paths_filename;
+  char* rndgen_state_in_filename;
+  char* rndgen_state_out_filename;
+  char* chunks_prefix;
+  char* camera;
+  size_t samples;
+  double pos_and_time[5];
+  double initial_time; /* [s] */
+  unsigned nthreads;
+  unsigned picard_order;
+  int mode;
+  enum dump_path_type dump_paths;
+  enum sdis_diffusion_algorithm diff_algo;
+  int verbose;
+  int disable_intrad; /* Disable internal radiative exchanges */
+
+  struct darray_probe_boundary probe_boundary_list;
+};
+
+extern LOCAL_SYM res_T
+init_args
+  (struct logger* logger,
+   struct mem_allocator* mem,
+   struct args** args);
+
+extern LOCAL_SYM void
+release_args
+  (struct args* args);
+
+extern LOCAL_SYM void
+print_version
+  (FILE* stream);
+
+extern LOCAL_SYM void
+usage
+  (FILE* stream);
+
+extern LOCAL_SYM res_T
+parse_args
+  (const int argc,
+   char** argv,
+   struct args* args,
+   struct mem_allocator* allocator);
+
+extern LOCAL_SYM res_T
+parse_camera
+  (struct logger* logger,
+   char* cam_param,
+   struct stardis* stardis);
+
+#endif /* STRADIS_ARGS_H */

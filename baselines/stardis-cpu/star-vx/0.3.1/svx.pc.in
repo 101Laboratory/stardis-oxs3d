@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Name: Star-VX
+Description: Star 3D VoXel library
+Version: @VERSION@
+Libs: -L${libdir} -lsvx
+Libs.private: -lm
+CFlags: -I${includedir}

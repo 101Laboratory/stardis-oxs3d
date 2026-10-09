@@ -1,0 +1,414 @@
+# star-enclosures-2d Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: star-enclosures-2d - 2D Enclosure Calculation Library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-18
+
+cmake_minimum_required(VERSION 3.15)
+project(star-enclosures-2d
+    VERSION 0.6.0
+    DESCRIPTION "star-enclosures-2d: 2D enclosure and view factor calculation"
+    LANGUAGES C
+)
+
+# Inherit options from root CMakeLists.txt if exists
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+if(NOT DEFINED SENC2D_BUILD_TESTS)
+    option(SENC2D_BUILD_TESTS "Build tests" OFF)
+endif()
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - MSVC requires C99 minimum (original uses C89 but we need C99 for Windows compatibility)
+if(MSVC)
+    set(CMAKE_C_STANDARD 99)
+    add_compile_options(/TC)  # Compile as C code
+else()
+    set(CMAKE_C_STANDARD 89)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS OFF)
+endif()
+
+# Platform-specific Warning Flags
+set(WARNING_FLAGS "")
+set(HARDENING_FLAGS "")
+
+if(MSVC)
+    # MSVC warning flags (equivalent to GCC -Wall -Wextra)
+    set(WARNING_FLAGS
+        /W4          # Warning level 4
+        /wd4200      # Disable: non-standard extension: zero-sized array
+        /wd4204      # Disable: non-standard extension: non-constant aggregate initializer
+    )
+    
+    # MSVC security hardening
+    set(HARDENING_FLAGS
+        /GS          # Buffer security check
+        /guard:cf    # Control flow guard
+    )
+else()
+    # GCC/Clang warning flags (from config.mk WFLAGS)
+    set(WARNING_FLAGS
+        -Wall
+        -Wcast-align
+        -Wconversion
+        -Wextra
+        -Wmissing-declarations
+        -Wmissing-prototypes
+        -Wshadow
+        -pedantic
+    )
+    
+    # GCC/Clang hardening flags (from config.mk CFLAGS_HARDENED)
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2
+        -fcf-protection=full
+        -fstack-clash-protection
+        -fstack-protector-strong
+        -fvisibility=hidden
+        -fstrict-aliasing
+    )
+endif()
+
+# Apply warning and hardening flags
+add_compile_options(${WARNING_FLAGS})
+add_compile_options(${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od")
+    else()
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g")
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG")
+    endif()
+endif()
+
+# Position Independent Code for shared libraries
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+# Find rsys (required dependency)
+# Add rsys as subdirectory to make target available
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+
+# Find star-2d (required dependency)
+# Add s2d as subdirectory to make target available
+set(S2D_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../star-2d/0.7" CACHE PATH "Path to star-2d library")
+if(NOT TARGET s2d)
+    if(EXISTS "${S2D_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding s2d from: ${S2D_ROOT}")
+        if(NOT DEFINED S2D_BUILD_TESTS)
+            set(S2D_BUILD_TESTS OFF CACHE BOOL "Disable s2d tests when included as subdirectory")
+        endif()
+        # Set variables that s2d's CMakeLists.txt expects
+        # IMPORTANT: RSYS_INCLUDE_DIR must point to parent of 'src/', because s2d uses #include <rsys/rsys.h>
+        set(RSYS_SRC_DIR "${RSYS_ROOT}/src" CACHE PATH "rsys source directory" FORCE)
+        set(RSYS_INCLUDE_DIR "${RSYS_ROOT}" CACHE PATH "rsys include directory (parent of src/)" FORCE)
+        # RSYS_LIBRARY will be set by rsys build (either librsys.dll or librsys.lib)
+        # For now, point to the build directory where it will be generated
+        set(RSYS_LIBRARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" CACHE PATH "rsys library directory" FORCE)
+        set(RSYS_LIBRARY "${RSYS_LIBRARY_DIR}/\${CMAKE_BUILD_TYPE}/rsys.lib" CACHE FILEPATH "rsys library" FORCE)
+        set(RSYS_LIBRARY_DEBUG "${RSYS_LIBRARY_DIR}/Debug/rsys.lib" CACHE FILEPATH "rsys debug library" FORCE)
+        set(RSYS_LIBRARY_RELEASE "${RSYS_LIBRARY_DIR}/Release/rsys.lib" CACHE FILEPATH "rsys release library" FORCE)
+        
+        add_subdirectory("${S2D_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/s2d" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "s2d not found at ${S2D_ROOT}")
+    endif()
+endif()
+
+# Find OpenMP (required dependency - used in DPDC_CFLAGS and DPDC_LIBS)
+find_package(OpenMP REQUIRED)
+
+if(OpenMP_C_FOUND)
+    message(STATUS "OpenMP found: ${OpenMP_C_VERSION}")
+    message(STATUS "OpenMP C flags: ${OpenMP_C_FLAGS}")
+else()
+    message(FATAL_ERROR "OpenMP not found but is required by star-enclosures-2d")
+endif()
+
+################################################################################
+# Library Source Files
+################################################################################
+
+set(SENC2D_SOURCES
+    src/senc2d_descriptor.c
+    src/senc2d_device.c
+    src/senc2d_enclosure.c
+    src/senc2d_scene.c
+    src/senc2d_scene_analyze.c
+)
+
+set(SENC2D_PUBLIC_HEADERS
+    src/senc2d.h
+    src/senc2d_sXd_helper.h
+    src/sencX2d.h
+    src/sencX2d_undefs.h
+)
+
+set(SENC2D_PRIVATE_HEADERS
+    src/senc2d_device_c.h
+    src/senc2d_enclosure_c.h
+    src/senc2d_enclosure_data.h
+    src/senc2d_internal_types.h
+    src/senc2d_scene_analyze_c.h
+    src/senc2d_scene_c.h
+    src/senc2d_side_range.h
+)
+
+################################################################################
+# Library Target
+################################################################################
+
+if(BUILD_SHARED_LIBS)
+    add_library(senc2d SHARED ${SENC2D_SOURCES} ${SENC2D_PUBLIC_HEADERS} ${SENC2D_PRIVATE_HEADERS})
+    target_compile_definitions(senc2d PRIVATE SENC2D_SHARED_BUILD)
+    
+    if(WIN32)
+        # Windows DLL export/import macros
+        target_compile_definitions(senc2d PRIVATE SENC2D_EXPORTS)
+        target_compile_definitions(senc2d INTERFACE SENC2D_IMPORTS)
+    endif()
+else()
+    add_library(senc2d STATIC ${SENC2D_SOURCES} ${SENC2D_PUBLIC_HEADERS} ${SENC2D_PRIVATE_HEADERS})
+endif()
+
+# Add alias for namespaced target
+add_library(star::senc2d ALIAS senc2d)
+
+# Include directories
+# Support both #include <senc2d.h> and #include <star/senc2d.h>
+target_include_directories(senc2d
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>        # For #include <senc2d.h>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>             # For #include <star/senc2d.h>
+        $<INSTALL_INTERFACE:include/star>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${S2D_ROOT}  # For #include <star/s2d.h>
+        ${RSYS_ROOT}  # For #include <rsys/rsys.h>
+)
+
+# Link dependencies
+target_link_libraries(senc2d
+    PUBLIC
+        rsys
+        s2d
+        OpenMP::OpenMP_C
+)
+
+# Platform-specific libraries
+if(WIN32)
+    # Windows-specific system libraries if needed
+    # target_link_libraries(senc2d PRIVATE kernel32)
+elseif(UNIX)
+    # Math library
+    target_link_libraries(senc2d PUBLIC m)
+endif()
+
+# Set library output name
+set_target_properties(senc2d PROPERTIES
+    OUTPUT_NAME "senc2d"
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
+# Windows-specific: Set runtime output directory
+if(WIN32)
+    set_target_properties(senc2d PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    )
+endif()
+
+################################################################################
+# Tests
+################################################################################
+
+if(SENC2D_BUILD_TESTS)
+    enable_testing()
+    
+    # Test utility headers
+    set(TEST_UTILS
+        src/test_senc2d_utils.h
+        src/test_senc2d_utils2.h
+    )
+    
+    # Main test sources (14 tests)
+    set(TEST_SOURCES
+        test_senc2d_square_behind_square
+        test_senc2d_square_in_square
+        test_senc2d_square_on_square
+        test_senc2d_device
+        test_senc2d_enclosure
+        test_senc2d_inconsistant_square
+        test_senc2d_invalid_scenes
+        test_senc2d_many_enclosures
+        test_senc2d_many_segments
+        test_senc2d_multi_media
+        test_senc2d_scene
+        test_senc2d_some_enclosures
+        test_senc2d_some_segments
+        test_senc2d_unspecified_medium
+    )
+    
+    # Create test executables
+    foreach(TEST_NAME ${TEST_SOURCES})
+        add_executable(${TEST_NAME} src/${TEST_NAME}.c ${TEST_UTILS})
+        
+        target_link_libraries(${TEST_NAME}
+            PRIVATE
+                senc2d
+                rsys
+        )
+        
+        # Special linking for specific tests
+        if(TEST_NAME STREQUAL "test_senc2d_many_enclosures" OR TEST_NAME STREQUAL "test_senc2d_many_segments")
+            # These tests need math library explicitly (from Makefile line 205)
+            if(UNIX)
+                target_link_libraries(${TEST_NAME} PRIVATE m)
+            endif()
+        endif()
+        
+        if(TEST_NAME STREQUAL "test_senc2d_enclosure")
+            # This test needs s2d library (from Makefile line 208)
+            target_link_libraries(${TEST_NAME} PRIVATE s2d)
+        endif()
+        
+        target_include_directories(${TEST_NAME}
+            PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+                ${S2D_ROOT}  # For #include <star/s2d.h> in test_senc2d_enclosure
+                ${RSYS_ROOT}  # For #include <rsys/rsys.h>
+        )
+        
+        # Register with CTest
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+        
+        # Set working directory and PATH for tests (to find DLLs on Windows)
+        if(WIN32)
+            set_tests_properties(${TEST_NAME} PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                ENVIRONMENT "PATH=${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>;${CMAKE_CURRENT_BINARY_DIR}/_deps/s2d/$<CONFIG>;${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys/$<CONFIG>;${EMBREE4_ROOT}/bin;$ENV{PATH}"
+            )
+        else()
+            set_tests_properties(${TEST_NAME} PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            )
+        endif()
+    endforeach()
+    
+    # Optional test that requires star-sp (commented out for now)
+    # If star-sp is available, uncomment below:
+    # find_package(star-sp 0.14 QUIET)
+    # if(star-sp_FOUND)
+    #     add_executable(test_senc2d_sample_enclosure src/test_senc2d_sample_enclosure.c ${TEST_UTILS})
+    #     target_link_libraries(test_senc2d_sample_enclosure
+    #         PRIVATE
+    #             senc2d
+    #             rsys::rsys
+    #             s2d::s2d
+    #             star-sp::star-sp
+    #     )
+    #     add_test(NAME test_senc2d_sample_enclosure COMMAND test_senc2d_sample_enclosure)
+    # endif()
+    
+    message(STATUS "star-enclosures-2d: Configured ${CMAKE_CURRENT_LIST_FILE}")
+    message(STATUS "star-enclosures-2d: ${CMAKE_BUILD_TYPE} build with ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+    message(STATUS "star-enclosures-2d: Tests enabled - ${CMAKE_CURRENT_LIST_LENGTH} test executables will be built")
+endif()
+
+################################################################################
+# Installation (optional - can be enabled later)
+################################################################################
+
+# install(TARGETS senc2d
+#     EXPORT senc2dTargets
+#     LIBRARY DESTINATION lib
+#     ARCHIVE DESTINATION lib
+#     RUNTIME DESTINATION bin
+#     INCLUDES DESTINATION include/star
+# )
+# 
+# install(FILES ${SENC2D_PUBLIC_HEADERS}
+#     DESTINATION include/star
+# )
+
+################################################################################
+# Package Config (for find_package support)
+################################################################################
+
+# Export targets for find_package
+include(CMakePackageConfigHelpers)
+
+# Create package config file
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/senc2dConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/senc2dConfig.cmake"
+    INSTALL_DESTINATION lib/cmake/senc2d
+    NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+# Create package version file
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/senc2dConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+# Export targets to build tree (disabled for subdirectory build)
+# Uncomment when building standalone or installing
+# export(TARGETS senc2d
+#     NAMESPACE star::
+#     FILE "${CMAKE_CURRENT_BINARY_DIR}/senc2dTargets.cmake"
+# )
+# 
+# # Register package in CMake user package registry (for find_package to find it)
+# export(PACKAGE senc2d)
+
+################################################################################
+# Summary
+################################################################################
+
+message(STATUS "=== star-enclosures-2d Configuration Summary ===")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Shared library: ${BUILD_SHARED_LIBS}")
+message(STATUS "C Compiler: ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+message(STATUS "C Standard: C${CMAKE_C_STANDARD}")
+message(STATUS "Build tests: ${SENC2D_BUILD_TESTS}")
+message(STATUS "Dependencies:")
+message(STATUS "  - rsys: ${rsys_VERSION}")
+message(STATUS "  - s2d: ${s2d_VERSION}")
+message(STATUS "  - OpenMP: ${OpenMP_C_VERSION}")
+message(STATUS "===============================================")

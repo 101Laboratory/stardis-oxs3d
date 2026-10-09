@@ -1,0 +1,224 @@
+# star-wf (swf) Library - CMake Build Configuration
+# Version: 1.0.0 (Based on Makefile to CMake Migration SOP v2.0)
+# Project: star-wf - Wavefront format library
+# Original Makefile: Makefile
+# Original Config: config.mk
+# Created: 2026-01-19
+
+cmake_minimum_required(VERSION 3.15)
+project(star-wf
+    VERSION 0.0.0
+    DESCRIPTION "star-wf: Wavefront format library"
+    LANGUAGES C
+)
+
+# Options
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library instead of static" ON)
+endif()
+
+option(SWF_BUILD_TESTS "Build tests" ON)
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type: Debug or Release" FORCE)
+endif()
+
+# C Standard - C99 from config.mk
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
+# Platform-specific Warning Flags
+if(MSVC)
+    set(WARNING_FLAGS /W4 /wd4200 /wd4204)
+    set(HARDENING_FLAGS /GS /guard:cf)
+else()
+    set(WARNING_FLAGS
+        -Wall -Wcast-align -Wconversion -Wextra
+        -Wmissing-declarations -Wmissing-prototypes -Wshadow -pedantic
+    )
+    set(HARDENING_FLAGS
+        -D_FORTIFY_SOURCES=2 -fcf-protection=full
+        -fstack-clash-protection -fstack-protector-strong
+        -fvisibility=hidden -fstrict-aliasing
+    )
+endif()
+
+add_compile_options(${WARNING_FLAGS} ${HARDENING_FLAGS})
+
+# Build type specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /DNDEBUG")
+    else()
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -DNDEBUG")
+    endif()
+endif()
+
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# Linker flags (Linux only)
+if(NOT WIN32 AND NOT MSVC)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+################################################################################
+# Dependencies
+################################################################################
+
+set(RSYS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rsys/0.15" CACHE PATH "Path to rsys library")
+if(NOT TARGET rsys)
+    if(EXISTS "${RSYS_ROOT}/CMakeLists.txt")
+        message(STATUS "Adding rsys from: ${RSYS_ROOT}")
+        if(NOT DEFINED RSYS_BUILD_TESTS)
+            set(RSYS_BUILD_TESTS OFF CACHE BOOL "Disable rsys tests when included as subdirectory")
+        endif()
+        add_subdirectory("${RSYS_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/_deps/rsys" EXCLUDE_FROM_ALL)
+    else()
+        message(FATAL_ERROR "rsys not found at ${RSYS_ROOT}")
+    endif()
+endif()
+set(RSYS_INCLUDE_DIR "${RSYS_ROOT}/src" CACHE PATH "rsys include directory")
+
+if(NOT MSVC)
+    set(MATH_LIBRARY m)
+endif()
+
+################################################################################
+# Source Files
+################################################################################
+
+set(SWF_SOURCES
+    src/swf_H.c
+    src/swf_tabulation.c
+)
+
+set(SWF_PUBLIC_HEADERS
+    src/swf.h
+)
+
+################################################################################
+# Create Library
+################################################################################
+
+if(BUILD_SHARED_LIBS)
+    add_library(swf SHARED ${SWF_SOURCES})
+    target_compile_definitions(swf PRIVATE SWF_SHARED_BUILD)
+else()
+    add_library(swf STATIC ${SWF_SOURCES})
+endif()
+
+add_library(swf::swf ALIAS swf)
+
+set_target_properties(swf PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0
+    OUTPUT_NAME "swf"
+    PUBLIC_HEADER "${SWF_PUBLIC_HEADERS}"
+)
+
+target_include_directories(swf
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include/star>
+    PRIVATE
+        ${RSYS_INCLUDE_DIR}
+)
+
+target_link_libraries(swf
+    PUBLIC rsys
+    PRIVATE ${MATH_LIBRARY}
+)
+
+if(MSVC)
+    target_compile_definitions(swf PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        NOMINMAX
+    )
+endif()
+
+################################################################################
+# Tests
+################################################################################
+
+if(SWF_BUILD_TESTS)
+    enable_testing()
+    
+    set(SWF_TEST_SOURCES
+        src/test_swf_H2d.c
+        src/test_swf_H3d.c
+    )
+    
+    # Helper function to create test executables
+    function(add_swf_test TEST_NAME)
+        add_executable(${TEST_NAME} src/${TEST_NAME}.c)
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${RSYS_INCLUDE_DIR}
+        )
+        target_link_libraries(${TEST_NAME} PRIVATE swf rsys ${MATH_LIBRARY})
+        add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+        
+        # Set working directory
+        set_tests_properties(${TEST_NAME} PROPERTIES
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:${TEST_NAME}>
+        )
+        
+        # Windows DLL copy
+        if(WIN32 AND BUILD_SHARED_LIBS)
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:swf>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying swf.dll to ${TEST_NAME} directory"
+            )
+            add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:rsys>
+                    $<TARGET_FILE_DIR:${TEST_NAME}>
+                COMMENT "Copying rsys.dll to ${TEST_NAME} directory"
+            )
+        endif()
+    endfunction()
+    
+    add_swf_test(test_swf_H2d)
+    add_swf_test(test_swf_H3d)
+endif()
+
+################################################################################
+# Installation
+################################################################################
+
+include(GNUInstallDirs)
+
+install(TARGETS swf
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/star
+)
+
+# Package config
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/swfConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/swfConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/swf
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/swfConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/swfConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/swfConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/swf
+)
+
+message(STATUS "star-wf (swf) v${PROJECT_VERSION} - Tests: ${SWF_BUILD_TESTS}")

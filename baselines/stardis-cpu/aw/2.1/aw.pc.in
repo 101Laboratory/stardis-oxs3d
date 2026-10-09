@@ -1,0 +1,10 @@
+prefix=@PREFIX@
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Requires: rsys >= @RSYS_VERSION@
+Name: AW
+Description: AW library
+Version: @VERSION@
+Libs: -L${libdir} -law 
+CFlags: -I${includedir}
