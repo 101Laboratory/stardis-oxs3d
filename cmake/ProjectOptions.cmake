@@ -37,11 +37,11 @@ option(ENABLE_TESTS "Enable building tests" ON)
 # 选项：启用 MPI（对应原 config.mk 的 DISTRIB_PARALLELISM）
 option(ENABLE_MPI "Enable MPI distributed parallelism" OFF)
 
-# 选项：s3d 后端选择（cubql = cuBQL/custar-3d, optix = OptiX/oxstar-3d）
-set(S3D_BACKEND "cubql" CACHE STRING "s3d ray-tracing backend: cubql or optix")
-set_property(CACHE S3D_BACKEND PROPERTY STRINGS cubql optix)
-if(NOT S3D_BACKEND MATCHES "^(cubql|optix)$")
-    message(FATAL_ERROR "Invalid S3D_BACKEND='${S3D_BACKEND}'. Must be 'cubql' or 'optix'.")
+# 选项：s3d 后端选择（embree = CPU Embree/star-3d, cubql = cuBQL/custar-3d, optix = OptiX/oxstar-3d）
+set(S3D_BACKEND "embree" CACHE STRING "s3d ray-tracing backend: embree, cubql, or optix")
+set_property(CACHE S3D_BACKEND PROPERTY STRINGS embree cubql optix)
+if(NOT S3D_BACKEND MATCHES "^(embree|cubql|optix)$")
+    message(FATAL_ERROR "Invalid S3D_BACKEND='${S3D_BACKEND}'. Must be 'embree', 'cubql', or 'optix'.")
 endif()
 message(STATUS "s3d backend: ${S3D_BACKEND}")
 

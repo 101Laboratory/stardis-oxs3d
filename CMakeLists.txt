@@ -15,9 +15,9 @@ cmake_minimum_required(VERSION 3.25)
 # ====================================================================
 # 1. 工程定义（Workspace Orchestrator）
 # ====================================================================
-project(STARDIS_CUDA_Workspace
+project(STARDIS_CPU_WF_Experiment
     VERSION 0.16.2
-    DESCRIPTION "STARDIS Monte Carlo Radiative Transfer Solver - CUDA Edition (13 Modules with htpp)"
+    DESCRIPTION "STARDIS CPU Wavefront + Embree experiment (exp/cpu-wavefront-embree)"
     LANGUAGES C CXX
 )
 
@@ -121,7 +121,7 @@ message(STATUS "")
 message(STATUS "--- Layer 2: Geometry & Sampling (4/11) ---")
 load_module("star-2d/0.7" "star-2d v0.7 (s2d) - 2D geometry" "REQUIRED")
 load_module("star-3dut/0.4" "star-3dut v0.4 (s3dut) - 3D utility meshes" "REQUIRED")
-load_module("oxstar-3d/0.10" "oxstar-3d v0.10 (s3d) - OptiX GPU backend (replaces star-3d)" "REQUIRED")
+load_module("star-3d/0.10" "star-3d v0.10 (s3d) - CPU Embree backend (exp/cpu-wavefront-embree)" "REQUIRED")
 load_module("star-sp/0.15" "star-sp v0.15 (ssp) - Sampling + Random123" "REQUIRED")
 
 # --------------------------------------------------------------------

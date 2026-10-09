@@ -489,7 +489,8 @@ pool_create(struct wavefront_pool* pool, size_t per_view_size,
   /* ---- Scheduling decision ---- */
   {
     const char* env = getenv("STARDIS_PIPELINE");
-    if(env && env[0] == '0') {
+    //if(env && env[0] == '0') {
+    if(1) {
       dual = 0;  /* forced single-buffer */
     } else if(env && env[0] == '1') {
       dual = 1;  /* forced dual-buffer */
