@@ -19,7 +19,7 @@
  * by step function modules without pulling in scheduler-level types.
  *
  * Contains:
- *   - enum path_phase       (~45 states)
+ *   - enum path_phase       (59 states)
  *   - enum ray_bucket_type  (5 ray categories)
  *   - path_phase_is_ray_pending()  inline helper
  */
@@ -32,7 +32,7 @@
 /*******************************************************************************
  * Path phase — models the state machine of a single Monte-Carlo path.
  *
- * Phase B-4: Fine-grained explicit state machine (~45 states).
+ * Phase B-4: Fine-grained explicit state machine (59 states).
  * Each trace_ray call site becomes a wavefront suspend/resume point.
  *
  * Legend:
