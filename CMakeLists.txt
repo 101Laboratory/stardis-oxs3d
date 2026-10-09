@@ -47,6 +47,13 @@ if(ENABLE_TESTS)
     message(STATUS "CTest infrastructure enabled at workspace level")
 endif()
 
+# Check if any module has B4/WF tests enabled
+get_property(ENABLE_B4_WF_TESTS CACHE ENABLE_B4_WF_TESTS PROPERTY VALUE)
+if(ENABLE_B4_WF_TESTS AND NOT ENABLE_TESTS)
+    enable_testing()
+    message(STATUS "CTest infrastructure enabled for B4/WF tests only")
+endif()
+
 # ====================================================================
 # 4. 第三方依赖注册（工程级唯一位置）
 # ====================================================================

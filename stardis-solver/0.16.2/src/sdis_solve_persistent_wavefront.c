@@ -315,6 +315,96 @@ pool_view_destroy(struct pool_view* pv)
 }
 
 /*******************************************************************************
+ * Merge-state diagnostic dump.
+ *
+ * Enabled by: STARDIS_MERGE_DUMP=<file_path>
+ * Appends a CSV block for every merge/split event so that post-mortem
+ * analysis can trace any failing path_id back to its source pool view and
+ * pre-merge phase.
+ *
+ * Zero overhead when the env-var is unset (single getenv check per call).
+ ******************************************************************************/
+static void
+dump_pool_state_at_merge(const struct wavefront_pool* pool,
+                         const char* reason)
+{
+  const char* dump_path;
+  FILE* f;
+  size_t i;
+  int v;
+
+  dump_path = getenv("STARDIS_MERGE_DUMP");
+  if(!dump_path || dump_path[0] == '\0') return;
+
+  f = fopen(dump_path, "a");
+  if(!f) {
+    fprintf(stderr, "[MERGE_DUMP] cannot open %s\n", dump_path);
+    return;
+  }
+
+  /* ── Block header ── */
+  fprintf(f, "\n# MERGE step=%llu reason=%s views=%d pool_size=%zu\n",
+    (unsigned long long)pool->total_steps, reason,
+    pool->num_active_views, pool->pool_size);
+
+  for(v = 0; v < pool->num_active_views; v++) {
+    const struct pool_view* pv = &pool->views[v];
+    fprintf(f,
+      "# V%d: base=%zu size=%zu active=%zu rays=%zu "
+      "enc=%zu cp=%zu gpu_pend=%d enc_pend=%d cp_pend=%d\n",
+      v, pv->base, pv->view_size, pv->active_compact,
+      pv->ray_count, pv->enc_locate_count, pv->cp_count,
+      pv->gpu_pending, pv->enc_gpu_pending, pv->cp_gpu_pending);
+  }
+
+  /* ── CSV header ── */
+  fprintf(f,
+    "slot,view,path_id,phase,active,needs_ray,ray_bucket,"
+    "steps,batch_idx,enc_batch_idx,cp_batch_idx,ray_count_ext,"
+    "ipix_x,ipix_y,realisation\n");
+
+  /* ── One row per non-harvested slot ── */
+  for(i = 0; i < pool->pool_size; i++) {
+    const struct path_state* p = &pool->slots[i];
+    const struct path_hot*   h = &pool->hot_arr[i];
+    int view_id = -1;
+
+    /* Skip already-harvested slots (noise reduction) */
+    if(!h->active && (enum path_phase)h->phase == PATH_HARVESTED)
+      continue;
+
+    /* Determine owning view */
+    for(v = 0; v < pool->num_active_views; v++) {
+      if(i >= pool->views[v].base
+      && i <  pool->views[v].base + pool->views[v].view_size) {
+        view_id = v;
+        break;
+      }
+    }
+
+    fprintf(f,
+      "%zu,%d,%llu,%u,%d,%d,%u,%llu,%u,%u,%u,%u,%u,%u,%u\n",
+      i,                                          /* slot            */
+      view_id,                                    /* view (0/1/-1)   */
+      (unsigned long long)p->path_id,             /* path_id         */
+      (unsigned)h->phase,                         /* phase (numeric) */
+      h->active ? 1 : 0,                         /* active          */
+      h->needs_ray ? 1 : 0,                      /* needs_ray       */
+      (unsigned)h->ray_bucket,                    /* ray_bucket      */
+      (unsigned long long)p->steps_taken,         /* steps           */
+      (unsigned)p->ray_req.batch_idx,             /* RT batch_idx    */
+      (unsigned)pool->enc_arr[i].locate.batch_idx,/* enc batch_idx   */
+      (unsigned)p->locals.cnd_wos.batch_cp_idx,   /* cp batch_idx    */
+      (unsigned)h->ray_count_ext,                 /* ray_count_ext   */
+      (unsigned)p->ipix_image[0],                 /* ipix_x          */
+      (unsigned)p->ipix_image[1],                 /* ipix_y          */
+      (unsigned)p->realisation_idx);              /* realisation     */
+  }
+
+  fclose(f);
+}
+
+/*******************************************************************************
  * P2: Dynamic merge / split — dual-buffer <-> single-buffer transitions
  ******************************************************************************/
 
@@ -5147,6 +5237,7 @@ pool_run_dual(struct wavefront_pool* pool,
         res = gpu_wait_download_all(pool, pv_b, sv);
         if(res != RES_OK) return res;
       }
+      dump_pool_state_at_merge(pool, "pool_run_dual");
       merge_to_single_pool(pool);
       break;
     }
@@ -5826,6 +5917,7 @@ solve_camera_persistent_wavefront(
           (unsigned long long)pool.total_steps,
           (unsigned long long)pv_a->active_compact,
           (unsigned long long)pv_b->active_compact);
+        dump_pool_state_at_merge(&pool, "camera_ir_dual");
         merge_to_single_pool(&pool);
         { struct time t_hk_end; time_current(&t_hk_end);
           pool.time_housekeeping_s += time_elapsed_sec(&t_hk, &t_hk_end); }

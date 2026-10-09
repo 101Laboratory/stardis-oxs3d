@@ -37,6 +37,9 @@ if(NOT DEFINED ENABLE_TESTS)
     option(ENABLE_TESTS "Enable building tests" ON)
 endif()
 
+# Solver-specific B4/WF test control
+option(ENABLE_B4_WF_TESTS "Enable building B4 and WF series tests only" OFF)
+
 if(NOT DEFINED BUILD_SHARED_LIBS)
     option(BUILD_SHARED_LIBS "Build shared library" ON)
 endif()
@@ -173,7 +176,7 @@ set_target_properties(sdis PROPERTIES
 # Tests
 # ============================================================================
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTS OR ENABLE_B4_WF_TESTS)
     enable_testing()
     
     # Test utility source (shared by all tests)
@@ -185,19 +188,21 @@ if(ENABLE_TESTS)
     # These do NOT call sdis_solve_probe or any depth-first MC solver, so they
     # remain valid regardless of the ray-tracing backend.
     # =========================================================================
-    set(SDIS_REGULAR_TESTS
-        src/test_sdis_camera.c          # H4: camera API
-        src/test_sdis_data.c            # H2: data container
-        src/test_sdis_interface.c       # H8: interface component API
-        src/test_sdis_medium.c          # H8: medium component API
-        src/test_sdis_radiative_env.c   # H8: radiative env component API
-        src/test_sdis_source.c          # H8: source component API
-    )
+    if(ENABLE_TESTS)
+        set(SDIS_REGULAR_TESTS
+            src/test_sdis_camera.c          # H4: camera API
+            src/test_sdis_data.c            # H2: data container
+            src/test_sdis_interface.c       # H8: interface component API
+            src/test_sdis_medium.c          # H8: medium component API
+            src/test_sdis_radiative_env.c   # H8: radiative env component API
+            src/test_sdis_source.c          # H8: source component API
+        )
 
-    add_module_tests(
-        SOURCES ${SDIS_REGULAR_TESTS}
-        LIBRARIES test_sdis_utils sdis
-    )
+        add_module_tests(
+            SOURCES ${SDIS_REGULAR_TESTS}
+            LIBRARIES test_sdis_utils sdis
+        )
+    endif()
 
     # =========================================================================
     # DISABLED: depth-first solver tests (use sdis_solve_probe / synchronous
@@ -251,6 +256,12 @@ if(ENABLE_TESTS)
     #     set_tests_properties(${test_name} PROPERTIES TIMEOUT 600)
     # endforeach()
 
+    # =========================================================================
+    # B4/WF TESTS - Architecture and Numerical Correctness Tests
+    # Only built when ENABLE_B4_WF_TESTS=ON or ENABLE_TESTS=ON
+    # =========================================================================
+    if(ENABLE_B4_WF_TESTS OR ENABLE_TESTS)
+        
     # ---- B-4 tests link the OBJECT library directly ----
     # sdis_obj gives direct access to all symbols (LOCAL_SYM included)
     # without needing WINDOWS_EXPORT_ALL_SYMBOLS on the DLL.
@@ -485,7 +496,9 @@ if(ENABLE_TESTS)
         endforeach()
     endif()
 
-endif()
+    endif() # End of ENABLE_B4_WF_TESTS OR ENABLE_TESTS
+
+endif() # End of (ENABLE_TESTS OR ENABLE_B4_WF_TESTS)
 
 # ============================================================================
 # Installation
