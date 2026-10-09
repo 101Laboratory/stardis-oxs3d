@@ -20,8 +20,9 @@
  *   T9.9: End-to-end transient WoS probe (unsteady box, Green function ref)
  */
 
-#include "sdis_solve_wavefront.h"
+#include "sdis_solve_persistent_wavefront.h"
 #include "sdis_wf_steps.h"
+#include "sdis_wf_hot.h"
 #include "sdis_scene_c.h"
 #include "sdis_medium_c.h"
 
@@ -150,27 +151,29 @@ static void
 test_wos_init_enc_query(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
 
   printf("  T9.1: WoS init ENC query chain ...\n");
 
   /* Part A: first entry (wos_initialized=0) -> ENC query */
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.ctx.diff_algo = SDIS_DIFFUSION_WOS;
   p.locals.cnd_wos.wos_initialized = 0;
   p.rwalk.vtx.P[0] = 0.5;
   p.rwalk.vtx.P[1] = 0.5;
   p.rwalk.vtx.P[2] = 0.5;
 
-  OK(step_conductive(&p, g_scn, &enc));
+  OK(step_conductive(&p, &hot, g_scn, &enc));
 
-  CHK(p.phase == PATH_ENC_QUERY_EMIT);
-  CHK(p.needs_ray == 1);
+  CHK(hot.phase == PATH_ENC_QUERY_EMIT);
+  CHK(hot.needs_ray == 1);
   CHK(enc.return_state == PATH_CND_WOS_CHECK_TEMP);
-  CHK(p.ray_count_ext == 6);
-  CHK(p.ray_bucket == RAY_BUCKET_ENCLOSURE);
+  CHK(hot.ray_count_ext == 6);
+  CHK(hot.ray_bucket == RAY_BUCKET_ENCLOSURE);
   CHK(fabs(enc.query_pos[0] - 0.5) < 1.e-10);
   CHK(fabs(enc.query_pos[1] - 0.5) < 1.e-10);
   CHK(fabs(enc.query_pos[2] - 0.5) < 1.e-10);
@@ -179,15 +182,16 @@ test_wos_init_enc_query(void)
 
   /* Part B: re-entry (wos_initialized=1) -> direct CHECK_TEMP */
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.ctx.diff_algo = SDIS_DIFFUSION_WOS;
   p.locals.cnd_wos.wos_initialized = 1;
 
-  OK(step_conductive(&p, g_scn, &enc));
+  OK(step_conductive(&p, &hot, g_scn, &enc));
 
-  CHK(p.phase == PATH_CND_WOS_CHECK_TEMP);
-  CHK(p.needs_ray == 0);
+  CHK(hot.phase == PATH_CND_WOS_CHECK_TEMP);
+  CHK(hot.needs_ray == 0);
 
   printf("    Part B: re-entry -> PATH_CND_WOS_CHECK_TEMP  PASS\n");
   printf("  T9.1: PASS\n");
@@ -200,6 +204,7 @@ static void
 test_wos_check_temp_known(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
   res_T res;
 
@@ -208,8 +213,9 @@ test_wos_check_temp_known(void)
   /* Set up a path_state at box centre with known temperature.
    * We use a temporary scene with a solid that returns T=300. */
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.rng = g_rng;
   p.rwalk.vtx.P[0] = 0.5;
   p.rwalk.vtx.P[1] = 0.5;
@@ -224,12 +230,12 @@ test_wos_check_temp_known(void)
     sdis_medium_getter_T old_temp = g_solid->shader.solid.temperature;
     g_solid->shader.solid.temperature = m9_solid_temp_known;
 
-    res = step_cnd_wos_check_temp(&p, g_scn);
+    res = step_cnd_wos_check_temp(&p, &hot, g_scn);
     CHK(res == RES_OK);
 
     /* Temperature known -> PATH_DONE, T.done=1, T.value = 300 */
-    CHK(p.phase == PATH_DONE);
-    CHK(p.active == 0);
+    CHK(hot.phase == PATH_DONE);
+    CHK(hot.active == 0);
     CHK(p.T.done == 1);
     CHK(fabs(p.T.value - 300.0) < 1.e-6);
     CHK(p.done_reason == 2);
@@ -248,22 +254,24 @@ static void
 test_wos_closest_submit(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
 
   printf("  T9.3: WoS closest submits batch CP request ...\n");
 
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.rwalk.vtx.P[0] = 0.3;
   p.rwalk.vtx.P[1] = 0.4;
   p.rwalk.vtx.P[2] = 0.6;
 
-  step_cnd_wos_closest(&p);
+  step_cnd_wos_closest(&p, &hot);
 
   /* After call: phase = PATH_CND_WOS_CLOSEST, needs_ray = 0 */
-  CHK(p.phase == PATH_CND_WOS_CLOSEST);
-  CHK(p.needs_ray == 0);
+  CHK(hot.phase == PATH_CND_WOS_CLOSEST);
+  CHK(hot.needs_ray == 0);
 
   /* query_pos should match rwalk position */
   CHK(fabs(p.locals.cnd_wos.query_pos[0] - 0.3) < 1.e-10);
@@ -291,6 +299,7 @@ static void
 test_wos_closest_result_epsilon_shell(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
   res_T res;
   struct s3d_hit fake_hit;
@@ -299,8 +308,9 @@ test_wos_closest_result_epsilon_shell(void)
   printf("  T9.4: WoS closest_result epsilon-shell -> TIME_TRAVEL ...\n");
 
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.rng = g_rng;
   p.rwalk.vtx.P[0] = 0.5;
   p.rwalk.vtx.P[1] = 0.5;
@@ -324,17 +334,17 @@ test_wos_closest_result_epsilon_shell(void)
 
   p.locals.cnd_wos.cached_hit = fake_hit;
 
-  res = step_cnd_wos_closest_result(&p, g_scn);
+  res = step_cnd_wos_closest_result(&p, &hot, g_scn);
   /* In epsilon-shell, setup_hit_wos is called (may fail on edge case).
    * If it succeeds, phase = TIME_TRAVEL.
-   * If the enclosure side doesn't match, it may fail â€?that's OK for this
+   * If the enclosure side doesn't match, it may fail â€” that's OK for this
    * unit test; we just check the state machine flow. */
   if(res == RES_OK) {
-    CHK(p.phase == PATH_CND_WOS_TIME_TRAVEL);
+    CHK(hot.phase == PATH_CND_WOS_TIME_TRAVEL);
     printf("    epsilon-shell hit -> TIME_TRAVEL  PASS\n");
   } else {
-    /* wf_setup_hit_wos failed due to side mismatch â€?error path is also valid */
-    CHK(p.phase == PATH_DONE);
+    /* wf_setup_hit_wos failed due to side mismatch â€” error path is also valid */
+    CHK(hot.phase == PATH_DONE);
     CHK(p.done_reason == -1);
     printf("    epsilon-shell hit -> error path (side mismatch)  PASS\n");
   }
@@ -349,13 +359,15 @@ static void
 test_wos_fallback_trace_emit(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
 
   printf("  T9.5: WoS fallback_trace emits 1 ray ... ");
 
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.rwalk.vtx.P[0] = 0.5;
   p.rwalk.vtx.P[1] = 0.5;
   p.rwalk.vtx.P[2] = 0.5;
@@ -364,11 +376,11 @@ test_wos_fallback_trace_emit(void)
   p.locals.cnd_wos.dir[1] = 0.0f;
   p.locals.cnd_wos.dir[2] = 1.0f;
 
-  step_cnd_wos_fallback_trace(&p);
+  step_cnd_wos_fallback_trace(&p, &hot);
 
-  CHK(p.phase == PATH_CND_WOS_FALLBACK_TRACE);
-  CHK(p.needs_ray == 1);
-  CHK(p.ray_bucket == RAY_BUCKET_RADIATIVE);
+  CHK(hot.phase == PATH_CND_WOS_FALLBACK_TRACE);
+  CHK(hot.needs_ray == 1);
+  CHK(hot.ray_bucket == RAY_BUCKET_RADIATIVE);
   CHK(p.ray_req.ray_count == 1);
 
   /* Verify origin = rwalk.vtx.P */
@@ -395,6 +407,7 @@ static void
 test_wos_fallback_result_miss(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
   struct s3d_hit hit_rt;
   struct s3d_hit cached;
@@ -404,8 +417,9 @@ test_wos_fallback_result_miss(void)
   printf("  T9.6: WoS fallback_result miss -> snap to cached ...\n");
 
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.rng = g_rng;
   p.rwalk.vtx.P[0] = 0.5;
   p.rwalk.vtx.P[1] = 0.5;
@@ -430,14 +444,14 @@ test_wos_fallback_result_miss(void)
 
   scene_get_enclosure_ids(g_scn, 0, encs);
 
-  res = step_cnd_wos_fallback_result(&p, g_scn, &hit_rt);
+  res = step_cnd_wos_fallback_result(&p, &hot, g_scn, &hit_rt);
   /* Miss -> snap to cached hit via wf_setup_hit_wos.
    * May fail on side mismatch. */
   if(res == RES_OK) {
-    CHK(p.phase == PATH_CND_WOS_TIME_TRAVEL);
+    CHK(hot.phase == PATH_CND_WOS_TIME_TRAVEL);
     printf("    miss -> snap -> TIME_TRAVEL  PASS\n");
   } else {
-    CHK(p.phase == PATH_DONE);
+    CHK(hot.phase == PATH_DONE);
     printf("    miss -> snap failed (side mismatch) -> error path  PASS\n");
   }
 
@@ -451,14 +465,16 @@ static void
 test_wos_time_travel_boundary(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
   res_T res;
 
   printf("  T9.7: WoS time_travel with boundary hit -> COUPLED_BOUNDARY ...\n");
 
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.rng = g_rng;
   p.rwalk.vtx.P[0] = 0.5;
   p.rwalk.vtx.P[1] = 0.5;
@@ -486,11 +502,11 @@ test_wos_time_travel_boundary(void)
   p.rwalk.hit_3d.prim.prim_id = 0;
   p.rwalk.hit_3d.normal[2] = -1.0f;
 
-  res = step_cnd_wos_time_travel(&p, g_scn);
+  res = step_cnd_wos_time_travel(&p, &hot, g_scn);
   CHK(res == RES_OK);
 
   /* Boundary hit -> COUPLED_BOUNDARY */
-  CHK(p.phase == PATH_COUPLED_BOUNDARY);
+  CHK(hot.phase == PATH_COUPLED_BOUNDARY);
   CHK(p.locals.cnd_wos.wos_initialized == 0); /* reset for next entry */
 
   printf("  T9.7: PASS\n");
@@ -503,14 +519,16 @@ static void
 test_wos_time_travel_loop(void)
 {
   struct path_state p;
+  struct path_hot hot;
   struct path_enc_data enc;
   res_T res;
 
   printf("  T9.7b: WoS time_travel no hit -> CHECK_TEMP (loop) ...\n");
 
   memset(&p, 0, sizeof(p));
+  memset(&hot, 0, sizeof(hot));
   memset(&enc, 0, sizeof(enc));
-  p.active = 1;
+  hot.active = 1;
   p.rng = g_rng;
   p.rwalk.vtx.P[0] = 0.5;
   p.rwalk.vtx.P[1] = 0.5;
@@ -533,11 +551,11 @@ test_wos_time_travel_loop(void)
   p.T.value = 0;
   p.T.done = 0;
 
-  res = step_cnd_wos_time_travel(&p, g_scn);
+  res = step_cnd_wos_time_travel(&p, &hot, g_scn);
   CHK(res == RES_OK);
 
   /* No hit, no initial condition -> continue WoS loop */
-  CHK(p.phase == PATH_CND_WOS_CHECK_TEMP);
+  CHK(hot.phase == PATH_CND_WOS_CHECK_TEMP);
 
   printf("  T9.7b: PASS\n");
 }

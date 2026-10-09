@@ -173,301 +173,55 @@ if(ENABLE_TESTS)
     # Test utility source (shared by all tests)
     add_library(test_sdis_utils OBJECT src/test_sdis_utils.c)
     target_link_libraries(test_sdis_utils PUBLIC sdis rsys)
-    
-    # =========================================================================
-    # Regular tests -- H-category (data structure / API, no ray tracing)
-    # These do NOT call sdis_solve_probe or any depth-first MC solver, so they
-    # remain valid regardless of the ray-tracing backend.
-    # =========================================================================
-    set(SDIS_REGULAR_TESTS
-        src/test_sdis_camera.c          # H4: camera API
-        src/test_sdis_data.c            # H2: data container
-        src/test_sdis_interface.c       # H8: interface component API
-        src/test_sdis_medium.c          # H8: medium component API
-        src/test_sdis_radiative_env.c   # H8: radiative env component API
-        src/test_sdis_source.c          # H8: source component API
-    )
-
-    add_module_tests(
-        SOURCES ${SDIS_REGULAR_TESTS}
-        LIBRARIES test_sdis_utils sdis
-    )
 
     # =========================================================================
-    # DISABLED: depth-first solver tests (use sdis_solve_probe / synchronous
-    # single-width ray queries).  The ray-tracing backend has been fully
-    # migrated to GPU (cuBQL), so the depth-first code path can no longer
-    # execute ray queries.  Corresponding wavefront (WF-*) replacements are
-    # listed next to each test where available; tests without a WF
-    # replacement are 2D-only or cover features not yet ported.
+    # WoS-related tests only (test/wos-validation branch)
     #
-    # Re-enable these ONLY if a CPU depth-first fallback is restored.
-    # =========================================================================
-    # set(SDIS_DISABLED_DEPTH_FIRST_TESTS
-    #     src/test_sdis_conducto_radiative.c        # → WF-C1
-    #     src/test_sdis_conducto_radiative_2d.c      # 2D only, no WF replacement
-    #     src/test_sdis_contact_resistance.c         # → WF-A3
-    #     src/test_sdis_contact_resistance_2.c       # A4, no WF replacement
-    #     src/test_sdis_convection.c                 # → WF-D1
-    #     src/test_sdis_convection_non_uniform.c     # → WF-D2
-    #     src/test_sdis_enclosure_limit_conditions.c # → WF-I3
-    #     src/test_sdis_flux.c                       # → WF-A1
-    #     src/test_sdis_flux2.c                      # → WF-C4
-    #     src/test_sdis_flux_with_h.c                # no WF replacement
-    #     src/test_sdis_picard.c                     # → WF-C3
-    #     src/test_sdis_solve_probe.c                # B1, no WF replacement
-    #     src/test_sdis_solve_probe_2d.c             # 2D only, no WF replacement
-    #     src/test_sdis_solve_probe2_2d.c            # 2D only, no WF replacement
-    #     src/test_sdis_solve_probe3_2d.c            # 2D only, no WF replacement
-    #     src/test_sdis_transcient.c                 # E6, no WF replacement
-    #     src/test_sdis_unsteady.c                   # → WF-E1
-    #     src/test_sdis_unsteady_1d.c                # → WF-E2
-    #     src/test_sdis_unsteady_analytic_profile_2d.c # 2D only, no WF replacement
-    #     src/test_sdis_unsteady_atm.c               # → WF-E5
-    #     src/test_sdis_volumic_power.c              # → WF-A2
-    #     src/test_sdis_volumic_power4.c             # → WF-A6
-    # )
-    
-    # =========================================================================
-    # DISABLED: long-running depth-first solver tests (same reason as above).
-    # =========================================================================
-    # set(SDIS_LONG_TESTS
-    #     src/test_sdis_volumic_power2.c      # → WF-I1
-    #     src/test_sdis_volumic_power2_2d.c    # 2D only, no WF replacement
-    #     src/test_sdis_volumic_power3_2d.c    # A5, 2D only, no WF replacement
-    # )
+    # This worktree builds only the subset of B4 and WF tests that exercise
+    # the Walk-on-Spheres (WoS) conductive path algorithm.
     #
-    # foreach(test_src ${SDIS_LONG_TESTS})
-    #     get_filename_component(test_name ${test_src} NAME_WE)
-    #     add_executable(${test_name} ${test_src})
-    #     target_link_libraries(${test_name} PRIVATE test_sdis_utils sdis)
-    #     add_test(NAME ${test_name} COMMAND ${test_name})
-    #     set_tests_properties(${test_name} PROPERTIES TIMEOUT 600)
-    # endforeach()
+    # B4-M9:  FSM unit tests (T9.1-T9.7b) + E2E probes (T9.8 steady, T9.9
+    #         transient).  Pure conduction scenes (unit box, Dirichlet BC).
+    # WF-C3:  Picard multi-order conducto-radiative test.  4/6 configs use
+    #         SDIS_DIFFUSION_WOS; tests WoS within a coupled solver context.
+    # =========================================================================
 
-    # ---- B-4 tests link the OBJECT library directly ----
-    # sdis_obj gives direct access to all symbols (LOCAL_SYM included)
-    # without needing WINDOWS_EXPORT_ALL_SYMBOLS on the DLL.
+    # When linking tests against sdis_obj (OBJECT lib) while SDIS_SHARED_BUILD
+    # is PRIVATE on sdis_obj, tests see SDIS_API = __declspec(dllimport) by
+    # default.  Force SDIS_SHARED_BUILD so the symbol decoration matches the
+    # object files (avoids LNK2019 on __imp_* symbols).
+    if(BUILD_SHARED_LIBS)
+        set(WOS_TEST_DEFS SDIS_SHARED_BUILD)
+    endif()
 
-    # M1 enclosure batch test (disabled: M1 6-ray ENC replaced by M10 BVH locate)
-    # add_executable(test_sdis_b4_m1_enclosure_batch
-    #     src/test_sdis_b4_m1_enclosure_batch.c)
-    # target_link_libraries(test_sdis_b4_m1_enclosure_batch PRIVATE sdis_obj)
-    # add_test(NAME test_sdis_b4_m1_enclosure_batch
-    #          COMMAND test_sdis_b4_m1_enclosure_batch)
-
-    add_executable(test_sdis_b4_m2_ray_bucketing
-        src/test_sdis_b4_m2_ray_bucketing.c)
-    target_link_libraries(test_sdis_b4_m2_ray_bucketing PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m2_ray_bucketing
-             COMMAND test_sdis_b4_m2_ray_bucketing)
-
-    add_executable(test_sdis_b4_m3_solid_solid
-        src/test_sdis_b4_m3_solid_solid.c)
-    target_link_libraries(test_sdis_b4_m3_solid_solid PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m3_solid_solid
-             COMMAND test_sdis_b4_m3_solid_solid)
-
-    add_executable(test_sdis_b4_m4_delta_sphere
-        src/test_sdis_b4_m4_delta_sphere.c)
-    target_link_libraries(test_sdis_b4_m4_delta_sphere PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m4_delta_sphere
-             COMMAND test_sdis_b4_m4_delta_sphere)
-
-    add_executable(test_sdis_b4_m6_convective
-        src/test_sdis_b4_m6_convective.c)
-    target_link_libraries(test_sdis_b4_m6_convective PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m6_convective
-             COMMAND test_sdis_b4_m6_convective)
-
-    add_executable(test_sdis_b4_m5_picard1
-        src/test_sdis_b4_m5_picard1.c)
-    target_link_libraries(test_sdis_b4_m5_picard1 PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m5_picard1
-             COMMAND test_sdis_b4_m5_picard1)
-
-    add_executable(test_sdis_b4_m7_external_flux
-        src/test_sdis_b4_m7_external_flux.c)
-    target_link_libraries(test_sdis_b4_m7_external_flux PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m7_external_flux
-             COMMAND test_sdis_b4_m7_external_flux)
-
-    add_executable(test_sdis_b4_m8_picardN
-        src/test_sdis_b4_m8_picardN.c)
-    target_link_libraries(test_sdis_b4_m8_picardN PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m8_picardN
-             COMMAND test_sdis_b4_m8_picardN)
-
-    # M9 WoS state machine tests
+    # ---- B4-M9: WoS state machine unit tests (T9.1-T9.9) ----
+    # Pure conduction: unit box with Dirichlet BC, steady + transient.
+    # T9.1-T9.7b test individual FSM states (LOCAL_SYM step functions).
+    # T9.8-T9.9 test end-to-end probe (SDIS_API solver function).
     add_executable(test_sdis_b4_m9_wos
         src/test_sdis_b4_m9_wos.c)
     target_link_libraries(test_sdis_b4_m9_wos PRIVATE sdis_obj)
+    target_compile_definitions(test_sdis_b4_m9_wos PRIVATE ${WOS_TEST_DEFS})
     add_test(NAME test_sdis_b4_m9_wos COMMAND test_sdis_b4_m9_wos)
-    set_tests_properties(test_sdis_b4_m9_wos PROPERTIES TIMEOUT 600)
+    set_tests_properties(test_sdis_b4_m9_wos PROPERTIES
+        TIMEOUT 600
+        LABELS "b4;wos;conduction")
 
-    # M10 enc_locate tests
-    add_executable(test_sdis_b4_m10_enc_locate
-        src/test_sdis_b4_m10_enc_locate.c)
-    target_link_libraries(test_sdis_b4_m10_enc_locate PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_m10_enc_locate
-             COMMAND test_sdis_b4_m10_enc_locate)
+    # ---- WF-C3: Picard multi-order conducto-radiative test ----
+    # 4 of 6 configs use SDIS_DIFFUSION_WOS; tests WoS in coupled context.
+    add_executable(test_sdis_wf_c3_picard_multi
+        src/test_sdis_wf_c3_picard_multi.c)
+    target_link_libraries(test_sdis_wf_c3_picard_multi PRIVATE sdis_obj)
+    target_compile_definitions(test_sdis_wf_c3_picard_multi PRIVATE ${WOS_TEST_DEFS})
+    add_test(NAME test_sdis_wf_c3_picard_multi COMMAND test_sdis_wf_c3_picard_multi)
+    set_tests_properties(test_sdis_wf_c3_picard_multi PROPERTIES
+        TIMEOUT 600
+        LABELS "wf;p1;wos;numerical")
 
-    # E2E delayed tests (wavefront vs depth-first for M2-M8)
-    add_executable(test_sdis_b4_e2e
-        src/test_sdis_b4_e2e.c)
-    target_link_libraries(test_sdis_b4_e2e PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_e2e COMMAND test_sdis_b4_e2e)
-    set_tests_properties(test_sdis_b4_e2e PROPERTIES TIMEOUT 1200)
-
-    # Full integration test (T-INT)
-    add_executable(test_sdis_b4_integration
-        src/test_sdis_b4_integration.c)
-    target_link_libraries(test_sdis_b4_integration PRIVATE sdis_obj)
-    add_test(NAME test_sdis_b4_integration COMMAND test_sdis_b4_integration)
-    set_tests_properties(test_sdis_b4_integration PROPERTIES TIMEOUT 1200)
-
-    # Wavefront benchmark (re-enabled: API fix applied, links sdis_obj for
-    # access to LOCAL_SYM symbols)
-    add_executable(test_sdis_wavefront_benchmark
-        src/test_sdis_wavefront_benchmark.c)
-    target_link_libraries(test_sdis_wavefront_benchmark PRIVATE sdis_obj)
-    add_test(NAME test_sdis_wavefront_benchmark
-             COMMAND test_sdis_wavefront_benchmark)
-    set_tests_properties(test_sdis_wavefront_benchmark PROPERTIES TIMEOUT 1200)
-
-    # ---- P0 wavefront numerical correctness tests ----
-    # Links sdis_obj (OBJECT lib) for LOCAL_SYM access, same as B-4 tests.
-    set(WF_P0_TESTS
-        test_sdis_wf_a1_flux
-        test_sdis_wf_a2_volumic
-        test_sdis_wf_b2_boundary
-        test_sdis_wf_c1_condrad
-        test_sdis_wf_d1_convection)
-
-    foreach(p0test ${WF_P0_TESTS})
-        add_executable(${p0test} src/${p0test}.c)
-        target_link_libraries(${p0test} PRIVATE sdis_obj)
-        add_test(NAME ${p0test} COMMAND ${p0test})
-        set_tests_properties(${p0test} PROPERTIES
-            TIMEOUT 300
-            LABELS "wf;p0;numerical")
-    endforeach()
-
-    # ---- P1 wavefront numerical correctness tests ----
-    # Same pattern as P0: links sdis_obj (OBJECT lib) for LOCAL_SYM access.
-    set(WF_P1_TESTS
-        test_sdis_wf_a3_contact_resistance
-        test_sdis_wf_a6_volumic_power4
-        test_sdis_wf_c3_picard_multi
-        test_sdis_wf_d2_convection_nonuniform
-        test_sdis_wf_f1_external_flux
-        test_sdis_wf_f2_diffuse_radiance)
-
-    foreach(p1test ${WF_P1_TESTS})
-        add_executable(${p1test} src/${p1test}.c)
-        target_link_libraries(${p1test} PRIVATE sdis_obj)
-        add_test(NAME ${p1test} COMMAND ${p1test})
-        set_tests_properties(${p1test} PROPERTIES
-            TIMEOUT 600
-            LABELS "wf;p1;numerical")
-    endforeach()
-
-    # ---- P2 wavefront numerical correctness tests ----
-    # Basic tests: link sdis_obj only (box geometry from test_sdis_utils.h)
-    set(WF_P2_TESTS_BASIC
-        test_sdis_wf_e1_unsteady
-        test_sdis_wf_e2_unsteady_1d)
-
-    foreach(p2test ${WF_P2_TESTS_BASIC})
-        add_executable(${p2test} src/${p2test}.c)
-        target_link_libraries(${p2test} PRIVATE sdis_obj)
-        add_test(NAME ${p2test} COMMAND ${p2test})
-        set_tests_properties(${p2test} PROPERTIES
-            TIMEOUT 600
-            LABELS "wf;p2;numerical")
-    endforeach()
-
-    # S3DUT tests: link sdis_obj + s3dut (supershape / sphere geometry)
-    set(WF_P2_TESTS_S3DUT
-        test_sdis_wf_e3_unsteady_analytic
-        test_sdis_wf_g1_robustness
-        test_sdis_wf_a7_solve_probe3)
-
-    foreach(p2test ${WF_P2_TESTS_S3DUT})
-        add_executable(${p2test} src/${p2test}.c)
-        target_link_libraries(${p2test} PRIVATE sdis_obj s3dut)
-        add_test(NAME ${p2test} COMMAND ${p2test})
-        set_tests_properties(${p2test} PROPERTIES
-            TIMEOUT 600
-            LABELS "wf;p2;numerical")
-    endforeach()
-
-    # ---- P3 wavefront numerical correctness tests ----
-    # Basic tests (box geometry, no s3dut): link sdis_obj only
-    set(WF_P3_TESTS_BASIC
-        test_sdis_wf_e5_unsteady_atm
-        test_sdis_wf_c4_flux2
-        test_sdis_wf_b3_boundary_flux
-        test_sdis_wf_i3_enclosure_limit
-        test_sdis_wf_i1_volumic_power2)
-
-    foreach(p3test ${WF_P3_TESTS_BASIC})
-        add_executable(${p3test} src/${p3test}.c)
-        target_link_libraries(${p3test} PRIVATE sdis_obj)
-        add_test(NAME ${p3test} COMMAND ${p3test})
-        set_tests_properties(${p3test} PROPERTIES
-            TIMEOUT 600
-            LABELS "wf;p3;numerical")
-    endforeach()
-
-    # I1 batches 8 probes x 10K = 80K paths in a single pool pass — needs
-    # more wall-clock time than the default 600 s.
-    set_tests_properties(test_sdis_wf_i1_volumic_power2 PROPERTIES TIMEOUT 1200)
-    set(WF_P3_TESTS_S3DUT
-        test_sdis_wf_b5_probe_list)
-
-    foreach(p3test ${WF_P3_TESTS_S3DUT})
-        add_executable(${p3test} src/${p3test}.c)
-        target_link_libraries(${p3test} PRIVATE sdis_obj s3dut)
-        add_test(NAME ${p3test} COMMAND ${p3test})
-        set_tests_properties(${p3test} PROPERTIES
-            TIMEOUT 600
-            LABELS "wf;p3;numerical")
-    endforeach()
-
-    # Deploy runtime DLLs (Embree4, TBB, etc.) for all B4 test executables
+    # Deploy runtime DLLs (Embree4, TBB, etc.)
     if(WIN32 AND COMMAND deploy_runtime_dependencies)
-        # deploy_runtime_dependencies(test_sdis_b4_m1_enclosure_batch)
-        deploy_runtime_dependencies(test_sdis_b4_m2_ray_bucketing)
-        deploy_runtime_dependencies(test_sdis_b4_m3_solid_solid)
-        deploy_runtime_dependencies(test_sdis_b4_m4_delta_sphere)
-        deploy_runtime_dependencies(test_sdis_b4_m6_convective)
-        deploy_runtime_dependencies(test_sdis_b4_m5_picard1)
-        deploy_runtime_dependencies(test_sdis_b4_m7_external_flux)
-        deploy_runtime_dependencies(test_sdis_b4_m8_picardN)
-        deploy_runtime_dependencies(test_sdis_b4_m10_enc_locate)
-        deploy_runtime_dependencies(test_sdis_b4_e2e)
-        deploy_runtime_dependencies(test_sdis_b4_integration)
-        deploy_runtime_dependencies(test_sdis_wavefront_benchmark)
-        # O14: test_sdis_dispatch_soa removed (dispatch_soa layer eliminated in merge-phase)
-        foreach(p0test ${WF_P0_TESTS})
-            deploy_runtime_dependencies(${p0test})
-        endforeach()
-        foreach(p1test ${WF_P1_TESTS})
-            deploy_runtime_dependencies(${p1test})
-        endforeach()
-        foreach(p2test ${WF_P2_TESTS_BASIC})
-            deploy_runtime_dependencies(${p2test})
-        endforeach()
-        foreach(p2test ${WF_P2_TESTS_S3DUT})
-            deploy_runtime_dependencies(${p2test})
-        endforeach()
-        foreach(p3test ${WF_P3_TESTS_BASIC})
-            deploy_runtime_dependencies(${p3test})
-        endforeach()
-        foreach(p3test ${WF_P3_TESTS_S3DUT})
-            deploy_runtime_dependencies(${p3test})
-        endforeach()
+        deploy_runtime_dependencies(test_sdis_b4_m9_wos)
+        deploy_runtime_dependencies(test_sdis_wf_c3_picard_multi)
     endif()
 
 endif()
