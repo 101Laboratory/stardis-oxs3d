@@ -1,0 +1,37 @@
+message: MPI is disabled.
+message: Using 32 threads.
+message: Read file 'S_porous.stl': 12998 triangles found.
+message: Read file 'plate.stl': 12 triangles found.
+message: External fluid created: T=300 (it is medium 2)
+message: Read file 'B_lateral.stl': 12994 triangles found.
+message: Dummy fluid created: (it is medium 3)
+message: Read file 'B_T0.stl': 2 triangles found.
+message: Read file 'B_T1.stl': 2 triangles found.
+message: External fluid created: T=300 (it is medium 4)
+message: Read file 'plate.stl': 12 triangles found.
+message: Scaling factor is 1
+message: Trad is 680, Trad reference is 800
+message: System Tref range is [300 850]
+message: Picard order is 1
+message: Read 13010 unique triangles.
+warning: User delta for solid 'FOAM' seems too big: 0.0002; auto delta would have set it to 5.76629e-05.
+message: Description 0: Solid 'FOAM': lambda=237 rho=2700 cp=890 delta=0.0002 Tinit=800 (it is medium 0)
+message: Auto delta for solid 'PLATE' set to 0.000816993
+message: Description 1: Solid 'PLATE': lambda=1 rho=2700 cp=890 delta=0.000816993 Tinit=700 Temp=700 (it is medium 1)
+message: Description 2: H boundary for solid 'LAT': ref_temperature=300 emissivity=0.9 specular_fraction=0.5 hc=0 T=300 (using medium 2 as external medium)
+message: Description 3: T boundary for solid 'T0': T=750 (using medium 3 as external medium)
+message: Description 4: T boundary for solid 'T1': T=850 (using medium 3 as external medium)
+message: Description 5: H boundary for solid 'HPLATE': ref_temperature=300 emissivity=0.8 specular_fraction=0.8 hc=0 T=300 (using medium 4 as external medium)
+message: Rendering:   0%message: Rendering:   1%message: Rendering:   2%message: Rendering:   3%message: Rendering:   4%message: Rendering:   5%message: Rendering:   6%message: Rendering:   7%message: Rendering:   8%message: Rendering:   9%message: Rendering:  10%message: Rendering:  11%message: Rendering:  12%message: Rendering:  13%message: Rendering:  14%message: Rendering:  15%message: Rendering:  16%message: Rendering:  17%message: Rendering:  18%message: Rendering:  19%message: Rendering:  20%message: Rendering:  21%message: Rendering:  22%message: Rendering:  23%message: Rendering:  24%message: Rendering:  25%message: Rendering:  26%error: Inconsistent intersection when sampling the radiative path. The path reaches an interface on its solid side, whereas this is supposed to be impossible (path position: 0.000261813, -0.000725187, 0.001712).
+message: Rendering:  27%message: Rendering:  28%message: Rendering:  29%message: Rendering:  30%message: Rendering:  31%message: Rendering:  32%message: Rendering:  33%message: Rendering:  34%message: Rendering:  35%message: Rendering:  36%message: Rendering:  37%message: Rendering:  38%message: Rendering:  39%message: Rendering:  40%message: Rendering:  41%message: Rendering:  42%error: Inconsistent intersection when sampling the radiative path. The path reaches an interface on its solid side, whereas this is supposed to be impossible (path position: 0.00228682, 0.00430675, 0.00271489).
+message: Rendering:  43%message: Rendering:  44%message: Rendering:  45%message: Rendering:  46%message: Rendering:  47%message: Rendering:  48%message: Rendering:  49%message: Rendering:  50%message: Rendering:  51%message: Rendering:  52%message: Rendering:  53%message: Rendering:  54%message: Rendering:  55%message: Rendering:  56%message: Rendering:  57%error: Inconsistent intersection when sampling the radiative path. The path reaches an interface on its solid side, whereas this is supposed to be impossible (path position: 0.00315363, -0.00413863, -0.001688).
+message: Rendering:  58%message: Rendering:  59%message: Rendering:  60%message: Rendering:  61%message: Rendering:  62%message: Rendering:  63%message: Rendering:  64%message: Rendering:  65%message: Rendering:  66%message: Rendering:  67%message: Rendering:  68%message: Rendering:  69%message: Rendering:  70%message: Rendering:  71%message: Rendering:  72%message: Rendering:  73%message: Rendering:  74%message: Rendering:  75%message: Rendering:  76%message: Rendering:  77%message: Rendering:  78%message: Rendering:  79%error: Inconsistent intersection when sampling the radiative path. The path reaches an interface on its solid side, whereas this is supposed to be impossible (path position: 0.004001, 0.008008, -0.000364029).
+message: Rendering:  80%message: Rendering:  81%message: Rendering:  82%message: Rendering:  83%message: Rendering:  84%message: Rendering:  85%message: Rendering:  86%message: Rendering:  87%message: Rendering:  88%message: Rendering:  89%message: Rendering:  90%error: Inconsistent intersection when sampling the radiative path. The path reaches an interface on its solid side, whereas this is supposed to be impossible (path position: 0.00400099, 0.008008, -0.00297974).
+message: Rendering:  91%message: Rendering:  92%message: Rendering:  93%message: Rendering:  94%message: Rendering:  95%message: Rendering:  96%message: Rendering:  97%message: Rendering:  98%message: Rendering:  99%message: Rendering: 100%message: Image rendered in 17 mins 23 secs 457 msecs 938 usecs 400 nsecs.
+message: Image tiles gathered in 10 msecs 325 usecs 100 nsecs.
+message: Initialisation time = 155 msecs
+message: Computation time = 17 mins 23 secs 596 msecs
+[RSYS-DEBUG] mem_shutdown_proxy_allocator called, proxy=000000EB2A4FE7B0
+[RSYS-DEBUG] proxy_data=0000023F4A42E380
+[RSYS-DEBUG] node_list=0000000000000000
+[RSYS-DEBUG] About to assert node_list == NULL

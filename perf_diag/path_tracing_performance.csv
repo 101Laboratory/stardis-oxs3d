@@ -1,0 +1,11 @@
+Path Tracing Performance Report
+Resolution,512x512
+Samples Per Pixel,1024
+Max Depth,8
+Total Rays,1073741824
+
+Backend,Time (ms),Rays/sec (M),Throughput
+Embree,9691.11,110.80,1.11e+08
+cuBQL,777.00,1381.91,1.38e+09
+
+Speedup,12.47x

@@ -1,0 +1,3 @@
+﻿mode,threads,run,wall_clock_s
+serial,1,1,287.469
+omp,32,1,152.696

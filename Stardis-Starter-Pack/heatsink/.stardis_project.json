@@ -1,0 +1,177 @@
+{
+  "probes": [],
+  "cameras": [
+    {
+      "name": "Camera1",
+      "position": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "target": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fov": 30.0,
+      "spp": 32,
+      "resolution": [
+        320,
+        320
+      ]
+    },
+    {
+      "name": "Camera2",
+      "position": [
+        170.95355844592095,
+        171.16574593545073,
+        56.45660139079479
+      ],
+      "target": [
+        -30.727526120231484,
+        30.087469921367124,
+        0.0
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fov": 30.0,
+      "spp": 32,
+      "resolution": [
+        320,
+        320
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "name": "DefaultLight",
+      "light_type": "DEFAULT",
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "position": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "enabled": true,
+      "radius": 1.0,
+      "power": 0.0,
+      "diffuse_radiance": 0.0,
+      "raw_line": ""
+    }
+  ],
+  "ambient_intensity": 0.15,
+  "body_zone_ids": {
+    "AL": {
+      "next_zone_id": 2,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "CL"
+        }
+      ]
+    },
+    "SI": {
+      "next_zone_id": 1,
+      "zones": []
+    },
+    "SIPw": {
+      "next_zone_id": 1,
+      "zones": []
+    }
+  },
+  "zone_parent_map": {
+    "CL": "AL"
+  },
+  "task_queue": {
+    "error_policy": {
+      "retry_count": 0,
+      "after_retries_exhausted": "cancel"
+    },
+    "env_vars": {},
+    "tasks": [
+      {
+        "id": "9df5651a-381c-43bd-8131-da4489b71a89",
+        "name": "IR渲染-Camera2",
+        "task_type": "stardis",
+        "enabled": true,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "8192"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "model.txt",
+          "samples": 1000000,
+          "threads": 24,
+          "verbosity": 1,
+          "probe_refs": [],
+          "camera_ref": "Camera2",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "{EXE_TAG}_{WIDTH}x{HEIGHT}_{THREADS}T.ht",
+        "stderr_redirect": "{EXE_TAG}_{WIDTH}x{HEIGHT}_{THREADS}T.txt"
+      },
+      {
+        "id": "9aa03f1d-b492-4e6c-bcd7-580c5f5e44e7",
+        "name": "后处理-Camera2",
+        "task_type": "htpp",
+        "enabled": true,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": false,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 0.0,
+          "range_max": 500.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "9df5651a-381c-43bd-8131-da4489b71a89"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      }
+    ]
+  },
+  "normal_orientations": {
+    "AL": "outward",
+    "SI": "outward",
+    "SIPw": "outward"
+  }
+}

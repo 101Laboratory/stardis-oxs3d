@@ -1,0 +1,455 @@
+{
+  "scope": "Static literal references only; includes unreferenced chapter/template definitions; not a TeX compilation",
+  "references": [
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/0_0_Abstract",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\0_0_Abstract.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/0_1_Abbreviations",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\0_1_Abbreviations.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/0_2_Symbols",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\0_2_Symbols.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/1_Introduction",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\1_Introduction.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/2_Research",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\2_Research.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/3_ParallelizedSolver",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\3_ParallelizedSolver.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/4_RTBackend",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\4_RTBackend.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/5_GUI",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\5_GUI.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/6_Conclusion",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\6_Conclusion.tex"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "bibliography",
+      "target": "ReferenceBase",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\ReferenceBase.bib"
+      ]
+    },
+    {
+      "source": "MainBody.tex",
+      "command": "include",
+      "target": "Chapters/Achievements",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\Achievements.tex"
+      ]
+    },
+    {
+      "source": "Chapters/1_Introduction.tex",
+      "command": "includegraphics",
+      "target": "Figures/FEM_Object_Grid_Example/Tank_Grid.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\FEM_Object_Grid_Example\\Tank_Grid.png"
+      ]
+    },
+    {
+      "source": "Chapters/1_Introduction.tex",
+      "command": "includegraphics",
+      "target": "Figures/FEM_Object_Grid_Example/Tank_Engine_Grid.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\FEM_Object_Grid_Example\\Tank_Engine_Grid.png"
+      ]
+    },
+    {
+      "source": "Chapters/1_Introduction.tex",
+      "command": "includegraphics",
+      "target": "Figures/ThesisArch/ThesisArch.pdf",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\ThesisArch\\ThesisArch.pdf"
+      ]
+    },
+    {
+      "source": "Chapters/2_Research.tex",
+      "command": "includegraphics",
+      "target": "Figures/Coupled_Path_Meta_SM/CPML.pdf",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Coupled_Path_Meta_SM\\CPML.pdf"
+      ]
+    },
+    {
+      "source": "Chapters/2_Research.tex",
+      "command": "includegraphics",
+      "target": "Figures/BVH/BVH.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\BVH\\BVH.png"
+      ]
+    },
+    {
+      "source": "Chapters/2_Research.tex",
+      "command": "includegraphics",
+      "target": "Figures/GPU_Arch/AD102CoreArch.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\GPU_Arch\\AD102CoreArch.png"
+      ]
+    },
+    {
+      "source": "Chapters/2_Research.tex",
+      "command": "includegraphics",
+      "target": "Figures/GPU_Arch/AD102GPCDesign.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\GPU_Arch\\AD102GPCDesign.png"
+      ]
+    },
+    {
+      "source": "Chapters/2_Research.tex",
+      "command": "includegraphics",
+      "target": "Figures/GPU_Arch/AD102SMDesign.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\GPU_Arch\\AD102SMDesign.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Coupled_Path/CoupledPath.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Coupled_Path\\CoupledPath.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/FSM_RAD/FSM_RAD.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\FSM_RAD\\FSM_RAD.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/FSM_CND/FSM_CND.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\FSM_CND\\FSM_CND.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/FSM_CNV/FSM_CNV.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\FSM_CNV\\FSM_CNV.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/FSM_BND/FSM_BND.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\FSM_BND\\FSM_BND.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Timing_SinglePool/SinglePoolTimeline.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Timing_SinglePool\\SinglePoolTimeline.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Timing_PingPong/DualPoolTimeline.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Timing_PingPong\\DualPoolTimeline.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/fig1_a2_parabola.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\fig1_a2_parabola.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/fig2_a3_contact_resistance.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\fig2_a3_contact_resistance.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/fig3_d1_convection.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\fig3_d1_convection.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/fig4_e3_sin_exp.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\fig4_e3_sin_exp.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/fig5_e5_multidomain.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\fig5_e5_multidomain.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/fig6_summary.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\fig6_summary.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/porous_512x512x128spp_z_diagnostic.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\porous_512x512x128spp_z_diagnostic.png"
+      ]
+    },
+    {
+      "source": "Chapters/3_ParallelizedSolver.tex",
+      "command": "includegraphics",
+      "target": "Figures/Consistency/porous_512x512x128spp_difference_map.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\Consistency\\porous_512x512x128spp_difference_map.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/architecture/架构.jpg",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\architecture\\架构.jpg"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/panels/VtkNavMode.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\panels\\VtkNavMode.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/panels/VtkPaintMode.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\panels\\VtkPaintMode.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/panels/SceneTree.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\panels\\SceneTree.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/panels/GeometryMeshConfig.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\panels\\GeometryMeshConfig.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/panels/StardisConfig.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\panels\\StardisConfig.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/panels/CameraConfig.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\panels\\CameraConfig.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/panels/TaskQueue.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\panels\\TaskQueue.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/workflow/1_2_ImportedGeometry.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\workflow\\1_2_ImportedGeometry.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/workflow/3_1_PaintBNDCondition.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\workflow\\3_1_PaintBNDCondition.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/workflow/6_1_ConfigTask.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\workflow\\6_1_ConfigTask.png"
+      ]
+    },
+    {
+      "source": "Chapters/5_GUI.tex",
+      "command": "includegraphics",
+      "target": "Figures/editor/workflow/8_Result.png",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Figures\\editor\\workflow\\8_Result.png"
+      ]
+    },
+    {
+      "source": "Template/scuthesis2020.cls",
+      "command": "includegraphics",
+      "target": "./Template/Components/Images/SCU_TITLE_BW",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Template\\Components\\Images\\SCU_TITLE_BW.png"
+      ]
+    },
+    {
+      "source": "Template/scuthesis2020.cls",
+      "command": "includegraphics",
+      "target": "./Template/Components/Images/SCU_TITLE",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Template\\Components\\Images\\SCU_TITLE.png"
+      ]
+    },
+    {
+      "source": "Template/scuthesis2020.cls",
+      "command": "include",
+      "target": "Chapters/Thanks",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Chapters\\Thanks.tex"
+      ]
+    },
+    {
+      "source": "Template/scuthesis2020.cls",
+      "command": "input",
+      "target": "./Template/scuthesis.def",
+      "status": "found",
+      "resolved": [
+        "D:\\thesis\\Template\\scuthesis.def"
+      ]
+    }
+  ]
+}

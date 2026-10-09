@@ -1,0 +1,704 @@
+[
+  {
+    "path": "D:\\Stardis-GPU\\stardis-cpu",
+    "git_kind": "repository",
+    "head": {
+      "ok": true,
+      "text": "e5b56a9f821c941501a58e9cdf3fb8063627cc15",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "master",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## master...origin/master\n?? stardis/0.12/src/stardis-args.h\n?? stardis/0.12/src/stardis-default.h\n?? stardis/0.12/src/stardis-green-types.h\n?? stardis/0.12/src/stardis-prog-properties.h\n?? stardis/0.12/src/stardis-version.h",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-win.git (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-win.git (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "master\te5b56a9f821c941501a58e9cdf3fb8063627cc15\torigin/master",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-cpu\nHEAD e5b56a9f821c941501a58e9cdf3fb8063627cc15\nbranch refs/heads/master",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "e5b56a9f821c941501a58e9cdf3fb8063627cc15\n2026-01-22T00:05:20+08:00\nEricPu\nfix htpp version missing.",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "4\tBenjamin Piaud\n   110\tChristophe Coustet\n     7\tEricPu\n     2\tMegane Bati\n   855\tVincent Forest\n     2\tchristophe coustet",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d",
+    "git_kind": "repository",
+    "head": {
+      "ok": true,
+      "text": "407766cdb4550c4d562d38204b2c54021ff157e2",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "main",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## main...origin/main [ahead 1]",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "407766cdb4550c4d562d38204b2c54021ff157e2\n2026-04-08T16:13:11+08:00\nEricPu\nAdd detailed property conflict diagnostics in validate_properties",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-cpu-wf",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "407766cdb4550c4d562d38204b2c54021ff157e2",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "exp/cpu-wavefront-embree",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## exp/cpu-wavefront-embree\n M CMakeLists.txt\n M cmake/ProjectOptions.cmake\n M stardis-solver/0.16.2/src/sdis_solve_persistent_wavefront.c\n?? star-3d/",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "407766cdb4550c4d562d38204b2c54021ff157e2\n2026-04-08T16:13:11+08:00\nEricPu\nAdd detailed property conflict diagnostics in validate_properties",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "CMakeLists.txt                                              |  6 +++---\n cmake/ProjectOptions.cmake                                  | 10 +++++-----\n stardis-solver/0.16.2/src/sdis_solve_persistent_wavefront.c |  3 ++-\n 3 files changed, 10 insertions(+), 9 deletions(-)",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-merge-phase",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "opt/merge-phase",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## opt/merge-phase...origin/opt/merge-phase\n M stardis-solver/0.16.2/src/sdis_wf_types.h",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\n2026-03-20T16:27:50+08:00\nEricPu\nMerge branch 'opt/o16-mem-access' into opt/merge-phase",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "stardis-solver/0.16.2/src/sdis_wf_types.h | 4 ++--\n 1 file changed, 2 insertions(+), 2 deletions(-)",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-o14",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "635d66153581c81ef40066f796d71054e9c744d0",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "opt/o14-partition",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## opt/o14-partition",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "635d66153581c81ef40066f796d71054e9c744d0\n2026-03-18T19:52:25+08:00\nEricPu\nO14 v2: per-thread compact within partition (replace direct scan)",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-o16",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "f6d421f7ed422afc3e9f8378d2d86638c88da1f6",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "opt/o16-mem-access",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## opt/o16-mem-access",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "f6d421f7ed422afc3e9f8378d2d86638c88da1f6\n2026-03-20T16:23:03+08:00\nEricPu\nO16: cacheline-align tl_ray_entry (104B->64B) + SSE2 NT stream flush",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-stream-order",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "1489531a3271e860b97320e28900c3b8b0773019",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "opt/stream-auto-order",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## opt/stream-auto-order",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "1489531a3271e860b97320e28900c3b8b0773019\n2026-03-14T13:41:54+08:00\nEricPu\nO12: stream auto-ordering pipeline + fine-grained timing",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-test-validation",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "1044d05510a7baf1cc9f6930947fc1542739911e",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "test-b4-wf-validation",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## test-b4-wf-validation\n M CMakeLists.txt\n M stardis-solver/0.16.2/CMakeLists.txt\n M stardis-solver/0.16.2/src/sdis_solve_persistent_wavefront.c\n?? build_test/",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "1044d05510a7baf1cc9f6930947fc1542739911e\n2026-03-12T16:14:09+08:00\nEricPu\nFix wavefront radiative dispatch and improve robustness",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "CMakeLists.txt                                     |  7 ++\n stardis-solver/0.16.2/CMakeLists.txt               | 43 ++++++----\n .../0.16.2/src/sdis_solve_persistent_wavefront.c   | 92 ++++++++++++++++++++++\n 3 files changed, 127 insertions(+), 15 deletions(-)",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-wos-fix",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "fix/wos-cp-radius",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## fix/wos-cp-radius\n M stardis-solver/0.16.2/src/sdis_wf_state.h\n M stardis-solver/0.16.2/src/sdis_wf_steps_cnd.c\n M stardis-solver/0.16.2/src/test_sdis_b4_m9_wos.c",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\n2026-03-20T16:27:50+08:00\nEricPu\nMerge branch 'opt/o16-mem-access' into opt/merge-phase",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "stardis-solver/0.16.2/src/sdis_wf_state.h       |  1 +\n stardis-solver/0.16.2/src/sdis_wf_steps_cnd.c   | 14 +++++++++++++-\n stardis-solver/0.16.2/src/test_sdis_b4_m9_wos.c |  8 ++++----\n 3 files changed, 18 insertions(+), 5 deletions(-)",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-wos-test",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "test/wos-validation",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## test/wos-validation\n M stardis-solver/0.16.2/CMakeLists.txt\n M stardis-solver/0.16.2/src/test_sdis_b4_m9_wos.c\n?? stardis-solver/0.16.2/build/",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-cuda (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-cuda (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "cleanup/wavefront-dead-code\tbfcebb46e961a691592be22b400bec777e4f5183\t\t\nexp/cpu-wavefront-embree\t407766cdb4550c4d562d38204b2c54021ff157e2\t\t\nfix/wos-cp-radius\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\t\t\nmain\t407766cdb4550c4d562d38204b2c54021ff157e2\torigin/main\t[ahead 1]\nopt/merge-phase\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866\torigin/opt/merge-phase\t\nopt/o14-partition\t635d66153581c81ef40066f796d71054e9c744d0\t\t\nopt/o16-mem-access\tf6d421f7ed422afc3e9f8378d2d86638c88da1f6\t\t\nopt/stream-auto-order\t1489531a3271e860b97320e28900c3b8b0773019\t\t\ntest-b4-wf-validation\t1044d05510a7baf1cc9f6930947fc1542739911e\t\t\ntest/wos-validation\td89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/Stardis-GPU/stardis-oxs3d\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/main\n\nworktree D:/Stardis-GPU/stardis-oxs3d-cpu-wf\nHEAD 407766cdb4550c4d562d38204b2c54021ff157e2\nbranch refs/heads/exp/cpu-wavefront-embree\n\nworktree D:/Stardis-GPU/stardis-oxs3d-merge-phase\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/opt/merge-phase\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o14\nHEAD 635d66153581c81ef40066f796d71054e9c744d0\nbranch refs/heads/opt/o14-partition\n\nworktree D:/Stardis-GPU/stardis-oxs3d-o16\nHEAD f6d421f7ed422afc3e9f8378d2d86638c88da1f6\nbranch refs/heads/opt/o16-mem-access\n\nworktree D:/Stardis-GPU/stardis-oxs3d-stream-order\nHEAD 1489531a3271e860b97320e28900c3b8b0773019\nbranch refs/heads/opt/stream-auto-order\n\nworktree D:/Stardis-GPU/stardis-oxs3d-test-validation\nHEAD 1044d05510a7baf1cc9f6930947fc1542739911e\nbranch refs/heads/test-b4-wf-validation\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-fix\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/fix/wos-cp-radius\n\nworktree D:/Stardis-GPU/stardis-oxs3d-wos-test\nHEAD d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\nbranch refs/heads/test/wos-validation",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866\n2026-03-20T16:27:50+08:00\nEricPu\nMerge branch 'opt/o16-mem-access' into opt/merge-phase",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "65\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "stardis-solver/0.16.2/CMakeLists.txt            | 326 +++---------------------\n stardis-solver/0.16.2/src/test_sdis_b4_m9_wos.c |  98 ++++---\n 2 files changed, 98 insertions(+), 326 deletions(-)",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\stardis-editor",
+    "git_kind": "repository",
+    "head": {
+      "ok": true,
+      "text": "89b66b1d7f9a79c29413aa84df5aedce78ba342a",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "master",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## master...origin/master\n M editor_settings.json\n M src/models/scene_model.py\n M src/panels/property_panel.py\n M src/panels/scene_tree_panel.py\n M src/scene_editor.py\n M src/task_runner/command_builder.py\n M src/task_runner/task_runner.py\n M src/viewport/scene_viewport.py\n M tests/task_runner_tests/test_task_runner.py",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/stardis-editor.git (fetch)\norigin\thttps://github.com/ericsolshkov/stardis-editor.git (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "master\t89b66b1d7f9a79c29413aa84df5aedce78ba342a\torigin/master",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/stardis-editor\nHEAD 89b66b1d7f9a79c29413aa84df5aedce78ba342a\nbranch refs/heads/master",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "89b66b1d7f9a79c29413aa84df5aedce78ba342a\n2026-03-31T17:30:20+08:00\nEricPu\nfeat: 材质数据库 + 法线语义化 + 腔体UI重构 + 变量模板系统",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "6\tEricPu",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "editor_settings.json                        |  19 ++--\n src/models/scene_model.py                   |  10 +++\n src/panels/property_panel.py                | 133 +++++++++++++++++++++-------\n src/panels/scene_tree_panel.py              |  13 ++-\n src/scene_editor.py                         |  36 +++++++-\n src/task_runner/command_builder.py          |   8 +-\n src/task_runner/task_runner.py              |   4 +-\n src/viewport/scene_viewport.py              |   2 +-\n tests/task_runner_tests/test_task_runner.py |  34 +++++++\n 9 files changed, 210 insertions(+), 49 deletions(-)",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\thesis",
+    "git_kind": "repository",
+    "head": {
+      "ok": true,
+      "text": "72306b4be707ecfd5e92c26b1a51b57524e7f68a",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "master",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## master...origin/master [ahead 1]\n M Chapters/1_Introduction.tex\n M Chapters/3_ParallelizedSolver.tex\n M Chapters/6_Conclusion.tex\n M Chapters/Thanks.tex\n M Figures/Consistency/fig1_a2_parabola.png\n M Figures/Consistency/fig2_a3_contact_resistance.png\n M Figures/Consistency/fig3_d1_convection.png\n M Figures/Consistency/fig4_e3_sin_exp.png\n M Figures/Consistency/fig5_e5_multidomain.png\n M Figures/Consistency/fig6_summary.png\n M Figures/Consistency/porous_512x512x128spp_difference_map.png\n M Figures/Consistency/porous_512x512x128spp_z_diagnostic.png\n M Figures/Coupled_Path/CoupledPath.pdf\n M Figures/FSM_BND/FSM_BND.png\n M Figures/FSM_CND/FSM_CND.png\n M Figures/FSM_CNV/FSM_CNV.png\n M Figures/FSM_RAD/FSM_RAD.png\n M Figures/Timing_PingPong/DualPoolTimeline.png\n M Figures/Timing_SinglePool/SinglePoolTimeline.png\n M MainBody.xdv\n M MainBody_approval.xdv\n M ReferenceBase.bib\n m Template\n M gbt7714-numerical.bst\n?? \"Figures - bak/\"\n?? Figures/Coupled_Path/CoupledPath.png\n?? MainBody527Fin.pdf\n?? ReviewComments/最终答辩纪要.md\n?? ReviewComments/答辩意见响应方案.md",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/ericsolshkov/thesis (fetch)\norigin\thttps://github.com/ericsolshkov/thesis (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "master\t72306b4be707ecfd5e92c26b1a51b57524e7f68a\torigin/master\t[ahead 1]",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/thesis\nHEAD 72306b4be707ecfd5e92c26b1a51b57524e7f68a\nbranch refs/heads/master",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "72306b4be707ecfd5e92c26b1a51b57524e7f68a\n2026-05-15T09:32:19+08:00\nEricPu\nresponse blind check",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "68\tCui Ao\n    13\tEricPu\n   192\tKevin\n    16\tKevin T. Lee",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "7429516a52d7a086d3842831f5af7943c406a168 Template (heads/master)",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "Chapters/1_Introduction.tex                        |   4 +--\n Chapters/3_ParallelizedSolver.tex                  |   2 +-\n Chapters/6_Conclusion.tex                          |  28 +++++++++++++++------\n Chapters/Thanks.tex                                |   7 +++---\n Figures/Consistency/fig1_a2_parabola.png           | Bin 114180 -> 97972 bytes\n Figures/Consistency/fig2_a3_contact_resistance.png | Bin 149015 -> 133805 bytes\n Figures/Consistency/fig3_d1_convection.png         | Bin 89986 -> 75168 bytes\n Figures/Consistency/fig4_e3_sin_exp.png            | Bin 181167 -> 165035 bytes\n Figures/Consistency/fig5_e5_multidomain.png        | Bin 137223 -> 121274 bytes\n Figures/Consistency/fig6_summary.png               | Bin 156527 -> 133675 bytes\n .../porous_512x512x128spp_difference_map.png       | Bin 3144501 -> 2847570 bytes\n .../porous_512x512x128spp_z_diagnostic.png         | Bin 145830 -> 134255 bytes\n Figures/Coupled_Path/CoupledPath.pdf               | Bin 32199 -> 32200 bytes\n Figures/FSM_BND/FSM_BND.png                        | Bin 523183 -> 533532 bytes\n Figures/FSM_CND/FSM_CND.png                        | Bin 276045 -> 276258 bytes\n Figures/FSM_CNV/FSM_CNV.png                        | Bin 103287 -> 101809 bytes\n Figures/FSM_RAD/FSM_RAD.png                        | Bin 69612 -> 67902 bytes\n Figures/Timing_PingPong/DualPoolTimeline.png       | Bin 179038 -> 155505 bytes\n Figures/Timing_SinglePool/SinglePoolTimeline.png   | Bin 118506 -> 107668 bytes\n MainBody.xdv                                       | Bin 2309256 -> 2321028 bytes\n MainBody_approval.xdv                              | Bin 2281912 -> 2278328 bytes\n ReferenceBase.bib                                  |   3 ---\n Template                                           |   0\n gbt7714-numerical.bst                              |  10 ++------\n 24 files changed, 29 insertions(+), 25 deletions(-)",
+      "error": ""
+    }
+  },
+  {
+    "path": "D:\\thesis\\Template",
+    "git_kind": "worktree-or-submodule",
+    "head": {
+      "ok": true,
+      "text": "7429516a52d7a086d3842831f5af7943c406a168",
+      "error": ""
+    },
+    "branch": {
+      "ok": true,
+      "text": "master",
+      "error": ""
+    },
+    "status": {
+      "ok": true,
+      "text": "## master...origin/master\n M gbt7714-numerical.bst",
+      "error": ""
+    },
+    "remotes": {
+      "ok": true,
+      "text": "origin\thttps://github.com/salomelly/scu_thesis_template.git (fetch)\norigin\thttps://github.com/salomelly/scu_thesis_template.git (push)",
+      "error": ""
+    },
+    "branches": {
+      "ok": true,
+      "text": "master\t7429516a52d7a086d3842831f5af7943c406a168\torigin/master\t\nwrap\t9d007116ab86165561dc2c0e7609e75037ce82c1",
+      "error": ""
+    },
+    "worktrees": {
+      "ok": true,
+      "text": "worktree D:/thesis/.git/modules/Template\nHEAD 7429516a52d7a086d3842831f5af7943c406a168\nbranch refs/heads/master",
+      "error": ""
+    },
+    "last_commit": {
+      "ok": true,
+      "text": "7429516a52d7a086d3842831f5af7943c406a168\n2026-04-10T16:17:51+08:00\nSalomelly\nupdate",
+      "error": ""
+    },
+    "authors": {
+      "ok": true,
+      "text": "1\tEricPu\n   103\tKevin\n     2\tKevin T. Lee\n     1\tSalomelly",
+      "error": ""
+    },
+    "submodules": {
+      "ok": true,
+      "text": "",
+      "error": ""
+    },
+    "diff_stat": {
+      "ok": true,
+      "text": "gbt7714-numerical.bst | 10 ++--------\n 1 file changed, 2 insertions(+), 8 deletions(-)",
+      "error": ""
+    }
+  }
+]

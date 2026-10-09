@@ -1,0 +1,313 @@
+{
+  "probes": [],
+  "cameras": [
+    {
+      "name": "Camera1",
+      "position": [
+        -0.5,
+        -2.0,
+        0.5
+      ],
+      "target": [
+        -0.5,
+        0.0,
+        0.5
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fov": 30.0,
+      "spp": 512,
+      "resolution": [
+        320,
+        320
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "name": "DefaultLight",
+      "light_type": "DEFAULT",
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "position": [
+        3.0,
+        4.0,
+        5.0
+      ],
+      "enabled": true,
+      "radius": 1.0,
+      "power": 0.0,
+      "diffuse_radiance": 0.0,
+      "raw_line": ""
+    }
+  ],
+  "ambient_intensity": 0.6,
+  "body_zone_ids": {
+    "CORNELL_BOX_OUTER_BOX": {
+      "next_zone_id": 5,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "CeilLight"
+        },
+        {
+          "zone_id": 2,
+          "name": "LeftWall"
+        },
+        {
+          "zone_id": 3,
+          "name": "RightWall"
+        },
+        {
+          "zone_id": 4,
+          "name": "Other"
+        }
+      ]
+    },
+    "CORNELL_BOX_SHORT": {
+      "next_zone_id": 2,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "ShortBoxFace"
+        }
+      ]
+    },
+    "CORNELL_BOX_TALL": {
+      "next_zone_id": 2,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "TallBoxFace"
+        }
+      ]
+    }
+  },
+  "zone_parent_map": {
+    "CeilLight": "CORNELL_BOX_OUTER_BOX",
+    "LeftWall": "CORNELL_BOX_OUTER_BOX",
+    "RightWall": "CORNELL_BOX_OUTER_BOX",
+    "Other": "CORNELL_BOX_OUTER_BOX",
+    "ShortBoxFace": "CORNELL_BOX_SHORT",
+    "TallBoxFace": "CORNELL_BOX_TALL"
+  },
+  "task_queue": {
+    "error_policy": {
+      "retry_count": 0,
+      "after_retries_exhausted": "cancel"
+    },
+    "env_vars": {},
+    "tasks": [
+      {
+        "id": "57e6dfa9-fb1b-46a2-a958-b5027d93f07b",
+        "name": "IR渲染-Camera1-hybrid-ds",
+        "task_type": "stardis",
+        "enabled": true,
+        "exe_ref": "stardis-cpu",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "8192"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "cbox.txt",
+          "samples": 1000000,
+          "threads": 24,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Camera1",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IRR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{env.STARDIS_POOL_SIZE}_{THREADS}T_{ALGO}.ht",
+        "stderr_redirect": "IRR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{env.STARDIS_POOL_SIZE}_{THREADS}T_{ALGO}.txt"
+      },
+      {
+        "id": "fc9436ff-0d8b-4187-b3c7-efd968e47e35",
+        "name": "后处理-Camera1",
+        "task_type": "htpp",
+        "enabled": true,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "D:\\Stardis-GPU\\Stardis-Starter-Pack\\cbox\\IRR_stardis-ox_320x320x512_8192_32T_dsphere.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 300.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "57e6dfa9-fb1b-46a2-a958-b5027d93f07b"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "f71f04ef-3538-4c8d-ad23-09bf86a1c296",
+        "name": "IR渲染-Camera1-cpu-ds",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-cpu",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "cbox.txt",
+          "samples": 1000000,
+          "threads": 32,
+          "verbosity": 1,
+          "probe_refs": [],
+          "camera_ref": "Camera1",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IRR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{ALGO}.ht",
+        "stderr_redirect": "IRR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{ALGO}.txt"
+      },
+      {
+        "id": "0b36bec3-d508-4f7b-9878-2cf17fdfa659",
+        "name": "后处理-Camera1",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "D:\\Stardis-GPU\\Stardis-Starter-Pack\\cbox\\IRR_stardis-cpu_320x320x512_32T_dsphere.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 300.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "f71f04ef-3538-4c8d-ad23-09bf86a1c296"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "de04ad75-03e4-448b-b141-5ffc148aa62f",
+        "name": "IR渲染-Camera1-cpu-wos",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-cpu",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "cbox.txt",
+          "samples": 1000000,
+          "threads": 32,
+          "verbosity": 1,
+          "probe_refs": [],
+          "camera_ref": "Camera1",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "wos",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IRR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{ALGO}.ht",
+        "stderr_redirect": "IRR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{ALGO}.txt"
+      },
+      {
+        "id": "4b7a0ae6-dbb9-4d52-bdad-7c14143bf419",
+        "name": "后处理-Camera1",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "D:\\Stardis-GPU\\Stardis-Starter-Pack\\cbox\\IRR_stardis-cpu_320x320x512_32T_wos.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 300.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "de04ad75-03e4-448b-b141-5ffc148aa62f"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      }
+    ]
+  },
+  "body_materials": {
+    "CORNELL_BOX_OUTER_BOX": "Polyurethane_Foam",
+    "CORNELL_BOX_SHORT": "Copper",
+    "CORNELL_BOX_TALL": "Polyurethane_Foam"
+  },
+  "normal_orientations": {
+    "CORNELL_BOX_OUTER_BOX": "outward",
+    "CORNELL_BOX_SHORT": "outward",
+    "CORNELL_BOX_TALL": "outward"
+  }
+}

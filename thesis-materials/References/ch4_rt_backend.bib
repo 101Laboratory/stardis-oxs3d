@@ -1,0 +1,111 @@
+% 第四章 光追后端 — 光追实现、OptiX、Embree
+% 来源子集合: 光追实现, optix, embree
+% 共 8 篇
+
+@article{evangelouFastRadiusSearch2021,
+  title = {Fast Radius Search Using Bounding Volume Hierarchies},
+  author = {Evangelou, Iordanis and Papaioannou, Georgios and Vardis, Konstantinos and Vasilakis, Andreas A},
+  year = 2021,
+  volume = {10},
+  number = {1},
+  abstract = {Spatial queries to infer information from the neighborhood of a set of points are frequently performed in rendering and geometry-processing algorithms. Traditionally, these are accomplished using radius and k-nearest neighbors search operations, which utilize kd-trees and other specialized spatial data structures that fall short of delivering high performance. Recently, advances in ray-tracing performance, with respect to both acceleration data-structure construction and ray-traversal times, have resulted in a wide adoption of the ray-tracing paradigm for graphics-related tasks that spread beyond typical image synthesis. In this work, we propose an alternative formulation of the radius-search operation that maps the problem to the ray-tracing paradigm in order to take advantage of the available GPU-accelerated solutions for it. We demonstrate the performance gain relative to traditional spatial search methods, especially on dynamically updated sample sets, using two representative applications: geometry processing of point-wise operations on scanned point clouds and global illumination via progressive photon mapping.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\FILX4YAE\Evangelou 等 - 2021 - Fast radius search using bounding volume hierarchies.pdf}
+}
+
+@article{kuangPracticalGPUBased,
+  title = {A Practical {{GPU}} Based {{KNN}} Algorithm},
+  author = {Kuang, Quansheng and Zhao, Lei},
+  abstract = {The KNN algorithm is a widely applied method for classification in machine learning and pattern recognition. However, we can't be able to get a satisfactory performance in many applications, as the KNN algorithm has a high computational complexity. Recent developments in programmable, highly paralleled Graphics Processing Units (GPU) have opened a new era of parallel computing which deliver tremendous computational horsepower in a single chip. In this paper, we describe a practical GPU based K Nearest Neighbor (KNN) algorithm implemented by CUDA. In our algorithm, a data segmentation method has introduced in the distances computation step to adapt to the CUDA thread model and memory hierarchy. We obtain highly increase in performance compared to ordinary CPU version.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\7DEUTKRD\Kuang和Zhao - A practical GPU based KNN algorithm.pdf}
+}
+
+@book{vaidyanathanWatertightRayTraversal2016,
+  title = {Watertight Ray Traversal with Reduced Precision},
+  author = {Vaidyanathan, Karthik and {Akenine-M{\"o}ller}, Tomas and Salvi, Marco},
+  year = 2016,
+  publisher = {The Eurographics Association},
+  issn = {2079-8679},
+  urldate = {2026-02-09},
+  abstract = {Reduced precision bounding volume hierarchies and ray traversal can significantly improve the efficiency of ray tracing through low-cost dedicated hardware. A key approach to enabling reduced precision computations during traversal is to translate the ray origin closer to the bounding volume hierarchy node after each traversal step. However, this approach precludes sharing of intersection computations between a parent node and its two children, which is an important optimization. In this paper, we introduce a novel traversal algorithm that addresses this limitation and achieves a significant reduction in the computational complexity of traversal compared to previous approaches.We also include an analysis that shows how our algorithm guarantees watertight intersections which is a key requirement for robust image quality, especially with reduced precision traversal where numerical errors can be large.},
+  isbn = {978-3-03868-008-6},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\LGMJ3D5X\Vaidyanathan 等 - 2016 - Watertight ray traversal with reduced precision.pdf}
+}
+
+@article{woopWatertightRayTriangle2013,
+  title = {Watertight Ray/Triangle Intersection},
+  author = {Woop, Sven and Benthin, Carsten and Wald, Ingo},
+  year = 2013,
+  volume = {2},
+  number = {1},
+  abstract = {We propose a novel algorithm for ray/triangle intersection tests that, unlike most other such algorithms, is watertight at both edges and vertices for adjoining triangles, while also maintaining the same performance as simpler algorithms that are not watertight. Our algorithm is straightforward to implement, and is, in particular, robust for all triangle configurations including extreme cases, such as small and needle-like triangles. We achieve this robustness by transforming the intersection problem using a translation, shear, and scale transformation into a coordinate space where the ray starts at the origin and is directed, with unit length, along one coordinate axis. This simplifies the remaining intersection problem to a 2D problem where edge tests can be done conservatively using single-precision floating-point arithmetic. Using our algorithm, numerically challenging cases, where single precision is insufficient, can be detected with almost no overhead and can be accurately handled through a (rare) fallback to double precision. Because our algorithm is conservative but not exact, we must dynamically enlarge bounds during BVH traversal to conservatively bound the triangles intersected.},
+  langid = {english},
+  keywords = {wbw algo},
+  file = {C:\Users\EricPu\Zotero\storage\ZT3TAI2P\Woop 等 - 2013 - Watertight raytriangle intersection.pdf}
+}
+
+@inproceedings{zhuRTNNAcceleratingNeighbor2022,
+  title = {{{RTNN}}: Accelerating Neighbor Search Using Hardware Ray Tracing},
+  shorttitle = {Rtnn},
+  booktitle = {Proceedings of the 27th {{ACM SIGPLAN Symposium}} on {{Principles}} and {{Practice}} of {{Parallel Programming}}},
+  author = {Zhu, Yuhao},
+  year = 2022,
+  month = apr,
+  pages = {76--89},
+  publisher = {ACM},
+  address = {Seoul Republic of Korea},
+  doi = {10.1145/3503221.3508409},
+  urldate = {2026-02-21},
+  abstract = {Neighbor search is of fundamental importance to many engineering and science fields such as physics simulation and computer graphics. This paper proposes to formulate neighbor search as a ray tracing problem and leverage the dedicated ray tracing hardware in recent GPUs for acceleration. We show that a naive mapping under-exploits the ray tracing hardware. We propose two performance optimizations, query scheduling and query partitioning, to tame the inefficiencies. Experimental results show 2.2\texttimes{} -- 65.0\texttimes{} speedups over existing neighbor search libraries on GPUs. The code is available at https://github.com/horizon-research/rtnn.},
+  isbn = {978-1-4503-9204-4},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\GIKUND9R\Zhu - 2022 - RTNN accelerating neighbor search using hardware ray tracing.pdf}
+}
+
+@inproceedings{parkerOptiXGeneralPurpose2010,
+  title = {{{OptiX}}: A General Purpose Ray Tracing Engine},
+  shorttitle = {{{OptiX}}},
+  booktitle = {{{ACM SIGGRAPH}} 2010 Papers},
+  author = {Parker, Steven G. and Bigler, James and Dietrich, Andreas and Friedrich, Heiko and Hoberock, Jared and Luebke, David and McAllister, David and McGuire, Morgan and Morley, Keith and Robison, Austin and Stich, Martin},
+  year = 2010,
+  month = jul,
+  series = {{{SIGGRAPH}} '10},
+  pages = {1--13},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/1833349.1778803},
+  urldate = {2026-02-21},
+  abstract = {The NVIDIA\textregistered{} OptiX™ ray tracing engine is a programmable system designed for NVIDIA GPUs and other highly parallel architectures. The OptiX engine builds on the key observation that most ray tracing algorithms can be implemented using a small set of programmable operations. Consequently, the core of OptiX is a domain-specific just-in-time compiler that generates custom ray tracing kernels by combining user-supplied programs for ray generation, material shading, object intersection, and scene traversal. This enables the implementation of a highly diverse set of ray tracing-based algorithms and applications, including interactive rendering, offline rendering, collision detection systems, artificial intelligence queries, and scientific simulations such as sound propagation. OptiX achieves high performance through a compact object model and application of several ray tracing-specific compiler optimizations. For ease of use it exposes a single-ray programming model with full support for recursion and a dynamic dispatch mechanism similar to virtual function calls.},
+  isbn = {978-1-4503-0210-4},
+  langid = {english},
+  annotation = {abstractTranslation: NVIDIA\textregistered OptiXTM光线跟踪引擎是一个可编程系统，专为NVIDIA-GPU和其他高度并行架构设计。OptiX引擎建立在关键观察的基础上，即大多数光线跟踪算法可以使用一组小的可编程操作来实现。因此，OptiX的核心是一个特定于域的实时编译器，它通过组合用户提供的用于光线生成、材质着色、对象相交和场景遍历的程序来生成自定义光线跟踪内核。这使得能够实现一组高度多样化的基于光线跟踪的算法和应用程序，包括交互式渲染、脱机渲染、碰撞检测系统、人工智能查询和科学模拟（如声音传播）。OptiX通过紧凑的对象模型和应用几个特定于光线跟踪的编译器优化来实现高性能。为了易于使用，它公开了一个完全支持递归的单光线编程模型和类似于虚拟函数调用的动态调度机制。},
+  file = {C:\Users\EricPu\Zotero\storage\U76PKAUI\Parker 等 - 2010 - OptiX a general purpose ray tracing engine.pdf}
+}
+
+@misc{EmbreeRayTracing,
+  title = {Embree Ray Tracing Kernels \textbar{} {{ACM SIGGRAPH}} 2016 Talks},
+  urldate = {2026-02-08},
+  howpublished = {https://dl.acm.org/doi/10.1145/2897839.2927450},
+  langid = {english}
+}
+
+@article{waldEmbreeKernelFramework2014,
+  title = {Embree: A Kernel Framework for Efficient {{CPU}} Ray Tracing},
+  shorttitle = {Embree},
+  author = {Wald, Ingo and Woop, Sven and Benthin, Carsten and Johnson, Gregory S. and Ernst, Manfred},
+  year = 2014,
+  month = jul,
+  journal = {ACM Trans. Graph.},
+  volume = {33},
+  number = {4},
+  pages = {143:1--143:8},
+  issn = {0730-0301},
+  doi = {10.1145/2601097.2601199},
+  urldate = {2026-02-22},
+  abstract = {We describe Embree, an open source ray tracing framework for x86 CPUs. Embree is explicitly designed to achieve high performance in professional rendering environments in which complex geometry and incoherent ray distributions are common. Embree consists of a set of low-level kernels that maximize utilization of modern CPU architectures, and an API which enables these kernels to be used in existing renderers with minimal programmer effort. In this paper, we describe the design goals and software architecture of Embree, and show that for secondary rays in particular, the performance of Embree is competitive with (and often higher than) existing state-of-the-art methods on CPUs and GPUs.},
+  langid = {english},
+  annotation = {abstractTranslation: 我们描述了Embree，一个用于x86 CPU的开源光线跟踪框架。Embree明确设计为在复杂几何体和非相干光线分布常见的专业渲染环境中实现高性能。Embree由一组低级内核组成，这些内核最大限度地利用了现代CPU架构，以及一个API，该API使这些内核能够在现有的渲染器中使用，而程序员只需最少的工作量。在本文中，我们描述了Embree的设计目标和软件架构，并表明，特别是对于二次射线，Embree在CPU和GPU上的性能与现有最先进的方法相比具有竞争力（通常高于）。},
+  file = {C:\Users\EricPu\Zotero\storage\W7QJGC9M\Wald 等 - 2014 - Embree a kernel framework for efficient CPU ray tracing.pdf}
+}

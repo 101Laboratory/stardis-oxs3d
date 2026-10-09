@@ -1,0 +1,13 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+C3,picard1_constTref_2D,cpu_df,WoS,0.05,0,0,inf,1,10000,315.028,3.499999e-01,315,0.0800,1
+C3,picard1_constTref_3D,cpu_df,WoS,0.05,0,0,inf,1,10000,315.133,3.499975e-01,315,0.3800,1
+C3,picard1_T4ref_2D,cpu_df,DS,0.05,0,0,inf,1,10000,320.845,3.450849e-01,320.3712647,1.3728,1
+C3,picard1_T4ref_3D,cpu_df,DS,0.05,0,0,inf,1,10000,321.181,3.444989e-01,320.3712647,2.3505,1
+C3,picard2_constTref_2D,cpu_df,WoS,0.05,0,0,inf,2,10000,320.502,3.456484e-01,320.3712647,0.3782,1
+C3,picard2_constTref_3D,cpu_df,WoS,0.05,0,0,inf,2,10000,320.425,3.457701e-01,320.3712647,0.1554,1
+C3,picard3_deltaT_2D,cpu_df,WoS,0.05,0,0,inf,3,10000,417.71,1.338483e+00,416.4023,0.9770,1
+C3,picard3_deltaT_3D,cpu_df,WoS,0.05,0,0,inf,3,10000,415.13,1.351225e+00,416.4023,0.9416,1
+C3,picard1_Pw_constTref_2D,cpu_df,DS,0.05,0,0,inf,1,10000,324.2395665,3.622244e-01,324.2526642,0.0362,1
+C3,picard1_Pw_constTref_3D,cpu_df,DS,0.05,0,0,inf,1,10000,324.4778004,3.618278e-01,324.2526642,0.6222,1
+C3,picard1_Pw_T4ref_2D,cpu_df,WoS,0.05,0,0,inf,1,10000,328.1004302,3.542038e-01,327.9598105,0.3970,1
+C3,picard1_Pw_T4ref_3D,cpu_df,WoS,0.05,0,0,inf,1,10000,328.3227428,3.523715e-01,327.9598105,1.0300,1

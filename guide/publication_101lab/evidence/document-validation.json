@@ -1,0 +1,8 @@
+{
+  "markdown_files": 10,
+  "local_links_checked": 468,
+  "missing_links": [],
+  "python_syntax": "passed",
+  "evidence_json_parse": "passed",
+  "source_changes": "Only documentation and audit scripts, no solver/editor/thesis sources modified"
+}

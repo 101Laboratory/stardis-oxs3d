@@ -1,0 +1,56 @@
+{
+  "EricSolshkov/stardis-win": {
+    "full_name": "EricSolshkov/stardis-win",
+    "private": true,
+    "default_branch": "master",
+    "permissions": {
+      "admin": true,
+      "maintain": true,
+      "push": true,
+      "triage": true,
+      "pull": true
+    },
+    "api_error": null
+  },
+  "EricSolshkov/thesis": {
+    "full_name": "EricSolshkov/thesis",
+    "private": true,
+    "default_branch": "master",
+    "permissions": {
+      "admin": true,
+      "maintain": true,
+      "push": true,
+      "triage": true,
+      "pull": true
+    },
+    "api_error": null
+  },
+  "101Laboratory/stardis-research": {
+    "full_name": null,
+    "private": null,
+    "default_branch": null,
+    "permissions": null,
+    "api_error": 404
+  },
+  "101Laboratory/stardis-oxs3d": {
+    "full_name": null,
+    "private": null,
+    "default_branch": null,
+    "permissions": null,
+    "api_error": 404
+  },
+  "101Laboratory/stardis-editor": {
+    "full_name": null,
+    "private": null,
+    "default_branch": null,
+    "permissions": null,
+    "api_error": 404
+  },
+  "101Laboratory/stardis-thesis": {
+    "full_name": null,
+    "private": null,
+    "default_branch": null,
+    "permissions": null,
+    "api_error": 404
+  }
+}

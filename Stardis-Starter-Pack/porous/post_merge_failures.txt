@@ -1,0 +1,79 @@
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: scene_get_enclosure_medium: invalid medium request. The enclosure includes several media.
+warning: M5_SF_FAIL path=3098940 px=201,306 spp=28 steps=44530 prim=7455 pos=-0.00343772,-0.00454347,-0.00228708 N=-0.701736,0.113666,-0.703312 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.725794,0.687761,0.014418 dir1=-0.0845007,-0.556511,-0.826532
+warning: M5_SF_FAIL path=3008746 px=187,305 spp=10 steps=54237 prim=12159 pos=-0.00221299,-0.00225555,0.000153825 N=-0.700429,-0.507254,-0.502088 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.159033,-0.984991,0.0670839 dir1=-0.649753,0.399265,-0.646845
+warning: M5_SF_FAIL path=3036507 px=192,287 spp=27 steps=50323 prim=7790 pos=0.00127475,-0.00276539,0.00339509 N=0.118852,0.985773,-0.118852 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.485777,0.603365,0.632433 dir1=-0.348538,0.534908,-0.769672
+warning: M5_SF_FAIL path=3125966 px=246,297 spp=14 steps=43151 prim=4806 pos=-0.00216587,0.00382928,-0.00156 N=0.131024,-0.131024,-0.982683 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.646638,0.277094,-0.710688 dir1=0.797932,-0.428387,-0.424016
+warning: M5_SF_FAIL path=2982022 px=162,288 spp=6 steps=58153 prim=9392 pos=-0.00421529,0.00251705,-0.00250967 N=0.512382,-0.690291,-0.510845 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.819413,-0.470477,0.327434 dir1=-0.227766,-0.326603,-0.917308
+warning: M5_SF_FAIL path=2991733 px=181,293 spp=21 steps=56952 prim=6108 pos=0.00355751,-0.00143208,0.000113084 N=-0.688797,-0.226094,-0.688797 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.684349,-0.724312,0.0838993 dir1=-0.111005,0.463241,-0.879253
+warning: M5_SF_FAIL path=2989410 px=169,303 spp=2 steps=57387 prim=9053 pos=0.00375887,0.00182614,-0.00366665 N=-0.219332,0.948641,-0.227975 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.613848,0.639203,-0.46326 dir1=-0.867111,0.456194,0.200017
+warning: M5_SF_FAIL path=3091155 px=222,289 spp=19 steps=45500 prim=12699 pos=7.71006e-05,-0.00218854,0.00351058 N=-0.517837,-0.517164,-0.681459 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.334073,-0.935325,0.116458 dir1=-0.263873,0.338155,-0.903339
+warning: M5_SF_FAIL path=3091155 px=222,289 spp=19 steps=45500 prim=12699 pos=7.71006e-05,-0.00218854,0.00351058 N=-0.517837,-0.517164,-0.681459 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.334073,-0.935325,0.116458 dir1=-0.263873,0.338155,-0.903339
+warning: M5_SF_FAIL path=3091155 px=222,289 spp=19 steps=45500 prim=12699 pos=7.71006e-05,-0.00218854,0.00351058 N=-0.517837,-0.517164,-0.681459 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.334073,-0.935325,0.116458 dir1=-0.263873,0.338155,-0.903339
+warning: M5_SF_FAIL path=3091155 px=222,289 spp=19 steps=45500 prim=12699 pos=7.71006e-05,-0.00218854,0.00351058 N=-0.517837,-0.517164,-0.681459 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.334073,-0.935325,0.116458 dir1=-0.263873,0.338155,-0.903339
+warning: M5_SF_FAIL path=3091155 px=222,289 spp=19 steps=45500 prim=12699 pos=7.71006e-05,-0.00218854,0.00351058 N=-0.517837,-0.517164,-0.681459 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.334073,-0.935325,0.116458 dir1=-0.263873,0.338155,-0.903339
+warning: M5_SF_FAIL path=1974553 px=208,194 spp=25 steps=98276 prim=12302 pos=7.71006e-05,-0.00218854,0.00351058 N=-0.517837,-0.517164,-0.681459 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.334073,-0.935325,0.116458 dir1=-0.263873,0.338155,-0.903339
+warning: M5_SF_FAIL path=1974553 px=208,194 spp=25 steps=98276 prim=12302 pos=-0.0024383,0.0035313,-0.0034982 N=0.535347,-0.648239,0.54147 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.0792103,-0.979581,-0.184789 dir1=0.538955,0.231059,0.810025
+warning: M5_SF_FAIL path=1974553 px=208,194 spp=25 steps=98276 prim=12302 pos=-0.0024383,0.0035313,-0.0034982 N=0.535347,-0.648239,0.54147 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.0792103,-0.979581,-0.184789 dir1=0.538955,0.231059,0.810025
+warning: M5_SF_FAIL path=2797367 px=125,262 spp=23 steps=75441 prim=7806 pos=0.00288074,-0.00174326,0.000490141 N=-0.350118,-0.350118,-0.868812 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.48813,-0.864563,-0.119414 dir1=0.0838484,0.460282,-0.883804
+warning: M5_SF_FAIL path=2994516 px=176,299 spp=20 steps=56473 prim=8018 pos=-0.00361815,-0.00236759,-0.00207164 N=-0.886471,0.327429,-0.327048 solid_side=0 solid_enc=1 enc0=4294967295 enc1=0 delta=0.00034641 dst=0 h0miss=1 h1miss=0 dir0=-0.88954,-0.337792,0.307595 dir1=-0.134068,0.715874,-0.685237
+warning: M5_SF_FAIL path=2994516 px=176,299 spp=20 steps=56473 prim=8018 pos=-0.00361815,-0.00236759,-0.00207164 N=-0.886471,0.327429,-0.327048 solid_side=0 solid_enc=1 enc0=4294967295 enc1=0 delta=0.00034641 dst=0 h0miss=1 h1miss=0 dir0=-0.88954,-0.337792,0.307595 dir1=-0.134068,0.715874,-0.685237
+warning: M5_SF_FAIL path=2812917 px=127,275 spp=21 steps=75258 prim=113 pos=-0.00205831,0.00171303,-0.00052904 N=-1,-0,-0 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.57735,0.312554,0.754305 dir1=-0.57735,-0.312554,-0.754305
+warning: M5_SF_FAIL path=2812917 px=127,275 spp=21 steps=75258 prim=113 pos=-0.00205831,0.00171303,-0.00052904 N=-1,-0,-0 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.57735,0.312554,0.754305 dir1=-0.57735,-0.312554,-0.754305
+warning: M5_SF_FAIL path=3042685 px=217,279 spp=29 steps=49591 prim=8901 pos=0.0012525,-0.00353217,0.00202292 N=-0.695379,0.174574,-0.697116 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.0438909,-0.443125,-0.895385 dir1=-0.759064,0.644705,0.0904239
+warning: M5_SF_FAIL path=3042685 px=217,279 spp=29 steps=49591 prim=8901 pos=0.0012525,-0.00353217,0.00202292 N=-0.695379,0.174574,-0.697116 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.0438909,-0.443125,-0.895385 dir1=-0.759064,0.644705,0.0904239
+warning: M5_SF_FAIL path=3042685 px=217,279 spp=29 steps=49591 prim=8901 pos=0.0012525,-0.00353217,0.00202292 N=-0.695379,0.174574,-0.697116 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=-0.0438909,-0.443125,-0.895385 dir1=-0.759064,0.644705,0.0904239
+warning: M5_SF_FAIL path=2991936 px=180,295 spp=0 steps=56735 prim=11532 pos=-0.0092986,0.00463083,-0.00985227 N=-0.425414,-0.800122,-0.42288 solid_side=0 solid_enc=1 enc0=2 enc1=2 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.0612458,-0.242408,-0.968239 dir1=-0.552472,-0.681493,0.47994
+warning: M5_SF_FAIL path=2991936 px=180,295 spp=0 steps=56735 prim=11532 pos=-0.0092986,0.00463083,-0.00985227 N=-0.425414,-0.800122,-0.42288 solid_side=0 solid_enc=1 enc0=2 enc1=2 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.0612458,-0.242408,-0.968239 dir1=-0.552472,-0.681493,0.47994
+warning: M5_SF_FAIL path=2859534 px=116,288 spp=14 steps=72748 prim=7897 pos=0.000757665,0.00200377,-0.00330862 N=0.493416,0.716747,-0.492763 solid_side=0 solid_enc=1 enc0=0 enc1=0 delta=0.00034641 dst=0 h0miss=0 h1miss=0 dir0=0.544688,0.722863,0.425187 dir1=0.0250598,0.104765,-0.994181

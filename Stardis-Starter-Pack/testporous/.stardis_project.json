@@ -1,0 +1,561 @@
+{
+  "probes": [],
+  "cameras": [
+    {
+      "name": "Cam",
+      "position": [
+        0.05,
+        0.0,
+        0.0
+      ],
+      "target": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fov": 30.0,
+      "spp": 32,
+      "resolution": [
+        320,
+        320
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "name": "DefaultLight",
+      "light_type": "DEFAULT",
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "position": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "enabled": true,
+      "radius": 1.0,
+      "power": 0.0,
+      "diffuse_radiance": 0.0,
+      "raw_line": ""
+    }
+  ],
+  "ambient_intensity": 0.15,
+  "body_zone_ids": {
+    "FOAM": {
+      "next_zone_id": 4,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "LAT"
+        },
+        {
+          "zone_id": 2,
+          "name": "T0"
+        },
+        {
+          "zone_id": 3,
+          "name": "T1"
+        }
+      ]
+    },
+    "PLATE": {
+      "next_zone_id": 2,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "HPLATE"
+        }
+      ]
+    }
+  },
+  "zone_parent_map": {
+    "LAT": "FOAM",
+    "T0": "FOAM",
+    "T1": "FOAM",
+    "HPLATE": "PLATE"
+  },
+  "task_queue": {
+    "error_policy": {
+      "retry_count": 0,
+      "after_retries_exhausted": "cancel"
+    },
+    "env_vars": {},
+    "tasks": [
+      {
+        "id": "9911c3a7-4c70-4ec1-8b09-c0f4b0ade9ad",
+        "name": "IR渲染-Cam",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "1024"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "porous.txt",
+          "samples": 1000000,
+          "threads": 32,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Cam",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.ht",
+        "stderr_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}"
+      },
+      {
+        "id": "32efa39a-daa6-494a-ae96-d42f186dd9d0",
+        "name": "后处理-Cam",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 650.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "9911c3a7-4c70-4ec1-8b09-c0f4b0ade9ad"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "7ef41423-a7bc-454f-9d32-6bbe61395adb",
+        "name": "IR渲染-Cam",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "2048"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "porous.txt",
+          "samples": 1000000,
+          "threads": 32,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Cam",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.ht",
+        "stderr_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.txt"
+      },
+      {
+        "id": "08806ae8-7115-4849-9a09-ac1bc59c9220",
+        "name": "后处理-Cam",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 650.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "7ef41423-a7bc-454f-9d32-6bbe61395adb"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "759fb349-e2fe-4cc3-b49e-a06b4b2fae09",
+        "name": "IR渲染-Cam",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "4096"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "porous.txt",
+          "samples": 1000000,
+          "threads": 32,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Cam",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.ht",
+        "stderr_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.txt"
+      },
+      {
+        "id": "580ad030-4ee6-4774-8a90-8a62978bb87a",
+        "name": "后处理-Cam",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 650.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "759fb349-e2fe-4cc3-b49e-a06b4b2fae09"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "70bdf2eb-5770-416b-80a5-c5e418598ee3",
+        "name": "IR渲染-Cam",
+        "task_type": "stardis",
+        "enabled": true,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "8192"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "porous.txt",
+          "samples": 1000000,
+          "threads": 24,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Cam",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.ht",
+        "stderr_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.txt"
+      },
+      {
+        "id": "f6bf440b-f19e-46ff-a3d3-c61b9ade57e4",
+        "name": "后处理-Cam",
+        "task_type": "htpp",
+        "enabled": true,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 650.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "70bdf2eb-5770-416b-80a5-c5e418598ee3"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "91e65cf2-6c65-4505-91ba-7a38d9f50206",
+        "name": "IR渲染-Cam",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "16384"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "porous.txt",
+          "samples": 1000000,
+          "threads": 32,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Cam",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.ht",
+        "stderr_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.txt"
+      },
+      {
+        "id": "b8d16fde-8696-420a-9e28-78dd8139e7f0",
+        "name": "后处理-Cam",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 650.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "91e65cf2-6c65-4505-91ba-7a38d9f50206"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "3fe2e442-1c07-454c-a392-b9386f998351",
+        "name": "IR渲染-Cam",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "32768"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "porous.txt",
+          "samples": 1000000,
+          "threads": 32,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Cam",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.ht",
+        "stderr_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}.txt"
+      },
+      {
+        "id": "3853e417-0a8d-4214-9db3-9fdd4bb1d2b3",
+        "name": "后处理-Cam",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 650.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "3fe2e442-1c07-454c-a392-b9386f998351"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      },
+      {
+        "id": "5c444628-91e4-4468-8292-9313d9cb2e75",
+        "name": "IR渲染-Cam",
+        "task_type": "stardis",
+        "enabled": false,
+        "exe_ref": "stardis-ox",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "8192",
+          "STARDIS_PIPELINE": "0"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "porous.txt",
+          "samples": 1000000,
+          "threads": 16,
+          "verbosity": 3,
+          "probe_refs": [],
+          "camera_ref": "Cam",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}_single.ht",
+        "stderr_redirect": "IR_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}_{ALGO}_single.txt"
+      },
+      {
+        "id": "a4be3463-74ac-4a62-871e-e7aa459b218c",
+        "name": "后处理-Cam",
+        "task_type": "htpp",
+        "enabled": false,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 4,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 650.0,
+          "range_max": 850.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_task",
+          "task_id": "5c444628-91e4-4468-8292-9313d9cb2e75"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      }
+    ]
+  },
+  "normal_orientations": {
+    "FOAM": "outward",
+    "PLATE": "outward"
+  }
+}

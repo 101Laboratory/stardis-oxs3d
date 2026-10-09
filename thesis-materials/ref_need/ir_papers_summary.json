@@ -1,0 +1,492 @@
+[
+  {
+    "key": "VAUTIKVU",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "刘梦章 2023",
+    "title": "基于物理材质渲染和全链路红外成像仿真的岸滩目标与环境特性研究",
+    "summary_zh": "刘梦章等将基于物理材质渲染（PBR）与Cook-Torrance红外光照模型结合，构建了基于GPU的全链路红外成像实时仿真系统，实现了岸滩障碍带目标、军用车辆和舰船目标与背景的高真实感热像融合，平均不确定度分别优于1.75dB和1.09dB。",
+    "chapter_section": "§1.2.3",
+    "tags": ["物理材质渲染", "全链路仿真", "岸滩目标", "GPU实时仿真", "不确定度评估"]
+  },
+  {
+    "key": "KW8MLWTR",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Nandhakumar 1988",
+    "title": "Integrated analysis of thermal and visual images for scene interpretation",
+    "summary_zh": "Nandhakumar等融合热红外与可见光图像，通过联合估计表面温度、吸收率和朝向推算表面热通量，提取出比单一成像更具场景区分力的热通量特征，开创了热-视觉双模态场景解译的早期范例。",
+    "chapter_section": "§1.2.1",
+    "tags": ["热红外视觉融合", "场景解译", "表面热通量", "计算机视觉"]
+  },
+  {
+    "key": "MUAQJHTP",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Altshuler 1961",
+    "title": "Infrared transmission and background radiation by clear atmospheres",
+    "summary_zh": "Altshuler建立了晴空大气中红外辐射传输与天空背景辐射的早期计算模型，覆盖水汽、CO₂、臭氧等主要大气成分的吸收特性，是LOWTRAN/MODTRAN等后续大气传输代码的重要前驱工作。",
+    "chapter_section": "§1.2.1",
+    "tags": ["大气传输模型", "红外辐射", "天空背景辐射", "早期奠基工作"]
+  },
+  {
+    "key": "TKL6PZHZ",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "McClatchey 1973",
+    "title": "AFCRL atmospheric absorption line parameters compilation",
+    "summary_zh": "McClatchey等编制了AFCRL大气吸收谱线参数数据库，收录水汽、CO₂、O₃、N₂O、CO、CH₄、O₂七种分子的超10万条谱线频率、强度、半宽度及量子数标识，是HITRAN和大气辐射传输建模的核心分子光谱数据来源。",
+    "chapter_section": "§1.2.1",
+    "tags": ["大气吸收谱线", "分子光谱数据库", "HITRAN前驱", "大气辐射传输基础"]
+  },
+  {
+    "key": "GTT36C7Z",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Berk 1987",
+    "title": "MODTRAN: a moderate resolution model for LOWTRAN",
+    "summary_zh": "Berk等（AFGL）将LOWTRAN大气传输代码升级为MODTRAN，光谱分辨率从20 cm⁻¹提升至2 cm⁻¹（FWHM），通过重新参数化十二种大气分子的逐谱带吸收模型实现精细计算，并保持与LOWTRAN多次散射选项的完全兼容。",
+    "chapter_section": "§1.2.1",
+    "tags": ["MODTRAN", "大气传输模型", "中等分辨率", "LOWTRAN升级"]
+  },
+  {
+    "key": "9JKK6KXN",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Kneizys 1978",
+    "title": "Atmospheric transmittance and radiance: the lowtran code",
+    "summary_zh": "Kneizys等开发了LOWTRAN大气辐射传输计算程序，以20 cm⁻¹中等分辨率计算大气透过率与背景辐亮度，通过单参数带模型处理分子吸收并涵盖气溶胶消光效应，成为红外系统大气效应评估的通用工程计算标准。",
+    "chapter_section": "§1.2.1",
+    "tags": ["LOWTRAN", "大气传输模型", "单参数带模型", "红外工程大气效应"]
+  },
+  {
+    "key": "KDY778ZS",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Berk 2014",
+    "title": "MODTRAN6: a major upgrade of the MODTRAN radiative transfer code",
+    "summary_zh": "Berk等将MODTRAN升级至第六版，引入逐谱线算法和面向对象模块化架构，实现2 cm⁻¹高分辨率大气辐射传输计算，提供标准化API接口并配备物理工具包，成为红外工程大气效应建模的权威参考工具。",
+    "chapter_section": "§1.2.1",
+    "tags": ["MODTRAN6", "逐谱线算法", "大气辐射传输", "面向对象架构", "API接口"]
+  },
+  {
+    "key": "VUNT2SIB",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Johnson 1998",
+    "title": "MuSES: a new heat and signature management design tool for virtual prototyping",
+    "summary_zh": "Johnson等开发了MuSES热特征管理设计软件，取代旧版PRISM，为军用车辆虚拟样机提供红外热特征预测与热管理设计能力，集成目标-背景-大气-传感器完整链路的数值仿真，满足快速样机阶段的隐身设计需求。",
+    "chapter_section": "§1.2.1",
+    "tags": ["MuSES", "热特征仿真", "军用车辆", "虚拟样机", "PRISM替代"]
+  },
+  {
+    "key": "QM83MFE5",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Upadhyay 2025",
+    "title": "A comprehensive survey on synthetic infrared image synthesis",
+    "summary_zh": "Upadhyay等全面综述了红外合成图像生成领域，系统梳理了从传统物理建模到深度学习的各类方法，涵盖黑体/灰体辐射理论基础与成像原理，并讨论了在遥感、监视和目标识别等任务中的应用前景。",
+    "chapter_section": "§1.1",
+    "tags": ["红外合成图像综述", "深度学习生成", "物理建模", "目标识别应用"]
+  },
+  {
+    "key": "8DNCX6MH",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Kottler 2019",
+    "title": "Physically-based thermal simulation of large scenes for infrared imaging",
+    "summary_zh": "Kottler等提出大场景热红外仿真工作流，将机载传感器数据经材质分类、网格生成、材质参数赋值和有限体积法热仿真（含辐射、对流、传导三维耦合）转化为红外渲染所需温度场，Melville城市场景五昼夜周期仅需252秒。",
+    "chapter_section": "§1.2.3",
+    "tags": ["城市大场景热仿真", "有限体积法", "机载数据驱动", "三维耦合热输运"]
+  },
+  {
+    "key": "MFV4EMSM",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Gonda 1989",
+    "title": "A comprehensive methodology for thermal signature simulation of targets and backgrounds",
+    "summary_zh": "Gonda等（美陆军TACOM）建立了目标与背景热特征仿真全流程方法，涵盖温度场预测、三维图形数据库构建及大气传感器效应叠加，并展示了概念车辆热特征动画生成能力，为早期集成热仿真提供了系统性框架。",
+    "chapter_section": "§1.2.1",
+    "tags": ["热特征仿真", "目标背景温度场", "集成仿真工具", "军用概念车辆"]
+  },
+  {
+    "key": "5CYHGGYC",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Naraniya 2021",
+    "title": "Scene simulation and modeling of InfraRed search and track sensor for air-borne long range point targets",
+    "summary_zh": "Naraniya等建立了机载红外搜索跟踪（IRST）系统的简化场景生成模型，覆盖传感器-目标-背景-大气多要素交互建模，实现全视场扫描机制，并集成标准点目标检测跟踪算法对生成的远程点目标场景进行验证。",
+    "chapter_section": "§1.2.1",
+    "tags": ["IRST红外搜索跟踪", "场景仿真建模", "点目标检测", "机载传感器"]
+  },
+  {
+    "key": "XTZTIWWW",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Klaassen 2020",
+    "title": "MIRISim: a simulator for the mid-infrared instrument on JWST",
+    "summary_zh": "Klaassen等开发了韦布空间望远镜MIRI中红外仪器仿真器MIRISim，集成探测器、分光器、畸变、噪声及宇宙线模型，支持用户自定义天文场景输入，输出与真实在轨数据相同格式的探测器图像，用于在轨调试和用户数据预测。",
+    "chapter_section": "§1.2.1",
+    "tags": ["中红外仪器仿真", "JWST/MIRI", "天文传感器模拟", "超光谱成像"]
+  },
+  {
+    "key": "MK9TVCQT",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Coiro 2013",
+    "title": "Global illumination technique for aircraft infrared signature calculations",
+    "summary_zh": "Coiro将全局光照技术引入飞机红外特征计算，通过辐射度方法精确计算飞机各部件间的多次辐射反射和腔体辐射再辐射效应，相比传统局部模型显著提升了飞机平台热红外特征预测精度。",
+    "chapter_section": "§1.2.3",
+    "tags": ["全局光照", "飞机热特征", "辐射度方法", "多次反射辐射"]
+  },
+  {
+    "key": "ZI66GZ3K",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Kwan 2008",
+    "title": "A simulation for hyperspectral thermal IR imaging sensors",
+    "summary_zh": "Kwan等开发了IRHSS超光谱热红外成像仿真工具，集成超光谱版MuSES计算场景温度和辐亮度，通过辐射视因子高效处理大规模地形数据库，实现从场景模型到超光谱图像的端到端仿真，支持ATR算法超光谱数据评估。",
+    "chapter_section": "§1.2.1",
+    "tags": ["IRHSS", "超光谱成像仿真", "MuSES扩展", "大规模地形", "ATR算法评估"]
+  },
+  {
+    "key": "EI5J2XZE",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Gonda 2003",
+    "title": "An explanation of vehicle-terrain interaction in IR synthetic scenes",
+    "summary_zh": "Gonda等研究了车辆与地形热交互在红外合成场景中的物理建模问题，将MuSES目标集成至现有红外合成场景仿真程序并实现排气冲击地面热效应建模，为军事训练仿真中的车辆-背景物理真实感奠定基础。",
+    "chapter_section": "§1.2.3",
+    "tags": ["MuSES集成", "车辆地形热交互", "红外合成场景", "军事训练仿真"]
+  },
+  {
+    "key": "YYUX72C3",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Haynes 2003",
+    "title": "Accurate scene modeling using synthetic imagery",
+    "summary_zh": "Haynes等介绍了CAMEO-SIM多光谱合成图像生成系统，改进大气建模与热阴影仿真，引入三维空间与光谱变化真实感，并配合FIRE工具集定量评估图像杂波等保真度指标，满足军事伪装检测与ATR等应用需求。",
+    "chapter_section": "§1.2.1",
+    "tags": ["CAMEO-SIM", "多光谱合成图像", "热阴影建模", "图像保真度评估"]
+  },
+  {
+    "key": "2BA3DEVC",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Priest 2002",
+    "title": "Polarimetric microfacet scattering theory with applications to absorptive and reflective surfaces",
+    "summary_zh": "Priest等提出适用于吸收介质和反射表面的偏振微面元散射理论，将偏振BRDF模型通过Fresnel方程扩展至有损介质，为描述真实材质表面对红外辐射的方向散射和偏振特性提供了统一的物理建模框架。",
+    "chapter_section": "§1.2.1",
+    "tags": ["偏振BRDF", "微面元模型", "吸收介质散射", "红外材质建模"]
+  },
+  {
+    "key": "MFHBSMPB",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Schott 1995",
+    "title": "Incorporation of texture in multispectral synthetic image generation tools",
+    "summary_zh": "Schott等研究了多光谱含热红外合成图像生成工具（DIRSIG等）中背景纹理的引入方法，通过在三维场景数据库中嵌入分辨率和光谱真实感纹理，提升了合成图像的空间统计特性和目标可检测性评估准确性。",
+    "chapter_section": "§1.2.1",
+    "tags": ["DIRSIG", "多光谱仿真", "纹理生成", "场景数据库"]
+  },
+  {
+    "key": "JA65GKS8",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Meyers 2002",
+    "title": "Modeling polarimetric imaging using DIRSIG",
+    "summary_zh": "Meyers扩展DIRSIG多光谱场景仿真工具以支持偏振成像仿真，在辐射传输计算中引入完整Stokes矢量和Mueller矩阵表示，实现了从光谱辐射到偏振探测器响应的端到端偏振成像仿真能力。",
+    "chapter_section": "§1.2.1",
+    "tags": ["DIRSIG扩展", "偏振成像仿真", "Stokes矢量", "Mueller矩阵"]
+  },
+  {
+    "key": "PSW4AVCG",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Sheffer 1988",
+    "title": "Computer generated IR imagery: a first principles modeling approach",
+    "summary_zh": "Sheffer等提出了基于第一性原理热特征预测驱动红外合成图像生成的理想化范式，以佐治亚理工学院的系统为例展示了当时的计算机红外图像生成能力，为后续DIRSIG等工具的发展提供了方法论基础。",
+    "chapter_section": "§1.2.1",
+    "tags": ["第一性原理", "热特征预测", "计算机红外图像生成", "早期仿真范式"]
+  },
+  {
+    "key": "VYF3NDA8",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Balfour 1997",
+    "title": "Semi-empirical model-based approach for IR scene simulation",
+    "summary_zh": "Balfour等提出半经验红外自然背景场景仿真方法，将真实场景按热行为分割为若干元素，用四参数半经验系数将表面温度与太阳辐射、气温、风速等气象参数关联，能低成本生成具有真实杂波统计特性的昼夜变化热场景图像。",
+    "chapter_section": "§1.2.1",
+    "tags": ["半经验模型", "自然背景场景", "气象参数关联", "杂波统计特性"]
+  },
+  {
+    "key": "WM6EK3XL",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Curtis 1990",
+    "title": "Diurnal and seasonal variation of structural element thermal signatures",
+    "summary_zh": "Curtis等通过多年跨美欧多地点的大规模外场测量，统计分析了建筑材料物理温度与辐射温度随时间、季节和朝向的变化规律，建立了基于气象参数的不同表面类型经验温度预测模型，为红外热特征第一性原理建模提供了实测支撑数据库。",
+    "chapter_section": "§1.2.1",
+    "tags": ["昼夜温度变化", "建筑材料热特征", "外场实测数据库", "季节变化规律"]
+  },
+  {
+    "key": "4DDAGXHE",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Biesel 1987",
+    "title": "Real-time simulated forward looking infrared (FLIR) imagery for training",
+    "summary_zh": "Biesel等提出实时FLIR红外图像训练仿真策略，通过从可见光数据库派生红外场景数据并用后处理器模拟探测器非均匀性、噪声等固有效应，结合物理化场景-大气-传感器链路建模，实现高保真实时红外训练仿真图像生成。",
+    "chapter_section": "§1.2.1",
+    "tags": ["FLIR仿真", "实时训练系统", "探测器效应模拟", "可见光驱动红外"]
+  },
+  {
+    "key": "BWFQVXTF",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Kornfeld 1985",
+    "title": "Computer generation of infrared imagery",
+    "summary_zh": "Kornfeld提出适用于中型计算机的实用热辐射分布预测工程模型和数字热图像生成方法，通过节省内存的处理技术大幅缩短红外图像生成时间，在特定条件下可接近30帧/秒的实时生成速率，是早期计算机红外图像生成的重要工程实践。",
+    "chapter_section": "§1.2.1",
+    "tags": ["计算机红外图像生成", "热辐射预测模型", "实时生成", "早期工程实践"]
+  },
+  {
+    "key": "4C2GI8LE",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Ben-Yosef 1983",
+    "title": "Simulation of IR images of natural backgrounds",
+    "summary_zh": "Ben-Yosef等提出两种保持温度空间变化统计特性与功率谱的地形自然背景红外图像仿真方案，分别从空间域和空间频率域生成，为目标探测算法开发提供了具有真实统计特性的背景杂波红外图像。",
+    "chapter_section": "§1.2.1",
+    "tags": ["自然背景仿真", "统计特性保持", "空间功率谱", "杂波背景"]
+  },
+  {
+    "key": "YNWKDBG2",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Hinderer 1982",
+    "title": "Model for generating synthetic three-dimensional (3D) images of small vehicles",
+    "summary_zh": "Hinderer提出了小型车辆合成三维红外图像生成模型，通过对车辆几何体温度分布的参数化建模和透视投影，生成用于早期自动目标识别（ATR）算法性能评估的三维视角变换红外合成图像。",
+    "chapter_section": "§1.2.1",
+    "tags": ["车辆三维合成红外图像", "ATR算法评估", "参数化温度模型", "早期工作"]
+  },
+  {
+    "key": "MZ4DP7I9",
+    "collection": "红外特征建模",
+    "collection_key": "HFGRFYUY",
+    "author_year": "Jacobs 1980",
+    "title": "Simulation of the thermal behaviour of an object and its nearby surroundings",
+    "summary_zh": "Jacobs提出了目标与毗邻背景环境热行为的联合仿真方法，通过考虑目标与周边背景之间的辐射换热与传导耦合建立目标-环境热交互模型，是车辆-地面热交互仿真领域的早期探索工作。",
+    "chapter_section": "§1.2.1",
+    "tags": ["目标环境热交互", "联合热仿真", "辐射换热耦合", "早期奠基工作"]
+  },
+  {
+    "key": "D7ELUXC7",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "韩玉阁 2013",
+    "title": "装甲车辆与地面背景的热交互作用及红外仿真",
+    "summary_zh": "韩玉阁等建立了装甲车辆与地面背景温度及红外辐射特性模型，引入履带-地面力学关系与动网格方法仿真运动车辆对地面的沉陷与热痕迹，综合自身辐射、反射辐射和大气传输计算三种状态下热交互作用特征，验证模型精度。",
+    "chapter_section": "§1.2.3",
+    "tags": ["装甲车辆热仿真", "车辆地面热交互", "动网格方法", "履带热痕迹"]
+  },
+  {
+    "key": "XRTPJSDJ",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "张越恒 2024",
+    "title": "红外目标背景融合与快速图像仿真技术研究",
+    "summary_zh": "张越恒设计了天基红外监测一体化成像仿真系统，提出基于卷积金字塔的三维视频融合算法，通过深度学习技术提升渲染速度，在保持高保真仿真精度的前提下实现红外目标与背景的快速融合图像生成，为天基预警系统提供仿真数据支持。",
+    "chapter_section": "§1.2.3",
+    "tags": ["天基红外仿真", "视频融合算法", "深度学习加速", "红外预警系统"]
+  },
+  {
+    "key": "2FHJV9HN",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "吕琪 2024",
+    "title": "红外场景仿真方法及发展现状研究综述",
+    "summary_zh": "吕琪等综述了红外场景仿真数据准备、辐射计算和后处理三阶段的方法与发展现状，从仿真闭环角度探讨了红外辐射特性计算、大气辐射传输和实时性等关键技术的实现思路，并指出国内相关研究的不足与待突破方向。",
+    "chapter_section": "§1.1",
+    "tags": ["红外场景仿真综述", "仿真闭环", "辐射传输", "国内研究综述"]
+  },
+  {
+    "key": "UQ6GEU8H",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "杨博 2017",
+    "title": "基于OSG的红外视景仿真研究",
+    "summary_zh": "杨博基于OpenSceneGraph（OSG）开发空地导弹攻击坦克场景的红外视景仿真系统，提出基于材质和相对高度的大规模动态调度地形红外仿真方法，用GLSL着色器对目标和背景进行红外渲染，实现了大规模地形动态异步加载与实时红外灰度图像输出。",
+    "chapter_section": "§1.2.3",
+    "tags": ["OSG视景仿真", "大规模地形", "GLSL着色器", "导弹制导仿真"]
+  },
+  {
+    "key": "A2FMJT3K",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "张鑫 2012",
+    "title": "基于GPU编程的红外反射特性建模与仿真",
+    "summary_zh": "张鑫等在基于OGRE的红外场景仿真平台上，采用Schlick BRDF近似模型通过GPU着色器编程实现了中波和长波红外反射特性实时仿真，将环境辐射和材质参数预存为纹理供GPU快速采样，在极小效率损失下显著提升了红外仿真真实感。",
+    "chapter_section": "§1.2.3",
+    "tags": ["GPU红外反射仿真", "Schlick BRDF", "OGRE平台", "实时预计算纹理"]
+  },
+  {
+    "key": "5NIBP2CJ",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "张健 2005",
+    "title": "基于测量数据的红外场景生成方法及实现",
+    "summary_zh": "张健等提出绕过复杂几何体红外辐射场计算难点的新型三维红外场景生成方法，用实际测量数据直接描述辐射分布，基于可编程GPU流水线实现，克服了传统方法图像不自然和精度不足的缺点，并讨论了该方法的改进方向。",
+    "chapter_section": "§1.2.1",
+    "tags": ["测量数据驱动仿真", "可编程流水线", "红外场景生成", "绕过辐射场计算"]
+  },
+  {
+    "key": "GQ8DV3WH",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "潘雪萍 2007",
+    "title": "基于Creator和Vega的红外飞行视景仿真",
+    "summary_zh": "潘雪萍等利用Creator构建三维地形模型、基于Vega的SensorVision模块生成红外视景，通过C++ API开发仿真程序，在夜视条件下模拟飞行场景中的红外视景环境，相比纯OpenGL方法提升了画面逼真度并缩短了开发周期。",
+    "chapter_section": "§1.2.1",
+    "tags": ["Vega视景仿真", "飞行仿真", "红外制导", "SensorVision模块"]
+  },
+  {
+    "key": "6IVV5LW2",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "周帆 2016",
+    "title": "基于VEGA的地面目标与背景红外场景动态仿真研究",
+    "summary_zh": "周帆基于Vega平台采用格式转换和映射函数两种方案实现地面坦克目标与背景的红外场景仿真，用ANSYS计算温度场并二次开发红外目标特性演示软件，比较了3-5μm和8-12μm波段的热辐射通量差异，验证了方案一（格式转换）的仿真效果更佳。",
+    "chapter_section": "§1.2.1",
+    "tags": ["Vega红外仿真", "坦克目标", "ANSYS温度场", "多波段对比"]
+  },
+  {
+    "key": "UKYNJB8A",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "李晨阳 2020",
+    "title": "基于三维场景的红外成像仿真框架及实现",
+    "summary_zh": "李晨阳等提出基于辐射传输理论的三维红外成像仿真框架，分为三维场景构建、大气要素、可见性、辐射能量场、混合像元和相机六个低耦合模块，实现了太阳-大气-地物辐射全链路建模，生成了不同时间段的红外图像序列并验证了框架可扩展性。",
+    "chapter_section": "§1.2.3",
+    "tags": ["全链路仿真框架", "三维场景红外成像", "模块化低耦合设计", "国产自主软件"]
+  },
+  {
+    "key": "U3SRE5Y9",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "Huang 2014",
+    "title": "GPU-based high-precision real-time radiometric rendering for IR scene generation",
+    "summary_zh": "Huang等基于有效平均值原理将红外辐射方程分解为「底色」辐亮度项与有效平均因子，提出GPU LUT参数处理方法和预计算策略大幅降低实时计算量，实现了兼顾精度与实时性的三维红外场景GPU辐射渲染。",
+    "chapter_section": "§1.2.3",
+    "tags": ["GPU实时辐射渲染", "有效平均值原理", "预计算LUT", "红外场景生成"]
+  },
+  {
+    "key": "KSK7PJV3",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "Li 2018",
+    "title": "Real-time and multi-resolution rendering of the infrared characteristics for large-scale terrains",
+    "summary_zh": "Li等提出基于可见光遥感图像分类的大规模地形红外特性实时渲染方法，建立不同地表材质的能量平衡模型计算红外特性并生成多分辨率纹理金字塔，结合Out-of-core渲染技术实现了超200GB网格数据、15级LOD的实时渲染。",
+    "chapter_section": "§1.2.3",
+    "tags": ["大规模地形实时渲染", "Out-of-core渲染", "多分辨率LOD", "遥感图像驱动"]
+  },
+  {
+    "key": "QHFZNUIK",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "李蔚清 2022",
+    "title": "面向数字孪生战场的红外场景实时仿真方法",
+    "summary_zh": "李蔚清等构建了由实时物理域数据驱动的数字孪生战场红外仿真体系，设计基于有限自动机的图像仿真状态转移机制，通过并行计算模型形式化分析和GPU加速实现红外图像实时生成，为智能算法训练提供海量高真实感图像样本。",
+    "chapter_section": "§1.2.3",
+    "tags": ["数字孪生战场", "有限自动机", "GPU并行加速", "智能算法训练数据"]
+  },
+  {
+    "key": "VR9HA7WV",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "秦均玲 2019",
+    "title": "大规模红外场景实时渲染技术研究",
+    "summary_zh": "秦均玲提出系列加速算法提升大规模红外场景实时渲染帧率：基于遗传算法优化BP神经网络预测地表温度场、纹理映射可视化有限元辐射场、预计算BRDF参数存纹理加速反射、改进PCSS算法模拟红外阴影温度渐变，并开发了基于OSG的实时渲染软件。",
+    "chapter_section": "§1.2.3",
+    "tags": ["大规模实时渲染", "神经网络温度预测", "预计算BRDF", "红外阴影渐变"]
+  },
+  {
+    "key": "2HXEUMTY",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "张繁 2018",
+    "title": "基于Unity3D的改进实时红外仿真系统",
+    "summary_zh": "张繁等基于Unity3D游戏引擎构建改进实时红外仿真系统，修正零视距辐射计算模型并考虑太阳赤纬角和材质特性影响，通过GPU对多角度红外辐射灰度做并行计算，可仿真含植被、建筑和车辆的多类目标，帧率达30fps，与实测场景高度相似。",
+    "chapter_section": "§1.2.3",
+    "tags": ["Unity3D红外仿真", "GPU并行辐射计算", "游戏引擎", "多类目标实时"]
+  },
+  {
+    "key": "3Z8SLNV4",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "Wu 2015",
+    "title": "Real-time mid-wavelength infrared scene rendering with a feasible BRDF model",
+    "summary_zh": "Wu等针对大规模战场环境仿真（BES）提出满足Helmholtz互易性和能量守恒的中波红外BRDF模型，结合预计算大气透过率和辐亮度实现直接太阳与天空辐射贡献的快速计算，并通过中波红外外场实测数据定量验证了渲染精度。",
+    "chapter_section": "§1.2.3",
+    "tags": ["中波红外渲染", "BRDF模型", "战场环境仿真", "外场验证"]
+  },
+  {
+    "key": "8L235WKV",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "徐振道 2023",
+    "title": "坦克目标与复杂地面背景耦合热红外特征研究",
+    "summary_zh": "徐振道系统研究冷静态、热静态和热动态三种工作状态坦克与复杂地面背景的热红外耦合现象，建立涵盖静态耦合和动态履带压痕、扬尘影响的热红外特征模型，形成耦合红外辐射特征数据库，并开发了完整的坦克-背景耦合红外场景仿真平台。",
+    "chapter_section": "§1.2.3",
+    "tags": ["坦克热红外耦合", "履带压痕仿真", "扬尘红外特征", "场景仿真平台"]
+  },
+  {
+    "key": "GQG8H5C5",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "王霞 2015",
+    "title": "红外场景仿真技术发展综述",
+    "summary_zh": "王霞等综述了红外场景仿真数据准备、辐射计算和后处理三个阶段的国内外主要研究工作，梳理了从早期经验方法到基于物理渲染引擎的发展脉络，并指出了国内在自主仿真软件研发方面存在的若干不足。",
+    "chapter_section": "§1.1",
+    "tags": ["红外场景仿真综述", "发展脉络", "国内外对比", "渲染引擎"]
+  },
+  {
+    "key": "CSWTTDAH",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "黄曦 2014",
+    "title": "高真实感红外场景实时仿真技术研究",
+    "summary_zh": "黄曦研究高真实感红外场景实时仿真系统，设计模块化GPU仿真框架，提出基于实测反演的目标红外纹理生成方法与可见光遥感图像驱动的大规模地物纹理方法，实现大气传输效应仿真，并通过红外导引头半实物仿真试验系统验证框架可用性。",
+    "chapter_section": "§1.2.3",
+    "tags": ["GPU仿真框架", "红外纹理生成", "实测反演", "高真实感"]
+  },
+  {
+    "key": "DJN2I558",
+    "collection": "集成系统",
+    "collection_key": "YDX3ET5E",
+    "author_year": "徐非凡 2022",
+    "title": "基于OptiX并行光线追踪计算的红外成像仿真软件研制",
+    "summary_zh": "徐非凡基于NVIDIA OptiX光线追踪引擎开发红外成像仿真软件，引入蒙特卡洛半球积分与流式重采样重要性采样（RIS）加速收敛，建立Cook-Torrance和Sandford-Robertson BRDF模型，并使用循环降噪自动编码器优化图像质量，实现GPU并行加速的物理准确红外成像。",
+    "chapter_section": "§1.2.3",
+    "tags": ["OptiX光线追踪", "蒙特卡洛红外仿真", "重要性采样", "GPU并行计算", "降噪自动编码器"]
+  },
+  {
+    "key": "US4775BJ",
+    "collection": "应用",
+    "collection_key": "VLXCEIT9",
+    "author_year": "山清 2020",
+    "title": "基于变跟踪点的红外场景仿真原理及关键技术研究",
+    "summary_zh": "山清针对固定跟踪点红外场景仿真无法真实考核第四代红外导引头对目标要害部位识别和跟踪性能的问题，提出了基于变跟踪点的红外场景仿真原理，并对失调角误差等影响工程应用的关键误差因素进行了定量建模和敏感性分析。",
+    "chapter_section": "§1.2.1",
+    "tags": ["变跟踪点仿真", "红外导引头考核", "失调角误差", "空空导弹"]
+  },
+  {
+    "key": "YSVE8WJH",
+    "collection": "应用",
+    "collection_key": "VLXCEIT9",
+    "author_year": "肖甫 2005",
+    "title": "地面坦克目标红外热成像物理模型研究",
+    "summary_zh": "肖甫等分别建立地面坦克目标与背景的红外物理仿真模型，通过考虑目标-背景热交互作用、大气衰减和成像综合响应建立完整仿真流程，在试验环境中对目标和场景进行经济便捷的红外热成像性能评估，为红外系统研制提供仿真支撑。",
+    "chapter_section": "§1.2.3",
+    "tags": ["坦克红外热成像", "物理仿真模型", "目标背景热交互", "成像响应建模"]
+  }
+]

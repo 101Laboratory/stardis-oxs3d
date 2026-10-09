@@ -1,0 +1,9 @@
+Backend,Build Time (ms),Render Time (ms),Total Time (ms)
+Embree,0.38,32.47,32.85
+cuBQL,7.53,19.34,26.87
+Speedup,0.05x,1.68x,1.22x
+
+Validation,Matched Pixels,Total Pixels,Match Rate (%)
+Results,262144,262144,100.00
+Error,Avg Error,Max Error,Tolerance
+Values,0.00e+00,0.00e+00,1e-5

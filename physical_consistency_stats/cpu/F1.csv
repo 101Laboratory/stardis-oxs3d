@@ -1,0 +1,3 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+F1,lambertian_2D,cpu_df,DS,-0.05,1000,0,inf,1,10000,376.81421,9.509707e-01,375.88,0.9824,1
+F1,specular_2D,cpu_df,DS,-0.05,1000,0,inf,1,100000,429.9172244,1.434691e+01,417.77,0.8467,1

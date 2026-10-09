@@ -1,0 +1,146 @@
+[
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d",
+    "branch": "main",
+    "source_head": "407766cdb4550c4d562d38204b2c54021ff157e2",
+    "snapshot_head": "407766cdb4550c4d562d38204b2c54021ff157e2",
+    "files": []
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-cpu-wf",
+    "branch": "exp/cpu-wavefront-embree",
+    "source_head": "407766cdb4550c4d562d38204b2c54021ff157e2",
+    "snapshot_head": "cd1fa1c02653bae6fef306c7b6f5884846f76456",
+    "files": [
+      "CMakeLists.txt",
+      "cmake/ProjectOptions.cmake",
+      "star-3d/0.10/CMakeLists.txt",
+      "star-3d/0.10/COPYING",
+      "star-3d/0.10/README.md",
+      "star-3d/0.10/src/s3d.h",
+      "star-3d/0.10/src/s3d_backend.h",
+      "star-3d/0.10/src/s3d_batch.c",
+      "star-3d/0.10/src/s3d_buffer.h",
+      "star-3d/0.10/src/s3d_c.h",
+      "star-3d/0.10/src/s3d_device.c",
+      "star-3d/0.10/src/s3d_device_c.h",
+      "star-3d/0.10/src/s3d_geometry.c",
+      "star-3d/0.10/src/s3d_geometry.h",
+      "star-3d/0.10/src/s3d_instance.c",
+      "star-3d/0.10/src/s3d_instance.h",
+      "star-3d/0.10/src/s3d_mesh.c",
+      "star-3d/0.10/src/s3d_mesh.h",
+      "star-3d/0.10/src/s3d_primitive.c",
+      "star-3d/0.10/src/s3d_scene.c",
+      "star-3d/0.10/src/s3d_scene_c.h",
+      "star-3d/0.10/src/s3d_scene_view.c",
+      "star-3d/0.10/src/s3d_scene_view_c.h",
+      "star-3d/0.10/src/s3d_scene_view_closest_point.c",
+      "star-3d/0.10/src/s3d_scene_view_trace_ray.c",
+      "star-3d/0.10/src/s3d_shape.c",
+      "star-3d/0.10/src/s3d_shape_c.h",
+      "star-3d/0.10/src/s3d_sphere.c",
+      "star-3d/0.10/src/s3d_sphere.h",
+      "star-3d/0.10/src/test_s3d_accel_struct_conf.c",
+      "star-3d/0.10/src/test_s3d_camera.h",
+      "star-3d/0.10/src/test_s3d_cbox.h",
+      "star-3d/0.10/src/test_s3d_closest_point.c",
+      "star-3d/0.10/src/test_s3d_device.c",
+      "star-3d/0.10/src/test_s3d_primitive.c",
+      "star-3d/0.10/src/test_s3d_sample_sphere.c",
+      "star-3d/0.10/src/test_s3d_sampler.c",
+      "star-3d/0.10/src/test_s3d_scene.c",
+      "star-3d/0.10/src/test_s3d_scene_view.c",
+      "star-3d/0.10/src/test_s3d_scene_view_aabb.c",
+      "star-3d/0.10/src/test_s3d_seams.c",
+      "star-3d/0.10/src/test_s3d_shape.c",
+      "star-3d/0.10/src/test_s3d_sphere.c",
+      "star-3d/0.10/src/test_s3d_sphere_box.c",
+      "star-3d/0.10/src/test_s3d_sphere_instance.c",
+      "star-3d/0.10/src/test_s3d_trace_ray.c",
+      "star-3d/0.10/src/test_s3d_trace_ray_instance.c",
+      "star-3d/0.10/src/test_s3d_trace_ray_sphere.c",
+      "star-3d/0.10/src/test_s3d_utils.h",
+      "stardis-solver/0.16.2/src/sdis_solve_persistent_wavefront.c"
+    ]
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-merge-phase",
+    "branch": "opt/merge-phase",
+    "source_head": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+    "snapshot_head": "6a93c2007f4788d371cdbbc539862353ba61ecd1",
+    "files": [
+      "stardis-solver/0.16.2/src/sdis_wf_types.h"
+    ]
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-o14",
+    "branch": "opt/o14-partition",
+    "source_head": "635d66153581c81ef40066f796d71054e9c744d0",
+    "snapshot_head": "635d66153581c81ef40066f796d71054e9c744d0",
+    "files": []
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-o16",
+    "branch": "opt/o16-mem-access",
+    "source_head": "f6d421f7ed422afc3e9f8378d2d86638c88da1f6",
+    "snapshot_head": "f6d421f7ed422afc3e9f8378d2d86638c88da1f6",
+    "files": []
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-stream-order",
+    "branch": "opt/stream-auto-order",
+    "source_head": "1489531a3271e860b97320e28900c3b8b0773019",
+    "snapshot_head": "1489531a3271e860b97320e28900c3b8b0773019",
+    "files": []
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-test-validation",
+    "branch": "test-b4-wf-validation",
+    "source_head": "1044d05510a7baf1cc9f6930947fc1542739911e",
+    "snapshot_head": "bce94a7370ed1067f01e654b71a6f0dfaedc1c0c",
+    "files": [
+      "CMakeLists.txt",
+      "stardis-solver/0.16.2/CMakeLists.txt",
+      "stardis-solver/0.16.2/src/sdis_solve_persistent_wavefront.c"
+    ]
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-wos-fix",
+    "branch": "fix/wos-cp-radius",
+    "source_head": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+    "snapshot_head": "0a35e24be3c118f5f698318a8826b910f81c4a34",
+    "files": [
+      "stardis-solver/0.16.2/src/sdis_wf_state.h",
+      "stardis-solver/0.16.2/src/sdis_wf_steps_cnd.c",
+      "stardis-solver/0.16.2/src/test_sdis_b4_m9_wos.c"
+    ]
+  },
+  {
+    "source": "D:\\Stardis-GPU\\stardis-oxs3d-wos-test",
+    "branch": "test/wos-validation",
+    "source_head": "d89963a3f09dd91c27ef5d5824a8a7fdfc94c866",
+    "snapshot_head": "6264c42cf3bf201d572ce0659afb6a87525be654",
+    "files": [
+      "stardis-solver/0.16.2/CMakeLists.txt",
+      "stardis-solver/0.16.2/src/test_sdis_b4_m9_wos.c"
+    ]
+  },
+  {
+    "source": "D:\\stardis-editor",
+    "branch": "master",
+    "source_head": "89b66b1d7f9a79c29413aa84df5aedce78ba342a",
+    "snapshot_head": "8a54b599dc7cc61d7685eb8c7cebd7b2dd1a7aad",
+    "files": [
+      "editor_settings.json",
+      "src/models/scene_model.py",
+      "src/panels/property_panel.py",
+      "src/panels/scene_tree_panel.py",
+      "src/scene_editor.py",
+      "src/task_runner/command_builder.py",
+      "src/task_runner/task_runner.py",
+      "src/viewport/scene_viewport.py",
+      "tests/task_runner_tests/test_task_runner.py"
+    ]
+  }
+]

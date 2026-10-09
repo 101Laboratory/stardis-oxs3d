@@ -1,0 +1,10 @@
+TRAD 680 800
+# intermedia
+SOLID    FOAM   237   2700   890   0.0002    800    UNKNOWN    0   FRONT S_porous.stl
+# SOLID    PLATE  1     2700   890   AUTO      700    700        0   FRONT plate.stl
+
+# boundaries
+H_BOUNDARY_FOR_SOLID   LAT    300   0.9     0.5   0  300  B_lateral.stl
+T_BOUNDARY_FOR_SOLID   T0                            750  B_T0.stl 
+T_BOUNDARY_FOR_SOLID   T1                            850  B_T1.stl 
+# H_BOUNDARY_FOR_SOLID   HPLATE 300   0.8     0.8   0  300  plate.stl

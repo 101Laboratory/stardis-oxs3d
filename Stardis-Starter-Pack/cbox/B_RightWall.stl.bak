@@ -1,0 +1,16 @@
+solid Visualization Toolkit generated SLA File
+ facet normal -1 0 1.2246467863059315e-16
+  outer loop
+   vertex 6.7208616940533407e-15 55.919998168945312 54.880001068115234
+   vertex 0 0 0
+   vertex 6.7208616940533407e-15 0 54.880001068115234
+  endloop
+ endfacet
+ facet normal -1 0 1.2246467863059315e-16
+  outer loop
+   vertex 6.7208616940533407e-15 55.919998168945312 54.880001068115234
+   vertex 0 55.919998168945312 0
+   vertex 0 0 0
+  endloop
+ endfacet
+endsolid

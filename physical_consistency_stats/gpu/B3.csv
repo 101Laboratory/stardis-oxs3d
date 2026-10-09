@@ -1,0 +1,6 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+B3,default,gpu_wf,DS,0.1,0.5,0.5,inf,1,10000,30.63,9.083393e-01,29.55378179,1.1848,1
+B3,default,gpu_wf,DS,0.3,0.5,0.5,inf,1,10000,90.33,1.376208e+00,88.66134537,1.2125,1
+B3,default,gpu_wf,DS,0.5,0.5,0.5,inf,1,10000,149.43,1.499989e+00,147.7689089,1.1074,1
+B3,default,gpu_wf,DS,0.7,0.5,0.5,inf,1,10000,206.04,1.391385e+00,206.8764725,0.6012,1
+B3,default,gpu_wf,DS,0.9,0.5,0.5,inf,1,10000,265.68,9.548894e-01,265.9840361,0.3184,1

@@ -1,0 +1,370 @@
+﻿path,bytes,destination,reason
+.gitattributes,395,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+.github/cli/__init__.py,0,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/cli/__main__.py,35,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/cli/config.py,4055,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/cli/llm.py,6140,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/cli/main.py,5742,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/cli/parser.py,4056,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/cli/prompts.py,3915,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/cli/report.py,1241,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/00-meta.md,15264,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/ai_detection.md,5547,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/doc_parser.md,5926,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/figures_tables.md,6205,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/grammar_spelling.md,4270,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/logic_content.md,8508,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/references.md,7401,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/reviewer_simulator.md,8136,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/structure_review.md,7436,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/knowledge/writing_assistant.md,7269,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/check-figures/SKILL.md,542,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/check-grammar/SKILL.md,579,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/check-logic/SKILL.md,563,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/check-references/SKILL.md,560,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/check-structure/SKILL.md,542,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/detect-ai/SKILL.md,536,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/quick-review/SKILL.md,546,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/review/SKILL.md,1380,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/simulate-review/SKILL.md,992,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/writing-assist/SKILL.md,628,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/xr-writing-style/SKILL.md,17176,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.github/skills/xr-writing-style/evals/evals.json,3229,review-template-workflow,继承模板工作流，逐项核实与当前论文是否相关
+.gitignore,2703,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+.gitmodules,105,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+.latexmkrc,452,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+.vscode/mcp.json,142,exclude-generated-backup,编译辅助文件、备份或本机配置
+.vscode/settings.json,452,exclude-generated-backup,编译辅助文件、备份或本机配置
+.vscode/tasks.json,2918,exclude-generated-backup,编译辅助文件、备份或本机配置
+AGENTS.md,12986,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/0_0_Abstract.aux,1398,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/0_0_Abstract.tex,10678,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/0_1_Abbreviations.aux,1225,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/0_1_Abbreviations.tex,2913,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/0_2_Symbols.aux,1214,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/0_2_Symbols.tex,3466,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/1_Introduction.aux,8036,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/1_Introduction.tex,35514,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/2_Research.aux,13211,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/2_Research.tex,89183,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/2_Research_outline.md,26330,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/3_ParallelizedSolver.aux,23257,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/3_ParallelizedSolver.tex,114418,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/3_ParallelizedSolver_outline.md,71604,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/4_RTBackend.aux,8991,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/4_RTBackend.tex,31960,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/4_RTBackend_outline.md,25845,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/5_GUI.aux,10307,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/5_GUI.tex,29813,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/5_GUI_outline.md,32968,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/6_Conclusion.aux,2553,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/6_Conclusion.tex,15572,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/Achievements.aux,1246,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/Achievements.tex,473,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/CopyrightAuthorization.tex,600,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/Statement.tex,860,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Chapters/Thanks.aux,1221,exclude-generated-backup,编译辅助文件、备份或本机配置
+Chapters/Thanks.tex,2272,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures - bak/AGENTS.md,1675,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/BVH/BVH.md,427,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/BVH/BVH.png,166052,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/fig1_a2_parabola.png,114180,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/fig2_a3_contact_resistance.png,149015,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/fig3_d1_convection.png,89986,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/fig4_e3_sin_exp.png,181167,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/fig5_e5_multidomain.png,137223,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/fig6_summary.png,156527,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/porous_512x512x128spp_difference_map.png,3144501,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Consistency/porous_512x512x128spp_z_diagnostic.png,145830,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/CoupledPath.pdf,24279,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Coupled_Path/CoupledPath.pdf,32199,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Coupled_Path/CoupledPath.svg,14702,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Coupled_Path/README.md,632,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Coupled_Path/path_design.md,22268,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Coupled_Path_Meta_SM/CPML.pdf,32912,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Coupled_Path_Meta_SM/CPML.svg,131608,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FEM_Object_Grid_Example/Tank_Engine_Grid.png,200438,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FEM_Object_Grid_Example/Tank_Grid.png,306975,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_BND/FSM_BND.png,523183,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_BND/README.md,25480,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_CND/FSM_CND.png,276045,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_CND/README.md,4895,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_CNV/FSM_CNV.png,103287,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_CNV/README.md,2653,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_ModuleLevel/README.md,3567,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_RAD/FSM_RAD.png,69612,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/FSM_RAD/README.md,2398,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/GPU_Arch/AD102CoreArch.png,1039689,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/GPU_Arch/AD102GPCDesign.png,312544,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/GPU_Arch/AD102SMDesign.png,748117,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/RayUsageSchematic/README.md,2826,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Scene.png,107997,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/StardisEditorMainWindow.png,277387,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/ThesisArch/ThesisArch.pdf,43487,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/ThesisArch/ThesisArch.svg,161274,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Timing_PingPong/DualPoolTimeline.png,179038,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Timing_PingPong/README.md,2333,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Timing_SinglePool/README.md,1924,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/Timing_SinglePool/SinglePoolTimeline.png,118506,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/demo.png,359599,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/MainWindowsNoNormal.png,143023,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/MainWindowsWithNormal.png,28768,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/architecture/README.md,9459,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/architecture/架构.jpg,608122,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/dsl_example/README.md,3581,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/CameraConfig.png,20086,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/GeometryMeshConfig.png,53133,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/HtppConfig.png,42892,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/SceneTree.png,35628,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/StardisConfig.png,45166,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/TaskQueue.png,37867,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/VtkNavMode.png,25804,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/panels/VtkPaintMode.png,36565,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/0_EmptyScene.png,69684,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/1_1_ImportGemetry.png,120751,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/1_2_ImportedGeometry.png,106492,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/2_AssignEnclosure.png,145873,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/3_1_PaintBNDCondition.png,149695,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/3_2_PaintBNDCondition.png,132831,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/3_3_PaintBNDCondition.png,133184,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/4_CreateCamera.png,83775,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/5_CreateTask.png,118811,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/6_1_ConfigTask.png,139129,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/6_2_ConfigTask.png,137746,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/7_RunTask.png,135591,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/8_Result.png,81248,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/editor/workflow/8_Result.ppm,906384,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/levels.png,76325,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures - bak/论文组织架构图.png,101906,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/AGENTS.md,1675,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/BVH/BVH.md,427,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/BVH/BVH.png,166052,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/fig1_a2_parabola.png,97972,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/fig1_a2_parabola.png.bak,114180,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Consistency/fig2_a3_contact_resistance.png,133805,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/fig2_a3_contact_resistance.png.bak,149015,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Consistency/fig3_d1_convection.png,75168,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/fig3_d1_convection.png.bak,89986,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Consistency/fig4_e3_sin_exp.png,165035,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/fig4_e3_sin_exp.png.bak,181167,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Consistency/fig5_e5_multidomain.png,121274,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/fig5_e5_multidomain.png.bak,137223,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Consistency/fig6_summary.png,133675,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/fig6_summary.png.bak,156527,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Consistency/porous_512x512x128spp_difference_map.png,2847570,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/porous_512x512x128spp_difference_map.png.bak,3144501,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Consistency/porous_512x512x128spp_z_diagnostic.png,134255,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Consistency/porous_512x512x128spp_z_diagnostic.png.bak,145830,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/CoupledPath.pdf,24279,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Coupled_Path/CoupledPath.pdf,32200,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Coupled_Path/CoupledPath.pdf.bak,32199,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Coupled_Path/CoupledPath.png,93372,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Coupled_Path/CoupledPath.svg,14702,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Coupled_Path/README.md,632,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Coupled_Path/path_design.md,22268,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Coupled_Path_Meta_SM/CPML.pdf,32912,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Coupled_Path_Meta_SM/CPML.svg,131608,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/FEM_Object_Grid_Example/Tank_Engine_Grid.png,200438,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/FEM_Object_Grid_Example/Tank_Grid.png,306975,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/FSM_BND/FSM_BND.png,533532,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/FSM_BND/FSM_BND.png.bak,523183,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/FSM_BND/README.md,25480,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/FSM_CND/FSM_CND.png,276258,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/FSM_CND/FSM_CND.png.bak,276045,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/FSM_CND/README.md,4895,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/FSM_CNV/FSM_CNV.png,101809,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/FSM_CNV/FSM_CNV.png.bak,103287,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/FSM_CNV/README.md,2653,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/FSM_ModuleLevel/README.md,3567,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/FSM_RAD/FSM_RAD.png,67902,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/FSM_RAD/FSM_RAD.png.bak,69612,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/FSM_RAD/README.md,2398,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/GPU_Arch/AD102CoreArch.png,1039689,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/GPU_Arch/AD102GPCDesign.png,312544,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/GPU_Arch/AD102SMDesign.png,748117,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/RayUsageSchematic/README.md,2826,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Scene.png,107997,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/StardisEditorMainWindow.png,277387,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/ThesisArch/ThesisArch.pdf,43487,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/ThesisArch/ThesisArch.svg,161274,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Timing_PingPong/DualPoolTimeline.png,155505,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Timing_PingPong/DualPoolTimeline.png.bak,179038,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/Timing_PingPong/README.md,2333,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Timing_SinglePool/README.md,1924,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/Timing_SinglePool/SinglePoolTimeline.png,107668,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/Timing_SinglePool/SinglePoolTimeline.png.bak,118506,exclude-generated-backup,编译辅助文件、备份或本机配置
+Figures/demo.png,359599,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/MainWindowsNoNormal.png,143023,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/MainWindowsWithNormal.png,28768,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/architecture/README.md,9459,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/architecture/架构.jpg,608122,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/dsl_example/README.md,3581,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/panels/CameraConfig.png,20086,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/panels/GeometryMeshConfig.png,53133,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/panels/HtppConfig.png,42892,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/panels/SceneTree.png,35628,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/panels/StardisConfig.png,45166,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/panels/TaskQueue.png,37867,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/panels/VtkNavMode.png,25804,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/panels/VtkPaintMode.png,36565,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/workflow/0_EmptyScene.png,69684,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/1_1_ImportGemetry.png,120751,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/1_2_ImportedGeometry.png,106492,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/workflow/2_AssignEnclosure.png,145873,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/3_1_PaintBNDCondition.png,149695,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/workflow/3_2_PaintBNDCondition.png,132831,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/3_3_PaintBNDCondition.png,133184,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/4_CreateCamera.png,83775,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/5_CreateTask.png,118811,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/6_1_ConfigTask.png,139129,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/workflow/6_2_ConfigTask.png,137746,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/7_RunTask.png,135591,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/editor/workflow/8_Result.png,81248,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Figures/editor/workflow/8_Result.ppm,906384,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/levels.png,76325,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Figures/论文组织架构图.png,101906,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+License/fdl-1.3.txt,23034,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+License/gpl-3.0.txt,35147,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+MainBody.aux,8470,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.bbl,24060,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.blg,1654,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.fdb_latexmk,25605,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.fls,29658,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.lof,3858,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.log,65401,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.lot,2300,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.tex,3632,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+MainBody.toc,15813,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody.xdv,2321028,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody527Fin.pdf,9982448,exclude-thesis-output,整篇论文生成结果，按用户要求不发布
+MainBody_0515.pdf,9996364,exclude-thesis-output,整篇论文生成结果，按用户要求不发布
+MainBody_approval.aux,8441,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.bbl,24060,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.blg,1617,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.fdb_latexmk,25572,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.fls,29980,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.lof,3837,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.log,65175,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.lot,2280,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.pdf,9966895,exclude-thesis-output,整篇论文生成结果，按用户要求不发布
+MainBody_approval.toc,15742,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval.xdv,2278328,exclude-generated-backup,编译辅助文件、备份或本机配置
+MainBody_approval_0515.pdf,9974638,exclude-thesis-output,整篇论文生成结果，按用户要求不发布
+Makefile,990,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+OurWork/PoolSizeScan/pool_size_scan.md,485,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/SingleDualPoolComparison/SingleDualPoolComparision.md,334,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/TimeBreakdown/time_breakdown.md,7419,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/backend/enc_test_design/enc_ablation_design.md,8051,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/backend/oxstar_implementation_details.md,18185,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/backend/query_call_chains.md,16093,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/pwf-physics-background/README.md,1913,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/pwf-physics-background/equation-fsm-mapping.md,3892,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+OurWork/pwf-physics-background/physics-modules-analysis.md,19704,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+README.md,8959,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Reference Document/1-3 《研究生学位论文规范写作指南》.pdf,471874,review-third-party,学校模板规范资料，核实再分发来源
+ReferenceBase.bib,207173,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+References/AGENTS.md,3415,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+References/ch1_introduction.bib,100188,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+References/ch2_mc_theory.bib,45011,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+References/ch3_wavefront_solver.bib,27121,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+References/ch4_rt_backend.bib,12231,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+References/ch5_gui.bib,387,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+References/eoir_uncategorized.bib,19363,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ReviewComments/最终答辩纪要.md,1465,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ReviewComments/盲审专家意见.md,4567,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ReviewComments/答辩意见响应方案.md,9033,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ReviewComments/答辩组响应意见.md,13288,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ReviewComments/论文修改方案.md,31773,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+Template/.gitignore,2636,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/Components/Images/SCU_TITLE.png,36411,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Template/Components/Images/SCU_TITLE_BW.png,3702,latex-source-required-figure,正文或模板直接引用的必要插图，不是整篇论文输出
+Template/Components/Images/levels.png,76325,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/Components/Images/截屏2020-02-1901.36.30.png,359599,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/LICENSE,35184,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/README.md,4176,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/assets/icon.png,223234,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/gbt7714-author-year.bst,42418,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/gbt7714-numerical.bst,38801,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/gbt7714.sty,10364,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/scuthesis.def,693,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+Template/scuthesis2020.cls,27140,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+_config.yml,29,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+assets/cover.png,248751,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+assets/icon.png,223234,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+compile.bat,2605,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+config/config.json,58,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+gbt7714-author-year.bst,42418,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+gbt7714-numerical.bst,38801,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+gbt7714.sty,10364,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+pdflatex12628.fls,182,exclude-generated-backup,编译辅助文件、备份或本机配置
+pdflatex18088.fls,182,exclude-generated-backup,编译辅助文件、备份或本机配置
+pdflatex18184.fls,182,exclude-generated-backup,编译辅助文件、备份或本机配置
+pdflatex3248.fls,182,exclude-generated-backup,编译辅助文件、备份或本机配置
+pdflatex3424.fls,182,exclude-generated-backup,编译辅助文件、备份或本机配置
+pdflatex48336.fls,182,exclude-generated-backup,编译辅助文件、备份或本机配置
+pdflatex6224.fls,182,exclude-generated-backup,编译辅助文件、备份或本机配置
+ref_need/README.md,884,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ref_need/bati2023_detailed_extraction.md,18328,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ref_need/ch1_ch2_rendering.md,3370,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ref_need/ch1_ch2_rewrite_ref_gaps.md,14168,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ref_need/ch1_fem_dom.md,4942,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ref_need/ch2_ch4_gpu_rt.md,7447,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ref_need/ir_papers_summary.json,32554,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+ref_need/zotero-collections-inventory.md,24673,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/External-AI审查-report.md,7314,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/MainBody-全面审查-report.md,13964,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/MainBody-图表审查-report.md,5593,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/MainBody-审稿模拟-report.md,9989,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/MainBody-快速预审-report.md,5192,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/MainBody-逻辑内容-report.md,8293,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/review_report.md,21183,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/review_response.md,23956,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/textbf_audit_report.md,23006,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/盲审专家评审意见书.md,18835,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/盲审意见回复与修改方案.md,23579,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/盲审评审报告_严格版.md,24136,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+report/逻辑内容审计-响应整改计划.md,12469,research-hub,研究笔记、评审、答辩、文献整理，保留并转入成果总库
+scripts/count_textbf.py,2361,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+scripts/fix_textbf.py,5931,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+scripts/mcp_semantic_per_item.py,18295,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+scripts/svg2pdf.ps1,1656,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+scripts/wordcount.ps1,822,latex-source-candidate,源工程及支撑资源；最终白名单需编译验证
+xelatex1292.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex18404.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex20220.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex21132.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex29968.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex30484.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex32092.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex32376.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex36652.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex38128.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex39372.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex39988.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex41564.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex41592.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex44572.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex48468.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex53096.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex55912.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex56176.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex56476.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex56540.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex56936.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex59516.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex59548.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex60528.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex61316.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex65740.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex6620.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex68900.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex74388.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex77276.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex78584.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex78760.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex81232.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex83476.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex93644.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex94076.fls,180,exclude-generated-backup,编译辅助文件、备份或本机配置
+xelatex94624.fls,170,exclude-generated-backup,编译辅助文件、备份或本机配置
+蒲昱岐_2023223045139_基于路径追踪的混合架构耦合热输运红外仿真算法.pdf,9937127,exclude-thesis-output,整篇论文生成结果，按用户要求不发布

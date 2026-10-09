@@ -1,0 +1,232 @@
+% ===========================================================================
+% Statistical Consistency — Per-Pixel Significance Testing
+% ===========================================================================
+% Requires: amsmath, amssymb, booktabs, siunitx, graphicx
+% Figures : porous_512x512x128spp_difference_map.png
+%           porous_512x512x128spp_z_diagnostic.png
+% ===========================================================================
+
+\subsection{Per-Pixel Statistical Consistency}
+\label{sec:stat-consistency}
+
+To rigorously confirm that the GPU wavefront solver produces
+statistically indistinguishable results from the CPU depth-first
+reference, we perform a per-pixel hypothesis testing analysis on a
+shared radiative rendering scene.  The analysis goes beyond simple
+visual comparison: it subjects every pixel to a formal significance
+test, then applies multiple-comparison corrections to control the
+false-discovery rate across the entire image.
+
+%--- 5.X.1  Test Design ---------------------------------------------------
+\subsubsection{Choice of indicators}
+
+A Monte Carlo estimator at pixel $(x,y)$ yields an expected value
+$\hat{E}$ and a standard error $\mathrm{SE} = \sqrt{V/N}$, where $V$ is
+the sample variance and $N$ the number of independent realisations.
+Because both the GPU and CPU solvers report $(\hat{E},\mathrm{SE})$
+per pixel, we can construct a two-sample $Z$-statistic without
+requiring access to the underlying path-level samples:
+%
+\begin{equation}\label{eq:z-pixel}
+  Z_{x,y}
+  = \frac{\bigl|\hat{E}_{\mathrm{gpu}}(x,y)
+          - \hat{E}_{\mathrm{cpu}}(x,y)\bigr|}
+         {\sqrt{\mathrm{SE}_{\mathrm{gpu}}^{2}(x,y)
+              + \mathrm{SE}_{\mathrm{cpu}}^{2}(x,y)}}.
+\end{equation}
+%
+Under the null hypothesis that both solvers sample the same underlying
+distribution, $Z_{x,y}$ follows a half-normal distribution $|{\mathcal{N}(0,1)}|$
+with mean $\sqrt{2/\pi}\approx 0.7979$ and standard deviation
+$\sqrt{1-2/\pi}\approx 0.6028$.  Any systematic implementation
+divergence would shift the $Z$~distribution toward higher values.
+
+Three complementary indicators are reported:
+
+\begin{enumerate}
+\item \textbf{Uncorrected rejection rate.}
+      The fraction of pixels satisfying $Z_{x,y}>1.96$ (two-sided
+      $\alpha=0.05$).  Under the null this fraction converges to
+      exactly~5\%; a value materially above~5\% signals the presence
+      of systematic bias.
+
+\item \textbf{Bonferroni correction.}
+      The per-pixel significance level is set to
+      $\alpha_{B}=\alpha/N_{\mathrm{valid}}$, yielding a
+      family-wise error rate (FWER) $\le\alpha$.  This is the most
+      conservative test: \emph{any} pixel surviving the Bonferroni
+      threshold represents a near-certain localised discrepancy.
+
+\item \textbf{Benjamini--Hochberg (BH) false-discovery-rate (FDR)
+      control} \cite{benjamini1995}.
+      The sorted $p$-values $p_{(1)}\le\cdots\le p_{(N)}$ are compared
+      against the linear threshold $p_{(k)}\le (k/N)\,\alpha$.
+      This controls the expected proportion of false discoveries at
+      $\le\alpha$ while retaining substantially higher statistical
+      power than Bonferroni, making it the primary acceptance criterion.
+\end{enumerate}
+
+The rationale for using all three is \emph{triangulation}: the raw rate
+tests calibration of the $Z$~statistic itself; Bonferroni provides a
+conservative upper bound on localised errors; and BH--FDR gives the
+most powerful practical verdict.  When these three indicators are
+mutually consistent, the conclusion is robust against the choice of
+correction method.
+
+A fourth diagnostic---the Kolmogorov--Smirnov (KS) test of $Z_{x,y}$
+against the theoretical half-normal---assesses global distributional
+agreement.  Because the KS test becomes extremely powerful at large~$N$
+(rejecting even negligible deviations), we interpret the KS statistic
+$D_n$ rather than its $p$-value: $D_n < 0.03$ indicates negligible
+departure from the theoretical distribution.
+
+%--- 5.X.2  Experimental setup --------------------------------------------
+\subsubsection{Experimental setup}
+
+The validation scene is a porous aluminium foam with a backing plate,
+bounded by convective and fixed-temperature conditions
+(Section~\ref{sec:scene}), rendered at $512\times512$ pixels with
+$N_{\mathrm{spp}}=128$ samples per pixel on both solvers.
+At this sample count the per-pixel standard error is
+$\overline{\mathrm{SE}}\approx\SI{2.62}{\kelvin}$ (temperature range
+\SIrange{680}{850}{\kelvin}), providing adequate statistical power to
+detect biases of order $\SI{1}{\kelvin}$.
+
+Pixels with $\mathrm{SE}_{\mathrm{combined}}<10^{-12}$ or zero
+expected value on both sides (background sky rays that do not
+intersect geometry) are excluded, leaving
+$N_{\mathrm{valid}}=\num{153976}$ out of \num{262144} total pixels
+(58.7\%).
+
+%--- 5.X.3  Results --------------------------------------------------------
+\subsubsection{Results}
+
+\paragraph{Mean difference map.}
+Figure~\ref{fig:diff-map} presents the temperature fields, the signed
+pixel-wise difference $\Delta T = \hat{E}_{\mathrm{gpu}} -
+\hat{E}_{\mathrm{cpu}}$, and the $Z$-statistic map.  The mean
+difference across all valid pixels is
+$\overline{\Delta T}=\SI{+0.006}{\kelvin}$, three orders of magnitude
+below the per-pixel standard error, indicating \emph{no detectable
+systematic bias}.  The standard deviation of $\Delta T$ is
+$\SI{4.41}{\kelvin}$, consistent with the expected combined
+noise $\sqrt{2}\,\overline{\mathrm{SE}}\approx\SI{3.70}{\kelvin}$
+(the modest excess arises from the heavy-tailed SE distribution at
+geometric edges).  The maximum absolute difference is
+$\SI{34.2}{\kelvin}$ at a single edge pixel, which nevertheless yields
+$Z=4.55$---below the Bonferroni threshold.
+
+\paragraph{$Z$-distribution diagnostics.}
+Table~\ref{tab:z-stats} and Figure~\ref{fig:z-diag} summarise the
+$Z$-distribution.  The observed mean $\bar{Z}=0.806$ deviates from
+the theoretical value $\sqrt{2/\pi}=0.798$ by only 1.0\%, and the
+standard deviation is $0.606$ versus $0.603$ expected.
+The Q--Q plot (Figure~\ref{fig:z-diag}, right panel) closely follows
+the identity line up to $Z\approx3.5$, with a marginal heavy tail
+beyond---attributable to the geometric edges where the CLT convergence
+at $N=128$ is slower.  The KS statistic is $D_n=0.0226$, confirming
+that the observed distribution is practically half-normal despite the
+formal $p$-value being zero (an artefact of
+$N_{\mathrm{valid}}=\num{153976}$).
+
+\begin{table}[t]
+  \centering
+  \caption{Per-pixel $Z$-statistic summary and multiple-comparison
+           results for the porous scene
+           ($512\times512$, 128\,spp).}
+  \label{tab:z-stats}
+  \sisetup{round-mode=places}
+  \begin{tabular}{@{}lS[round-precision=4]@{}}
+    \toprule
+    \textbf{$Z$-distribution} & \textbf{Value} \\
+    \midrule
+    Mean $Z$            & 0.8057 \\
+    Median $Z$          & 0.6847 \\
+    Std.\ dev.\ $Z$    & 0.6056 \\
+    Max $Z$             & 4.5502 \\
+    \midrule
+    Theoretical mean $\sqrt{2/\pi}$ & 0.7979 \\
+    Deviation from theory & {1.0\,\%} \\
+    \bottomrule
+  \end{tabular}
+  \hspace{1em}
+  \begin{tabular}{@{}lrr@{}}
+    \toprule
+    \textbf{Correction} & \textbf{Rejects} & \textbf{Rate} \\
+    \midrule
+    None ($Z>1.96$)          &  7\,858 & 5.10\,\% \\
+    Bonferroni ($Z>5.11$)    &      0  & 0.000\,\% \\
+    BH--FDR ($\alpha=0.05$)  &      0  & 0.00\,\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Multiple-comparison verdict.}
+The uncorrected rejection rate of 5.10\,\% is statistically
+indistinguishable from the nominal 5\,\% expected under pure Monte
+Carlo noise, confirming that the $Z$-test is well-calibrated.
+Under the Bonferroni correction ($\alpha_B =
+\num{3.25e-7}$, threshold $Z>5.11$), \emph{zero} pixels are
+rejected---meaning no single pixel exhibits a discrepancy that
+could not be explained by chance alone in a family of
+\num{153976}~simultaneous tests.  The BH--FDR procedure likewise
+rejects \emph{zero} pixels, confirming the absence of any cluster of
+localised biases that might survive a less conservative correction.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{porous_512x512x128spp_difference_map}
+  \caption{Per-pixel comparison of the porous scene
+           ($512\times512$, 128\,spp).
+           \textit{Top row}: temperature maps from the CPU (left) and
+           GPU (right) solvers.
+           \textit{Bottom left}: signed difference
+           $\Delta T = \hat{E}_{\mathrm{gpu}}-\hat{E}_{\mathrm{cpu}}$
+           (colour centred at zero).
+           \textit{Bottom right}: $Z$-statistic map.  No contours
+           appear because both Bonferroni and FDR reject sets are
+           empty.}
+  \label{fig:diff-map}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{porous_512x512x128spp_z_diagnostic}
+  \caption{Diagnostic of the per-pixel $Z$-distribution.
+           \textit{Left}: histogram of observed $Z$ (blue) versus the
+           theoretical folded-normal density $2\varphi(z)$ (dashed).
+           Vertical lines mark $z=1.96$ and the Bonferroni threshold
+           $z=5.11$.
+           \textit{Right}: Q--Q plot against the half-normal
+           distribution.  Points follow the identity line closely,
+           with a marginal heavy tail above $Z\approx3.5$.}
+  \label{fig:z-diag}
+\end{figure}
+
+%--- 5.X.4  Interpretation ------------------------------------------------
+\subsubsection{Interpretation}
+
+Three independent lines of evidence converge to the same conclusion:
+
+\begin{enumerate}
+\item The \textbf{global bias} is negligible:
+      $\overline{\Delta T}=\SI{+0.006}{\kelvin}$ on a
+      \SIrange{680}{850}{\kelvin} temperature field, corresponding to
+      a relative bias of $3.5\times10^{-5}$.
+
+\item The \textbf{pixel-wise noise structure} is consistent with
+      independent Monte Carlo sampling: the $Z$-distribution matches
+      the half-normal to within 1\,\% in both mean and variance, and
+      the uncorrected 5.10\,\% rejection rate agrees with the
+      $\alpha=0.05$ type-I error rate.
+
+\item \textbf{No localised discrepancy} survives multiple-comparison
+      correction: both Bonferroni (FWER control) and BH--FDR yield
+      zero rejections among \num{153976} simultaneous tests.
+\end{enumerate}
+
+These results demonstrate that the GPU wavefront implementation is a
+statistically faithful reproduction of the CPU depth-first reference
+at the per-pixel level.  All observed differences are fully accounted
+for by the intrinsic variance of the Monte Carlo estimator, with no
+evidence of algorithmic, numerical, or synchronisation-induced biases.

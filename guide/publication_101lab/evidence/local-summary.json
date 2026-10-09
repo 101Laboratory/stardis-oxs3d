@@ -1,0 +1,1415 @@
+{
+  "observed_at": "2026-10-08T17:57:40.744571+00:00",
+  "roots": [
+    "D:/Stardis-GPU",
+    "D:/stardis-editor",
+    "D:/thesis"
+  ],
+  "scope": "excludes git objects, virtualenvs, caches, node_modules and this report package; includes build outputs; sizes are not deduplicated",
+  "files": 48968,
+  "bytes": 25145840878,
+  "groups": [
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "(root files)",
+      "files": 2,
+      "bytes": 9302,
+      "categories": {
+        "document": 1,
+        "other-review": 1
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": ".opencode",
+      "files": 15,
+      "bytes": 144081,
+      "categories": {
+        "other-review": 5,
+        "data-or-config": 2,
+        "document": 7,
+        "source-script": 1
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": ".vscode",
+      "files": 2,
+      "bytes": 3224,
+      "categories": {
+        "data-or-config": 2
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "GPU_WF_Validation",
+      "files": 116,
+      "bytes": 9601902,
+      "categories": {
+        "other-review": 3,
+        "data-or-config": 5,
+        "source-script": 4,
+        "build-or-build-docs-review": 104
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "Stardis-Starter-Pack",
+      "files": 312,
+      "bytes": 442106597,
+      "categories": {
+        "document": 4,
+        "geometry": 91,
+        "generated-or-backup-review": 11,
+        "data-or-config": 66,
+        "other-review": 76,
+        "figure-or-pdf": 46,
+        "source-script": 18
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "cuda-duplex-validation",
+      "files": 26,
+      "bytes": 85831122,
+      "categories": {
+        "source-script": 4,
+        "other-review": 4,
+        "generated-or-backup-review": 6,
+        "raw-profile": 8,
+        "data-or-config": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "debug_issues",
+      "files": 82,
+      "bytes": 4006830221,
+      "categories": {
+        "document": 52,
+        "source-script": 3,
+        "figure-or-pdf": 5,
+        "data-or-config": 4,
+        "other-review": 18
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "guide",
+      "files": 223,
+      "bytes": 10590028,
+      "categories": {
+        "document": 151,
+        "build-or-build-docs-review": 46,
+        "source-script": 6,
+        "data-or-config": 2,
+        "figure-or-pdf": 17,
+        "generated-or-backup-review": 1
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "optimization",
+      "files": 128,
+      "bytes": 58762080,
+      "categories": {
+        "document": 61,
+        "source-script": 10,
+        "data-or-config": 30,
+        "generated-or-backup-review": 25,
+        "other-review": 1,
+        "raw-profile": 1
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "optix-throughput-validation",
+      "files": 1540,
+      "bytes": 971335789,
+      "categories": {
+        "document": 5,
+        "source-script": 69,
+        "build-or-build-docs-review": 1466
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "perf_diag",
+      "files": 15,
+      "bytes": 41709427,
+      "categories": {
+        "raw-profile": 4,
+        "other-review": 6,
+        "data-or-config": 5
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "physical_consistency_stats",
+      "files": 47,
+      "bytes": 5221126,
+      "categories": {
+        "document": 2,
+        "source-script": 4,
+        "data-or-config": 26,
+        "figure-or-pdf": 15
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "profiling",
+      "files": 2766,
+      "bytes": 13867650116,
+      "categories": {
+        "other-review": 2519,
+        "generated-or-backup-review": 232,
+        "data-or-config": 15
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "scripts",
+      "files": 3,
+      "bytes": 22503,
+      "categories": {
+        "source-script": 3
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-cpu",
+      "files": 1953,
+      "bytes": 264777529,
+      "categories": {
+        "other-review": 226,
+        "source-script": 939,
+        "document": 70,
+        "build-or-build-docs-review": 641,
+        "generated-or-backup-review": 73,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d",
+      "files": 2669,
+      "bytes": 1054097213,
+      "categories": {
+        "other-review": 227,
+        "source-script": 1010,
+        "document": 68,
+        "build-or-build-docs-review": 1298,
+        "generated-or-backup-review": 62,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-cpu-wf",
+      "files": 6366,
+      "bytes": 850500025,
+      "categories": {
+        "other-review": 227,
+        "source-script": 1055,
+        "document": 70,
+        "build-or-build-docs-review": 4948,
+        "generated-or-backup-review": 62,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-merge-phase",
+      "files": 2179,
+      "bytes": 317879714,
+      "categories": {
+        "other-review": 228,
+        "source-script": 1010,
+        "document": 68,
+        "build-or-build-docs-review": 807,
+        "generated-or-backup-review": 62,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-o14",
+      "files": 5873,
+      "bytes": 578564931,
+      "categories": {
+        "other-review": 227,
+        "build-or-build-docs-review": 4502,
+        "source-script": 1010,
+        "document": 68,
+        "generated-or-backup-review": 62,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-o16",
+      "files": 4794,
+      "bytes": 525292507,
+      "categories": {
+        "other-review": 227,
+        "source-script": 1010,
+        "document": 68,
+        "build-or-build-docs-review": 3423,
+        "generated-or-backup-review": 62,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-stream-order",
+      "files": 4169,
+      "bytes": 442448315,
+      "categories": {
+        "other-review": 227,
+        "source-script": 1089,
+        "document": 69,
+        "build-or-build-docs-review": 2717,
+        "generated-or-backup-review": 63,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-test-validation",
+      "files": 6907,
+      "bytes": 636832124,
+      "categories": {
+        "other-review": 227,
+        "source-script": 1089,
+        "document": 69,
+        "build-or-build-docs-review": 5455,
+        "generated-or-backup-review": 63,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-wos-fix",
+      "files": 5872,
+      "bytes": 578685710,
+      "categories": {
+        "other-review": 227,
+        "source-script": 1010,
+        "document": 68,
+        "build-or-build-docs-review": 4501,
+        "generated-or-backup-review": 62,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "directory": "stardis-oxs3d-wos-test",
+      "files": 2431,
+      "bytes": 306043013,
+      "categories": {
+        "other-review": 227,
+        "source-script": 1010,
+        "document": 68,
+        "build-or-build-docs-review": 1060,
+        "generated-or-backup-review": 62,
+        "geometry": 4
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": "(root files)",
+      "files": 13,
+      "bytes": 91172,
+      "categories": {
+        "other-review": 2,
+        "document": 6,
+        "data-or-config": 4,
+        "source-script": 1
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": ".vscode",
+      "files": 3,
+      "bytes": 786,
+      "categories": {
+        "data-or-config": 3
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": "config_examples",
+      "files": 2,
+      "bytes": 7102,
+      "categories": {
+        "data-or-config": 2
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": "config_library",
+      "files": 2,
+      "bytes": 1757,
+      "categories": {
+        "data-or-config": 2
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": "design",
+      "files": 27,
+      "bytes": 350448,
+      "categories": {
+        "document": 27
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": "scripts",
+      "files": 4,
+      "bytes": 22801,
+      "categories": {
+        "source-script": 4
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": "src",
+      "files": 32,
+      "bytes": 555254,
+      "categories": {
+        "source-script": 32
+      }
+    },
+    {
+      "root": "D:\\stardis-editor",
+      "directory": "tests",
+      "files": 26,
+      "bytes": 111532,
+      "categories": {
+        "source-script": 22,
+        "document": 4
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "(root files)",
+      "files": 84,
+      "bytes": 55149817,
+      "categories": {
+        "other-review": 8,
+        "document": 4,
+        "source-script": 2,
+        "generated-or-backup-review": 65,
+        "figure-or-pdf": 5
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": ".github",
+      "files": 30,
+      "bytes": 128419,
+      "categories": {
+        "source-script": 8,
+        "document": 21,
+        "data-or-config": 1
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": ".vscode",
+      "files": 3,
+      "bytes": 3512,
+      "categories": {
+        "data-or-config": 3
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "Chapters",
+      "files": 28,
+      "bytes": 567128,
+      "categories": {
+        "generated-or-backup-review": 11,
+        "document": 17
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "Figures",
+      "files": 87,
+      "bytes": 18224956,
+      "categories": {
+        "document": 14,
+        "figure-or-pdf": 58,
+        "generated-or-backup-review": 15
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "Figures - bak",
+      "files": 71,
+      "bytes": 13147956,
+      "categories": {
+        "document": 14,
+        "figure-or-pdf": 57
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "License",
+      "files": 2,
+      "bytes": 58181,
+      "categories": {
+        "other-review": 2
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "OurWork",
+      "files": 9,
+      "bytes": 76076,
+      "categories": {
+        "document": 9
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "Reference Document",
+      "files": 1,
+      "bytes": 471874,
+      "categories": {
+        "figure-or-pdf": 1
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "References",
+      "files": 7,
+      "bytes": 207716,
+      "categories": {
+        "document": 7
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "ReviewComments",
+      "files": 5,
+      "bytes": 60126,
+      "categories": {
+        "document": 5
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "Template",
+      "files": 13,
+      "bytes": 860683,
+      "categories": {
+        "other-review": 6,
+        "document": 2,
+        "figure-or-pdf": 5
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "assets",
+      "files": 2,
+      "bytes": 471985,
+      "categories": {
+        "figure-or-pdf": 2
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "config",
+      "files": 1,
+      "bytes": 58,
+      "categories": {
+        "data-or-config": 1
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "ref_need",
+      "files": 8,
+      "bytes": 106366,
+      "categories": {
+        "document": 7,
+        "data-or-config": 1
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "report",
+      "files": 13,
+      "bytes": 197509,
+      "categories": {
+        "document": 13
+      }
+    },
+    {
+      "root": "D:\\thesis",
+      "directory": "scripts",
+      "files": 5,
+      "bytes": 29065,
+      "categories": {
+        "source-script": 5
+      }
+    }
+  ],
+  "largest_files": [
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "debug_issues/[RESOLVED]block_firefly_noise/gpu_trace.csv",
+      "bytes": 3991450340,
+      "category": "data-or-config",
+      "modified_utc": "2026-02-17T07:54:06.207831+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r009macc/data.0/sep4d24.20260318T230153.339263.tb7",
+      "bytes": 981690056,
+      "category": "other-review",
+      "modified_utc": "2026-03-18T15:02:16.729801+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r014macc/data.0/sep6f1c.20260319T122633.191496.tb7",
+      "bytes": 849418592,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T04:26:52.539263+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r013macc/data.0/sep14cc.20260319T121614.580007.tb7",
+      "bytes": 844879112,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T04:16:34.149441+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r011macc/data.0/sep1080.20260319T112248.701336.tb7",
+      "bytes": 831062880,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T03:23:08.040792+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r010macc/data.0/sep9644.20260318T231709.506560.tb7",
+      "bytes": 816991304,
+      "category": "other-review",
+      "modified_utc": "2026-03-18T15:17:30.381086+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r008hpc/data.0/sep6e4c.20260318T225622.325532.tb7",
+      "bytes": 765624264,
+      "category": "other-review",
+      "modified_utc": "2026-03-18T14:56:44.046225+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r012macc/data.0/sep8414.20260319T113618.066630.tb7",
+      "bytes": 549860168,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T03:36:31.291663+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/d138345ea6498774/OX_S3D_SCENE_VIEW.ipch",
+      "bytes": 124846080,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T05:46:26.623000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r005ue/data.0/sep7ff4.20260227T195012.807749.tb7",
+      "bytes": 124518256,
+      "category": "other-review",
+      "modified_utc": "2026-02-27T11:50:29.222650+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/8ef75bbadfdcc48f/OX_S3D_SHAPE.ipch",
+      "bytes": 122486784,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T04:33:52.273329+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/be429f6339e77c9b/OX_S3D_PRIMITIVE.ipch",
+      "bytes": 122486784,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T04:38:31.520428+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/707867a7a63a8616/OX_S3D_SCENE_VIEW.ipch",
+      "bytes": 121700352,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T05:45:41.376000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/b4cae969c7ed6f8e/OX_S3D_SCENE_VIEW.ipch",
+      "bytes": 120717312,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T03:01:30.413000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r011macc/sqlite-db/dicer.db",
+      "bytes": 110256128,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-19T03:25:52.665217+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r013macc/sqlite-db/dicer.db",
+      "bytes": 109158400,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-19T04:19:43.771896+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r014macc/sqlite-db/dicer.db",
+      "bytes": 108142592,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-19T04:28:20.763147+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r010macc/sqlite-db/dicer.db",
+      "bytes": 106143744,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-18T16:02:04.281238+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r009macc/sqlite-db/dicer.db",
+      "bytes": 98320384,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-18T15:54:24.697607+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r012macc/sqlite-db/dicer.db",
+      "bytes": 92594176,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-19T03:37:05.922549+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/8cf226e6fbcf181b/UNIFIED_TRACER.ipch",
+      "bytes": 85590016,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T16:01:36.214000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/e797c523a1efac33/UNIFIED_TRACER.ipch",
+      "bytes": 85590016,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-29T16:51:24.479561+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/20a9d08eb986cd3d/RAY_TRACER.ipch",
+      "bytes": 83492864,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T03:44:20.619786+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r008hpc/sqlite-db/dicer.db",
+      "bytes": 81805312,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-18T16:39:44.290983+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/.vs/STARDIS_CPU_WF_Experiment/v17/Browse.VC.db",
+      "bytes": 72278016,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T15:46:13.922308+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/.vs/STARDIS_CPU_WF_Experiment/v17/ipch/AutoPCH/34d6e6060fc0e2e4/SDIS_SOLVE_PERSISTENT_WAVEFRONT.ipch",
+      "bytes": 66715648,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T15:45:34.549000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/97e585bd5ce5d10a/SDIS_SOLVE_PERSISTENT_WAVEFRONT.ipch",
+      "bytes": 66715648,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-29T16:16:43.162000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r005ue/sqlite-db/dicer.db",
+      "bytes": 57262080,
+      "category": "data-or-config",
+      "modified_utc": "2026-02-27T11:50:47.900754+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/2080cae3b28e73e2/STARDIS-PARSING.ipch",
+      "bytes": 52822016,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-29T16:12:19.167000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/7b7413a62319d9/STARDIS-APP.ipch",
+      "bytes": 52822016,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-29T16:12:18.754000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/Browse.VC.db",
+      "bytes": 52371456,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T16:48:19.238492+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/1d5d457ff6fedac9/STARDIS-ARGS.ipch",
+      "bytes": 52297728,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T16:01:36.676000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/ec3ee9032b612f5d/STARDIS-MAIN.ipch",
+      "bytes": 52297728,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-29T16:06:48.007605+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/10a741d75738f30e/TEST_S3D_CLOSEST_POINT.ipch",
+      "bytes": 51380224,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T07:33:11.340000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/3a4bf7bd97fb41ea/TEST_S3D_TRACE_RAY_INSTANCE.ipch",
+      "bytes": 51380224,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T09:22:33.994555+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/2833b6001825ca4e/TEST_S3D_SCENE_VIEW.ipch",
+      "bytes": 51118080,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T08:34:05.869906+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/3e69244ff66f6b72/TEST_S3D_SCENE.ipch",
+      "bytes": 51118080,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T08:28:33.779477+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/84c7cad5e537a878/TEST_S3D_BATCH_CLOSEST_POINT.ipch",
+      "bytes": 51118080,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T09:50:30.502048+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/bec258cb5bcaf6a0/TEST_S3D_SHAPE.ipch",
+      "bytes": 51118080,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T04:34:29.584017+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/Browse.VC.db",
+      "bytes": 48070656,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T09:53:50.890877+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/cbox/IRR_stardis-cpu_320x320x512_32T_dsphere.txt",
+      "bytes": 39362489,
+      "category": "other-review",
+      "modified_utc": "2026-03-29T15:31:02.498292+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/cbox/IRR_stardis-cpu_320x320x512_8192_24T_dsphere.txt",
+      "bytes": 37990047,
+      "category": "other-review",
+      "modified_utc": "2026-05-19T15:38:49.372942+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-cpu/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-19T04:38:48.400956+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-cpu/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-17T07:47:04.090350+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/Tests/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T12:25:56.173822+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T12:25:55.021126+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-04-08T12:08:01.624956+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-merge-phase/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-15T09:27:11.692103+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-merge-phase/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-12T08:21:59.718558+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-o14/build/Tests/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-18T10:33:13.355620+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-o14/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-18T10:33:12.249311+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-o14/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-18T10:27:18.039834+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-o16/build/Tests/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-19T03:12:12.803813+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-o16/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-19T03:12:11.861876+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-o16/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-19T02:53:51.514523+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-stream-order/build/Tests/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-14T04:41:29.863257+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-stream-order/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-14T04:41:28.761085+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-stream-order/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-14T03:39:47.615541+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-test-validation/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-12T16:31:13.397170+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-test-validation/build_test/Tests/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-12T12:55:39.498322+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-test-validation/build_test/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-12T12:55:38.444161+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-test-validation/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-12T12:53:44.282965+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-wos-fix/build/Tests/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T03:27:46.662823+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-wos-fix/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T03:27:45.462046+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-wos-fix/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-30T03:23:35.395760+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-wos-test/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-29T12:54:07.505301+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-wos-test/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-29T12:31:45.250661+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/bin/Release/embree4.dll",
+      "bytes": 37316096,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-13T07:36:00.836416+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/thirdparty/embree4/bin/embree4.dll",
+      "bytes": 37316096,
+      "category": "generated-or-backup-review",
+      "modified_utc": "2026-03-12T08:02:55.525383+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/cbox/IRR_stardis-cpu_320x320x512_8192_32T_dsphere.txt",
+      "bytes": 36084079,
+      "category": "other-review",
+      "modified_utc": "2026-05-19T15:32:55.369931+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/.vs/STARDIS_CPU_WF_Experiment/v17/Solution.VC.db",
+      "bytes": 31277056,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T15:46:13.949826+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/diag_a1.log",
+      "bytes": 27702868,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T12:52:37.022777+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/cbox/IRR_stardis-ox_320x320x512_8192_32T_dsphere.txt",
+      "bytes": 19782845,
+      "category": "other-review",
+      "modified_utc": "2026-04-01T16:11:14.965625+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "perf_diag/kernelprofile.ncu-rep",
+      "bytes": 18265590,
+      "category": "raw-profile",
+      "modified_utc": "2026-02-18T11:28:24.271333+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/Testing/Temporary/LastTest.log",
+      "bytes": 15091263,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T09:52:21.512409+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "cuda-duplex-validation/report2.nsys-rep",
+      "bytes": 14562319,
+      "category": "raw-profile",
+      "modified_utc": "2026-03-13T17:18:59.301143+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "cuda-duplex-validation/report7.nsys-rep",
+      "bytes": 13700522,
+      "category": "raw-profile",
+      "modified_utc": "2026-03-13T17:48:46.971351+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/diag_stderr2.log",
+      "bytes": 13630645,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T12:56:49.422393+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/build/diag_stderr.log",
+      "bytes": 13630508,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-04-08T12:55:25.051327+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/porous/archive_img/IR_rendering_stardis-cpu_512x512x8.ht",
+      "bytes": 12759020,
+      "category": "data-or-config",
+      "modified_utc": "2026-02-16T09:41:52.541086+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "cuda-duplex-validation/report4.nsys-rep",
+      "bytes": 12726035,
+      "category": "raw-profile",
+      "modified_utc": "2026-03-13T17:37:55.305478+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "perf_diag/1.ncu-rep",
+      "bytes": 12692325,
+      "category": "raw-profile",
+      "modified_utc": "2026-02-14T11:10:34.708793+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "cuda-duplex-validation/report3.nsys-rep",
+      "bytes": 12682032,
+      "category": "raw-profile",
+      "modified_utc": "2026-03-13T17:31:46.081136+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/porous/archive_img/IR_rendering_stardis-cpu_512x512x2.ht",
+      "bytes": 12642526,
+      "category": "data-or-config",
+      "modified_utc": "2026-02-16T09:36:34.035304+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/porous/archive_img/IR_rendering_stardis-cus3d_512x512x2.ht",
+      "bytes": 12344254,
+      "category": "data-or-config",
+      "modified_utc": "2026-02-16T09:35:11.680978+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/378c2400790e9193/NN_KERNELS.ipch",
+      "bytes": 11665408,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T03:41:47.444364+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/bbace367333806d2/KERNELS.ipch",
+      "bytes": 11665408,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T03:41:44.748523+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "cuda-duplex-validation/report6.nsys-rep",
+      "bytes": 11641444,
+      "category": "raw-profile",
+      "modified_utc": "2026-03-13T17:46:50.185001+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build_s3d/Testing/Temporary/LastTest.log",
+      "bytes": 11418770,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-22T07:09:17.167824+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "cuda-duplex-validation/report8.nsys-rep",
+      "bytes": 11161537,
+      "category": "raw-profile",
+      "modified_utc": "2026-03-13T17:54:05.874995+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optimization/[DONE]wf_pipeline/validation/results/nsight/serial_timeline.nsys-rep",
+      "bytes": 10506261,
+      "category": "raw-profile",
+      "modified_utc": "2026-02-24T09:31:25.469867+00:00"
+    },
+    {
+      "root": "D:\\thesis",
+      "path": "MainBody_0515.pdf",
+      "bytes": 9996364,
+      "category": "figure-or-pdf",
+      "modified_utc": "2026-05-15T00:55:57.496441+00:00"
+    },
+    {
+      "root": "D:\\thesis",
+      "path": "MainBody527Fin.pdf",
+      "bytes": 9982448,
+      "category": "figure-or-pdf",
+      "modified_utc": "2026-05-27T12:39:34.263498+00:00"
+    },
+    {
+      "root": "D:\\thesis",
+      "path": "MainBody_approval_0515.pdf",
+      "bytes": 9974638,
+      "category": "figure-or-pdf",
+      "modified_utc": "2026-05-15T00:54:17.562662+00:00"
+    },
+    {
+      "root": "D:\\thesis",
+      "path": "MainBody_approval.pdf",
+      "bytes": 9966895,
+      "category": "figure-or-pdf",
+      "modified_utc": "2026-05-18T05:10:00.968460+00:00"
+    },
+    {
+      "root": "D:\\thesis",
+      "path": "蒲昱岐_2023223045139_基于路径追踪的混合架构耦合热输运红外仿真算法.pdf",
+      "bytes": 9937127,
+      "category": "figure-or-pdf",
+      "modified_utc": "2026-04-09T07:26:14.389085+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/cbox-test/ttest.ht",
+      "bytes": 9935816,
+      "category": "data-or-config",
+      "modified_utc": "2026-05-19T15:56:05.225887+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "Stardis-Starter-Pack/cbox-test/IR5_stardis-cpu_320x320x512_24T_8192.txt",
+      "bytes": 9709728,
+      "category": "other-review",
+      "modified_utc": "2026-05-19T15:48:44.797998+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-cpu/thirdparty/embree4/bin/models/furBall_A.bin",
+      "bytes": 9595972,
+      "category": "other-review",
+      "modified_utc": "2026-03-17T07:47:04.626070+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d-cpu-wf/thirdparty/embree4/bin/models/furBall_A.bin",
+      "bytes": 9595972,
+      "category": "other-review",
+      "modified_utc": "2026-04-08T12:08:02.283555+00:00"
+    }
+  ],
+  "over_100_mib": [
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "debug_issues/[RESOLVED]block_firefly_noise/gpu_trace.csv",
+      "bytes": 3991450340,
+      "category": "data-or-config",
+      "modified_utc": "2026-02-17T07:54:06.207831+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/707867a7a63a8616/OX_S3D_SCENE_VIEW.ipch",
+      "bytes": 121700352,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T05:45:41.376000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/8ef75bbadfdcc48f/OX_S3D_SHAPE.ipch",
+      "bytes": 122486784,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T04:33:52.273329+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/be429f6339e77c9b/OX_S3D_PRIMITIVE.ipch",
+      "bytes": 122486784,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T04:38:31.520428+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "optix-throughput-validation/build/.vs/optix_throughput_validation/v17/ipch/AutoPCH/d138345ea6498774/OX_S3D_SCENE_VIEW.ipch",
+      "bytes": 124846080,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-02-23T05:46:26.623000+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r005ue/data.0/sep7ff4.20260227T195012.807749.tb7",
+      "bytes": 124518256,
+      "category": "other-review",
+      "modified_utc": "2026-02-27T11:50:29.222650+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r008hpc/data.0/sep6e4c.20260318T225622.325532.tb7",
+      "bytes": 765624264,
+      "category": "other-review",
+      "modified_utc": "2026-03-18T14:56:44.046225+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r009macc/data.0/sep4d24.20260318T230153.339263.tb7",
+      "bytes": 981690056,
+      "category": "other-review",
+      "modified_utc": "2026-03-18T15:02:16.729801+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r010macc/data.0/sep9644.20260318T231709.506560.tb7",
+      "bytes": 816991304,
+      "category": "other-review",
+      "modified_utc": "2026-03-18T15:17:30.381086+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r010macc/sqlite-db/dicer.db",
+      "bytes": 106143744,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-18T16:02:04.281238+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r011macc/data.0/sep1080.20260319T112248.701336.tb7",
+      "bytes": 831062880,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T03:23:08.040792+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r011macc/sqlite-db/dicer.db",
+      "bytes": 110256128,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-19T03:25:52.665217+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r012macc/data.0/sep8414.20260319T113618.066630.tb7",
+      "bytes": 549860168,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T03:36:31.291663+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r013macc/data.0/sep14cc.20260319T121614.580007.tb7",
+      "bytes": 844879112,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T04:16:34.149441+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r013macc/sqlite-db/dicer.db",
+      "bytes": 109158400,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-19T04:19:43.771896+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r014macc/data.0/sep6f1c.20260319T122633.191496.tb7",
+      "bytes": 849418592,
+      "category": "other-review",
+      "modified_utc": "2026-03-19T04:26:52.539263+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "profiling/stardis-oxs3d-aos/r014macc/sqlite-db/dicer.db",
+      "bytes": 108142592,
+      "category": "data-or-config",
+      "modified_utc": "2026-03-19T04:28:20.763147+00:00"
+    },
+    {
+      "root": "D:\\Stardis-GPU",
+      "path": "stardis-oxs3d/build/.vs/STARDIS_CUDA_Workspace/v17/ipch/AutoPCH/b4cae969c7ed6f8e/OX_S3D_SCENE_VIEW.ipch",
+      "bytes": 120717312,
+      "category": "build-or-build-docs-review",
+      "modified_utc": "2026-03-30T03:01:30.413000+00:00"
+    }
+  ],
+  "excluded_paths": [
+    "D:\\Stardis-GPU\\.opencode\\node_modules",
+    "D:\\Stardis-GPU\\guide\\publication_101lab",
+    "D:\\Stardis-GPU\\stardis-cpu\\.git",
+    "D:\\Stardis-GPU\\stardis-oxs3d\\.git",
+    "D:\\stardis-editor\\.git",
+    "D:\\stardis-editor\\.pytest_cache",
+    "D:\\stardis-editor\\.venv",
+    "D:\\stardis-editor\\src\\__pycache__",
+    "D:\\stardis-editor\\src\\models\\__pycache__",
+    "D:\\stardis-editor\\src\\panels\\__pycache__",
+    "D:\\stardis-editor\\src\\parsers\\__pycache__",
+    "D:\\stardis-editor\\src\\task_runner\\__pycache__",
+    "D:\\stardis-editor\\src\\viewport\\__pycache__",
+    "D:\\stardis-editor\\tests\\__pycache__",
+    "D:\\stardis-editor\\tests\\material_tests\\__pycache__",
+    "D:\\stardis-editor\\tests\\normal_orientation_tests\\__pycache__",
+    "D:\\stardis-editor\\tests\\paint_tests\\__pycache__",
+    "D:\\stardis-editor\\tests\\task_runner_tests\\__pycache__",
+    "D:\\thesis\\.git",
+    "D:\\thesis\\.venv",
+    "D:\\thesis\\.github\\cli\\__pycache__"
+  ],
+  "errors": []
+}

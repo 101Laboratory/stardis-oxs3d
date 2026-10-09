@@ -1,0 +1,9 @@
+message: MPI is disabled.
+message: Using 32 threads.
+error: Error parsing camera options.
+error: Use the -h option to get help.
+error: No computation possible.
+[RSYS-DEBUG] mem_shutdown_proxy_allocator called, proxy=00000085A47DE660
+[RSYS-DEBUG] proxy_data=000002142F8F4E20
+[RSYS-DEBUG] node_list=0000000000000000
+[RSYS-DEBUG] About to assert node_list == NULL

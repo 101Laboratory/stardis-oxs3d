@@ -1,0 +1,2 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+A7,default,gpu_wf,DS,0.5,0.5,0.5,inf,1,10000,325.61,2.499256e-01,325,2.4407,1

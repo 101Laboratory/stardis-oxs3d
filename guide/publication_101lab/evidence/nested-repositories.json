@@ -1,0 +1,97 @@
+[
+  {
+    "path": "D:\\Stardis-GPU\\stardis-cpu",
+    "git_kind": "repository",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d",
+    "git_kind": "repository",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-cpu-wf",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-merge-phase",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-o14",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-o16",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-stream-order",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-test-validation",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-wos-fix",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\Stardis-GPU\\stardis-oxs3d-wos-test",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\stardis-editor",
+    "git_kind": "repository",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  },
+  {
+    "path": "D:\\thesis",
+    "git_kind": "repository",
+    "gitlinks": [
+      "160000 7429516a52d7a086d3842831f5af7943c406a168 0\tTemplate"
+    ],
+    "tracked_gitmodules": {
+      ".gitmodules": "[submodule \"Template\"]\n    path = Template\n\turl = https://github.com/salomelly/scu_thesis_template.git\n"
+    },
+    "index_ok": true
+  },
+  {
+    "path": "D:\\thesis\\Template",
+    "git_kind": "worktree-or-submodule",
+    "gitlinks": [],
+    "tracked_gitmodules": {},
+    "index_ok": true
+  }
+]

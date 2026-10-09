@@ -1,0 +1,199 @@
+{
+  "probes": [],
+  "cameras": [
+    {
+      "name": "Camera1",
+      "position": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "target": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fov": 30.0,
+      "spp": 32,
+      "resolution": [
+        320,
+        320
+      ]
+    },
+    {
+      "name": "Camera2",
+      "position": [
+        -0.554295,
+        -2.825915,
+        0.362724
+      ],
+      "target": [
+        -0.5,
+        0.996403,
+        0.493525
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fov": 30.0,
+      "spp": 32,
+      "resolution": [
+        128,
+        128
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "name": "DefaultLight",
+      "light_type": "DEFAULT",
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "position": [
+        3.0,
+        -4.0,
+        5.0
+      ],
+      "enabled": true,
+      "radius": 1.0,
+      "power": 0.0,
+      "diffuse_radiance": 0.0,
+      "raw_line": ""
+    }
+  ],
+  "ambient_intensity": 0.6,
+  "body_zone_ids": {
+    "CORNELL_BOX_OUTER_BOX": {
+      "next_zone_id": 3,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "Light"
+        },
+        {
+          "zone_id": 2,
+          "name": "BoxSurface"
+        }
+      ]
+    },
+    "CORNELL_BOX_SHORT": {
+      "next_zone_id": 2,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "ShortSurface"
+        }
+      ]
+    },
+    "CORNELL_BOX_TALL": {
+      "next_zone_id": 2,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "TallSurface"
+        }
+      ]
+    }
+  },
+  "zone_parent_map": {
+    "Light": "CORNELL_BOX_OUTER_BOX",
+    "BoxSurface": "CORNELL_BOX_OUTER_BOX",
+    "ShortSurface": "CORNELL_BOX_SHORT",
+    "TallSurface": "CORNELL_BOX_TALL"
+  },
+  "task_queue": {
+    "error_policy": {
+      "retry_count": 0,
+      "after_retries_exhausted": "cancel"
+    },
+    "env_vars": {},
+    "tasks": [
+      {
+        "id": "c28edc95-9297-4dd2-ae4b-00a43eb82b59",
+        "name": "IR渲染-Camera2",
+        "task_type": "stardis",
+        "enabled": true,
+        "exe_ref": "stardis-cpu",
+        "working_dir": "",
+        "env_vars": {
+          "STARDIS_POOL_SIZE": "8192"
+        },
+        "compute_mode": "ir_render",
+        "stardis_params": {
+          "model_file": "cbox.txt",
+          "samples": 1000000,
+          "threads": 24,
+          "verbosity": 1,
+          "probe_refs": [],
+          "camera_ref": "Camera2",
+          "field_solve": null,
+          "advanced": {
+            "diff_algorithm": "dsphere",
+            "picard_order": 1,
+            "initial_time": 0.0,
+            "disable_intrad": false,
+            "extended_results": false,
+            "rng_state_in": "",
+            "rng_state_out": ""
+          }
+        },
+        "htpp_mode": null,
+        "htpp_params": null,
+        "input_source": null,
+        "output_redirect": "IR5_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}.ht",
+        "stderr_redirect": "IR5_{EXE_TAG}_{WIDTH}x{HEIGHT}x{SPP}_{THREADS}T_{env.STARDIS_POOL_SIZE}.txt"
+      },
+      {
+        "id": "43fd0c77-877c-4fff-a8b0-317fe13dd912",
+        "name": "后处理-Camera2",
+        "task_type": "htpp",
+        "enabled": true,
+        "exe_ref": "htpp",
+        "working_dir": "",
+        "env_vars": {},
+        "compute_mode": null,
+        "stardis_params": null,
+        "htpp_mode": "map",
+        "htpp_params": {
+          "threads": 5,
+          "force_overwrite": true,
+          "verbose": false,
+          "output_file": "{INPUT}.ppm",
+          "exposure": 1.0,
+          "white_scale": null,
+          "pixel_component": 0,
+          "palette": "",
+          "range_min": 300.0,
+          "range_max": 1000.0,
+          "gnuplot": false
+        },
+        "input_source": {
+          "type": "from_file",
+          "file_path": "test1.ht"
+        },
+        "output_redirect": null,
+        "stderr_redirect": null
+      }
+    ]
+  },
+  "body_materials": {
+    "CORNELL_BOX_OUTER_BOX": "Polyurethane_Foam",
+    "CORNELL_BOX_SHORT": "Glass",
+    "CORNELL_BOX_TALL": "Polyurethane_Foam"
+  },
+  "normal_orientations": {
+    "CORNELL_BOX_OUTER_BOX": "outward",
+    "CORNELL_BOX_SHORT": "outward",
+    "CORNELL_BOX_TALL": "outward"
+  }
+}

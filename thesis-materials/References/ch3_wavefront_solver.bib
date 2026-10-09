@@ -1,0 +1,197 @@
+% 第三章 Wavefront 求解器 — Wavefront 执行模型、质量评估
+% 来源子集合: Wavefront, 质量评估
+% 共 10 篇
+
+@article{ancourtScanningPolyhedraLoops1991,
+  title = {Scanning Polyhedra with {{DO}} Loops},
+  author = {Ancourt, Corinne and Irigoin, Fran{\c c}ois},
+  year = 1991,
+  month = apr,
+  journal = {SIGPLAN Not.},
+  volume = {26},
+  number = {7},
+  pages = {39--50},
+  issn = {0362-1340},
+  doi = {10.1145/109626.109631},
+  urldate = {2026-02-27},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\Q9WZMXS2\Ancourt和Irigoin - 1991 - Scanning polyhedra with DO loops.pdf}
+}
+
+@article{blumofeSchedulingMultithreadedComputations1999,
+  title = {Scheduling Multithreaded Computations by Work Stealing},
+  author = {Blumofe, Robert D. and Leiserson, Charles E.},
+  year = 1999,
+  month = sep,
+  journal = {J. ACM},
+  volume = {46},
+  number = {5},
+  pages = {720--748},
+  issn = {0004-5411},
+  doi = {10.1145/324133.324234},
+  urldate = {2026-02-22},
+  abstract = {This paper studies the problem of efficiently schedulling fully strict (i.e., well-structured) multithreaded computations on parallel computers. A popular and practical method of scheduling this kind of dynamic MIMD-style computation is ``work stealing,'' in which processors needing work steal computational threads from other processors. In this paper, we give the first provably good work-stealing scheduler for multithreaded computations with dependencies.Specifically, our analysis shows that the expected time to execute a fully strict computation on P processors using our work-stealing scheduler is T1/P + O(T {$\infty$} , where T1 is the minimum serial execution time of the multithreaded computation and (T {$\infty$} is the minimum execution time with an infinite number of processors. Moreover, the space required by the execution is at most S1P, where S1 is the minimum serial space requirement. We also show that the expected total communication of the algorithm is at most O(PT {$\infty$}( 1 + nd)Smax), where Smax is the size of the largest activation record of any thread and nd is the maximum number of times that any thread synchronizes with its parent. This communication bound justifies the folk wisdom that work-stealing schedulers are more communication efficient than their work-sharing counterparts. All three of these bounds are existentially optimal to within a constant factor.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\DDXFRVJW\Blumofe和Leiserson - 1999 - Scheduling multithreaded computations by work stealing.pdf}
+}
+
+@article{borgerBehaviouralTheoryRecursive2021,
+  title = {A {{Behavioural Theory}} of {{Recursive Algorithms}}},
+  author = {B{\"o}rger, Egon and Schewe, Klaus-Dieter},
+  year = 2021,
+  month = oct,
+  journal = {Science of Computer Programming},
+  volume = {210},
+  eprint = {2001.01862},
+  primaryclass = {cs},
+  pages = {102691},
+  issn = {01676423},
+  doi = {10.1016/j.scico.2021.102691},
+  urldate = {2026-02-26},
+  abstract = {"What is an algorithm?" is a fundamental question of computer science. Gurevich's behavioural theory of sequential algorithms (aka the sequential ASM thesis) gives a partial answer by defining (non-deterministic) sequential algorithms axiomatically, without referring to a particular machine model or programming language, and showing that they are captured by (non-deterministic) sequential Abstract State Machines (nd-seq ASMs). Moschovakis pointed out that recursive algorithms such as mergesort are not covered by this theory. In this article we propose an axiomatic definition of the notion of sequential recursive algorithm which extends Gurevich's axioms for sequential algorithms by a Recursion Postulate and allows us to prove that sequential recursive algorithms are captured by recursive Abstract State Machines, an extension of nd-seq ASMs by a CALL rule. Applying this recursive ASM thesis yields a characterization of sequential recursive algorithms as finitely composed concurrent algorithms all of whose concurrent runs are partial-order runs.},
+  archiveprefix = {arXiv},
+  langid = {american},
+  keywords = {Computer Science - Logic in Computer Science},
+  annotation = {abstractTranslation: ``什么是算法？''是计算机科学的一个基本问题。Gurevich的序列算法行为理论（又名序列ASM论文）通过公理化地定义（非确定性）序列算法，而不参考特定的机器模型或编程语言，并表明它们被（非确定）序列抽象状态机（nd-seq-ASM）捕获，给出了部分答案。Moschovakis指出，该理论不涵盖诸如合并排序之类的递归算法。在本文中，我们提出了序列递归算法概念的公理化定义，该定义通过递归假设扩展了Gurevich的序列算法公理，并允许我们证明序列递归算法是由递归抽象状态机捕获的，这是nd-seq ASM通过CALL规则的扩展。应用该递归ASM论文将序列递归算法描述为有限组合并发算法，其所有并发运行都是偏序运行。},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\T7URZH53\\Börger和Schewe - 2021 - A Behavioural Theory of Recursive Algorithms.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\ZV6MBI5D\\2001.html}
+}
+
+@misc{frolovCrossRTCrossPlatform2024,
+  title = {{{CrossRT}}: A Cross Platform Programming Technology for Hardware-Accelerated Ray Tracing in {{CG}} and {{CV}} Applications},
+  shorttitle = {{{CrossRT}}},
+  author = {Frolov, Vladimir and Sanzharov, Vadim and Albert, Garifullin and Raenchuk, Maxim and Voloboy, Alexei},
+  year = 2024,
+  month = sep,
+  number = {arXiv:2409.12617},
+  eprint = {2409.12617},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2409.12617},
+  urldate = {2026-02-22},
+  abstract = {We propose a programming technology that bridges cross-platform compatibility and hardware acceleration in ray tracing applications. Our methodology enables developers to define algorithms while our translator manages implementation specifics for different hardware or APIs. Features include: generating hardware-accelerated code from hardware-agnostic, object-oriented C++ algorithm descriptions; enabling users to define software fallbacks for non-hardware-accelerated CPUs and GPUs; producing GPU programming API-based algorithm implementations resembling manually ported C++ versions. The generated code is editable and readable, allowing for additional hardware acceleration. Our translator supports single megakernel and multiple kernel path tracing implementations without altering the programming model or input source code. Wavefront mode is crucial for NeRF and SDF, ensuring efficient evaluation with multiple kernels. Validation on tasks such as BVH tree build/traversal, ray-surface intersection for SDF, ray-volume intersection for 3D Gaussian Splatting, and complex Path Tracing models showed comparable performance levels to expert-written implementations for GPUs. Our technology outperformed existing Path Tracing implementations.},
+  archiveprefix = {arXiv},
+  langid = {english},
+  keywords = {Computer Science - Graphics},
+  annotation = {abstractTranslation: 我们提出了一种编程技术，在光线跟踪应用中架起跨平台兼容性和硬件加速的桥梁。我们的方法使开发人员能够定义算法，而我们的转换器管理不同硬件或API的实现细节。功能包括：从硬件不可知的、面向对象的C++算法描述生成硬件加速代码；使用户能够为非硬件加速CPU和GPU定义软件回退；生成类似于手动移植C++版本的基于GPU编程API的算法实现。生成的代码是可编辑和可读的，允许额外的硬件加速。我们的转换器支持单个巨核和多个内核路径跟踪实现，而不改变编程模型或输入源代码。波前模式对于NeRF和SDF至关重要，确保使用多个内核进行有效评估。对BVH树构建/遍历、SDF的光线曲面相交、3D高斯溅射的光线体积相交和复杂路径跟踪模型等任务的验证显示了与GPU的专家编写实现相当的性能水平。我们的技术优于现有的路径跟踪实现。\\
+titleTranslation: CrossRT：用于CG和CV应用中硬件加速光线跟踪的跨平台编程技术},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\KGC8FN7Q\\Frolov 等 - 2024 - CrossRT a cross platform programming technology for hardware-accelerated ray tracing in CG and CV a.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\9Y2HVKGC\\2409.html}
+}
+
+@article{kerblHierarchicalBucketQueuing2017,
+  title = {Hierarchical {{Bucket Queuing}} for {{Fine-Grained Priority Scheduling}} on the {{GPU}}},
+  author = {Kerbl, Bernhard and Kenzel, Michael and Schmalstieg, Dieter and Seidel, Hans-Peter and Steinberger, Markus},
+  year = 2017,
+  month = dec,
+  journal = {Computer Graphics Forum},
+  volume = {36},
+  number = {8},
+  pages = {232--246},
+  publisher = {John Wiley \& Sons, Ltd},
+  issn = {0167-7055},
+  doi = {10.1111/cgf.13075},
+  urldate = {2026-02-22},
+  abstract = {Abstract While the modern graphics processing unit (GPU) offers massive parallel compute power, the ability to influence the scheduling of these immense resources is severely limited. Therefore, the GPU is widely considered to be only suitable as an externally controlled co-processor for homogeneous workloads which greatly restricts the potential applications of GPU computing. To address this issue, we present a new method to achieve fine-grained priority scheduling on the GPU: hierarchical bucket queuing. By carefully distributing the workload among multiple queues and efficiently deciding which queue to draw work from next, we enable a variety of scheduling strategies. These strategies include fair-scheduling, earliest-deadline-first scheduling and user-defined dynamic priority scheduling. In a comparison with a sorting-based approach, we reveal the advantages of hierarchical bucket queuing over previous work. Finally, we demonstrate the benefits of using priority scheduling in real-world applications by example of path tracing and foveated micropolygon rendering.},
+  langid = {american},
+  keywords = {GPU queuing priority scheduling,I.3.1 [Computer Graphics]: Hardware Architecture-Parallel processing,parallel computing},
+  annotation = {abstractTranslation: 摘要现代图形处理器( Graphics Processing Unit，GPU )提供了强大的并行计算能力，但对这些巨大资源的调度能力却非常有限。因此，GPU被普遍认为只适合作为外部控制的协处理器处理同构的工作负载，这极大地限制了GPU计算的潜在应用。为了解决这个问题，我们提出了一种在GPU上实现细粒度优先级调度的新方法：分层桶排队。通过仔细分配多个队列之间的工作负载，并有效地决定下一个队列从哪个队列中提取工作，我们启用了多种调度策略。 这些策略包括公平性调度、最早截止期限优先调度调度和用户自定义动态优先级调度。在与基于排序的方法的比较中，我们揭示了分层桶排队相对于以前工作的优势。最后，我们通过路径跟踪和凹槽微多边形渲染的例子展示了在实际应用中使用优先级调度的好处。},
+  file = {C:\Users\EricPu\Zotero\storage\S8ZSKZYQ\Kerbl 等 - 2017 - Hierarchical Bucket Queuing for Fine-Grained Priority Scheduling on the GPU.pdf}
+}
+
+@inproceedings{laineMegakernelsConsideredHarmful2013,
+  title = {Megakernels Considered Harmful: Wavefront Path Tracing on {{GPUs}}},
+  shorttitle = {Megakernels Considered Harmful},
+  booktitle = {Proceedings of the 5th {{High-Performance Graphics Conference}}},
+  author = {Laine, Samuli and Karras, Tero and Aila, Timo},
+  year = 2013,
+  month = jul,
+  series = {{{HPG}} '13},
+  pages = {137--143},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/2492045.2492060},
+  urldate = {2026-02-21},
+  abstract = {When programming for GPUs, simply porting a large CPU program into an equally large GPU kernel is generally not a good approach. Due to SIMT execution model on GPUs, divergence in control flow carries substantial performance penalties, as does high register us-age that lessens the latency-hiding capability that is essential for the high-latency, high-bandwidth memory system of a GPU. In this paper, we implement a path tracer on a GPU using a wavefront formulation, avoiding these pitfalls that can be especially prominent when using materials that are expensive to evaluate. We compare our performance against the traditional megakernel approach, and demonstrate that the wavefront formulation is much better suited for real-world use cases where multiple complex materials are present in the scene.},
+  isbn = {978-1-4503-2135-8},
+  langid = {american},
+  annotation = {abstractTranslation: 在对GPU进行编程时，简单地将一个大的CPU程序移植到一个同样大的GPU内核中通常不是一个好的方法。由于GPU上的SIMT执行模型，控制流中的散度会带来严重的性能损失，高寄存器使用率也会降低延迟隐藏能力，这对于GPU的高延迟、高带宽存储系统来说是必不可少的。在本文中，我们使用波前公式在GPU上实现了路径示踪器，避免了使用昂贵的材料进行评估时可能会特别突出的这些缺陷。 我们将我们的性能与传统的巨核方法进行了比较，并证明了波前公式更适合于场景中存在多种复杂材料的实际应用。},
+  file = {C:\Users\EricPu\Zotero\storage\7AT634MM\Laine 等 - 2013 - Megakernels considered harmful wavefront path tracing on GPUs.pdf}
+}
+
+@misc{teodoroEfficientIrregularWavefront2012,
+  title = {Efficient Irregular Wavefront Propagation Algorithms on Hybrid {{CPU-GPU}} Machines},
+  author = {Teodoro, George and Pan, Tony and Kurc, Tahsin and Kong, Jun and Cooper, Lee and Saltz, Joel},
+  year = 2012,
+  month = sep,
+  number = {arXiv:1209.3314},
+  eprint = {1209.3314},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.1209.3314},
+  urldate = {2026-02-27},
+  abstract = {In this paper, we address the problem of efficient execution of a computation pattern, referred to here as the irregular wavefront propagation pattern (IWPP), on hybrid systems with multiple CPUs and GPUs. The IWPP is common in several image processing operations. In the IWPP, data elements in the wavefront propagate waves to their neighboring elements on a grid if a propagation condition is satisfied. Elements receiving the propagated waves become part of the wavefront. This pattern results in irregular data accesses and computations. We develop and evaluate strategies for efficient computation and propagation of wavefronts using a multi-level queue structure. This queue structure improves the utilization of fast memories in a GPU and reduces synchronization overheads. We also develop a tile-based parallelization strategy to support execution on multiple CPUs and GPUs. We evaluate our approaches on a state-of-the-art GPU accelerated machine (equipped with 3 GPUs and 2 multicore CPUs) using the IWPP implementations of two widely used image processing operations: morphological reconstruction and euclidean distance transform. Our results show significant performance improvements on GPUs. The use of multiple CPUs and GPUs cooperatively attains speedups of 50x and 85x with respect to single core CPU executions for morphological reconstruction and euclidean distance transform, respectively.},
+  archiveprefix = {arXiv},
+  langid = {english},
+  keywords = {Computer Science - Data Structures and Algorithms,Computer Science - Distributed Parallel and Cluster Computing},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\UZFA5TSY\\Teodoro 等 - 2012 - Efficient irregular wavefront propagation algorithms on hybrid CPU-GPU machines.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\ITWUNNYG\\1209.html}
+}
+
+@inproceedings{troendleSpecializedConcurrentQueue2019,
+  title = {A Specialized Concurrent Queue for Scheduling Irregular Workloads on {{GPUs}}},
+  booktitle = {Proceedings of the 48th {{International Conference}} on {{Parallel Processing}}},
+  author = {Troendle, David and Ta, Tuan and Jang, Byunghyun},
+  year = 2019,
+  month = aug,
+  series = {{{ICPP}} '19},
+  pages = {1--11},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/3337821.3337837},
+  urldate = {2026-02-21},
+  abstract = {The persistent thread model offers a viable solution for accelerating data-irregular workloads on Graphic Processing Units (GPUs). However, as the number of active threads increases, contention and retries on shared resources limit the efficiency of task scheduling among the persistent threads. To address this, we propose a highly scalable, non-blocking concurrent queue suitable for use as a GPU persistent thread task scheduler. The proposed concurrent queue has two novel properties: 1) The supporting enqueue/dequeue queue operations never suffer from retry overhead because the atomic operation does not fail and the queue empty exception has been refactored; and 2) The queue operates on an arbitrary number of queue entries for the same cost as a single entry. A proxy thread in each thread group performs all atomic operations on behalf of all threads in the group. These two novel properties substantially reduce thread contention caused by the GPU's lock-step Single Instruction Multiple Threads (SIMT) execution model.To demonstrate the performance and scalability of the proposed queue, we implemented a top-down Breadth First Search (BFS) based on the persistent thread model using 1) the proposed concurrent queue, and 2) two traditional concurrent queues; and analyzed its performance and scalability characteristics under different input graph datasets and hardware configurations. Our experiments show that the BFS implementation based on our proposed queue outperforms not only ones based on traditional queues but also the state-of-the-art BFS implementations found in the literature by a minimum of 1.26\texttimes{} and maximum of 36.23\texttimes. We also observed the scalability of our proposed queue is within 10\% of the ideal linear speedup for up to the maximum number of threads supported by high-end discrete GPUs (14K threads in our experiment).},
+  isbn = {978-1-4503-6295-5},
+  langid = {english},
+  annotation = {abstractTranslation: 持久线程模型为加速图形处理单元（GPU）上的数据不规则工作负载提供了一种可行的解决方案。然而，随着活动线程数量的增加，共享资源上的争用和重试限制了持久线程之间任务调度的效率。为了解决这个问题，我们提出了一个高度可扩展、无阻塞的并发队列，适合用作GPU持久线程任务调度器。该并发队列具有两个新的特性：1）支持的排队/出列队列操作从不遭受重试开销，因为原子操作不会失败，并且队列空异常已经被重构；和2）队列以与单个条目相同的成本对任意数量的队列条目进行操作。每个线程组中的代理线程代表组中的所有线程执行所有原子操作。这两个新颖的属性大大减少了GPU的锁步单指令多线程（SIMT）执行模型引起的线程争用。为了证明所提队列的性能和可扩展性，我们使用1）所提并发队列，2）两个传统的并发队列，实现了一个基于持久线程模型的自顶向下宽度优先搜索（BFS）；并分析了其在不同输入图数据集和硬件配置下的性能和可扩展性特征。我们的实验表明，基于我们提出的队列的BFS实现不仅比基于传统队列的实现好，而且比文献中发现的最新BFS实现好1.26倍，最大36.23倍。我们还观察到，对于高端离散GPU支持的最大线程数（在我们的实验中为14K个线程），我们建议的队列的可扩展性在理想线性加速比的10\%以内。\\
+titleTranslation: 用于在GPU上调度不规则工作负载的专用并发队列},
+  file = {C:\Users\EricPu\Zotero\storage\29JZHAFR\Troendle 等 - 2019 - A specialized concurrent queue for scheduling irregular workloads on GPUs.pdf}
+}
+
+@article{wuAdaptiveGridbasedConfidence2017,
+  title = {Adaptive Grid-Based Confidence Assessment for Synthetic Optoelectronic Images by Physical Reasonable Infrared Scene Simulation Engine ({{PRISSE}})},
+  author = {Wu, Xin and Sun, Hao and Ma, Xiangchao and Wang, Yucheng and Han, Yiping},
+  year = 2017,
+  month = sep,
+  journal = {Infrared Physics and Technology},
+  volume = {85},
+  pages = {324--334},
+  issn = {1350-4495},
+  doi = {10.1016/j.infrared.2017.07.011},
+  urldate = {2025-05-21},
+  abstract = {Like visible spectrum, synthetic infrared scenes reflect the invisible world of infrared features. Propagation of a typical infrared radiation involves a variety of sources of different sizes, shapes, intensities, roughness, temperature, etc., all of which would impose impacts on the fidelity of the synthetic images. Assessing the confidence of a synthetic infrared scene is therefore not so intuitive as evaluating the quality of a visible image. An adaptive grid-based method is proposed in this paper for similarity assessments between synthetic infrared images and the corresponding real infrared images, which is on a grid-by-grid basis. Different from many traditional methods, each grid in our work is weighted by a value that is simulated by a 2D Gamma distribution. Introducing adaptive grids and exerting a weighting value on each grid are the aspects of our method. To investigate the effectiveness of our method, an experiment was conducted for taking real mid-wavelength infrared (MWIR) images, and the corresponding synthetic MWIR images were simulated by Physical Reasonable Infrared Scene Simulation Engine (PRISSE). The confidence of similarity assessments evaluated by our method is then compared to some popularly-used traditional assessment methods.},
+  langid = {english},
+  keywords = {Adaptive grid,Confidence assessment,Image processing,PRISSE,Synthetic infrared images},
+  annotation = {TLDR: An adaptive grid-based method is proposed in this paper for similarity assessments between synthetic infrared images and the corresponding real infrared images, which is on a grid-by-grid basis and is compared to some popularly-used traditional assessment methods.\\
+abstractTranslation: 与可见光谱一样，合成红外场景反映了红外特征的不可见世界。典型红外辐射的传播涉及各种大小、形状、强度、粗糙度、温度等不同的源，所有这些都会对合成图像的保真度产生影响。因此，评估合成红外场景的可信度不如评估可见图像的质量直观。提出了一种基于自适应网格的合成红外图像与对应的真实红外图像的相似性评估方法，该方法是在逐网格的基础上进行的。与许多传统方法不同，我们工作中的每个网格都由由2D Gamma分布模拟的值加权。引入自适应网格并在每个网格上施加权重值是我们方法的方面。为了研究该方法的有效性，对真实的中波长红外（MWIR）图像进行了实验，并使用物理合理红外场景模拟引擎（PRISSE）对相应的合成MWIR图像进行了模拟。然后将我们的方法评估的相似性评估的置信度与一些常用的传统评估方法进行比较。},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\DM4ZKDNT\\Wu 等 - 2017 - Adaptive grid-based confidence assessment for synthetic optoelectronic images by physical reasonable.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\F2BIMXQQ\\S1350449517301986.html}
+}
+
+@phdthesis{YangMengDiHongWaiFangZhenTuXiangZhiLiangPingJieFangFaYanJiu2023,
+  type = {{硕士学位论文}},
+  title = {{红外仿真图像质量评价方法研究}},
+  author = {{杨梦迪}},
+  year = 2023,
+  address = {西安},
+  doi = {10.27389/d.cnki.gxadu.2023.002404},
+  urldate = {2026-02-04},
+  abstract = {随着科技的不断发展,红外场景仿真技术日益成熟起来。在红外图像短缺的情况下,红外仿真图像在越来越多的应用中发挥着重要作用。然而不同的仿真平台生成的红外仿真图像存在着差异,而针对不同的需求也需要不同类型的红外仿真图像。同时,随着红外仿真图像在军事领域发挥着重要作用,对于红外仿真图像目标内容的真实性也有了较高的要求。此时如何挑选衡量红外仿真图像就显得举足轻重。但是目前国内外针对红外仿真图像质量评价并未形成统一的标准,同时在仿真过程中容易出现各种复杂性的问题,对于仿真系统和仿真图像并未存在合适的验证方法,使得红外仿真图像质量评价领域发展缓慢。因此本文通过总结和分析前人的研究成果,参考可见光图像质量评价方法和卷积神经网络在图像质量评价领域的经验,提出了三种方法对红外仿真图像的质量进行评价,为以后红外仿真图像质量评价领域提供了新的思路。本文主要的研究内容包括以下方面:第一,针对红外场景仿真技术和红外仿真图像质量评价的国内外研究现状进行了详细的总结分析。同时阐述了现有的主客观图像质量评价方法和常用评价指标,并且详细介绍了卷积神经网络原理和相关网络模型。第二,分析了图像质量评价方法在红外仿真图像质量评价上的应用,从目标逼真度的角度选取了多个图像质量评价方法对红外仿真图像进行计算提取特征,并进行了详细分析,接着使用机器学习模型对提取到的特征值和主观质量评价值进行相关映射,最终得到红外仿真图像符合人类认知的综合质量评价值,并且设计了一系列实验验证方法的有效性。第三,从光谱相似的角度对红外仿真图像进行质量评价,分别从二元光谱相似度和多元图像光谱相似度的角度来研究红外仿真图像光谱特性,并且通过设计实验验证了方法的有效性,为以后红外仿真图像质量评价领域提供了新的思路。第四,详细分析了人类视觉敏感度在红外仿真图像质量评价中的优势,并实现了基于卷积神经网络的红外仿真图像质量评价方法。该模型使用最基础的卷积神经网络与人类视觉敏感度相结合,通过多次实验对比完善卷积神经网络模型,得到了符合人类视觉认知的红外仿真图像质量评价方法,并且通过设计对照实验验证了模型的有效性。},
+  collaborator = {{韩亮} and {张兴国}},
+  langid = {chinese},
+  school = {西安电子科技大学},
+  annotation = {album: 信息科技\\
+CLC: TP391.41;TN219\\
+dbcode: CMFD\\
+dbname: CMFD202501\\
+download: 181\\
+filename: 1024464177.nh\\
+major: 工程硕士（专业学位）},
+  file = {C:\Users\EricPu\Zotero\storage\RNSTVHL3\杨梦迪 - 2023 - 红外仿真图像质量评价方法研究.pdf}
+}

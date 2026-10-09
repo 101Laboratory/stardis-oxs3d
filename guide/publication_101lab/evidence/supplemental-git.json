@@ -1,0 +1,37 @@
+{
+  "stash": {
+    "ok": true,
+    "text": "stash@{0} aa3050f9d346de8e49ab4e17e20d68ba8ac2c2df On opt/merge-phase: GPU_PP work in progress (before reset to ec873d2)\nstash@{1} 4d33cbaa435457757c9d10fef4c69a017635f271 On opt/merge-phase: WIP: PCIe overlap instrumentation events + query API",
+    "error": ""
+  },
+  "local_unpushed": {
+    "ok": true,
+    "text": "407766c Add detailed property conflict diagnostics in validate_properties",
+    "error": ""
+  },
+  "branches_not_in_main": {
+    "ok": true,
+    "text": "+ opt/o14-partition",
+    "error": ""
+  },
+  "candidate_compare": {
+    "ok": true,
+    "text": "407766c Add detailed property conflict diagnostics in validate_properties",
+    "error": ""
+  },
+  "main_diff": {
+    "ok": true,
+    "text": "stardis/0.12/src/stardis-app.c | 55 +++++++++++++++++++++++++++++++++++++++++-\n 1 file changed, 54 insertions(+), 1 deletion(-)",
+    "error": ""
+  },
+  "tracked_thesis_outputs": {
+    "ok": true,
+    "text": "Figures/CoupledPath.pdf\nFigures/Coupled_Path/CoupledPath.pdf\nFigures/Coupled_Path_Meta_SM/CPML.pdf\nFigures/ThesisArch/ThesisArch.pdf\nMainBody.xdv\nMainBody_0515.pdf\nMainBody_approval.xdv\nMainBody_approval_0515.pdf\nReference Document/1-3 《研究生学位论文规范写作指南》.pdf\n蒲昱岐_2023223045139_基于路径追踪的混合架构耦合热输运红外仿真算法.pdf",
+    "error": ""
+  },
+  "template_diff": {
+    "ok": true,
+    "text": "gbt7714-numerical.bst | 10 ++--------\n 1 file changed, 2 insertions(+), 8 deletions(-)",
+    "error": ""
+  }
+}

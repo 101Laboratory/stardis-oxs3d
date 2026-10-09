@@ -1,0 +1,137 @@
+{
+  "release_tag": "research-archive-2026-10-09",
+  "base_url": "https://github.com/101Laboratory/stardis-oxs3d/releases/download/research-archive-2026-10-09/",
+  "packages": [
+    {
+      "id": "Stardis-Starter-Pack",
+      "format": "concatenated gzip tar volumes",
+      "parts": [
+        {
+          "name": "Stardis-Starter-Pack.tar.gz.part001",
+          "bytes": 41158303,
+          "sha256": "8520d31159730f57269c10c0aedeac896136509ca8110e93e47d4ee7d983ee06"
+        }
+      ],
+      "files": 101,
+      "raw_bytes": 351666595
+    },
+    {
+      "id": "cuda-duplex-validation",
+      "format": "concatenated gzip tar volumes",
+      "parts": [
+        {
+          "name": "cuda-duplex-validation.tar.gz.part001",
+          "bytes": 61310809,
+          "sha256": "3eff09bb658ea751ebef8bd4d4ba05391982a64e5acc2fff5aec0f9b2c12d232"
+        }
+      ],
+      "files": 8,
+      "raw_bytes": 84788771
+    },
+    {
+      "id": "debug_issues",
+      "format": "concatenated gzip tar volumes",
+      "parts": [
+        {
+          "name": "debug_issues.tar.gz.part001",
+          "bytes": 536870912,
+          "sha256": "8cd2faff43f74a0f4d027b375d0f7ec9143651b86caff101f6cc7a7559c07807"
+        },
+        {
+          "name": "debug_issues.tar.gz.part002",
+          "bytes": 536870912,
+          "sha256": "516174cfffc8fd949c184857b60cc212ee04d99957be365b2e085e295c9bbe4f"
+        },
+        {
+          "name": "debug_issues.tar.gz.part003",
+          "bytes": 403312411,
+          "sha256": "819c1e86674e800fd3570b5e6adfe077148b75531ad195ccc654d99151c3e277"
+        }
+      ],
+      "files": 5,
+      "raw_bytes": 4003320418
+    },
+    {
+      "id": "optimization",
+      "format": "concatenated gzip tar volumes",
+      "parts": [
+        {
+          "name": "optimization.tar.gz.part001",
+          "bytes": 8320572,
+          "sha256": "f912ac98bec7294c7ef2f87495b3d232b09393b7459ad9471277799a8afc0859"
+        }
+      ],
+      "files": 26,
+      "raw_bytes": 56441688
+    },
+    {
+      "id": "perf_diag",
+      "format": "concatenated gzip tar volumes",
+      "parts": [
+        {
+          "name": "perf_diag.tar.gz.part001",
+          "bytes": 18646469,
+          "sha256": "94bd42bb93cbe1db92e5866007158b0894524a329f182e8a3b118ceef31246a7"
+        }
+      ],
+      "files": 4,
+      "raw_bytes": 41611208
+    },
+    {
+      "id": "profiling",
+      "format": "concatenated gzip tar volumes",
+      "parts": [
+        {
+          "name": "profiling.tar.gz.part001",
+          "bytes": 536870912,
+          "sha256": "134a11850cd49c695360f557f9445f94f81eedebbb1af593d92aefee59a4427d"
+        },
+        {
+          "name": "profiling.tar.gz.part002",
+          "bytes": 536870912,
+          "sha256": "d482b9dddf8f7f2214e71166705dceca52baff6f7b281df90e46f7276e60fe4f"
+        },
+        {
+          "name": "profiling.tar.gz.part003",
+          "bytes": 536870912,
+          "sha256": "c9d58048d9d74420a0b2ef6e58d7e82bb6d220e07c9513a34c7626b347b2fe36"
+        },
+        {
+          "name": "profiling.tar.gz.part004",
+          "bytes": 536870912,
+          "sha256": "9cded91c40bbbe699abad896a94b98a501467702c50e8f5392b02f493252de56"
+        },
+        {
+          "name": "profiling.tar.gz.part005",
+          "bytes": 536870912,
+          "sha256": "b0891a6f7a17aa85ee63a867afe848f5871c156b046752aa6a09a4c8427e3260"
+        },
+        {
+          "name": "profiling.tar.gz.part006",
+          "bytes": 536870912,
+          "sha256": "30220c6b2f12a34f72799475ef284afbfdb3d164acd7840d5c2b2ddd5cf3047b"
+        },
+        {
+          "name": "profiling.tar.gz.part007",
+          "bytes": 419407804,
+          "sha256": "fa003d3474132faa76ac27124c18b9e79b976eccc8a6d2fb623aef3d032eb08d"
+        }
+      ],
+      "files": 2766,
+      "raw_bytes": 13867650116
+    },
+    {
+      "id": "thesis-materials",
+      "format": "concatenated gzip tar volumes",
+      "parts": [
+        {
+          "name": "thesis-materials.tar.gz.part001",
+          "bytes": 11461922,
+          "sha256": "35e1660c4c7fb9af59f52a7f2bd6742ade12308aaec452a25e42175d91551e1f"
+        }
+      ],
+      "files": 71,
+      "raw_bytes": 13147956
+    }
+  ]
+}

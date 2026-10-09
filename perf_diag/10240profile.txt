@@ -1,0 +1,12 @@
+message: persistent_wavefront DONE: 320x320 spp=32 pool=10240 elapsed=45 mins 40 secs 113 msecs 664 usecs 500 nsecs  steps=494152  rays=3383092008  avg_width=6142.8  (rad=3338953 cond_ds=2304915948 ds_retry=7776752)  done: rad=2703463 temp=5690 bnd=561259 fail=6388  max_depth=467682
+message: persistent wavefront summary:
+  total_steps=494152  total_rays=3383092008  avg_wavefront_width=6142.8
+  refill_phase: rays=3175996559 (98.3%)  wall=2577.008s
+  drain_phase:  rays=207095449 (1.7%)  steps=202848  wall=163.106s
+  batch_size: min=1, max=50497
+  ray_buckets: radiative=3338953, step_pair=2304915948, shadow=0, startup=0
+  paths: completed=3276800, failed=6388, truncated=0, max_depth=467682
+  refills=3266560
+  timing: compact=60.368s  collect=178.452s  trace=1136.835s  distribute=319.359s  cascade=886.515s  harvest+refill=83.830s
+message: Initialisation time = 228 msecs
+message: Computation time = 45 mins 40 secs 172 msecs

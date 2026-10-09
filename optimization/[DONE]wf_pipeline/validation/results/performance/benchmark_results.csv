@@ -1,0 +1,5 @@
+﻿pool_size,mode,run,elapsed_s
+4096,serial,1,296.2131286
+4096,serial,2,297.5218501
+4096,serial,3,298.2209092
+4096,pipeline,1,302.6732565

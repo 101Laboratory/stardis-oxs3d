@@ -1,0 +1,22 @@
+EmbreeAPI,Category,cuBQLEquivalent,Notes
+rtcNewDevice,Lifecycle,N/A,CUDA context managed externally
+rtcReleaseDevice,Lifecycle,N/A,CUDA context managed externally
+rtcNewScene,Lifecycle,cubql::TwoLevelBVH / BVH,Scene represented as TLAS/BLAS
+rtcReleaseScene,Lifecycle,Destroy BVH object,Explicit free of GPU memory
+rtcNewGeometry,Lifecycle,Primitive array + BVH build,Geometry baked into BVH
+rtcAttachGeometry,Lifecycle,Add BLAS to TLAS,Requires rebuild
+rtcDetachGeometry,Lifecycle,Remove BLAS,Requires rebuild
+rtcCommitGeometry,Lifecycle,BVH rebuild,No incremental refit
+rtcCommitScene,Lifecycle,TLAS rebuild,Whole scene rebuild
+RTCRay,Query,cubql::Ray,Fields map directly
+RTCRayHit,Query,cubql hit record,Custom struct required
+rtcIntersect1,Query,shrinkingRayQuery,Closest-hit traversal
+rtcOccluded1,Query,shrinkingRayQuery + early exit,Use terminate traversal
+rtcSetGeometryUserData,Semantic,lambda capture,User data via lambda capture
+rtcSetGeometryIntersectFunction,Semantic,device lambda intersect,Inline lambda
+rtcSetGeometryBoundsFunction,Semantic,AABB array,Precomputed bounds
+rtcSetGeometryIntersectFilterFunction,Semantic,Traversal control return,Use CONTINUE/TERMINATE
+RTC_GEOMETRY_TYPE_USER,Semantic,Procedural Primitive,User-defined primitive
+RTC_BUILD_QUALITY_LOW,Build,BuildConfig::SPATIAL_MEDIAN,Fast build
+RTC_BUILD_QUALITY_MEDIUM,Build,BuildConfig::SAH,Balanced
+RTC_BUILD_QUALITY_HIGH,Build,BuildConfig::ELH,High quality

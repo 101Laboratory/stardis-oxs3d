@@ -1,0 +1,883 @@
+message: MPI is disabled.
+message: Using 32 threads.
+message: Read file 'S_FOAM.stl': 12998 triangles found.
+message: Read file 'S_PLATE.stl': 12 triangles found.
+message: External fluid created: T=300 (it is medium 2)
+message: Read file 'B_LAT.stl': 12994 triangles found.
+message: Dummy fluid created: (it is medium 3)
+message: Read file 'B_T0.stl': 2 triangles found.
+message: Read file 'B_T1.stl': 2 triangles found.
+message: External fluid created: T=300 (it is medium 4)
+message: Read file 'B_HPLATE.stl': 12 triangles found.
+message: Scaling factor is 1
+message: Trad is 680, Trad reference is 800
+message: System Tref range is [300 850]
+message: Picard order is 1
+message: Read 13010 unique triangles.
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+warning: User delta for solid 'FOAM' seems too big: 0.0002; auto delta would have set it to 5.76629e-05.
+message: Description 0: Solid 'FOAM': lambda=237 rho=2700 cp=890 delta=0.0002 Tinit=800 (it is medium 0)
+message: Auto delta for solid 'PLATE' set to 0.000816993
+message: Description 1: Solid 'PLATE': lambda=1 rho=2700 cp=890 delta=0.000816993 Tinit=700 Temp=700 (it is medium 1)
+message: Description 2: H boundary for solid 'LAT': ref_temperature=300 emissivity=0.9 specular_fraction=0.5 hc=0 T=300 (using medium 2 as external medium)
+message: Description 3: T boundary for solid 'T0': T=750 (using medium 3 as external medium)
+message: Description 4: T boundary for solid 'T1': T=850 (using medium 3 as external medium)
+message: Description 5: H boundary for solid 'HPLATE': ref_temperature=300 emissivity=0.8 specular_fraction=0.8 hc=0 T=300 (using medium 4 as external medium)
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+message: Rendering:   0%message: Persistent wavefront solver enabled (Phase B-3).
+message: Persistent wavefront (Phase B-3 M3): 320x320 spp=32, per_view_size=16384 (SM=128), total_tasks=3276800
+message: Cascade OMP: ENABLED, threads=32 (STARDIS_CASCADE_OMP=<unset,default=1>)
+message: persistent_wavefront: dual-buffer pipeline, view_size=16384, views[0].capacity=32768, views[1].capacity=16384
+message: persistent_wavefront: 32768 paths initialised (32768/3276800 tasks consumed), starting wavefront loop
+message: pipeline: starting dual-buffer mode (O13 async submit), half=16384
+message: O11_STARTUP A pre-merge: active=16384 need_ray=0 done=0
+message: O11_STARTUP A post-merge: active=16384 need_ray=0 done=0 rays=16384
+message: O11_STARTUP B pre-merge: active=16384 need_ray=0 done=0
+message: O11_STARTUP B post-merge: active=16384 need_ray=0 done=0 rays=16384
+message: Rendering:   1%message: persistent_wavefront pipeline step 1 [A]: 32768/32768 active, 0 rays (rad=0 ds=0 shd=0 enc=0 st=0), 16384/3276800 tasks done, refill
+message: Rendering:   2%message: Rendering:   3%message: Rendering:   4%message: Rendering:   5%message: Rendering:   6%message: Rendering:   7%message: Rendering:   8%message: Rendering:   9%message: Rendering:  10%message: Rendering:  11%message: Rendering:  12%message: Rendering:  13%message: Rendering:  14%message: Rendering:  15%message: Rendering:  16%message: Rendering:  17%message: Rendering:  18%message: Rendering:  19%message: Rendering:  20%message: Rendering:  21%message: Rendering:  22%message: Rendering:  23%message: Rendering:  24%message: Rendering:  25%message: Rendering:  26%message: persistent_wavefront pipeline step 1000 [B]: 32768/32768 active, 63872 rays (rad=0 ds=0 shd=0 enc=0 st=0), 846322/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 1001 [A]: 32768/32768 active, 66727 rays (rad=0 ds=0 shd=0 enc=0 st=0), 846332/3276800 tasks done, refill
+message: Rendering:  27%message: persistent_wavefront pipeline step 2000 [B]: 32768/32768 active, 64295 rays (rad=0 ds=0 shd=0 enc=0 st=0), 870707/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 2001 [A]: 32768/32768 active, 65034 rays (rad=0 ds=0 shd=0 enc=0 st=0), 870715/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 3000 [B]: 32768/32768 active, 64480 rays (rad=0 ds=0 shd=0 enc=0 st=0), 877064/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 3001 [A]: 32768/32768 active, 64611 rays (rad=0 ds=0 shd=0 enc=0 st=0), 877065/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 4000 [B]: 32768/32768 active, 64529 rays (rad=0 ds=0 shd=0 enc=0 st=0), 879794/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 4001 [A]: 32768/32768 active, 64520 rays (rad=0 ds=0 shd=0 enc=0 st=0), 879797/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 5000 [B]: 32768/32768 active, 65002 rays (rad=0 ds=0 shd=0 enc=0 st=0), 882227/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 5001 [A]: 32768/32768 active, 64458 rays (rad=0 ds=0 shd=0 enc=0 st=0), 882229/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 6000 [B]: 32768/32768 active, 64616 rays (rad=0 ds=0 shd=0 enc=0 st=0), 884135/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 6001 [A]: 32768/32768 active, 64576 rays (rad=0 ds=0 shd=0 enc=0 st=0), 884136/3276800 tasks done, refill
+message: Rendering:  28%message: Rendering:  29%message: persistent_wavefront pipeline step 7000 [B]: 32768/32768 active, 63942 rays (rad=0 ds=0 shd=0 enc=0 st=0), 959753/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 7001 [A]: 32768/32768 active, 64476 rays (rad=0 ds=0 shd=0 enc=0 st=0), 959797/3276800 tasks done, refill
+message: Rendering:  30%message: persistent_wavefront pipeline step 8000 [B]: 32768/32768 active, 64498 rays (rad=0 ds=0 shd=0 enc=0 st=0), 968286/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 8001 [A]: 32768/32768 active, 64756 rays (rad=0 ds=0 shd=0 enc=0 st=0), 968287/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 9000 [B]: 32768/32768 active, 64986 rays (rad=0 ds=0 shd=0 enc=0 st=0), 970326/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 9001 [A]: 32768/32768 active, 64361 rays (rad=0 ds=0 shd=0 enc=0 st=0), 970327/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 10000 [B]: 32768/32768 active, 64434 rays (rad=0 ds=0 shd=0 enc=0 st=0), 973327/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 10001 [A]: 32768/32768 active, 64821 rays (rad=0 ds=0 shd=0 enc=0 st=0), 973329/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 11000 [B]: 32768/32768 active, 64382 rays (rad=0 ds=0 shd=0 enc=0 st=0), 976194/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 11001 [A]: 32768/32768 active, 65419 rays (rad=0 ds=0 shd=0 enc=0 st=0), 976196/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 12000 [B]: 32768/32768 active, 64167 rays (rad=0 ds=0 shd=0 enc=0 st=0), 978335/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 12001 [A]: 32768/32768 active, 64795 rays (rad=0 ds=0 shd=0 enc=0 st=0), 978337/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 13000 [B]: 32768/32768 active, 63896 rays (rad=0 ds=0 shd=0 enc=0 st=0), 988157/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 13001 [A]: 32768/32768 active, 63934 rays (rad=0 ds=0 shd=0 enc=0 st=0), 988250/3276800 tasks done, refill
+message: Rendering:  31%message: persistent_wavefront pipeline step 14000 [B]: 32768/32768 active, 64981 rays (rad=0 ds=0 shd=0 enc=0 st=0), 999752/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 14001 [A]: 32768/32768 active, 64509 rays (rad=0 ds=0 shd=0 enc=0 st=0), 999758/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 15000 [B]: 32768/32768 active, 64427 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1004631/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 15001 [A]: 32768/32768 active, 65084 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1004635/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 16000 [B]: 32768/32768 active, 64745 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1010677/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 16001 [A]: 32768/32768 active, 64480 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1010684/3276800 tasks done, refill
+message: Rendering:  32%message: Rendering:  33%message: persistent_wavefront pipeline step 17000 [B]: 32768/32768 active, 64805 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1081400/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 17001 [A]: 32768/32768 active, 64816 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1081425/3276800 tasks done, refill
+message: Rendering:  34%message: Rendering:  35%message: persistent_wavefront pipeline step 18000 [B]: 32768/32768 active, 64655 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1155656/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 18001 [A]: 32768/32768 active, 64863 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1155666/3276800 tasks done, refill
+message: Rendering:  36%message: persistent_wavefront pipeline step 19000 [B]: 32768/32768 active, 64377 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1164401/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 19001 [A]: 32768/32768 active, 64864 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1164409/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 20000 [B]: 32768/32768 active, 64777 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1174715/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 20001 [A]: 32768/32768 active, 64842 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1174719/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 21000 [B]: 32768/32768 active, 65044 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1183664/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 21001 [A]: 32768/32768 active, 64509 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1183674/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 22000 [B]: 32768/32768 active, 64554 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1190309/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 22001 [A]: 32768/32768 active, 64746 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1190322/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 23000 [B]: 32768/32768 active, 64612 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1194994/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 23001 [A]: 32768/32768 active, 64626 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1194997/3276800 tasks done, refill
+message: Rendering:  37%message: persistent_wavefront pipeline step 24000 [B]: 32768/32768 active, 64294 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1200108/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 24001 [A]: 32768/32768 active, 64487 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1200111/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 25000 [B]: 32768/32768 active, 64311 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1203465/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 25001 [A]: 32768/32768 active, 64635 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1203468/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 26000 [B]: 32768/32768 active, 64495 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1209187/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 26001 [A]: 32768/32768 active, 64921 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1209190/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 27000 [B]: 32768/32768 active, 65087 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1213112/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 27001 [A]: 32768/32768 active, 64861 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1213114/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 28000 [B]: 32768/32768 active, 64871 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1217933/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 28001 [A]: 32768/32768 active, 65088 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1217938/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 29000 [B]: 32768/32768 active, 65039 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1223769/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 29001 [A]: 32768/32768 active, 64468 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1223774/3276800 tasks done, refill
+message: Rendering:  38%message: persistent_wavefront pipeline step 30000 [B]: 32768/32768 active, 65081 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1229989/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 30001 [A]: 32768/32768 active, 64954 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1229995/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 31000 [B]: 32768/32768 active, 64787 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1238864/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 31001 [A]: 32768/32768 active, 64775 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1238875/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 32000 [B]: 32768/32768 active, 64881 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1246546/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 32001 [A]: 32768/32768 active, 64856 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1246556/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 33000 [B]: 32768/32768 active, 64818 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1254411/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 33001 [A]: 32768/32768 active, 64844 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1254415/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 34000 [B]: 32768/32768 active, 64990 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1259679/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 34001 [A]: 32768/32768 active, 64479 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1259687/3276800 tasks done, refill
+message: Rendering:  39%message: persistent_wavefront pipeline step 35000 [B]: 32768/32768 active, 65070 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1265089/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 35001 [A]: 32768/32768 active, 65057 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1265096/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 36000 [B]: 32768/32768 active, 64618 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1268819/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 36001 [A]: 32768/32768 active, 64672 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1268821/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 37000 [B]: 32768/32768 active, 64934 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1272866/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 37001 [A]: 32768/32768 active, 64922 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1272871/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 38000 [B]: 32768/32768 active, 64595 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1276133/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 38001 [A]: 32768/32768 active, 64236 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1276137/3276800 tasks done, refill
+message: Rendering:  40%message: persistent_wavefront pipeline step 39000 [B]: 32768/32768 active, 63789 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1295736/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 39001 [A]: 32768/32768 active, 64352 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1295827/3276800 tasks done, refill
+message: Rendering:  41%message: Rendering:  42%message: Rendering:  43%message: persistent_wavefront pipeline step 40000 [B]: 32768/32768 active, 64469 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1410930/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 40001 [A]: 32768/32768 active, 64368 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1410950/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 41000 [B]: 32768/32768 active, 64546 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1418219/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 41001 [A]: 32768/32768 active, 64862 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1418229/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 42000 [B]: 32768/32768 active, 64638 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1424340/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 42001 [A]: 32768/32768 active, 64690 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1424345/3276800 tasks done, refill
+message: Rendering:  44%message: persistent_wavefront pipeline step 43000 [B]: 32768/32768 active, 64425 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1443515/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 43001 [A]: 32768/32768 active, 64257 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1443559/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 44000 [B]: 32768/32768 active, 64542 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1451459/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 44001 [A]: 32768/32768 active, 65218 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1451463/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 45000 [B]: 32768/32768 active, 65062 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1457141/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 45001 [A]: 32768/32768 active, 64978 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1457145/3276800 tasks done, refill
+message: Rendering:  45%message: persistent_wavefront pipeline step 46000 [B]: 32768/32768 active, 64757 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1466590/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 46001 [A]: 32768/32768 active, 64251 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1466613/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 47000 [B]: 32768/32768 active, 64800 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1485567/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 47001 [A]: 32768/32768 active, 64202 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1485600/3276800 tasks done, refill
+message: Rendering:  46%message: persistent_wavefront pipeline step 48000 [B]: 32768/32768 active, 64315 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1512466/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 48001 [A]: 32768/32768 active, 64557 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1512500/3276800 tasks done, refill
+message: Rendering:  47%message: persistent_wavefront pipeline step 49000 [B]: 32768/32768 active, 64322 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1538876/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 49001 [A]: 32768/32768 active, 64866 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1538902/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 50000 [B]: 32768/32768 active, 64825 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1543841/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 50001 [A]: 32768/32768 active, 64687 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1543844/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 51000 [B]: 32768/32768 active, 64685 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1547180/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 51001 [A]: 32768/32768 active, 64709 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1547187/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 52000 [B]: 32768/32768 active, 64791 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1549823/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 52001 [A]: 32768/32768 active, 64721 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1549824/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 53000 [B]: 32768/32768 active, 64518 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1552150/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 53001 [A]: 32768/32768 active, 64964 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1552151/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 54000 [B]: 32768/32768 active, 64787 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1554055/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 54001 [A]: 32768/32768 active, 64316 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1554060/3276800 tasks done, refill
+message: Rendering:  48%message: persistent_wavefront pipeline step 55000 [B]: 32768/32768 active, 64772 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1556529/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 55001 [A]: 32768/32768 active, 64518 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1556530/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 56000 [B]: 32768/32768 active, 64627 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1558589/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 56001 [A]: 32768/32768 active, 64288 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1558591/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 57000 [B]: 32768/32768 active, 64852 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1560586/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 57001 [A]: 32768/32768 active, 64591 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1560597/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 58000 [B]: 32768/32768 active, 65051 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1562682/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 58001 [A]: 32768/32768 active, 64723 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1562682/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 59000 [B]: 32768/32768 active, 64700 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1564757/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 59001 [A]: 32768/32768 active, 64643 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1564757/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 60000 [B]: 32768/32768 active, 64585 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1569378/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 60001 [A]: 32768/32768 active, 64535 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1569385/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 61000 [B]: 32768/32768 active, 64688 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1571127/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 61001 [A]: 32768/32768 active, 64594 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1571127/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 62000 [B]: 32768/32768 active, 64948 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1573868/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 62001 [A]: 32768/32768 active, 64765 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1573868/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 63000 [B]: 32768/32768 active, 64765 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1575844/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 63001 [A]: 32768/32768 active, 64564 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1575845/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 64000 [B]: 32768/32768 active, 64974 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1577610/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 64001 [A]: 32768/32768 active, 65007 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1577610/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 65000 [B]: 32768/32768 active, 65033 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1579706/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 65001 [A]: 32768/32768 active, 64852 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1579708/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 66000 [B]: 32768/32768 active, 64783 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1581726/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 66001 [A]: 32768/32768 active, 64425 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1581727/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 67000 [B]: 32768/32768 active, 64727 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1583811/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 67001 [A]: 32768/32768 active, 64641 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1583812/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 68000 [B]: 32768/32768 active, 64533 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1585635/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 68001 [A]: 32768/32768 active, 65105 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1585636/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 69000 [B]: 32768/32768 active, 64937 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1587980/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 69001 [A]: 32768/32768 active, 64690 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1587980/3276800 tasks done, refill
+message: Rendering:  49%message: persistent_wavefront pipeline step 70000 [B]: 32768/32768 active, 64786 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1590101/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 70001 [A]: 32768/32768 active, 64480 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1590122/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 71000 [B]: 32768/32768 active, 64540 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1594039/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 71001 [A]: 32768/32768 active, 64483 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1594041/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 72000 [B]: 32768/32768 active, 64833 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1596881/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 72001 [A]: 32768/32768 active, 64838 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1596882/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 73000 [B]: 32768/32768 active, 64979 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1598722/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 73001 [A]: 32768/32768 active, 64720 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1598724/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 74000 [B]: 32768/32768 active, 64450 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1600692/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 74001 [A]: 32768/32768 active, 64616 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1600694/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 75000 [B]: 32768/32768 active, 64614 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1603108/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 75001 [A]: 32768/32768 active, 64554 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1603111/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 76000 [B]: 32768/32768 active, 64293 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1605100/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 76001 [A]: 32768/32768 active, 64577 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1605102/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 77000 [B]: 32768/32768 active, 64483 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1606984/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 77001 [A]: 32768/32768 active, 64166 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1606987/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 78000 [B]: 32768/32768 active, 64536 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1608925/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 78001 [A]: 32768/32768 active, 64576 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1608929/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 79000 [B]: 32768/32768 active, 64585 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1611490/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 79001 [A]: 32768/32768 active, 64661 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1611490/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 80000 [B]: 32768/32768 active, 64536 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1613533/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 80001 [A]: 32768/32768 active, 64562 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1613534/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 81000 [B]: 32768/32768 active, 64927 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1615857/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 81001 [A]: 32768/32768 active, 64680 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1615857/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 82000 [B]: 32768/32768 active, 64761 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1619524/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 82001 [A]: 32768/32768 active, 64177 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1619530/3276800 tasks done, refill
+message: Rendering:  50%message: persistent_wavefront pipeline step 83000 [B]: 32768/32768 active, 64818 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1622398/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 83001 [A]: 32768/32768 active, 64389 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1622399/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 84000 [B]: 32768/32768 active, 64385 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1624777/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 84001 [A]: 32768/32768 active, 64764 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1624778/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 85000 [B]: 32768/32768 active, 64739 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1626723/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 85001 [A]: 32768/32768 active, 64872 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1626726/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 86000 [B]: 32768/32768 active, 64804 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1628955/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 86001 [A]: 32768/32768 active, 64578 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1628958/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 87000 [B]: 32768/32768 active, 64622 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1630939/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 87001 [A]: 32768/32768 active, 64418 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1630945/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 88000 [B]: 32768/32768 active, 64868 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1633253/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 88001 [A]: 32768/32768 active, 64702 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1633255/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 89000 [B]: 32768/32768 active, 64693 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1635023/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 89001 [A]: 32768/32768 active, 64676 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1635027/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 90000 [B]: 32768/32768 active, 64449 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1637113/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 90001 [A]: 32768/32768 active, 64371 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1637113/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 91000 [B]: 32768/32768 active, 65017 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1639733/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 91001 [A]: 32768/32768 active, 64367 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1639734/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 92000 [B]: 32768/32768 active, 64574 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1641369/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 92001 [A]: 32768/32768 active, 64707 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1641369/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 93000 [B]: 32768/32768 active, 65025 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1643721/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 93001 [A]: 32768/32768 active, 64546 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1643724/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 94000 [B]: 32768/32768 active, 64876 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1647628/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 94001 [A]: 32768/32768 active, 64855 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1647630/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 95000 [B]: 32768/32768 active, 64943 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1649652/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 95001 [A]: 32768/32768 active, 64251 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1649654/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 96000 [B]: 32768/32768 active, 64400 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1651882/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 96001 [A]: 32768/32768 active, 64228 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1651882/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 97000 [B]: 32768/32768 active, 64332 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1653951/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 97001 [A]: 32768/32768 active, 64494 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1653951/3276800 tasks done, refill
+message: Rendering:  51%message: persistent_wavefront pipeline step 98000 [B]: 32768/32768 active, 65090 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1656091/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 98001 [A]: 32768/32768 active, 64926 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1656091/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 99000 [B]: 32768/32768 active, 64781 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1658034/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 99001 [A]: 32768/32768 active, 64646 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1658034/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 100000 [B]: 32768/32768 active, 64677 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1659765/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 100001 [A]: 32768/32768 active, 64612 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1659767/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 101000 [B]: 32768/32768 active, 64351 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1661915/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 101001 [A]: 32768/32768 active, 64688 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1661916/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 102000 [B]: 32768/32768 active, 64572 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1664066/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 102001 [A]: 32768/32768 active, 64134 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1664068/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 103000 [B]: 32768/32768 active, 64692 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1666223/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 103001 [A]: 32768/32768 active, 64032 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1666230/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 104000 [B]: 32768/32768 active, 64315 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1668671/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 104001 [A]: 32768/32768 active, 64407 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1668673/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 105000 [B]: 32768/32768 active, 64652 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1670494/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 105001 [A]: 32768/32768 active, 64565 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1670496/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 106000 [B]: 32768/32768 active, 64857 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1672242/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 106001 [A]: 32768/32768 active, 64648 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1672244/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 107000 [B]: 32768/32768 active, 64990 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1674165/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 107001 [A]: 32768/32768 active, 64497 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1674168/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 108000 [B]: 32768/32768 active, 64869 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1676042/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 108001 [A]: 32768/32768 active, 64265 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1676045/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 109000 [B]: 32768/32768 active, 64462 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1678416/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 109001 [A]: 32768/32768 active, 64144 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1678417/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 110000 [B]: 32768/32768 active, 64377 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1680808/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 110001 [A]: 32768/32768 active, 64716 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1680809/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 111000 [B]: 32768/32768 active, 64274 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1683248/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 111001 [A]: 32768/32768 active, 64525 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1683250/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 112000 [B]: 32768/32768 active, 64256 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1685811/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 112001 [A]: 32768/32768 active, 64635 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1685816/3276800 tasks done, refill
+message: Rendering:  52%message: persistent_wavefront pipeline step 113000 [B]: 32768/32768 active, 64639 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1690635/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 113001 [A]: 32768/32768 active, 64805 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1690638/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 114000 [B]: 32768/32768 active, 64074 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1694021/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 114001 [A]: 32768/32768 active, 64015 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1694024/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 115000 [B]: 32768/32768 active, 64965 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1697179/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 115001 [A]: 32768/32768 active, 64492 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1697180/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 116000 [B]: 32768/32768 active, 64518 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1700657/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 116001 [A]: 32768/32768 active, 64483 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1700659/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 117000 [B]: 32768/32768 active, 64304 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1704149/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 117001 [A]: 32768/32768 active, 64241 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1704151/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 118000 [B]: 32768/32768 active, 65124 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1707375/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 118001 [A]: 32768/32768 active, 64946 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1707379/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 119000 [B]: 32768/32768 active, 64981 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1711763/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 119001 [A]: 32768/32768 active, 64339 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1711768/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 120000 [B]: 32768/32768 active, 64826 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1718149/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 120001 [A]: 32768/32768 active, 64275 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1718154/3276800 tasks done, refill
+message: Rendering:  53%message: persistent_wavefront pipeline step 121000 [B]: 32768/32768 active, 64917 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1725829/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 121001 [A]: 32768/32768 active, 64482 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1725837/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 122000 [B]: 32768/32768 active, 64530 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1733979/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 122001 [A]: 32768/32768 active, 64711 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1733988/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 123000 [B]: 32768/32768 active, 64547 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1745858/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 123001 [A]: 32768/32768 active, 65182 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1745861/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 124000 [B]: 32768/32768 active, 64815 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1750479/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 124001 [A]: 32768/32768 active, 64557 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1750483/3276800 tasks done, refill
+message: Rendering:  54%message: persistent_wavefront pipeline step 125000 [B]: 32768/32768 active, 64847 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1756018/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 125001 [A]: 32768/32768 active, 65140 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1756022/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 126000 [B]: 32768/32768 active, 64462 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1759313/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 126001 [A]: 32768/32768 active, 65178 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1759314/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 127000 [B]: 32768/32768 active, 64697 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1762304/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 127001 [A]: 32768/32768 active, 64778 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1762307/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 128000 [B]: 32768/32768 active, 64845 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1764896/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 128001 [A]: 32768/32768 active, 64668 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1764896/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 129000 [B]: 32768/32768 active, 64652 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1768043/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 129001 [A]: 32768/32768 active, 64470 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1768045/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 130000 [B]: 32768/32768 active, 64686 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1771405/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 130001 [A]: 32768/32768 active, 64938 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1771409/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 131000 [B]: 32768/32768 active, 64845 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1775691/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 131001 [A]: 32768/32768 active, 64682 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1775695/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 132000 [B]: 32768/32768 active, 64978 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1782128/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 132001 [A]: 32768/32768 active, 64863 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1782135/3276800 tasks done, refill
+message: Rendering:  55%message: persistent_wavefront pipeline step 133000 [B]: 32768/32768 active, 64955 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1789987/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 133001 [A]: 32768/32768 active, 65143 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1789994/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 134000 [B]: 32768/32768 active, 65483 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1796882/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 134001 [A]: 32768/32768 active, 64925 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1796886/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 135000 [B]: 32768/32768 active, 64726 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1806989/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 135001 [A]: 32768/32768 active, 65197 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1806999/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 136000 [B]: 32768/32768 active, 65163 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1814345/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 136001 [A]: 32768/32768 active, 64726 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1814350/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 137000 [B]: 32768/32768 active, 64643 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1817435/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 137001 [A]: 32768/32768 active, 64354 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1817435/3276800 tasks done, refill
+message: Rendering:  56%message: persistent_wavefront pipeline step 138000 [B]: 32768/32768 active, 64662 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1821297/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 138001 [A]: 32768/32768 active, 64585 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1821299/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 139000 [B]: 32768/32768 active, 64523 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1828107/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 139001 [A]: 32768/32768 active, 64736 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1828117/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 140000 [B]: 32768/32768 active, 64944 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1836235/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 140001 [A]: 32768/32768 active, 64869 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1836237/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 141000 [B]: 32768/32768 active, 64864 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1839933/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 141001 [A]: 32768/32768 active, 64010 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1839935/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 142000 [B]: 32768/32768 active, 64780 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1842346/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 142001 [A]: 32768/32768 active, 64638 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1842350/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 143000 [B]: 32768/32768 active, 64786 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1844162/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 143001 [A]: 32768/32768 active, 64721 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1844163/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 144000 [B]: 32768/32768 active, 64181 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1846235/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 144001 [A]: 32768/32768 active, 64452 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1846239/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 145000 [B]: 32768/32768 active, 64564 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1848197/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 145001 [A]: 32768/32768 active, 64946 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1848199/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 146000 [B]: 32768/32768 active, 64500 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1849801/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 146001 [A]: 32768/32768 active, 64328 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1849801/3276800 tasks done, refill
+message: Rendering:  57%message: persistent_wavefront pipeline step 147000 [B]: 32768/32768 active, 64476 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1852147/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 147001 [A]: 32768/32768 active, 64247 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1852150/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 148000 [B]: 32768/32768 active, 64641 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1859814/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 148001 [A]: 32768/32768 active, 64652 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1859814/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 149000 [B]: 32768/32768 active, 64723 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1864340/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 149001 [A]: 32768/32768 active, 64670 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1864353/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 150000 [B]: 32768/32768 active, 64771 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1875111/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 150001 [A]: 32768/32768 active, 64378 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1875119/3276800 tasks done, refill
+message: Rendering:  58%message: persistent_wavefront pipeline step 151000 [B]: 32768/32768 active, 64556 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1886356/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 151001 [A]: 32768/32768 active, 64216 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1886368/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 152000 [B]: 32768/32768 active, 64386 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1898475/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 152001 [A]: 32768/32768 active, 64602 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1898486/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 153000 [B]: 32768/32768 active, 64135 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1909462/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 153001 [A]: 32768/32768 active, 64532 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1909470/3276800 tasks done, refill
+message: Rendering:  59%message: persistent_wavefront pipeline step 154000 [B]: 32768/32768 active, 64724 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1920132/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 154001 [A]: 32768/32768 active, 64501 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1920151/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 155000 [B]: 32768/32768 active, 64404 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1932076/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 155001 [A]: 32768/32768 active, 64277 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1932086/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 156000 [B]: 32768/32768 active, 64415 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1936150/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 156001 [A]: 32768/32768 active, 64326 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1936153/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 157000 [B]: 32768/32768 active, 64850 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1938017/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 157001 [A]: 32768/32768 active, 64714 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1938018/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 158000 [B]: 32768/32768 active, 64271 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1939874/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 158001 [A]: 32768/32768 active, 64556 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1939876/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 159000 [B]: 32768/32768 active, 64346 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1942107/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 159001 [A]: 32768/32768 active, 64248 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1942109/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 160000 [B]: 32768/32768 active, 64712 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1946296/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 160001 [A]: 32768/32768 active, 64585 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1946297/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 161000 [B]: 32768/32768 active, 64851 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1949585/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 161001 [A]: 32768/32768 active, 64342 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1949586/3276800 tasks done, refill
+message: Rendering:  60%message: persistent_wavefront pipeline step 162000 [B]: 32768/32768 active, 64351 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1960831/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 162001 [A]: 32768/32768 active, 64934 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1960837/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 163000 [B]: 32768/32768 active, 64748 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1968005/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 163001 [A]: 32768/32768 active, 64538 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1968008/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 164000 [B]: 32768/32768 active, 64636 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1972012/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 164001 [A]: 32768/32768 active, 64340 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1972015/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 165000 [B]: 32768/32768 active, 64625 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1977436/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 165001 [A]: 32768/32768 active, 64717 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1977443/3276800 tasks done, refill
+message: Rendering:  61%message: persistent_wavefront pipeline step 166000 [B]: 32768/32768 active, 64514 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1991079/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 166001 [A]: 32768/32768 active, 64936 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1991088/3276800 tasks done, refill
+message: Rendering:  62%message: persistent_wavefront pipeline step 167000 [B]: 32768/32768 active, 64289 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2025396/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 167001 [A]: 32768/32768 active, 64288 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2025433/3276800 tasks done, refill
+message: Rendering:  63%message: persistent_wavefront pipeline step 168000 [B]: 32768/32768 active, 64393 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2058844/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 168001 [A]: 32768/32768 active, 64752 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2058874/3276800 tasks done, refill
+message: Rendering:  64%message: Rendering:  65%message: Rendering:  66%message: Rendering:  67%message: Rendering:  68%message: Rendering:  69%message: Rendering:  70%message: Rendering:  71%message: Rendering:  72%message: persistent_wavefront pipeline step 169000 [B]: 32768/32768 active, 64176 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2349714/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 169001 [A]: 32768/32768 active, 64518 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2349819/3276800 tasks done, refill
+message: Rendering:  73%message: Rendering:  74%message: Rendering:  75%message: Rendering:  76%message: Rendering:  77%message: Rendering:  78%message: Rendering:  79%message: persistent_wavefront pipeline step 170000 [B]: 32768/32768 active, 62529 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2588420/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 170001 [A]: 32768/32768 active, 61854 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2588871/3276800 tasks done, refill
+message: Rendering:  80%message: Rendering:  81%message: Rendering:  82%message: Rendering:  83%message: Rendering:  84%message: Rendering:  85%message: persistent_wavefront pipeline step 171000 [B]: 32768/32768 active, 64353 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2783777/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 171001 [A]: 32768/32768 active, 64609 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2783814/3276800 tasks done, refill
+message: Rendering:  86%message: persistent_wavefront pipeline step 172000 [B]: 32768/32768 active, 64110 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2831628/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 172001 [A]: 32768/32768 active, 64515 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2831682/3276800 tasks done, refill
+message: Rendering:  87%message: Rendering:  88%message: persistent_wavefront pipeline step 173000 [B]: 32768/32768 active, 64533 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2876230/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 173001 [A]: 32768/32768 active, 64577 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2876262/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 174000 [B]: 32768/32768 active, 64715 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2897341/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 174001 [A]: 32768/32768 active, 64503 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2897350/3276800 tasks done, refill
+message: Rendering:  89%message: persistent_wavefront pipeline step 175000 [B]: 32768/32768 active, 64570 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2912322/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 175001 [A]: 32768/32768 active, 64218 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2912338/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 176000 [B]: 32768/32768 active, 64238 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2926209/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 176001 [A]: 32768/32768 active, 64568 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2926217/3276800 tasks done, refill
+message: Rendering:  90%message: persistent_wavefront pipeline step 177000 [B]: 32768/32768 active, 64575 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2941795/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 177001 [A]: 32768/32768 active, 64267 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2941824/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 178000 [B]: 32768/32768 active, 64523 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2960527/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 178001 [A]: 32768/32768 active, 64639 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2960538/3276800 tasks done, refill
+message: Rendering:  91%message: persistent_wavefront pipeline step 179000 [B]: 32768/32768 active, 64695 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2978018/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 179001 [A]: 32768/32768 active, 64393 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2978038/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 180000 [B]: 32768/32768 active, 64218 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2993358/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 180001 [A]: 32768/32768 active, 64929 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2993366/3276800 tasks done, refill
+message: Rendering:  92%message: persistent_wavefront pipeline step 181000 [B]: 32768/32768 active, 63989 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3005776/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 181001 [A]: 32768/32768 active, 64317 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3005795/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 182000 [B]: 32768/32768 active, 64702 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3018694/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 182001 [A]: 32768/32768 active, 64304 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3018709/3276800 tasks done, refill
+message: Rendering:  93%message: persistent_wavefront pipeline step 183000 [B]: 32768/32768 active, 64264 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3038222/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 183001 [A]: 32768/32768 active, 64509 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3038241/3276800 tasks done, refill
+message: Rendering:  94%message: persistent_wavefront pipeline step 184000 [B]: 32768/32768 active, 64391 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3068244/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 184001 [A]: 32768/32768 active, 64774 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3068278/3276800 tasks done, refill
+message: Rendering:  95%message: persistent_wavefront pipeline step 185000 [B]: 32768/32768 active, 64286 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3106465/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 185001 [A]: 32768/32768 active, 64314 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3106508/3276800 tasks done, refill
+message: Rendering:  96%message: Rendering:  97%message: Rendering:  98%message: Rendering:  99%message: persistent_wavefront: entering drain phase at step 185901, 32674 active paths remain, refill_wall=138.855s
+message: persistent_wavefront pipeline step 186000 [B]: 29455/32768 active, 58078 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3247356/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 186001 [A]: 29448/32768 active, 58246 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3247363/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 186400 [B]: 28135/32768 active, 55722 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3248676/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 186900 [B]: 26821/32768 active, 52801 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3249990/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 187000 [B]: 26589/32768 active, 52272 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3250222/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 187001 [A]: 26589/32768 active, 52238 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3250222/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 187400 [B]: 25740/32768 active, 50659 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3251071/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 187900 [B]: 24699/32768 active, 48306 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3252112/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 188000 [B]: 24516/32768 active, 48312 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3252295/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 188001 [A]: 24516/32768 active, 48264 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3252295/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 188400 [B]: 23849/32768 active, 46998 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3252962/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 188900 [B]: 23084/32768 active, 45574 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3253727/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 189000 [B]: 22950/32768 active, 45610 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3253861/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 189001 [A]: 22947/32768 active, 45200 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3253864/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 189400 [B]: 22335/32768 active, 44154 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3254476/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 189900 [B]: 21677/32768 active, 42634 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3255134/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 190000 [B]: 21529/32768 active, 42412 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3255282/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 190001 [A]: 21529/32768 active, 42237 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3255282/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 190400 [B]: 20954/32768 active, 41424 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3255857/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 190900 [B]: 20310/32768 active, 39997 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3256501/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 191000 [B]: 20178/32768 active, 40022 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3256633/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 191001 [A]: 20177/32768 active, 39632 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3256634/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 191400 [B]: 19699/32768 active, 38670 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3257112/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 191900 [B]: 19093/32768 active, 37535 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3257718/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 192000 [B]: 18960/32768 active, 37390 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3257851/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 192001 [A]: 18960/32768 active, 37394 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3257851/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 192400 [B]: 18496/32768 active, 36438 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3258315/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 192900 [B]: 17945/32768 active, 35352 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3258866/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 193000 [B]: 17825/32768 active, 34858 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3258986/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 193001 [A]: 17825/32768 active, 35256 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3258986/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 193400 [B]: 17437/32768 active, 34184 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3259374/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 193900 [B]: 16913/32768 active, 33578 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3259898/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 194000 [B]: 16820/32768 active, 32814 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3259991/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 194001 [A]: 16819/32768 active, 33328 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3259992/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 194400 [B]: 16417/32768 active, 32562 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3260394/3276800 tasks done, DRAIN
+message: Rendering: 100%message: persistent_wavefront pipeline step 194900 [B]: 15960/32768 active, 31316 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3260851/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 195000 [B]: 15867/32768 active, 30982 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3260944/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 195001 [A]: 15866/32768 active, 31678 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3260945/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 195400 [B]: 15501/32768 active, 30600 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3261310/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 195900 [B]: 15079/32768 active, 29672 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3261732/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 196000 [B]: 14995/32768 active, 29286 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3261816/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 196001 [A]: 14995/32768 active, 29756 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3261816/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 196400 [B]: 14615/32768 active, 28312 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3262196/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 196900 [B]: 14222/32768 active, 27904 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3262589/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 197000 [B]: 14147/32768 active, 27578 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3262664/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 197001 [A]: 14146/32768 active, 28306 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3262665/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 197400 [B]: 13800/32768 active, 27022 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3263011/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 197900 [B]: 13417/32768 active, 26162 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3263394/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 198000 [B]: 13338/32768 active, 26036 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3263473/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 198001 [A]: 13338/32768 active, 26160 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3263473/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 198400 [B]: 13033/32768 active, 25404 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3263778/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 198900 [B]: 12644/32768 active, 24652 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3264167/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 199000 [B]: 12553/32768 active, 24368 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3264258/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 199001 [A]: 12553/32768 active, 25086 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3264258/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 199400 [B]: 12251/32768 active, 23624 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3264560/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 199900 [B]: 11913/32768 active, 23600 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3264898/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 200000 [B]: 11843/32768 active, 23296 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3264968/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 200001 [A]: 11843/32768 active, 23406 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3264968/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 200400 [B]: 11539/32768 active, 22978 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3265272/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 200900 [B]: 11191/32768 active, 21844 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3265620/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 201000 [B]: 11123/32768 active, 21581 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3265688/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 201001 [A]: 11123/32768 active, 21936 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3265688/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 201400 [B]: 10845/32768 active, 21312 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3265966/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 201900 [B]: 10517/32768 active, 20331 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3266294/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 202000 [B]: 10459/32768 active, 20416 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3266352/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 202001 [A]: 10458/32768 active, 20880 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3266353/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 202400 [B]: 10204/32768 active, 19872 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3266607/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 202900 [B]: 9887/32768 active, 19268 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3266924/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 203000 [B]: 9828/32768 active, 18968 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3266983/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 203001 [A]: 9828/32768 active, 19700 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3266983/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 203400 [B]: 9603/32768 active, 18464 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3267208/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 203900 [B]: 9347/32768 active, 18508 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3267464/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 204000 [B]: 9292/32768 active, 18204 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3267519/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 204001 [A]: 9290/32768 active, 18428 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3267521/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 204400 [B]: 9086/32768 active, 17760 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3267725/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 204900 [B]: 8792/32768 active, 17312 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268019/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 205000 [B]: 8742/32768 active, 17270 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268069/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 205001 [A]: 8742/32768 active, 17342 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268069/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 205400 [B]: 8553/32768 active, 16452 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268258/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 205900 [B]: 8308/32768 active, 16046 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268503/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 206000 [B]: 8264/32768 active, 15866 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268547/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 206001 [A]: 8264/32768 active, 16554 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268547/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 206400 [B]: 8069/32768 active, 15440 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268742/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 206900 [B]: 7832/32768 active, 15200 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3268979/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 207000 [B]: 7781/32768 active, 15046 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269030/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 207001 [A]: 7780/32768 active, 15718 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269031/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 207400 [B]: 7584/32768 active, 14481 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269227/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 207900 [B]: 7370/32768 active, 14310 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269441/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 208000 [B]: 7331/32768 active, 14248 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269480/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 208001 [A]: 7331/32768 active, 14738 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269480/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 208400 [B]: 7163/32768 active, 14046 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269648/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 208900 [B]: 6940/32768 active, 13446 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269871/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 209000 [B]: 6893/32768 active, 13388 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269918/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 209001 [A]: 6893/32768 active, 14026 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3269918/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 209400 [B]: 6724/32768 active, 13086 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270087/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 209900 [B]: 6519/32768 active, 12362 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270292/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 210000 [B]: 6479/32768 active, 12472 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270332/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 210001 [A]: 6479/32768 active, 13094 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270332/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 210400 [B]: 6314/32768 active, 12256 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270497/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 210900 [B]: 6117/32768 active, 11890 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270694/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 211000 [B]: 6078/32768 active, 11808 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270733/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 211001 [A]: 6078/32768 active, 12216 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270733/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 211400 [B]: 5942/32768 active, 11304 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3270869/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 211900 [B]: 5749/32768 active, 11320 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271062/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 212000 [B]: 5720/32768 active, 11008 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271091/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 212001 [A]: 5719/32768 active, 11534 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271092/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 212400 [B]: 5580/32768 active, 10762 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271231/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 212900 [B]: 5422/32768 active, 10648 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271389/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 213000 [B]: 5391/32768 active, 10346 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271420/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 213001 [A]: 5391/32768 active, 10744 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271420/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 213400 [B]: 5284/32768 active, 10194 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271527/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 213900 [B]: 5148/32768 active, 10084 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271663/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 214000 [B]: 5116/32768 active, 10102 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271695/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 214001 [A]: 5115/32768 active, 10312 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271696/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 214400 [B]: 4996/32768 active, 9580 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271815/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 214900 [B]: 4843/32768 active, 9402 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3271968/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 215000 [B]: 4809/32768 active, 9372 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272002/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 215001 [A]: 4809/32768 active, 9798 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272002/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 215400 [B]: 4708/32768 active, 9238 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272103/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 215900 [B]: 4583/32768 active, 9024 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272228/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 216000 [B]: 4555/32768 active, 9032 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272256/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 216001 [A]: 4554/32768 active, 9004 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272257/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 216400 [B]: 4429/32768 active, 8632 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272382/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 216900 [B]: 4292/32768 active, 8248 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272519/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 217000 [B]: 4269/32768 active, 8250 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272542/3276800 tasks done, DRAIN
+message: persistent_wavefront pipeline step 217001 [A]: 4268/32768 active, 8702 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3272543/3276800 tasks done, DRAIN
+warning: O11_MERGE step=217332 v0_active=2121 v0_size=16384 v1_active=2047 v1_size=16384 thresh=2048 tasks=3276800/3276800
+message: pipeline: merging to single-pool at step 217332 (A.active=2121, B.active=2047)
+message: run_pool: merged to single-buffer at step 217332
+message: pipeline stats: wall=147.005s, gpu_wait=19.093s, cpu_between=126.413s, submit=22.248s(async), steps=217332
+message: persistent_wavefront step 217400: 4139/32768 active, 16298 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3272672/3276800 tasks done, DRAIN
+message: persistent_wavefront step 217900: 3909/32768 active, 15330 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3272902/3276800 tasks done, DRAIN
+message: persistent_wavefront step 218000: 3852/32768 active, 15044 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3272959/3276800 tasks done, DRAIN
+message: persistent_wavefront step 218400: 3691/32768 active, 14550 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3273120/3276800 tasks done, DRAIN
+message: persistent_wavefront step 218900: 3487/32768 active, 13934 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3273324/3276800 tasks done, DRAIN
+message: persistent_wavefront step 219000: 3445/32768 active, 13566 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3273366/3276800 tasks done, DRAIN
+message: persistent_wavefront step 219400: 3265/32768 active, 12954 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3273546/3276800 tasks done, DRAIN
+message: persistent_wavefront step 219900: 3069/32768 active, 12194 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3273742/3276800 tasks done, DRAIN
+message: persistent_wavefront step 220000: 3026/32768 active, 11904 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3273785/3276800 tasks done, DRAIN
+message: persistent_wavefront step 220400: 2881/32768 active, 11506 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3273930/3276800 tasks done, DRAIN
+message: persistent_wavefront step 220900: 2739/32768 active, 11046 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274072/3276800 tasks done, DRAIN
+message: persistent_wavefront step 221000: 2709/32768 active, 10714 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274102/3276800 tasks done, DRAIN
+message: persistent_wavefront step 221400: 2574/32768 active, 10104 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274237/3276800 tasks done, DRAIN
+message: persistent_wavefront step 221900: 2447/32768 active, 9518 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274364/3276800 tasks done, DRAIN
+message: persistent_wavefront step 222000: 2420/32768 active, 9668 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274391/3276800 tasks done, DRAIN
+message: persistent_wavefront step 222400: 2315/32768 active, 9090 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274496/3276800 tasks done, DRAIN
+message: persistent_wavefront step 222900: 2176/32768 active, 8688 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274635/3276800 tasks done, DRAIN
+message: persistent_wavefront step 223000: 2153/32768 active, 8598 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274658/3276800 tasks done, DRAIN
+message: persistent_wavefront step 223400: 2052/32768 active, 8016 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274759/3276800 tasks done, DRAIN
+message: persistent_wavefront step 223900: 1920/32768 active, 7708 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274891/3276800 tasks done, DRAIN
+message: persistent_wavefront step 224000: 1899/32768 active, 7462 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274912/3276800 tasks done, DRAIN
+message: persistent_wavefront step 224400: 1819/32768 active, 7186 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3274992/3276800 tasks done, DRAIN
+message: persistent_wavefront step 224900: 1696/32768 active, 6660 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275115/3276800 tasks done, DRAIN
+message: persistent_wavefront step 225000: 1673/32768 active, 6650 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275138/3276800 tasks done, DRAIN
+message: persistent_wavefront step 225400: 1597/32768 active, 6222 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275214/3276800 tasks done, DRAIN
+message: persistent_wavefront step 225900: 1510/32768 active, 5980 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275301/3276800 tasks done, DRAIN
+message: persistent_wavefront step 226000: 1493/32768 active, 5826 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275318/3276800 tasks done, DRAIN
+message: persistent_wavefront step 226400: 1423/32768 active, 5594 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275388/3276800 tasks done, DRAIN
+message: persistent_wavefront step 226900: 1328/32768 active, 5196 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275483/3276800 tasks done, DRAIN
+message: persistent_wavefront step 227000: 1309/32768 active, 5010 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275502/3276800 tasks done, DRAIN
+message: persistent_wavefront step 227400: 1260/32768 active, 5168 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275551/3276800 tasks done, DRAIN
+message: persistent_wavefront step 227900: 1177/32768 active, 4642 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275634/3276800 tasks done, DRAIN
+message: persistent_wavefront step 228000: 1161/32768 active, 4618 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275650/3276800 tasks done, DRAIN
+message: persistent_wavefront step 228400: 1106/32768 active, 4372 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275705/3276800 tasks done, DRAIN
+message: persistent_wavefront step 228900: 1040/32768 active, 4068 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275771/3276800 tasks done, DRAIN
+message: persistent_wavefront step 229000: 1033/32768 active, 4110 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275778/3276800 tasks done, DRAIN
+message: persistent_wavefront step 229400: 978/32768 active, 3908 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275833/3276800 tasks done, DRAIN
+message: persistent_wavefront step 229900: 919/32768 active, 3678 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275892/3276800 tasks done, DRAIN
+message: persistent_wavefront step 230000: 908/32768 active, 3556 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275903/3276800 tasks done, DRAIN
+message: persistent_wavefront step 230400: 873/32768 active, 3434 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275938/3276800 tasks done, DRAIN
+message: persistent_wavefront step 230900: 836/32768 active, 3320 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275975/3276800 tasks done, DRAIN
+message: persistent_wavefront step 231000: 824/32768 active, 3256 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3275987/3276800 tasks done, DRAIN
+message: persistent_wavefront step 231400: 782/32768 active, 3052 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276029/3276800 tasks done, DRAIN
+message: persistent_wavefront step 231900: 749/32768 active, 2910 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276062/3276800 tasks done, DRAIN
+message: persistent_wavefront step 232000: 735/32768 active, 2938 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276076/3276800 tasks done, DRAIN
+message: persistent_wavefront step 232400: 691/32768 active, 2678 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276120/3276800 tasks done, DRAIN
+message: persistent_wavefront step 232900: 643/32768 active, 2518 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276168/3276800 tasks done, DRAIN
+message: persistent_wavefront step 233000: 636/32768 active, 2468 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276175/3276800 tasks done, DRAIN
+message: persistent_wavefront step 233400: 612/32768 active, 2455 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276199/3276800 tasks done, DRAIN
+message: persistent_wavefront step 233900: 575/32768 active, 2302 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276236/3276800 tasks done, DRAIN
+message: persistent_wavefront step 234000: 566/32768 active, 2216 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276245/3276800 tasks done, DRAIN
+message: persistent_wavefront step 234400: 544/32768 active, 2104 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276267/3276800 tasks done, DRAIN
+message: persistent_wavefront step 234900: 516/32768 active, 2056 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276295/3276800 tasks done, DRAIN
+message: persistent_wavefront step 235000: 512/32768 active, 2064 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276299/3276800 tasks done, DRAIN
+message: persistent_wavefront step 235400: 477/32768 active, 1830 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276334/3276800 tasks done, DRAIN
+message: persistent_wavefront step 235900: 444/32768 active, 1780 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276367/3276800 tasks done, DRAIN
+message: persistent_wavefront step 236000: 436/32768 active, 1740 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276375/3276800 tasks done, DRAIN
+message: persistent_wavefront step 236400: 417/32768 active, 1618 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276394/3276800 tasks done, DRAIN
+message: persistent_wavefront step 236900: 397/32768 active, 1586 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276414/3276800 tasks done, DRAIN
+message: persistent_wavefront step 237000: 391/32768 active, 1546 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276420/3276800 tasks done, DRAIN
+message: persistent_wavefront step 237400: 375/32768 active, 1458 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276436/3276800 tasks done, DRAIN
+message: persistent_wavefront step 237900: 352/32768 active, 1320 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276459/3276800 tasks done, DRAIN
+message: persistent_wavefront step 238000: 349/32768 active, 1330 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276462/3276800 tasks done, DRAIN
+message: persistent_wavefront step 238400: 326/32768 active, 1260 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276485/3276800 tasks done, DRAIN
+message: persistent_wavefront step 238900: 303/32768 active, 1170 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276508/3276800 tasks done, DRAIN
+message: persistent_wavefront step 239000: 300/32768 active, 1188 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276511/3276800 tasks done, DRAIN
+message: persistent_wavefront step 239400: 292/32768 active, 1196 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276519/3276800 tasks done, DRAIN
+message: persistent_wavefront step 239900: 280/32768 active, 1072 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276531/3276800 tasks done, DRAIN
+message: persistent_wavefront step 240000: 276/32768 active, 1084 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276535/3276800 tasks done, DRAIN
+message: persistent_wavefront step 240400: 254/32768 active, 956 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276557/3276800 tasks done, DRAIN
+message: persistent_wavefront step 240900: 239/32768 active, 950 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276572/3276800 tasks done, DRAIN
+message: persistent_wavefront step 241000: 235/32768 active, 954 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276576/3276800 tasks done, DRAIN
+message: persistent_wavefront step 241400: 223/32768 active, 926 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276588/3276800 tasks done, DRAIN
+message: persistent_wavefront step 241900: 203/32768 active, 834 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276608/3276800 tasks done, DRAIN
+message: persistent_wavefront step 242000: 202/32768 active, 752 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276609/3276800 tasks done, DRAIN
+message: persistent_wavefront step 242400: 193/32768 active, 758 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276618/3276800 tasks done, DRAIN
+message: persistent_wavefront step 242900: 185/32768 active, 690 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276626/3276800 tasks done, DRAIN
+message: persistent_wavefront step 243000: 183/32768 active, 678 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276628/3276800 tasks done, DRAIN
+message: persistent_wavefront step 243400: 177/32768 active, 734 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276634/3276800 tasks done, DRAIN
+message: persistent_wavefront step 243900: 169/32768 active, 694 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276642/3276800 tasks done, DRAIN
+message: persistent_wavefront step 244000: 168/32768 active, 640 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276643/3276800 tasks done, DRAIN
+message: persistent_wavefront step 244400: 160/32768 active, 624 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276651/3276800 tasks done, DRAIN
+message: persistent_wavefront step 244900: 154/32768 active, 616 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276657/3276800 tasks done, DRAIN
+message: persistent_wavefront step 245000: 153/32768 active, 614 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276658/3276800 tasks done, DRAIN
+message: persistent_wavefront step 245400: 146/32768 active, 560 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276665/3276800 tasks done, DRAIN
+message: persistent_wavefront step 245900: 136/32768 active, 544 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276675/3276800 tasks done, DRAIN
+message: persistent_wavefront step 246000: 136/32768 active, 540 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276675/3276800 tasks done, DRAIN
+message: persistent_wavefront step 246400: 129/32768 active, 522 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276682/3276800 tasks done, DRAIN
+message: persistent_wavefront step 246900: 119/32768 active, 486 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276692/3276800 tasks done, DRAIN
+message: persistent_wavefront step 247000: 116/32768 active, 444 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276695/3276800 tasks done, DRAIN
+message: persistent_wavefront step 247400: 111/32768 active, 422 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276700/3276800 tasks done, DRAIN
+message: persistent_wavefront step 247900: 100/32768 active, 392 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276711/3276800 tasks done, DRAIN
+message: persistent_wavefront step 248000: 98/32768 active, 380 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276713/3276800 tasks done, DRAIN
+message: persistent_wavefront step 248400: 90/32768 active, 352 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276721/3276800 tasks done, DRAIN
+message: persistent_wavefront step 248900: 85/32768 active, 306 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276726/3276800 tasks done, DRAIN
+message: persistent_wavefront step 249000: 85/32768 active, 354 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276726/3276800 tasks done, DRAIN
+message: persistent_wavefront step 249400: 82/32768 active, 308 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276729/3276800 tasks done, DRAIN
+message: persistent_wavefront step 249900: 80/32768 active, 312 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276731/3276800 tasks done, DRAIN
+message: persistent_wavefront step 250000: 80/32768 active, 304 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276731/3276800 tasks done, DRAIN
+message: persistent_wavefront step 250400: 76/32768 active, 320 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276735/3276800 tasks done, DRAIN
+message: persistent_wavefront step 250900: 72/32768 active, 296 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276739/3276800 tasks done, DRAIN
+message: persistent_wavefront step 251000: 72/32768 active, 280 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276739/3276800 tasks done, DRAIN
+message: persistent_wavefront step 251400: 68/32768 active, 288 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276743/3276800 tasks done, DRAIN
+message: persistent_wavefront step 251900: 66/32768 active, 272 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276745/3276800 tasks done, DRAIN
+message: persistent_wavefront step 252000: 65/32768 active, 234 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276746/3276800 tasks done, DRAIN
+message: persistent_wavefront step 252400: 62/32768 active, 224 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276749/3276800 tasks done, DRAIN
+message: persistent_wavefront step 252900: 61/32768 active, 214 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276750/3276800 tasks done, DRAIN
+message: persistent_wavefront step 253000: 59/32768 active, 230 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276752/3276800 tasks done, DRAIN
+message: persistent_wavefront step 253400: 57/32768 active, 190 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276754/3276800 tasks done, DRAIN
+message: persistent_wavefront step 253900: 54/32768 active, 216 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276757/3276800 tasks done, DRAIN
+message: persistent_wavefront step 254000: 54/32768 active, 208 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276757/3276800 tasks done, DRAIN
+message: persistent_wavefront step 254400: 49/32768 active, 198 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276762/3276800 tasks done, DRAIN
+message: persistent_wavefront step 254900: 46/32768 active, 184 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276765/3276800 tasks done, DRAIN
+message: persistent_wavefront step 255000: 45/32768 active, 182 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276766/3276800 tasks done, DRAIN
+message: persistent_wavefront step 255400: 45/32768 active, 162 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276766/3276800 tasks done, DRAIN
+message: persistent_wavefront step 255900: 44/32768 active, 148 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276767/3276800 tasks done, DRAIN
+message: persistent_wavefront step 256000: 44/32768 active, 172 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276767/3276800 tasks done, DRAIN
+message: persistent_wavefront step 256400: 44/32768 active, 184 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276767/3276800 tasks done, DRAIN
+message: persistent_wavefront step 256900: 41/32768 active, 166 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276770/3276800 tasks done, DRAIN
+message: persistent_wavefront step 257000: 40/32768 active, 184 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276771/3276800 tasks done, DRAIN
+message: persistent_wavefront step 257400: 38/32768 active, 152 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276773/3276800 tasks done, DRAIN
+message: persistent_wavefront step 257900: 37/32768 active, 122 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276774/3276800 tasks done, DRAIN
+message: persistent_wavefront step 258000: 36/32768 active, 136 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276775/3276800 tasks done, DRAIN
+message: persistent_wavefront step 258400: 36/32768 active, 140 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276775/3276800 tasks done, DRAIN
+message: persistent_wavefront step 258900: 33/32768 active, 138 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276778/3276800 tasks done, DRAIN
+message: persistent_wavefront step 259000: 33/32768 active, 130 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276778/3276800 tasks done, DRAIN
+message: persistent_wavefront step 259400: 32/32768 active, 128 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276779/3276800 tasks done, DRAIN
+message: persistent_wavefront step 259900: 27/32768 active, 102 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276784/3276800 tasks done, DRAIN
+message: persistent_wavefront step 260000: 25/32768 active, 86 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276786/3276800 tasks done, DRAIN
+message: persistent_wavefront step 260400: 24/32768 active, 96 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276787/3276800 tasks done, DRAIN
+message: persistent_wavefront step 260900: 22/32768 active, 108 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276789/3276800 tasks done, DRAIN
+message: persistent_wavefront step 261000: 22/32768 active, 96 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276789/3276800 tasks done, DRAIN
+message: persistent_wavefront step 261400: 21/32768 active, 78 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276790/3276800 tasks done, DRAIN
+message: persistent_wavefront step 261900: 20/32768 active, 84 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276791/3276800 tasks done, DRAIN
+message: persistent_wavefront step 262000: 20/32768 active, 76 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276791/3276800 tasks done, DRAIN
+message: persistent_wavefront step 262400: 18/32768 active, 72 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276793/3276800 tasks done, DRAIN
+message: persistent_wavefront step 262900: 18/32768 active, 80 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276793/3276800 tasks done, DRAIN
+message: persistent_wavefront step 263000: 18/32768 active, 72 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276793/3276800 tasks done, DRAIN
+message: persistent_wavefront step 263400: 18/32768 active, 56 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276793/3276800 tasks done, DRAIN
+message: persistent_wavefront step 263900: 18/32768 active, 68 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276793/3276800 tasks done, DRAIN
+message: persistent_wavefront step 264000: 18/32768 active, 76 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276793/3276800 tasks done, DRAIN
+message: persistent_wavefront step 264400: 17/32768 active, 62 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276794/3276800 tasks done, DRAIN
+message: persistent_wavefront step 264900: 16/32768 active, 68 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276795/3276800 tasks done, DRAIN
+message: persistent_wavefront step 265000: 16/32768 active, 52 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276795/3276800 tasks done, DRAIN
+message: persistent_wavefront step 265400: 15/32768 active, 42 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276796/3276800 tasks done, DRAIN
+message: persistent_wavefront step 265900: 14/32768 active, 52 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276797/3276800 tasks done, DRAIN
+message: persistent_wavefront step 266000: 14/32768 active, 52 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276797/3276800 tasks done, DRAIN
+message: persistent_wavefront step 266400: 14/32768 active, 48 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276797/3276800 tasks done, DRAIN
+message: persistent_wavefront step 266900: 13/32768 active, 50 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276798/3276800 tasks done, DRAIN
+message: persistent_wavefront step 267000: 13/32768 active, 50 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276798/3276800 tasks done, DRAIN
+message: persistent_wavefront step 267400: 13/32768 active, 66 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276798/3276800 tasks done, DRAIN
+message: persistent_wavefront step 267900: 13/32768 active, 46 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276798/3276800 tasks done, DRAIN
+message: persistent_wavefront step 268000: 13/32768 active, 58 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276798/3276800 tasks done, DRAIN
+message: persistent_wavefront step 268400: 13/32768 active, 58 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276798/3276800 tasks done, DRAIN
+message: persistent_wavefront step 268900: 12/32768 active, 40 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276799/3276800 tasks done, DRAIN
+message: persistent_wavefront step 269000: 12/32768 active, 36 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276799/3276800 tasks done, DRAIN
+message: persistent_wavefront step 269400: 12/32768 active, 52 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276799/3276800 tasks done, DRAIN
+message: persistent_wavefront step 269900: 12/32768 active, 40 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276799/3276800 tasks done, DRAIN
+message: persistent_wavefront step 270000: 12/32768 active, 60 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276799/3276800 tasks done, DRAIN
+message: persistent_wavefront step 270400: 11/32768 active, 50 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276800/3276800 tasks done, DRAIN
+message: persistent_wavefront step 270900: 11/32768 active, 42 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276800/3276800 tasks done, DRAIN
+message: persistent_wavefront step 271000: 10/32768 active, 40 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276801/3276800 tasks done, DRAIN
+message: persistent_wavefront step 271400: 9/32768 active, 38 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276802/3276800 tasks done, DRAIN
+message: persistent_wavefront step 271900: 8/32768 active, 32 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276803/3276800 tasks done, DRAIN
+message: persistent_wavefront step 272000: 8/32768 active, 28 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276803/3276800 tasks done, DRAIN
+message: persistent_wavefront step 272400: 7/32768 active, 30 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 272900: 7/32768 active, 38 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 273000: 7/32768 active, 22 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 273400: 7/32768 active, 38 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 273900: 7/32768 active, 34 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 274000: 7/32768 active, 26 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 274400: 7/32768 active, 30 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 274900: 7/32768 active, 38 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 275000: 7/32768 active, 18 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 275400: 7/32768 active, 30 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276804/3276800 tasks done, DRAIN
+message: persistent_wavefront step 275900: 6/32768 active, 28 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276805/3276800 tasks done, DRAIN
+message: persistent_wavefront step 276000: 6/32768 active, 16 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276805/3276800 tasks done, DRAIN
+message: persistent_wavefront step 276400: 6/32768 active, 28 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276805/3276800 tasks done, DRAIN
+message: persistent_wavefront step 276900: 6/32768 active, 20 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276805/3276800 tasks done, DRAIN
+message: persistent_wavefront step 277000: 5/32768 active, 18 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276806/3276800 tasks done, DRAIN
+message: persistent_wavefront step 277400: 4/32768 active, 20 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 277900: 4/32768 active, 12 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 278000: 4/32768 active, 16 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 278400: 4/32768 active, 12 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 278900: 4/32768 active, 16 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 279000: 4/32768 active, 16 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 279400: 4/32768 active, 20 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 279900: 4/32768 active, 20 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 280000: 4/32768 active, 12 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 280400: 4/32768 active, 12 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 280900: 4/32768 active, 16 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 281000: 4/32768 active, 16 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 281400: 4/32768 active, 24 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276807/3276800 tasks done, DRAIN
+message: persistent_wavefront step 281900: 3/32768 active, 6 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 282000: 3/32768 active, 10 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 282400: 3/32768 active, 10 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 282900: 3/32768 active, 10 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 283000: 3/32768 active, 14 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 283400: 3/32768 active, 10 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 283900: 3/32768 active, 18 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 284000: 3/32768 active, 10 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 284400: 3/32768 active, 10 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276808/3276800 tasks done, DRAIN
+message: persistent_wavefront step 284900: 2/32768 active, 8 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276809/3276800 tasks done, DRAIN
+message: persistent_wavefront step 285000: 2/32768 active, 8 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276809/3276800 tasks done, DRAIN
+message: persistent_wavefront step 285400: 2/32768 active, 4 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276809/3276800 tasks done, DRAIN
+message: persistent_wavefront step 285900: 2/32768 active, 8 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276809/3276800 tasks done, DRAIN
+message: persistent_wavefront step 286000: 2/32768 active, 8 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276809/3276800 tasks done, DRAIN
+message: persistent_wavefront step 286400: 2/32768 active, 4 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276809/3276800 tasks done, DRAIN
+message: persistent_wavefront step 286900: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 287000: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 287400: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 287900: 1/32768 active, 6 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 288000: 1/32768 active, 6 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 288400: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 288900: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 289000: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 289400: 1/32768 active, 6 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 289900: 1/32768 active, 6 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 290000: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront step 290400: 1/32768 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3276810/3276800 tasks done, DRAIN
+message: persistent_wavefront DONE: 320x320 spp=32 pool=32768 elapsed=2 mins 41 secs 561 msecs 293 usecs 600 nsecs  steps=290795  rays=12912158916  avg_width=22412.5  (rad=866345826 cond_ds=2490943888(retry=8) shadow=0 enc=9554869194 startup=0 other=0)  done: rad=1558051 temp=1085855 bnd=632883 fail=11  max_depth=278340
+message: persistent wavefront summary:
+  total_steps=290795  total_rays=12912158916  avg_wavefront_width=22412.5
+  refill_phase: rays=12002571393 (93.0%)  wall=138.855s
+  drain_phase:  rays=909554755 (7.0%)  steps=104895  wall=22.706s
+  batch_size: min=2, max=78079
+  rays: radiative=866345826  cond_ds=2490943888(retry=8)  shadow=0  enclosure=9554869194  startup=0  other=0
+  paths: completed=3276800, failed=11, truncated=0, max_depth=278340
+  refills=3244032
+message:   timing (pipeline phases):
+    submit       =  25.602s [15.8%] (async thread, overlapped)
+    wait_d2h     =  25.441s [15.7%]  (trace=20.646s  enc=0.008s  cp=0.008s)
+      trace_stall=   1.306s           (device: kern=4.072s d2h=1.183s, 75% hidden)
+      trace_post =  19.340s           (host: post=19.340s retrace=0.000s)
+    merged_pass  = 120.957s [74.9%]
+    compact+rfill=  10.258s [ 6.3%]
+    housekeeping =   0.486s [ 0.3%]
+    total= 182.744s  wall=161.561s  coverage=113.1%
+message:     submit breakdown: sync_kernel=0.000s  start_d2h+launch=3.354s
+message: cascade profiling: total_iterations=5379253197  total_advances=5379253197
+message: batch trace profiling: calls=290773  avg_batch=44406  min=2  max=78079
+  gpu_kernel:        total=4072.1ms (16.6%)  avg=0.01ms/call
+  d2h_wait:          total=1183.3ms (4.8%)  avg=0.00ms/call
+  cpu_postprocess:   total=19340.2ms (78.6%)  avg=0.07ms/call
+  fallback_retrace:  total=0.0ms (0.0%)  accepted=0  missed=0  rejected=0
+  gpu_throughput: 3170.9 Mrays/s  (kernel only)
+message: Initialisation time = 563 msecs
+message: Computation time = 2 mins 41 secs 716 msecs
+[RSYS-DEBUG] mem_shutdown_proxy_allocator called, proxy=000000D4E21EE1D0
+[RSYS-DEBUG] proxy_data=0000028A7C0905A0
+[RSYS-DEBUG] node_list=0000000000000000
+[RSYS-DEBUG] About to assert node_list == NULL

@@ -1,0 +1,199 @@
+message: MPI is disabled.
+message: Using 24 threads.
+message: Read file 'S_porous.stl': 12998 triangles found.
+message: External fluid created: T=300 (it is medium 1)
+message: Read file 'B_lateral.stl': 12994 triangles found.
+message: Dummy fluid created: (it is medium 2)
+message: Read file 'B_T0.stl': 2 triangles found.
+message: Read file 'B_T1.stl': 2 triangles found.
+message: Scaling factor is 1
+message: Trad is 680, Trad reference is 800
+message: System Tref range is [300 850]
+message: Picard order is 1
+message: Read 12998 unique triangles.
+warning: User delta for solid 'FOAM' seems too big: 0.0002; auto delta would have set it to 5.76629e-05.
+message: Description 0: Solid 'FOAM': lambda=237 rho=2700 cp=890 delta=0.0002 Tinit=800 (it is medium 0)
+message: Description 1: H boundary for solid 'LAT': ref_temperature=300 emissivity=0.9 specular_fraction=0.5 hc=0 T=300 (using medium 1 as external medium)
+message: Description 2: T boundary for solid 'T0': T=750 (using medium 2 as external medium)
+message: Description 3: T boundary for solid 'T1': T=850 (using medium 2 as external medium)
+message: Rendering:   0%message: Persistent wavefront solver enabled (Phase B-3).
+message: Persistent wavefront (Phase B-3 M3): 64x64 spp=4, pool_size=16384 (SM=128), total_tasks=16384
+message: Cascade OMP: ENABLED, threads=24 (STARDIS_CASCADE_OMP=1)
+message: persistent_wavefront: 16384 paths initialised (16384/16384 tasks consumed), starting wavefront loop
+message: persistent_wavefront: entering drain phase at step 1, 3019 active paths remain, refill_wall=0.005s
+message: Rendering:  82%message: Rendering:  83%message: Rendering:  84%message: Rendering:  85%message: Rendering:  86%message: Rendering:  87%message: persistent_wavefront step 500: 2092/16384 active, 8464 rays this step (rad=0 ds=2044 shd=0 st=0), 14298/16384 tasks done, DRAIN
+message: Rendering:  88%warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00358399, -0.00252846, 0.003274)
+message: Rendering:  89%message: persistent_wavefront step 1000: 1758/16384 active, 7112 rays this step (rad=0 ds=1718 shd=0 st=0), 14633/16384 tasks done, DRAIN
+message: Rendering:  90%warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00236496, 0.000844093, 0.00419694)
+message: Rendering:  91%message: persistent_wavefront step 1500: 1562/16384 active, 6048 rays this step (rad=0 ds=1662 shd=0 st=0), 14830/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00370213, 0.0013227, 0.0021546)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00151972, -0.00459318, 0.00368212)
+message: persistent_wavefront step 2000: 1429/16384 active, 5554 rays this step (rad=0 ds=1510 shd=0 st=0), 14965/16384 tasks done, DRAIN
+message: Rendering:  92%message: persistent_wavefront step 2500: 1329/16384 active, 5178 rays this step (rad=0 ds=1398 shd=0 st=0), 15065/16384 tasks done, DRAIN
+message: Rendering:  93%message: persistent_wavefront step 3000: 1232/16384 active, 4800 rays this step (rad=0 ds=1296 shd=0 st=0), 15162/16384 tasks done, DRAIN
+message: persistent_wavefront step 3500: 1165/16384 active, 4502 rays this step (rad=0 ds=1244 shd=0 st=0), 15229/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00390097, -0.00244291, -0.00202464)
+message: persistent_wavefront step 4000: 1096/16384 active, 4456 rays this step (rad=0 ds=1060 shd=0 st=0), 15299/16384 tasks done, DRAIN
+message: Rendering:  94%warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00105523, -0.00187265, -0.000333381)
+message: persistent_wavefront step 4500: 1027/16384 active, 4030 rays this step (rad=0 ds=1066 shd=0 st=0), 15369/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00260147, 0.00111547, -0.00385244)
+message: persistent_wavefront step 5000: 965/16384 active, 3882 rays this step (rad=0 ds=954 shd=0 st=0), 15432/16384 tasks done, DRAIN
+message: Rendering:  95%message: persistent_wavefront step 5500: 905/16384 active, 3598 rays this step (rad=0 ds=916 shd=0 st=0), 15492/16384 tasks done, DRAIN
+message: persistent_wavefront step 6000: 849/16384 active, 3222 rays this step (rad=0 ds=936 shd=0 st=0), 15548/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.0044042, -0.00283623, -0.000781618)
+message: persistent_wavefront step 6500: 798/16384 active, 3144 rays this step (rad=0 ds=822 shd=0 st=0), 15600/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00344964, 0.00179338, -0.00419976)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00216591, 0.000214436, -0.00147206)
+message: Rendering:  96%message: persistent_wavefront step 7000: 744/16384 active, 2944 rays this step (rad=0 ds=760 shd=0 st=0), 15656/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00046638, -0.00413776, -0.0018624)
+message: persistent_wavefront step 7500: 689/16384 active, 2684 rays this step (rad=0 ds=728 shd=0 st=0), 15712/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00434139, 0.0011563, 0.000737175)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.000754138, -0.000710787, 0.00215316)
+message: persistent_wavefront step 8000: 634/16384 active, 2516 rays this step (rad=0 ds=644 shd=0 st=0), 15769/16384 tasks done, DRAIN
+message: Rendering:  97%message: persistent_wavefront step 8500: 592/16384 active, 2332 rays this step (rad=0 ds=610 shd=0 st=0), 15811/16384 tasks done, DRAIN
+message: persistent_wavefront step 9000: 556/16384 active, 2332 rays this step (rad=0 ds=502 shd=0 st=0), 15847/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00217746, -0.00155239, -0.00381511)
+message: persistent_wavefront step 9500: 523/16384 active, 2062 rays this step (rad=0 ds=538 shd=0 st=0), 15881/16384 tasks done, DRAIN
+message: persistent_wavefront step 10000: 489/16384 active, 2006 rays this step (rad=0 ds=464 shd=0 st=0), 15915/16384 tasks done, DRAIN
+message: persistent_wavefront step 10500: 462/16384 active, 1832 rays this step (rad=0 ds=470 shd=0 st=0), 15942/16384 tasks done, DRAIN
+message: persistent_wavefront step 11000: 438/16384 active, 1772 rays this step (rad=0 ds=428 shd=0 st=0), 15966/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00339505, 0.00316462, -0.00184347)
+message: Rendering:  98%message: persistent_wavefront step 11500: 418/16384 active, 1672 rays this step (rad=0 ds=418 shd=0 st=0), 15987/16384 tasks done, DRAIN
+message: persistent_wavefront step 12000: 390/16384 active, 1552 rays this step (rad=0 ds=394 shd=0 st=0), 16015/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00414527, -0.00217109, 0.00351392)
+message: persistent_wavefront step 12500: 363/16384 active, 1414 rays this step (rad=0 ds=382 shd=0 st=0), 16043/16384 tasks done, DRAIN
+message: persistent_wavefront step 13000: 341/16384 active, 1394 rays this step (rad=0 ds=326 shd=0 st=0), 16065/16384 tasks done, DRAIN
+message: persistent_wavefront step 13500: 329/16384 active, 1282 rays this step (rad=0 ds=346 shd=0 st=0), 16077/16384 tasks done, DRAIN
+message: persistent_wavefront step 14000: 312/16384 active, 1168 rays this step (rad=0 ds=352 shd=0 st=0), 16094/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00226319, -0.000905608, -0.00404217)
+message: persistent_wavefront step 14500: 286/16384 active, 1164 rays this step (rad=0 ds=276 shd=0 st=0), 16121/16384 tasks done, DRAIN
+message: Rendering:  99%message: persistent_wavefront step 15000: 268/16384 active, 1120 rays this step (rad=0 ds=244 shd=0 st=0), 16139/16384 tasks done, DRAIN
+message: persistent_wavefront step 15500: 252/16384 active, 952 rays this step (rad=0 ds=280 shd=0 st=0), 16155/16384 tasks done, DRAIN
+message: persistent_wavefront step 16000: 241/16384 active, 966 rays this step (rad=0 ds=240 shd=0 st=0), 16166/16384 tasks done, DRAIN
+message: persistent_wavefront step 16500: 227/16384 active, 886 rays this step (rad=0 ds=238 shd=0 st=0), 16180/16384 tasks done, DRAIN
+message: persistent_wavefront step 17000: 218/16384 active, 936 rays this step (rad=0 ds=186 shd=0 st=0), 16189/16384 tasks done, DRAIN
+message: persistent_wavefront step 17500: 206/16384 active, 810 rays this step (rad=0 ds=216 shd=0 st=0), 16201/16384 tasks done, DRAIN
+message: persistent_wavefront step 18000: 193/16384 active, 750 rays this step (rad=0 ds=204 shd=0 st=0), 16214/16384 tasks done, DRAIN
+message: persistent_wavefront step 18500: 182/16384 active, 740 rays this step (rad=0 ds=176 shd=0 st=0), 16225/16384 tasks done, DRAIN
+message: persistent_wavefront step 19000: 171/16384 active, 722 rays this step (rad=0 ds=152 shd=0 st=0), 16236/16384 tasks done, DRAIN
+message: persistent_wavefront step 19500: 165/16384 active, 654 rays this step (rad=0 ds=168 shd=0 st=0), 16242/16384 tasks done, DRAIN
+message: persistent_wavefront step 20000: 156/16384 active, 600 rays this step (rad=0 ds=168 shd=0 st=0), 16251/16384 tasks done, DRAIN
+message: persistent_wavefront step 20500: 147/16384 active, 602 rays this step (rad=0 ds=140 shd=0 st=0), 16260/16384 tasks done, DRAIN
+message: persistent_wavefront step 21000: 139/16384 active, 550 rays this step (rad=0 ds=142 shd=0 st=0), 16268/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.000148836, -0.00198591, 0.000409824)
+message: persistent_wavefront step 21500: 131/16384 active, 502 rays this step (rad=0 ds=142 shd=0 st=0), 16277/16384 tasks done, DRAIN
+message: persistent_wavefront step 22000: 122/16384 active, 488 rays this step (rad=0 ds=122 shd=0 st=0), 16286/16384 tasks done, DRAIN
+message: persistent_wavefront step 22500: 115/16384 active, 422 rays this step (rad=0 ds=134 shd=0 st=0), 16293/16384 tasks done, DRAIN
+message: persistent_wavefront step 23000: 111/16384 active, 458 rays this step (rad=0 ds=104 shd=0 st=0), 16297/16384 tasks done, DRAIN
+message: Rendering: 100%message: persistent_wavefront step 23500: 101/16384 active, 418 rays this step (rad=0 ds=94 shd=0 st=0), 16307/16384 tasks done, DRAIN
+message: persistent_wavefront step 24000: 94/16384 active, 368 rays this step (rad=0 ds=98 shd=0 st=0), 16314/16384 tasks done, DRAIN
+message: persistent_wavefront step 24500: 86/16384 active, 352 rays this step (rad=0 ds=82 shd=0 st=0), 16322/16384 tasks done, DRAIN
+message: persistent_wavefront step 25000: 81/16384 active, 366 rays this step (rad=0 ds=60 shd=0 st=0), 16327/16384 tasks done, DRAIN
+message: persistent_wavefront step 25500: 72/16384 active, 296 rays this step (rad=0 ds=68 shd=0 st=0), 16336/16384 tasks done, DRAIN
+message: persistent_wavefront step 26000: 67/16384 active, 262 rays this step (rad=0 ds=70 shd=0 st=0), 16341/16384 tasks done, DRAIN
+message: persistent_wavefront step 26500: 64/16384 active, 244 rays this step (rad=0 ds=70 shd=0 st=0), 16344/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00425009, -0.0028517, -0.00213281)
+message: persistent_wavefront step 27000: 59/16384 active, 246 rays this step (rad=0 ds=54 shd=0 st=0), 16350/16384 tasks done, DRAIN
+message: persistent_wavefront step 27500: 54/16384 active, 208 rays this step (rad=0 ds=58 shd=0 st=0), 16355/16384 tasks done, DRAIN
+message: persistent_wavefront step 28000: 50/16384 active, 192 rays this step (rad=0 ds=54 shd=0 st=0), 16359/16384 tasks done, DRAIN
+message: persistent_wavefront step 28500: 45/16384 active, 166 rays this step (rad=0 ds=52 shd=0 st=0), 16364/16384 tasks done, DRAIN
+message: persistent_wavefront step 29000: 44/16384 active, 160 rays this step (rad=0 ds=52 shd=0 st=0), 16365/16384 tasks done, DRAIN
+message: persistent_wavefront step 29500: 40/16384 active, 144 rays this step (rad=0 ds=48 shd=0 st=0), 16369/16384 tasks done, DRAIN
+message: persistent_wavefront step 30000: 37/16384 active, 154 rays this step (rad=0 ds=34 shd=0 st=0), 16372/16384 tasks done, DRAIN
+message: persistent_wavefront step 30500: 35/16384 active, 150 rays this step (rad=0 ds=30 shd=0 st=0), 16374/16384 tasks done, DRAIN
+message: persistent_wavefront step 31000: 34/16384 active, 144 rays this step (rad=0 ds=30 shd=0 st=0), 16375/16384 tasks done, DRAIN
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00425804, -0.00265239, -0.000546009)
+message: persistent_wavefront step 31500: 31/16384 active, 130 rays this step (rad=0 ds=28 shd=0 st=0), 16379/16384 tasks done, DRAIN
+message: persistent_wavefront step 32000: 28/16384 active, 128 rays this step (rad=0 ds=20 shd=0 st=0), 16382/16384 tasks done, DRAIN
+message: persistent_wavefront step 32500: 27/16384 active, 118 rays this step (rad=0 ds=22 shd=0 st=0), 16383/16384 tasks done, DRAIN
+message: persistent_wavefront step 33000: 26/16384 active, 92 rays this step (rad=0 ds=32 shd=0 st=0), 16384/16384 tasks done, DRAIN
+message: persistent_wavefront step 33500: 25/16384 active, 102 rays this step (rad=0 ds=24 shd=0 st=0), 16385/16384 tasks done, DRAIN
+message: persistent_wavefront step 34000: 25/16384 active, 98 rays this step (rad=0 ds=26 shd=0 st=0), 16385/16384 tasks done, DRAIN
+message: persistent_wavefront step 34500: 25/16384 active, 94 rays this step (rad=0 ds=28 shd=0 st=0), 16385/16384 tasks done, DRAIN
+message: persistent_wavefront step 35000: 24/16384 active, 92 rays this step (rad=0 ds=26 shd=0 st=0), 16386/16384 tasks done, DRAIN
+message: persistent_wavefront step 35500: 23/16384 active, 98 rays this step (rad=0 ds=20 shd=0 st=0), 16387/16384 tasks done, DRAIN
+message: persistent_wavefront step 36000: 21/16384 active, 78 rays this step (rad=0 ds=24 shd=0 st=0), 16389/16384 tasks done, DRAIN
+message: persistent_wavefront step 36500: 18/16384 active, 84 rays this step (rad=0 ds=12 shd=0 st=0), 16392/16384 tasks done, DRAIN
+message: persistent_wavefront step 37000: 17/16384 active, 62 rays this step (rad=0 ds=20 shd=0 st=0), 16393/16384 tasks done, DRAIN
+message: persistent_wavefront step 37500: 16/16384 active, 68 rays this step (rad=0 ds=14 shd=0 st=0), 16394/16384 tasks done, DRAIN
+message: persistent_wavefront step 38000: 14/16384 active, 56 rays this step (rad=0 ds=14 shd=0 st=0), 16396/16384 tasks done, DRAIN
+message: persistent_wavefront step 38500: 13/16384 active, 50 rays this step (rad=0 ds=14 shd=0 st=0), 16397/16384 tasks done, DRAIN
+message: persistent_wavefront step 39000: 11/16384 active, 50 rays this step (rad=0 ds=8 shd=0 st=0), 16399/16384 tasks done, DRAIN
+message: persistent_wavefront step 39500: 10/16384 active, 32 rays this step (rad=0 ds=14 shd=0 st=0), 16400/16384 tasks done, DRAIN
+message: persistent_wavefront step 40000: 9/16384 active, 42 rays this step (rad=0 ds=6 shd=0 st=0), 16401/16384 tasks done, DRAIN
+message: persistent_wavefront step 40500: 9/16384 active, 42 rays this step (rad=0 ds=6 shd=0 st=0), 16401/16384 tasks done, DRAIN
+message: persistent_wavefront step 41000: 9/16384 active, 30 rays this step (rad=0 ds=12 shd=0 st=0), 16401/16384 tasks done, DRAIN
+message: persistent_wavefront step 41500: 9/16384 active, 34 rays this step (rad=0 ds=10 shd=0 st=0), 16401/16384 tasks done, DRAIN
+message: persistent_wavefront step 42000: 9/16384 active, 30 rays this step (rad=0 ds=12 shd=0 st=0), 16401/16384 tasks done, DRAIN
+message: persistent_wavefront step 42500: 8/16384 active, 24 rays this step (rad=0 ds=12 shd=0 st=0), 16402/16384 tasks done, DRAIN
+message: persistent_wavefront step 43000: 7/16384 active, 26 rays this step (rad=0 ds=8 shd=0 st=0), 16403/16384 tasks done, DRAIN
+message: persistent_wavefront step 43500: 6/16384 active, 20 rays this step (rad=0 ds=8 shd=0 st=0), 16404/16384 tasks done, DRAIN
+message: persistent_wavefront step 44000: 6/16384 active, 24 rays this step (rad=0 ds=6 shd=0 st=0), 16404/16384 tasks done, DRAIN
+message: persistent_wavefront step 44500: 6/16384 active, 16 rays this step (rad=0 ds=10 shd=0 st=0), 16404/16384 tasks done, DRAIN
+message: persistent_wavefront step 45000: 5/16384 active, 18 rays this step (rad=0 ds=6 shd=0 st=0), 16405/16384 tasks done, DRAIN
+message: persistent_wavefront step 45500: 5/16384 active, 26 rays this step (rad=0 ds=2 shd=0 st=0), 16405/16384 tasks done, DRAIN
+message: persistent_wavefront step 46000: 5/16384 active, 22 rays this step (rad=0 ds=4 shd=0 st=0), 16405/16384 tasks done, DRAIN
+message: persistent_wavefront step 46500: 5/16384 active, 22 rays this step (rad=0 ds=4 shd=0 st=0), 16405/16384 tasks done, DRAIN
+message: persistent_wavefront step 47000: 5/16384 active, 18 rays this step (rad=0 ds=6 shd=0 st=0), 16405/16384 tasks done, DRAIN
+message: persistent_wavefront step 47500: 4/16384 active, 26 rays this step (rad=0 ds=2 shd=0 st=0), 16406/16384 tasks done, DRAIN
+message: persistent_wavefront step 48000: 3/16384 active, 10 rays this step (rad=0 ds=4 shd=0 st=0), 16407/16384 tasks done, DRAIN
+message: persistent_wavefront step 48500: 3/16384 active, 14 rays this step (rad=0 ds=2 shd=0 st=0), 16407/16384 tasks done, DRAIN
+message: persistent_wavefront step 49000: 2/16384 active, 12 rays this step (rad=0 ds=0 shd=0 st=0), 16408/16384 tasks done, DRAIN
+message: persistent_wavefront step 49500: 2/16384 active, 4 rays this step (rad=0 ds=4 shd=0 st=0), 16408/16384 tasks done, DRAIN
+message: persistent_wavefront step 50000: 2/16384 active, 4 rays this step (rad=0 ds=4 shd=0 st=0), 16408/16384 tasks done, DRAIN
+message: persistent_wavefront step 50500: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 51000: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 51500: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 52000: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 52500: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 53000: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 53500: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 54000: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 54500: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 55000: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 55500: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 56000: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 56500: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 57000: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 57500: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 58000: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 58500: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 59000: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 59500: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 60000: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 60500: 1/16384 active, 2 rays this step (rad=0 ds=2 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 61000: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront step 61500: 1/16384 active, 6 rays this step (rad=0 ds=0 shd=0 st=0), 16409/16384 tasks done, DRAIN
+message: persistent_wavefront DONE: 64x64 spp=4 pool=16384 elapsed=1 min 16 secs 568 msecs 783 usecs 800 nsecs  steps=61837  rays=58411034  avg_width=239.2  (rad=16681 cond_ds=11245040 ds_retry=45478)  done: rad=13502 temp=31 bnd=2825 fail=26  max_depth=163847
+message: persistent wavefront summary:
+  total_steps=61837  total_rays=58411034  avg_wavefront_width=239.2
+  refill_phase: rays=0 (0.0%)  wall=0.005s
+  drain_phase:  rays=58411034 (100.0%)  steps=61837  wall=76.564s
+  batch_size: min=2, max=16384
+  ray_buckets: radiative=16681, step_pair=11245040, shadow=0, startup=0
+  paths: completed=16384, failed=26, truncated=0, max_depth=163847
+  refills=0
+  timing: compact=9.979s  collect=0.742s  trace=30.880s  distribute=0.926s  cascade=4.704s  harvest+refill=19.734s
+message:   enc_escalation: query_fb->m10=24  m10_degenerate_null=24
+message: cascade profiling: total_iterations=24312309  total_advances=24312294
+message:   cascade phase[34]: count=   5645259  time=   0.904s  avg=0.160us  (19.2% of cascade)
+message:   cascade phase[38]: count=   5642072  time=   0.857s  avg=0.152us  (18.2% of cascade)
+message:   cascade phase[16]: count=   3879394  time=   0.576s  avg=0.149us  (12.3% of cascade)
+message:   cascade phase[ 3]: count=   1942441  time=   0.511s  avg=0.263us  (10.9% of cascade)
+message:   cascade phase[37]: count=   4084805  time=   0.390s  avg=0.096us  (8.3% of cascade)
+message:   cascade phase[ 5]: count=   1557287  time=   0.150s  avg=0.096us  (3.2% of cascade)
+message:   cascade phase[15]: count=   1560796  time=   0.086s  avg=0.055us  (1.8% of cascade)
+message:   cascade phase[18]: count=       186  time=   0.000s  avg=0.294us  (0.0% of cascade)
+message:   cascade phase[51]: count=        24  time=   0.000s  avg=0.075us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=         7  time=   0.000s  avg=0.257us  (0.0% of cascade)
+message: batch trace profiling: calls=61837  avg_batch=945  min=2  max=16384
+  gpu_kernel+upload: total=30044.6ms (97.6%)  avg=0.49ms/call
+  cpu_postprocess:   total=706.5ms (2.3%)  avg=0.01ms/call
+  fallback_retrace:  total=34.3ms (0.1%)  accepted=1  missed=0  rejected=3376
+  gpu_throughput: 1.9 Mrays/s  (kernel+upload only)
+message: Initialisation time = 255 msecs
+message: Computation time = 1 min 16 secs 650 msecs
+[RSYS-DEBUG] mem_shutdown_proxy_allocator called, proxy=000000846E95E2A0
+[RSYS-DEBUG] proxy_data=0000026F8B1B7130
+[RSYS-DEBUG] node_list=0000000000000000
+[RSYS-DEBUG] About to assert node_list == NULL

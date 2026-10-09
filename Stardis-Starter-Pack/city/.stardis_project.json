@@ -1,0 +1,120 @@
+{
+  "probes": [],
+  "cameras": [
+    {
+      "name": "Camera1",
+      "position": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "target": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fov": 30.0,
+      "spp": 32,
+      "resolution": [
+        320,
+        320
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "name": "DefaultLight",
+      "light_type": "DEFAULT",
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "position": [
+        3.0,
+        4.0,
+        5.0
+      ],
+      "enabled": true,
+      "radius": 1.0,
+      "power": 0.0,
+      "diffuse_radiance": 0.0,
+      "raw_line": ""
+    }
+  ],
+  "ambient_intensity": 0.4,
+  "body_zone_ids": {
+    "WALL": {
+      "next_zone_id": 3,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "EXTERNAL"
+        },
+        {
+          "zone_id": 2,
+          "name": "INTERNAL"
+        }
+      ]
+    },
+    "INSULATOR": {
+      "next_zone_id": 1,
+      "zones": []
+    },
+    "BALCONIES": {
+      "next_zone_id": 1,
+      "zones": []
+    },
+    "GLAZING": {
+      "next_zone_id": 1,
+      "zones": []
+    },
+    "GROUND": {
+      "next_zone_id": 4,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "GROUNDTOP"
+        },
+        {
+          "zone_id": 2,
+          "name": "GROUNDSIDE"
+        },
+        {
+          "zone_id": 3,
+          "name": "GROUNDBOTTOM"
+        }
+      ]
+    },
+    "LAKE": {
+      "next_zone_id": 2,
+      "zones": [
+        {
+          "zone_id": 1,
+          "name": "LAKETOP"
+        }
+      ]
+    }
+  },
+  "zone_parent_map": {
+    "EXTERNAL": "WALL",
+    "INTERNAL": "WALL",
+    "GROUNDTOP": "GROUND",
+    "GROUNDSIDE": "GROUND",
+    "GROUNDBOTTOM": "GROUND",
+    "LAKETOP": "LAKE"
+  },
+  "normal_orientations": {
+    "WALL": "outward",
+    "INSULATOR": "outward",
+    "BALCONIES": "outward",
+    "GLAZING": "outward",
+    "GROUND": "outward",
+    "LAKE": "outward"
+  }
+}

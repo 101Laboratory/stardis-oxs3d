@@ -1,0 +1,7 @@
+{
+  "scope": "Common credential patterns only; current text-like files and reachable history blobs under 20 MiB; no guarantee of exhaustive detection",
+  "current_files": 3538,
+  "history_blobs": 5203,
+  "findings": [],
+  "history_blobs_over_100_mib": []
+}

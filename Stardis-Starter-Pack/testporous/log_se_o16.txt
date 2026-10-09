@@ -1,0 +1,22 @@
+message: MPI is disabled.
+message: Using 32 threads.
+message: Read file 'S_porous.stl': 12998 triangles found.
+message: Read file 'plate.stl': 12 triangles found.
+message: External fluid created: T=300 (it is medium 2)
+message: Read file 'B_LAT.stl': 12994 triangles found.
+message: Dummy fluid created: (it is medium 3)
+message: Read file 'B_T0.stl': 2 triangles found.
+message: Read file 'B_T1.stl': 2 triangles found.
+message: External fluid created: T=300 (it is medium 4)
+message: Read file 'B_HPLATE.stl': 12 triangles found.
+message: Scaling factor is 1
+message: Trad is 680, Trad reference is 800
+message: System Tref range is [300 850]
+message: Picard order is 1
+message: Read 13010 unique triangles.
+error: Property conflicts found in the model (12998 triangles).
+error: No computation possible.
+[RSYS-DEBUG] mem_shutdown_proxy_allocator called, proxy=0000003ED778E1D0
+[RSYS-DEBUG] proxy_data=0000023D0835F780
+[RSYS-DEBUG] node_list=0000000000000000
+[RSYS-DEBUG] About to assert node_list == NULL

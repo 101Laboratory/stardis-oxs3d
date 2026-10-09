@@ -1,0 +1,899 @@
+% 第一章 绪论 — 综述、集成系统、应用场景、经验/半经验方法
+% 来源子集合: 集成系统, 应用, 经验半经验与第一性方法
+% 共 50 篇
+
+@article{huangGPUbasedHighprecisionRealtime2014,
+  title = {{{GPU-based}} High-Precision Real-Time Radiometric Rendering for {{IR}} Scene Generation},
+  author = {Huang, Xi},
+  year = 2014,
+  month = jul,
+  journal = {Infrared Physics and Technology},
+  volume = {65},
+  pages = {134--143},
+  publisher = {Pergamon},
+  issn = {1350-4495},
+  doi = {10.1016/j.infrared.2014.04.007},
+  urldate = {2025-05-11},
+  abstract = {Aiming at the problem that traditional infrared scene real-time radiometric rendering method  leads to greater calculation error for securing real-time purpose, this article studies the IR  rendering comprehensive optimization method, which secures real-time performance as well as  calculation accuracy. Firstly, based on the effective average value principle, the spectrum coupling  thermal emission and reflected radiations in the spectral radiometric equation are decomposed into  physical quantities, and the spectral radiometric equation is improved to become a simpler  calculation between "primer" radiance terms and effective average factors. Secondly, the  parameter processing method is proposed to cope with the situation when index parameters of  effective average factors exceed the maximum dimensionalities of graphics processing unit (GPU)  look-up-table (LUT); and pre-calculation method is applied to promote the real-time evaluation  efficiency of the physical quantities in the radiometric equation. Finally, concurrent computation  of radiometric equation is achieved with GPU IR scene generation software and the precise and  real-time rendering of three-dimensional IR scene is realized.},
+  langid = {english},
+  annotation = {TLDR: The IR rendering comprehensive optimization method secures real-time performance as well as calculation accuracy, and concurrent computation of radiometric equation is achieved with GPU IR scene generation software and the precise and real- time rendering of three-dimensional IR scene is realized.\\
+abstractTranslation: 红外场景实时仿真广泛应用于战场环境仿真、数字/HWIL仿真测试、飞行训练以及热红外遥感建模[1-3]等军事和民用领域。在实时红外场景生成过程中，目标、背景和大气辐射相互作用下带内辐射的准确、高速计算，以及大气对目标辐射衰减和对比度变化的影响的准确体现，在很大程度上决定了模拟图像的真实感和实时性。然而，精确的三维场景红外渲染通常非常耗时。原因是多方面的。首先，高精度辐射方程包括大量的光谱计算，以表示源、反射面和大气之间的光谱耦合。其次，每个像素通常对应于通过大气的不同视线，这意味着每个像素根据辐射方程进行独立计算。在实时红外图像的生成中，单位时间内辐射方程的总计算量与模拟帧与像素数量的乘积成正比，是一个巨大的量。此外，在每个像素的辐射渲染中，由于视线的不同，大气透过率和路径辐射度等物理量是动态确定的，并且使用MODTRAN软件计算这些物理量也很耗时。针对以上在3D场景红外绘制中耗时的因素，研究人员提出了相关的实时优化方法。首先，对于辐射方程中的频谱形式耗时问题，Williams等人[4]、He等人[5]、Wu等人[6]、Jiang等人[7]采用透射平均值近似来简化频谱方程。平均值近似的核心思想是用带平均衰减近似代替精确频谱方程中辐射分量的频谱衰减积分计算，显著减少了计算量，因此被VIRSuite[8]、Vega/Vega Prime[9]、JRM[10]、SE Workbench IR[11,12]等大多数实时红外场景模拟软件采用。其次，针对实时计算量巨大的问题，基于仿真图像中不同像素的辐射渲染是离散的，因此可以并发进行的特点，研究人员采用了基于GPU的并行计算方法[2,4-8,10-12]或基于多核CPU的并行计算方法[13]来提高实时性能，并实现了有效的帧速率加速。由于GPU在三维图形数据的并行处理方面比CPU具有更高的效率，基于GPU的辐射绘制方法受到了研究人员的广泛关注。此外，对于直接计算辐射方程物理量所需的时间，研究人员通常采用物理量查表法进行优化，即根据已知的气象条件和观测几何变化范围，利用Modtran软件预先计算辐射衰减方程中的大气平均透射率、大气路径辐射度等物理参数，并保存为LUT。在实时绘制阶段，通过在LUT中进行实时查找，并根据精确的视线几何参数进行插值，实现了平均透射率等参数的实时采集。与辐射方程的并行计算一样，LUT的实时插值可以分别在GPU或CPU中进行。因此，辐射物理量查找表方法进一步分为基于GPU的物理量查找表格方法[4-12]和基于CPU的物理量查询表格方法[4,13]。与基于CPU的物理量LUT方法相比，基于GPU的物理量LUT方法通常具有更高的并行计算效率，但在数据大小和数据维数方面受到了较大的限制。例如，根据GPU对输入数据的限制（格式为纹理），GPU LUT方法仅支持三个最大维度。通过在实时辐射计算中定义气象条件、波段范围等参数保持不变，从而保证方程中的物理量依赖于三个指数参数中的最大值进行实时插值。由上述GPU LUT方法生成的GPU纹理不超过3的维数。最后，将这三种实时优化方法综合应用于实时过程中，可以有效地实现目标、背景和大气相互作用下的辐射计算，从而满足红外场景仿真应用对实时性能日益苛刻的要求。例如，在HWIL模拟中，可以生成帧频为100\textasciitilde 400Hz的模拟图像[2,13]。经进一步分析，以上实时优化方法都是基于大气平均透过率进行辐射计算的。根据参考文献[9]和本文的相关误差计算，简化大气平均透过率可能会导致不同程度的计算误差。在一定条件下，黑体或灰体辐射衰减误差为15\%以上，反射太阳辐射衰减误差超过-40\%，选择性辐射体状羽流甚至具有远大于100\%的辐射衰减误差。实时辐射渲染方法在准确性方面的不足，降低了计算结果的可信度和模拟试验的可靠性；同时也制约了红外场景实时仿真技术在多光谱成像系统开发与测试、高真实感红外建模等研究人员越来越关注的领域中的进一步深入应用。因此，如何在提高计算精度的同时满足辐射渲染的实时性能是一个重要而富有挑战性的课题。Cathala等人[14]采用了一种基于图像的渲染方法，该方法使用精确的光谱算法来预计算一组羽流辐射和衰减纹理。但由于辐射和透射重建算法的局限性，很难将衰减校正方法从简单的轴对称羽流扩展到具有复杂三维几何轮廓的目标和地形。Lepage等人[15]使用宽带版本的相关-k理论，将宽带上的全积分减少为宽带ck空间中几个ck系数上的总和。该方法在正确再现飞机和耀斑特征的光谱特性的同时，显著提高了辐射方程计算效率，但在计算大气透射率和辐射度等物理量时，与MODTRAN结果相比，仍然存在约5\%的误差。为了实现精确、实时的红外绘制，本文首先利用有效平均原理对复杂的光谱辐射方程进行了变换，建立了一个既能保持光谱耦合精度又能简化光谱积分的修正辐射方程，保证了各种辐射器（特别是选择性辐射器）总辐射的精度；然后，针对有效平均因子的实时指标参数个数超过GPU LUT的最大维数的问题，研究了多指标参数LUT预计算方法，并形成了相应的GPU纹理；最后，完成了基于GPU平台的三维场景红外实时渲染，生成高帧频、高精度的图像。本文的结构如下：第二节对热辐射、反射辐射等光谱耦合辐射分量进行物理量分解，将辐射方程修改为``引物''辐射项和有效平均因子的基本算术运算。第3节介绍如何将有效平均因子参数化以在LUT中预计算并存储���GPU纹理中。第四节利用GPU红外场景生成软件完成了辐射方程的精确快速计算。},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\WVGY72MG\\2014 - GPU-based high-precision real-time radiometric rendering for IR scene generation.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\MD9Z2QYB\\S1350449514000711.html}
+}
+
+@phdthesis{HuangXiGaoZhenShiGanHongWaiChangJingShiShiFangZhenJiShuYanJiu2014,
+  type = {{博士学位论文}},
+  title = {{高真实感红外场景实时仿真技术研究}},
+  author = {黄曦},
+  year = 2014,
+  address = {西安},
+  abstract = {红外场景实时仿真技术通过生成目标、背景的红外特性并模拟红外成像系统的实际工作方式,具有可靠、无破坏性、可多次重复、不受气象条件和场景空域限制、控制灵活等特点,能够降低研发风险、缩短研制周期、节约研究与试验经费,具有重要的军用和民用应用价值。而随着个人计算机与图形处理单元相结合的仿真硬件在运算性能上的飞速进步,进行更真实、复杂的物理现象与过程实时模拟成为可能,使得基于GPU构建红外场景实时仿真软件,并提高软件各子模块的拟真度越来越为研究者所重视。本文以建设系统化、基于物理的、高真实感、实时红外场景仿真软件为目标,对通用仿真框架设计、红外纹理生成、辐射特征渲染与大气传输效应仿真等关键问题进行了研究,开展的具体工作如下:第一部分研究基于GPU的红外场景实时仿真框架设计。分析了红外场景仿真的相似理论与复合系统的全链路关系,剖析了国外典型红外场景仿真软件的框架特点、模块组成与图像生成流程,总结出红外场景实时仿真框架应遵循的模块化、层次化、系统化及实时优化等设计准则。依据设计准则,完成了红外场景实时仿真框架与子模块设计,模块具备低耦合与高内聚特点,易于扩充与修改;工作层次分解为``数据管理-建模与设计-图像生成''三层结构,层中数据接口稳定,层间交流清晰、方便;模拟成像链路,实现了``目标-背景-大气-成像系统''的复合系统设计;对仿真模块基于物理建模,保障计算结果物理可信;在高级渲染引擎基础上构建基于GPU的三维红外渲染引擎,提高了稳定性,降低了开发难度。通过构建红外导引头半实物仿真试验系统验证了仿真框架的可用性。第二部分研究高真实感红外纹理生成方法。依据红外辐射计算理论设计了红外场景GPU实时仿真框架所用的红外物理纹理格式。分析了实测法与数字仿真方法生成目标红外纹理的优缺点互补性,提出了将测量图像与数学反演模型结合来生成准确、自然、细节丰富的目标表面温度场分布,再结合三维渲染技术实现灵活的目标红外图像仿真,得到了一种基于实测反演方法的目标红外纹理生成方法。分析了由于实测法红外数据获取困难、成本高,而人工设计法生成的大规模地物红外纹理边界生硬、细节重复等问题,采用可见光遥感图像分割获取了准确、自然的地物材质区域分布,然后分别从材质的可见光光学属性变化、地物海拔变化、相邻区域热传递等方面对温度分布细节进行了基于物理模型的调制,得到了一种基于可见光遥感图像生成大规模地物红外纹理的改进方法,应用于三维地表仿真,生成的红外图像真实感强,实...},
+  langid = {chinese},
+  school = {西安电子科技大学},
+  keywords = {,GPU},
+  annotation = {CNKICite: 69},
+  file = {C:\Users\EricPu\Zotero\storage\68JDLG3H\黄曦 - 2014 - 高真实感红外场景实时仿真技术研究.pdf}
+}
+
+@article{LiChenYangJiYuSanWeiChangJingDeHongWaiChengXiangFangZhenKuangJiaJiShiXian2020,
+  title = {{基于三维场景的红外成像仿真框架及实现}},
+  author = {{李晨阳} and {李立钢} and {杨震} and {倪伟}},
+  year = 2020,
+  journal = {计算机仿真},
+  volume = {37},
+  number = {7},
+  pages = {248--252},
+  issn = {1006-9348},
+  urldate = {2025-05-25},
+  abstract = {针对传统的图到图的红外仿真方法灵活性差,难以反映目标的立体信息,同时国内缺乏具有自主产权的场景仿真软件等问题,提出了一种红外场景仿真框架。基于辐射传输理论,通过分析太阳、大气和地物辐射对红外成像的影响,构建出红外成像全链路数学模型;依据此模型,将仿真框架分为三维场景的构建与组织、大气要素计算、场景可见性计算、辐射能量场计算、混合像元和相机模块部分;最后对整个仿真框架进行系统实现和验证,生成了不同时间段的红外图像序列。实验结果表明,所提出的系统架构可扩展性强,模型耦合度低,易于实现且生成的红外仿真图像符合物理规律,能够应用于红外场景仿真与设备测试。},
+  langid = {chinese},
+  annotation = {foundation: 中国科学院重点部署资助项目(KGFZD-125-15-014)；\\
+download: 670\\
+album: 信息科技;工程科技II辑\\
+CLC: TP391.9;TN21;TP751\\
+CNKICite: (\\
+dbcode: CJFQ\\
+dbname: CJFDLAST2020\\
+filename: JSJZ202007049},
+  file = {C:\Users\EricPu\Zotero\storage\7BQJ7GMK\李晨阳 等 - 2020 - 基于三维场景的红外成像仿真框架及实现.pdf}
+}
+
+@article{liRealtimeMultiresolutionRendering2018,
+  title = {Real-Time and Multi-Resolution Rendering of the Infrared Characteristics for Large-Scale Terrains},
+  author = {Li, Ni and Li, Ren and Gong, Guanghong and Yan, Jin},
+  year = 2018,
+  month = nov,
+  journal = {Infrared Physics and Technology},
+  volume = {94},
+  pages = {173--183},
+  issn = {1350-4495},
+  doi = {10.1016/j.infrared.2018.09.017},
+  urldate = {2025-05-21},
+  abstract = {As a low-cost, efficient, digital simulation tool, real-time rendering of the infrared characteristics for large-scale terrains is typically interdisciplinary involving the rapid computation of heat transfer and infrared physics models, as well as tools associated with pattern recognition and computer graphics. This paper proposes an integrated real-time method that renders the infrared characteristics of large-scale terrains based on the classification of remote-sensing images in the visible band which can be obtained more conveniently. An energy balance model for terrains composed of different surface materials is established. This model is used in calculating the infrared characteristics of different terrain features and in generating a multi-resolution texture pyramid with the classification information. The infrared calculation results were verified by comparing with results from real world data. Out-of-core rendering method is used to load the mesh data and textures of the large-scale terrains. The process meets real-time demands when rendering terrain composed of over 200\,GB mesh data and 15 LOD (level of detail).},
+  langid = {english},
+  keywords = {Image classification,Infrared characteristics calculation,Large-scale terrains,Real-time and multi-resolution rendering},
+  annotation = {TLDR: An integrated real-time method that renders the infrared characteristics of large-scale terrains based on the classification of remote-sensing images in the visible band which can be obtained more conveniently.\\
+abstractTranslation: 作为一种低成本、高效的数字模拟工具，大规模地形红外特征的实时渲染通常是跨学科的，涉及传热和红外物理模型的快速计算，以及与模式识别和计算机图形学相关的工具。提出了一种基于可见光波段遥感图像分类的大规模地形红外特征综合实时渲染方法，该方法可以更方便地获取可见光波段的遥感图像。建立了由不同表面材料组成的地形的能量平衡模型。该模型用于计算不同地形特征的红外特征，并利用分类信息生成多分辨率纹理金字塔。通过与真实数据的比较，验证了红外计算结果。采用核外渲染方法加载大规模地形的网格数据和纹理。当渲染由200 GB以上的网格数据和15 LOD（细节级别）组成的地形时，该过程满足实时要求。},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\CH6ITKP7\\Li 等 - 2018 - Real-time and multi-resolution rendering of the infrared characteristics for large-scale terrains.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\WLB8QIQ2\\S1350449518304249.html;C\:\\Users\\EricPu\\Zotero\\storage\\X33MADNS\\S1350449518304249.html}
+}
+
+@phdthesis{LiuMengZhangJiYuWuLiCaiZhiXuanRanHeQuanLianLuHongWaiChengXiangFangZhenDeAnTanMuBiaoYuHuanJingTeXingYanJiu2023,
+  type = {{硕士学位论文}},
+  title = {{基于物理材质渲染和全链路红外成像仿真的岸滩目标与环境特性研究}},
+  author = {{刘梦章}},
+  year = 2023,
+  address = {南京},
+  doi = {10.27241/d.cnki.gnjgu.2023.001282},
+  urldate = {2025-07-16},
+  abstract = {红外成像仿真技术能够模拟多变及多样的战场环境,可为各种场景下红外武器的性能评估提供红外目标样本,具有较高的应用价值。近几年来国家对岸滩技战术演练不断加强投入,岸滩目标场景的红外特性研究对新式清障装备的研制、目标探测与反探测技术的发展都具有重要的现实意义。与此同时,红外仿真目标的真实感对仿真样本的实用性具有重要影响,但现有方法存在仿真目标表面缺少光照变化的问题,目标表面的纹理细节以及真实感有所不足。基于物理材质渲染技术具有材质表达能力强、逼真度高等优点,能较好地提升仿真目标的真实感。因此本文以岸滩目标场景的红外成像仿真作为研究对象,研究基于物理材质渲染在红外仿真中的应用,开展了以下工作:(1)针对红外图像获取困难的问题,基于红外成像原理,建立了全链路红外成像仿真理论模型,包括场景温度场、场景红外辐射、大气辐射传输效应以及红外探测器效应的计算,构建了一种基于GPU的红外成像实时仿真系统,能够有效地生成红外目标样本。(2)针对现有方法存在对岸滩障碍带目标红外特性研究不足以及红外实时仿真真实感有待提升的问题,建立了一种岸滩障碍带目标的红外特性模型和一种将基于物理材质的渲染算法与Cook-Torance模型相结合的红外光照模型,实现了岸滩目标及海滩背景的红外热像融合。通过对比研究表明,提出的算法能更有效地增强红外仿真目标的纹理细节,提升仿真目标的真实感。为验证仿真模型的可信度,利用实测数据进行了不确定度评估,岸滩障碍带和军用车辆仿真目标的平均不确定度分别为1.75d B和1.34d B,证明了模型的可靠性。(3)针对海上目标红外图像数据获取困难的问题,构建了一种基于PM谱和RossBRDF的红外海面背景,建立了一种舰船目标的红外特性模型,实现了舰船目标与海面背景的红外热像融合,分析了不同季节、不同时刻以及不同海况下舰船目标和海面背景的红外成像效果。为验证仿真模型的可信度,与实测数据进行比较,舰船仿真目标的平均不确定度为1.09d B,证明了模型的准确性。},
+  collaborator = {{柏连发}},
+  langid = {chinese},
+  school = {南京理工大学},
+  annotation = {major: 电子信息（专业学位）\\
+download: 172\\
+album: 信息科技\\
+CLC: TP391.41;TN219\\
+dbcode: CMFD\\
+dbname: CMFD202501\\
+filename: 1024435053.nh}
+}
+
+@article{LiWeiQingMianXiangShuZiLuanShengZhanChangDeHongWaiChangJingShiShiFangZhenFangFa2022,
+  title = {{面向数字孪生战场的红外场景实时仿真方法}},
+  author = {{李蔚清} and {吴云超} and {李航宇} and {苏智勇}},
+  year = 2022,
+  journal = {指挥信息系统与技术},
+  volume = {13},
+  number = {4},
+  pages = {1--7},
+  issn = {1674-909X},
+  doi = {10.15908/j.cnki.cist.2022.04.001},
+  urldate = {2025-05-25},
+  abstract = {针对采取智能算法进行战场态势分析和目标识别时面临的图像样本不足问题，构建了战场数字孪生系统，以实时物理域数据驱动孪生体仿真生成图像训练样本。首先，设计了开放复杂环境中的数字孪生战场体系结构和战场环境虚拟场景仿真流程，给出了红外图像仿真流程中基于有限自动机的状态转移机制；然后，对红外图像仿真流程的并行性进行了形式化分析和并行计算模型设计，实现了红外图像实时生成；最后，通过典型场景验证了孪生战场红外仿真图像方法的有效性，可为智能算法训练提供真实感强和数据丰富的图像样本。},
+  langid = {chinese},
+  annotation = {foundation: 装备发展部``十四五''预研课题(50904040201)； 信息系统工程重点实验室开放基金(05202005)资助项目；\\
+download: 856\\
+album: 信息科技;工程科技II辑\\
+CLC: TP391.41;E91\\
+dbcode: CJFQ\\
+dbname: CJFDLAST2022\\
+filename: ZHXT202204001},
+  file = {C:\Users\EricPu\Zotero\storage\SWIID7Y6\李蔚清 等 - 2022 - 面向数字孪生战场的红外场景实时仿真方法.pdf}
+}
+
+@article{LuQiHongWaiChangJingFangZhenFangFaJiFaZhanXianZhuangYanJiuZongShu2024,
+  title = {{红外场景仿真方法及发展现状研究综述}},
+  author = {{吕琪} and {李凌} and {余松林} and {苏荣华} and {李炳臻} and {吴雨}},
+  year = 2024,
+  journal = {防护工程},
+  volume = {46},
+  number = {5},
+  pages = {60--66},
+  issn = {1674-1854},
+  urldate = {2025-07-16},
+  abstract = {红外场景仿真是对红外成像过程的多方位具象化描述，通过仿真生成高精度复杂红外场景能够高效模拟外场试验并获取各阶段红外数据。综述了红外场景仿真方法和研究现状，并从仿真闭环角度探讨了复杂交互场景仿真的实现思路和技术途径。},
+  langid = {chinese},
+  annotation = {download: 324\\
+album: 工程科技II辑;信息科技\\
+CLC: TN219;TP391.41\\
+dbcode: CJFQ\\
+dbname: CJFDLAST2024\\
+filename: FHGC202405009},
+  file = {C:\Users\EricPu\Zotero\storage\9XRCKZL5\吕琪 等 - 2024 - 红外场景仿真方法及发展现状研究综述.pdf}
+}
+
+@article{PanXuePingJiYuCreatorHeVegaDeHongWaiFeiXingShiJingFangZhen2007,
+  title = {{基于Creator和Vega的红外飞行视景仿真}},
+  author = {{潘雪萍} and {陈怀民} and {吴成富}},
+  year = 2007,
+  journal = {计算机仿真},
+  number = {9},
+  pages = {46--49},
+  issn = {1006-9348},
+  urldate = {2025-05-25},
+  abstract = {目前,红外飞行视景仿真已成为飞行仿真的一个重要研究方向,具有重大的军事和经济意义。针对视景仿真技术对于在夜视条件下也可以进行飞行仿真的问题,文中提出利用Creator建立三维地形模型;基于Vega仿真软件环境开发天空、地面背景和飞机效果;利用Vega中的SensorVision模块讨论了红外飞行视景生成技术,模拟在夜视条件下红外飞行视景环境,以及观察到的红外景象;利用C++编程,调用Vega API函数,开发了视景仿真程序,最后基于MFC完成了对于红外飞行视景仿真的软件界面的开发。开发和应用结果表明,该系统灵活通用,比基于OpenGL图形库开发的红外视景仿真提高了画面逼真度,缩短了开发周期。},
+  langid = {chinese},
+  annotation = {download: 493\\
+album: 信息科技\\
+CLC: TP391.9\\
+CNKICite: (\\
+dbcode: CJFQ\\
+dbname: CJFD2007\\
+filename: JSJZ200709015},
+  file = {C:\Users\EricPu\Zotero\storage\NLDFWDYR\潘雪萍 等 - 2007 - 基于Creator和Vega的红外飞行视景仿真.pdf}
+}
+
+@phdthesis{QinJunLingDaGuiMoHongWaiChangJingShiShiXuanRanJiShuYanJiu2019,
+  type = {{硕士学位论文}},
+  title = {{大规模红外场景实时渲染技术研究}},
+  author = {{秦均玲}},
+  year = 2019,
+  address = {南京},
+  doi = {10.27241/d.cnki.gnjgu.2019.001913},
+  urldate = {2025-05-25},
+  abstract = {红外场景渲染涉及到温度场、辐射场的计算和相互作用计算,其模型计算复杂,计算量庞大,利用现有的硬件很难满足大规模计算量的需求,实现实时渲染。因此,针对红外场景渲染过程中背景温度场、目标辐射场和红外阴影计算复杂耗时的问题,本文提出了一系列快速计算和渲染算法,显著提高实时渲染帧速率,并给出了GPU加速方案。具体开展工作如下:构建基于神经网络的背景温度场计算模型:分别为水体、光裸地表、植被地表和人造材质地表建立了基于神经网络的地表温度场计算模型。该模型设计了一种基于遗传算法优化的BP神经网络,以对地表温度影响较大的太阳辐射、气温、风速等作为输入,实现对一天之中任意时刻地表温度的预测。为了精确快速绘制目标辐射场,本文提出了一种基于纹理映射的目标辐射场可视化算法,将有限元辐射场计算结果映射到几何模型表面纹理上,从而以几何模型绘制取代了对稠密有限元网格的绘制,显著减少实时渲染过程中的面片数量、提高渲染效率。同时,设计一种基于预计算的反射辐射计算方法,通过将双向反射分布函数中的参数项计算结果存入纹理中,有效解决红外反射计算过程耗时的问题。提出了一种基于改进PCSS的红外阴影生成算法,通过对红外场景中阴影区域温度变化规律进行计算和分析,改进了百分比临近软阴影算法的滤波方案,不仅解决了传统可见光阴影方法无法处理红外阴影中的温度渐变问题,并且设计了GPU加速方案,实现了红外阴影实时计算过程的加速。在以上研究基础上,本文开发了基于Open Scene Graph的红外场景实时渲染软件,并对本文算法效率进行了测试。实验结果表明,本文系统可以精确、流畅地渲染红外场景。},
+  collaborator = {{李蔚清}},
+  langid = {chinese},
+  school = {南京理工大学},
+  keywords = {,BP},
+  annotation = {major: 应用软件工程\\
+foundation: 十三五装发预研项目《\texttimes\texttimes 目标与背景红外仿真技术》；\\
+download: 195\\
+album: 信息科技\\
+CLC: TN219;TP391.41\\
+dbcode: CMFD\\
+dbname: CMFD202201\\
+filename: 1021701336.nh},
+  file = {C:\Users\EricPu\Zotero\storage\HVQYPC8B\秦均玲 - 2019 - 大规模红外场景实时渲染技术研究.pdf}
+}
+
+@article{WangXiaHongWaiChangJingFangZhenJiShuFaZhanZongShu2015,
+  title = {{红外场景仿真技术发展综述}},
+  author = {{王霞} and {汪昊} and {徐超} and {白廷柱} and {金伟其}},
+  year = 2015,
+  journal = {红外技术},
+  volume = {37},
+  number = {7},
+  pages = {537--543},
+  issn = {1001-8891},
+  urldate = {2025-05-11},
+  abstract = {红外场景仿真技术在军事领域具有广泛的应用前景。介绍了红外场景仿真的3个阶段:数据准备、辐射计算和后处理;对各阶段的工作内容和实现途径做了简单说明。按照红外场景仿真技术的发展趋势,分析了国外在各发展阶段的主要工作,介绍了国内红外场景仿真概况及笔者目前的工作。最后指出了国内在红外场景仿真方面存在的几个问题。},
+  langid = {chinese},
+  annotation = {foundation: 国家自然基金重点项目,编号:61231014；\\
+download: 883\\
+album: 信息科技\\
+CLC: TP391.9;TN219\\
+CNKICite: (\\
+dbcode: CJFQ\\
+dbname: CJFDLAST2015\\
+filename: HWJS201507001},
+  file = {C:\Users\EricPu\Zotero\storage\E2S3JS9J\王霞 等 - 2015 - 红外场景仿真技术发展综述.pdf}
+}
+
+@article{wuRealtimeMidwavelengthInfrared2015,
+  title = {Real-Time Mid-Wavelength Infrared Scene Rendering with a Feasible {{BRDF}} Model},
+  author = {Wu, Xin and Zhang, Jianqi and Chen, Yang and Huang, Xi},
+  year = 2015,
+  month = jan,
+  journal = {Infrared Physics and Technology},
+  volume = {68},
+  pages = {124--133},
+  issn = {1350-4495},
+  doi = {10.1016/j.infrared.2014.11.011},
+  urldate = {2025-05-21},
+  abstract = {Practically modeling and rendering the surface-leaving radiance of large-scale scenes in mid-wavelength infrared (MWIR) is an important feature of Battlefield Environment Simulation (BES). Since radiation transfer in realistic scenes is complex, it is difficult to develop real-time simulations directly from first principle. Nevertheless, it is crucial to minimize distortions in the rendering of virtual scenes. This paper proposes a feasible bidirectional reflectance distribution function (BRDF) model to deal with a large-scale scene in the MWIR band. Our BRDF model is spectrally dependent and evolved from previous BRDFs, and meets both Helmholtz reciprocity and energy conservation. We employ our BRDF model to calculate the direct solar and sky contributions. Both of them are added to the surface thermal emission in order to give the surface-leaving radiance. Atmospheric path radiance and transmission are pre-calculated to speed up the programming for rendering large scale scenes. Quantitative and qualitative comparisons with MWIR field data are made to assess the render results of our proposed method.},
+  langid = {english},
+  keywords = {BRDF,Infrared simulation,Large scale scene,Real time rendering},
+  annotation = {TLDR: This paper proposes a feasible bidirectional reflectance distribution function (BRDF) model to deal with a large-scale scene in the MWIR band, which is spectrally dependent and evolved from previous BRDFs, and meets both Helmholtz reciprocity and energy conservation.},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\KK8DGK4M\\Wu 等 - 2015 - Real-time mid-wavelength infrared scene rendering with a feasible BRDF model.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\BVQCFID7\\S1350449514002631.html;C\:\\Users\\EricPu\\Zotero\\storage\\TB9ZVTWC\\S1350449514002631.html}
+}
+
+@phdthesis{XuFeiFanJiYuOptiXBingXingGuangXianZhuiZongJiSuanDeHongWaiChengXiangFangZhenRuanJianYanZhi2022,
+  type = {{硕士学位论文}},
+  title = {{基于OptiX并行光线追踪计算的红外成像仿真软件研制}},
+  author = {徐非凡},
+  year = 2022,
+  address = {哈尔滨},
+  abstract = {红外成像是航天及国防领域中的重要探测手段之一,而红外热像仪的研发需要大量费时费力的外场试验,因此红外成像仿真框架具有重要意义。目前许多成熟的红外成像仿真软件均为国外团队研发,国内对通用的红外成像仿真系统的研究较少,且由于计算时间的限制,以往的研究通常使用光栅化方法,成像结果的真实感较差。光线追踪方法能够获得更准确、真实感更高的成像结果,但需要大量的计算时间,而随着并行计算的兴起,在GPU上使用光线追踪方法进行计算能够节省大量的时间成本。本文通过OptiX光线追踪引擎进行了并行计算的红外成像仿真软件的开发,并使用自编软件对不同的场景进行了仿真计算。本文基于光线追踪方法建立了红外辐射传输计算理论。在自发辐射的计算中,本文根据等效粗糙度理论,使用对Fresnel方程的Schlick近似描述表面发射率的方向性。在反射辐射的计算中,使用了蒙特卡洛积分方法实现对半球空间的积分,并引入了流式重采样重要性采样(Streaming RIS)算法来加快计算的收敛速度。详细介绍了大气效应、太阳、天空及地表辐射对红外辐射传输的影响,并给出了红外成像仿真的整体链路图。根据成像仿真软件的整体框架图,本文使用C++和CUDA语言进行开发。实现了基于BVH加速结构的场景管理。引入了基于微表面模型的Cook-Torrance BRDF模型以及为飞行器红外信号预测而提出的Sandford-Robertson BRDF模型来描述表面的方向反射特性。使用ECOSTRESS光谱库以及MODTRAN软件的计算结果建立了软件的材料光谱发射率、大气效应及环境辐射数据库。实现了辐亮度计算结果的灰度图像映射以及伪彩色图像映射,并引入了循环降噪自动编码器对计算结果进行降噪处理。对不同场景在中红外波段以及远红外波段进行了仿真计算,结果表明,本文的仿真软件能够快速生成准确仿真图像,从伪彩色图中能够清晰的看出场景辐亮度的分布。分析了不同大气条件及环境辐射对成像仿真结果的影响,结果表明,太阳辐射对中红外波段成像结果的影响较大而对远红外波段成像结果的影响较小,其他因素对两个波段的影响相似。分析了软件计算效率以及降噪效果,结果表明光线追踪计算占据了软件的大���分计算时间,循环降噪自动编码器能够在减少成像结果噪点的同时提高图像的质量。},
+  langid = {chinese},
+  school = {哈尔滨工业大学},
+  keywords = {,BRDF,GPU},
+  file = {C:\Users\EricPu\Zotero\storage\RXQ8T27R\徐非凡 - 2022 - 基于OptiX并行光线追踪计算的红外成像仿真软件研制.pdf}
+}
+
+@phdthesis{XuZhenDaoTanKeMuBiaoYuFuZaDiMianBeiJingOuHeReHongWaiTeZhengYanJiu2023,
+  type = {{博士学位论文}},
+  title = {{坦克目标与复杂地面背景耦合热红外特征研究}},
+  author = {{徐振道}},
+  year = 2023,
+  address = {南京},
+  abstract = {在日益复杂和科技水平愈发增强的现代战场环境中,红外精确制导武器的研发愈加受到重视。在各种新型红外制导武器的设计、研制过程中,需要获取坦克目标在不同时间、不同工作状态、不同地面背景中的热红外特征数据,以实现真假目标的识别、追踪和精确打击。在实际战场环境中,坦克目标总是处于一定的背景中,且坦克目标的热红外特征会与背景发生耦合,使得目标或背景呈现出与单独研究时不同的热红外特征,影响坦克目标的探测概率。因此,对不同工作状态(冷静态、热静态及热动态)的坦克目标与复杂地面背景之间的热红外耦合现象进行深入的研究,形成耦合红外辐射特征数据库,进而实现坦克与地面背景耦合红外场景的生成,对于红外导引头的研发和坦克的隐身设计具有重要意义。本文首先研究了复杂地面背景的热红外特征,在此基础上建立了静态坦克目标(冷静态、热静态)与地面背景的耦合热红外特征模型,对不同时刻的静态坦克与典型地面背景的耦合热红外特征进行了对比分析。然后针对动态坦克行驶时与地面耦合引起的痕迹和扬尘现象进行了深入的研究,分别分析了痕迹对地面背景红外特征的影响和扬尘对坦克尾气红外特征的影响。最终通过开发红外场景仿真平台实现了坦克目标与地面背景耦合红外场景的生成。具体内容主要包括以下几个方面: 1.战场环境中复杂地面背景热红外特征研究 首先通过建立地面背景的一维温度场和红外特征计算模型,研究了不同地表材质平均温度和红外特征变化规律。进而利用神经网络方法对可见光影像进行材质分割,结合材质的热红外特征模型,得到了场景地表的平均温度和红外图像。然后针对平均热红外图像中缺乏真实感的问题,对于水平地表和起伏地表,分别给出了增强地表温度真实感的计算模型。对于水平地表,利用可见光图像中包含的太阳辐射信息,结合材质温度对太阳直射比例和短波吸收率的灵敏度分析,建立了温度特征细节调制模型。对于起伏地表,基于地表数字高程模型(DEM,Digital Elevation Model),考虑单元表面法向与太阳直射方向夹角的不同、各单元表面间的相互遮挡,建立了三维地面背景的温度场计算模型。最终获得了更真实的地表温度场和红外特征分布。 2.静态坦克目标与复杂地面背景耦合热红外特征研究 通过分析静态坦克目标与不同地面背景的热相互作用过程,在地面背景热红外特征研究的基础上,建立了描述坦克目标与地面背景间能量传递的静态耦合热红外特征模型,讨论了晴朗天气条件下不同时刻静态坦克目标与3种典型地面背景(水泥、裸土...},
+  langid = {chinese},
+  school = {南京理工大学},
+  annotation = {CNKICite: 1},
+  file = {C:\Users\EricPu\Zotero\storage\8HSC7V7F\坦克目标与复杂地面背景耦合热红外特征研究_徐振道.pdf}
+}
+
+@phdthesis{YangBoJiYuOSGDeHongWaiShiJingFangZhenYanJiu2017,
+  type = {{硕士学位论文}},
+  title = {{基于OSG的红外视景仿真研究}},
+  author = {{杨博}},
+  year = 2017,
+  address = {长沙},
+  doi = {10.27052/d.cnki.gzjgu.2017.000588},
+  urldate = {2025-05-25},
+  abstract = {红外视景仿真是视景仿真领域的重要研究方向之一,可用于红外制导武器的制导性能检测等军事领域研究。为进行红外末制导性能测试研究,作者所在研究室已搭建了半实物红外仿真系统。本文开展红外视景仿真研究,生成动态的红外灰度图像,为该系统提供仿真场景的红外辐射数据。本文以空地导弹对地面坦克目标的攻击场景为仿真场景,基于OSG开展红外视景仿真研究。与其它视景仿真软件相比,该软件开源性好,并在全球视景仿真方面具有独特的优势,对场景仿真的限制较少。本文对目标及背景的红外辐射特性进行了分析,并研究了其辐射数据计算方法;建立了目标和背景模型,搭建了空地导弹工作三维场景;提出了大规模地形背景的红外仿真方法,基于GLSL语言对目标和背景进行了红外渲染,将场景红外辐射数据显示为红外灰度图像;最后,设计实验方案,对红外仿真的效果做了有效性和实时性进行了测试。本文建立了大规模分层分块的地形背景模型,并实现对其动态调度。为解决其红外仿真问题,本文提出了基于材质和相对高度的大规模动态调度地形的红外仿真方法。},
+  collaborator = {{吕鸣}},
+  langid = {chinese},
+  school = {国防科技大学},
+  keywords = {,OSG},
+  annotation = {major: 控制科学与工程\\
+download: 341\\
+album: 工程科技II辑;信息科技\\
+CLC: TJ765.4;TN219\\
+dbcode: CMFD\\
+dbname: CMFD202001\\
+filename: 1020701254.nh},
+  file = {C:\Users\EricPu\Zotero\storage\2ZB72FSZ\杨博 - 2017 - 基于OSG的红外视景仿真研究.pdf}
+}
+
+@article{ZhangFanJiYuUnity3DDeGaiJinShiShiHongWaiFangZhenXiTong2018,
+  title = {{基于Unity3D的改进实时红外仿真系统}},
+  author = {{张繁} and {王通} and {黄可蒙} and {茅佳明} and {黎美玲} and {王章野}},
+  year = 2018,
+  journal = {计算机辅助设计与图形学学报},
+  volume = {30},
+  number = {7},
+  pages = {1177--1186},
+  issn = {1003-9775},
+  urldate = {2025-05-25},
+  abstract = {基于红外物理基础理论和自然场景仿真理论.通过改进已有算法以满足红外仿真系统中的实时性和准确性2个基本要求.提出基于Unity3D的改进实时红外仿真系统.首先探讨并修正了部分零视距离辐射计算模型和影响温度场的主要计算模型,在计算中考虑太阳赤纬角,改进经验公式,提高了计算的准确性;然后在讨论了热源放置和热传递计算问题之后.在红外仿真中考虑物体不同材质特性对红外效果的影响.使得绘制结果更为逼真;最后借助GPU对不同场景对象多角度下的红外辐射灰度进行并行计算.提升计算速度.该系统基于Unity3D游戏引擎.可以构建包含多种目标对象的红外场景,如植被、建筑以及车辆;重建的三维场景仿真效果图与实地拍摄的真实红外场景图像高度相似.仿真实验渲染速度达到30帧/s,基本满足实时性计算要求.},
+  langid = {chinese},
+  annotation = {foundation: 国家自然科学基金(U1736109,61303141,61772456)； 国家重点研发计划(2017YFB1002700)； 国家``八六三''高技术研究发展计划(2015AA016404)； 浙江省自然科学基金(LY12F02034,LY18F020034)；\\
+download: 586\\
+album: 信息科技;工程科技II辑\\
+CLC: TN219;TP391.41\\
+dbcode: CJFQ\\
+dbname: CJFDLAST2018\\
+filename: JSJF201807001},
+  file = {C:\Users\EricPu\Zotero\storage\PUTVENI8\张繁 等 - 2018 - 基于Unity3D的改进实时红外仿真系统.pdf}
+}
+
+@article{ZhangJianJiYuCeLiangShuJuDeHongWaiChangJingShengChengFangFaJiShiXian2005,
+  title = {{基于测量数据的红外场景生成方法及实现}},
+  author = {{张健} and {张建奇} and {邵晓鹏}},
+  year = 2005,
+  journal = {系统仿真学报},
+  number = {10},
+  pages = {92--95},
+  issn = {1004-731X},
+  urldate = {2025-05-25},
+  abstract = {提出了一种新的三维红外场景生成方法,该方法绕过了传统方法中复杂几何体红外辐射场计算这一技术难点,使用实际测量数据描述辐射分布,克服了传统方法生��图像不够自然、不够精确的缺点。基于这一思想,对该方法的原理和关键技术进行了讨论,并利用可编程流水线技术对该方法进行了实现,给出了最终生成的结果图像。最后,讨论了该方法的优缺点,指出了尚须完善的环节和改进方向。},
+  langid = {chinese},
+  annotation = {foundation: 国家自然科学基金(60277005)；\\
+download: 319\\
+album: 信息科技\\
+CLC: TN219\\
+dbcode: CJFQ\\
+dbname: CJFD2005\\
+filename: XTFZ200510025},
+  file = {C:\Users\EricPu\Zotero\storage\T4JMHS93\张健 等 - 2005 - 基于测量数据的红外场景生成方法及实现.pdf}
+}
+
+@phdthesis{ZhangXinJiYuGPUBianChengDeHongWaiFanSheTeXingJianMoYuFangZhen2012,
+  type = {{硕士学位论文}},
+  title = {{基于GPU编程的红外反射特性建模与仿真}},
+  author = {{张鑫}},
+  year = 2012,
+  address = {西安},
+  urldate = {2025-05-25},
+  abstract = {现阶段红外场景仿真系统中主要关注于目标本征辐射，比较缺乏目标对环境辐射反射的精细建模与仿真，这严重地影响了仿真场景的真实性，也制约了其在红外成像制导武器的设计和评估、红外目标识别和跟踪制导训练等军事领域的应用。本文针对实时红外场景中反射特性的建模进行探索和研究，实现基于GPU的中波和长波目标对环境辐射的反射仿真。首先，从探测器成像原理出发，介绍红外反射理论，通过Modtran计算，分析中波和长波的环境辐射特性。其次，对比研究各种反射模型，找到适用于实时仿真的Schlick BRDF模型，通过实验和理论计算分析反射特性和环境辐射在仿真中的影响，建立波段反射计算模型。然后，提出一种基于GPU编程的反射特性仿真方法，并对本文应用的反射模型进行计算和仿真验证。最后，在基于OGRE的红外场景仿真平台上，实现实时红外反射特性仿真，进一步完善此仿真框架。为满足仿真的实时性，本文对环境辐射、材质参数、积分数据等各种数据预先生成，以纹理的形式保存下来，通过GPU快速采样极大地减小了因加入反射计算而导致帧频下降的问题。仿真结果表明本文的方法在较小地损失仿真效率的前提下，有效地提高了仿真的真实性。},
+  collaborator = {{张建奇}},
+  langid = {chinese},
+  school = {西安电子科技大学},
+  keywords = {,BRDF,GPU},
+  annotation = {major: 物理电子学\\
+download: 446\\
+album: 信息科技\\
+CLC: TN215;TP391.41\\
+dbcode: CMFD\\
+dbname: CMFD201301\\
+filename: 1013114360.nh},
+  file = {C:\Users\EricPu\Zotero\storage\3RGWGC8Z\张鑫 - 2012 - 基于GPU编程的红外反射特性建模与仿真.pdf}
+}
+
+@phdthesis{ZhangYueHengHongWaiMuBiaoBeiJingRongHeYuKuaiSuTuXiangFangZhenJiShuYanJiu2024,
+  type = {{博士学位论文}},
+  title = {{红外目标背景融合与快速图像仿真技术研究}},
+  author = {{张越恒}},
+  year = 2024,
+  address = {北京},
+  doi = {10.27522/d.cnki.gkcgs.2024.000063},
+  urldate = {2025-07-16},
+  abstract = {天基红外监测系统具备广泛的应用功能,包括但不限于早期发现与拦截导弹、军事侦察以及战场监测等。除了军事应用外,该系统还可用于监测自然灾害事件,如大型火灾或火山活动。随着空间武器技术的迅速发展,太空环境变得更加复杂多变,因此,各国将高效而准确地追踪空间武器作为天基红外预警系统未来发展的重点战略。然而,天基红外系统平台的开发周期长、成本高昂,并且需要大量的红外数据支持。利用计算机模拟可以在多种条件下生成参考数据,有助于缩短开发时间和降低费用。然而,在天基红外仿真系统的开发中,往往需要权衡高仿真精度与图像生成速度之间的关系。为了解决这一问题,需要在简化理论辐射传递模型的基础上构建实时红外图像生成过程,同时确保计算机生成的图像具有较高的仿真精度。为了满足天基红外预警系统的多功能需求,需要在仿真精度和速度之间达到平衡。本研究通过开发一体化成像仿真系统,进行全面的红外成像仿真分析。一方面,采用新的图像融合策略,提高红外图像仿真的真实性和速度;另一方面,通过深度学习技术提高红外仿真图像的渲染速度。这将为天基红外监测系统提供有效的仿真工具,对于追踪航空航天目标具有重要意义。本论文的主要研究内容如下:设计一种具备多个模块的一体化成像仿真系统,旨在快速仿真红外图像与视频。该系统包括三个模块,分别为场景仿真模块、目标仿真模块和综合处理模块。通过这些模块的协同作用,该系统能够以高保真度生成红外仿真图像,并具备更高的仿真效率。本研究以实际飞行条件和多角度观测数据为基础,针对天空目标的红外成像仿真进行了深入研究,推导了解析表达式,建立了目标的红外辐射特性计算模型,并对目标的红外成像进行了更全面的仿真分析。所得的建模与仿真结果可为载荷提供重要的仿真数据支持。鉴于目前常见的成像仿真系统多采用光线追踪算法,其构建的仿真系统在保真度上表现出较高水准,但实时性受到一定程度的影响。本研究针对红外仿真成像系统在真实度与效率之间存在的矛盾,设计了以基于卷积金字塔的三维视频融合算法为核心的系统模块。实验结果显示,在处理分辨率为3840 \texttimes{} 2160、帧数为500的视频融合时,采用3D泊松视频融合算法的重建时间约为171.86秒,而泊松图像融合算法需时约714.55秒,基于均值坐标的图像融合算法需时约510.76秒。与此同时,采用本研究提出的算法所重建的视频质量略优于其他两种算法。实验结果表明,本研究提出的算法具有广泛的应用前景,并值得进一步深入研究。...},
+  collaborator = {{颜昌翔}},
+  langid = {chinese},
+  school = {中国科学院大学（中国科学院长春光学精密机械与物理研究所）},
+  annotation = {major: 光学工程\\
+download: 499\\
+album: 信息科技\\
+CLC: TP391.41;TN219\\
+dbcode: CDFD\\
+dbname: CDFDLAST2025\\
+filename: 1024720667.nh},
+  file = {C:\Users\EricPu\Zotero\storage\GCEKXBTK\张越恒 - 2024 - 红外目标背景融合与快速图像仿真技术研究.pdf}
+}
+
+@phdthesis{ZhouFanJiYuVEGADeDiMianMuBiaoYuBeiJingHongWaiChangJingDongTaiFangZhenYanJiu2016,
+  type = {{硕士学位论文}},
+  title = {{基于VEGA的地面目标与背景红外场景动态仿真研究}},
+  author = {{周帆}},
+  year = 2016,
+  address = {南京},
+  urldate = {2025-05-25},
+  abstract = {红外场景仿真技术能够在军事上给目标识别、隐身等提供相关数据与指导方案,为军用装备的改进奠定了坚定基础,具有重要的国防研究价值。本文采用转换格式(方案一)和映射函数(方案二)的两种不同方式,分别实现了基于Vega平台的红外场景仿真,并二次开发了其红外目标特性演示软件。(1)针对方案一中目标温度场的研究,提出了先用Pro/E对其三维建模,后用ANSYS对其分析计算的方法。构建了目标温度模型,而后通过Creator格式转换工具结合自定义的调用函数库及OpenFlight API对其转格式。(2)针对方案二中目标温度场的研究,分别采用外场实测和ANSYS分析计算的方法,建立了各自的目标温度模型。通过求解红外Sensor内部的映射函数,而后编写其映射函数程序,进而分别对各自的目标温度模型进行映射处理。(3)针对背景中的房屋等建模研究,通过Creator几何建模、相应纹理贴图、并采用TMM(Texture Material Mapper)进行材质贴图,映射建立了背景物体的3D模型；而针对大地形建模研究,则利用CTS(Creator Terrain Studio)软件依次进行采集原始数据、创建纹理、生成及发布地形等流程操作,最终构建了大地形模型。(4)基于转格式的方案,通过以上准备工作,实现了对ANSYS计算数据转格式的红外仿真,并二次开���了具有特定需求功能的红外目标特性演示软件。不同波段相同目标状态下,仿真结果表明：8-12{$\mu$}m波段坦克与背景的热辐射通量相较于3-5{$\mu$}m明显高些。而这一结果也符合热物理学中背景自身热辐射主要集中在4{$\mu$}m波段以上而在3-4 {$\mu$}m则很低的规律。相同波段不同目标状态下,仿真结果表明：在对应的时刻中,背景热辐射通量几乎相同,而目标则由于运动与否,其温度分布差别较大,红外辐射通量也有所不同。(5)基于映射函数的方案,通过编写其映射函数程序,实现了实测数据与ANSYS计算数据的映射方式红外仿真,并对比了ANSYS计算数据下的两种仿真方案,结果表明：方案一的目标红外辐射分布更合理些,仿真结果更加逼真,效果更好；方案二虽然其方法更简单、操作更方便、生成红外场景图像较快,但其仿真结果不够逼真。},
+  collaborator = {{韩玉阁}},
+  langid = {chinese},
+  school = {南京理工大学},
+  keywords = {,Vega},
+  annotation = {major: 动力工程（专业学位）\\
+download: 478\\
+album: 工程科技II辑;信息科技\\
+CLC: E933;TN219\\
+dbcode: CMFD\\
+dbname: CMFD201701\\
+filename: 1016225276.nh},
+  file = {C:\Users\EricPu\Zotero\storage\MDC2JB9C\周帆 - 2016 - 基于VEGA的地面目标与背景红外场景动态仿真研究.pdf}
+}
+
+@article{HanYuGeZhuangJiaCheLiangYuDiMianBeiJingDeReJiaoHuZuoYongJiHongWaiFangZhen2013,
+  title = {{装甲车辆与地面背景的热交互作用及红外仿真}},
+  author = {{韩玉阁} and {成志铎} and {任登凤} and {宣益民}},
+  year = 2013,
+  journal = {红外与激光工程},
+  volume = {42},
+  number = {1},
+  pages = {20--25},
+  urldate = {2025-05-21},
+  abstract = {为了全面揭示装甲车辆与地面背景之间热交互作用对地面背景温度以及红外辐射特性的影响,建立了装甲车辆和地面背景的温度和红外辐射特性的模型,重点考虑了装甲车辆与地面之间的传热。通过对地面和履带相关力学关系的引入,建立运动车辆和地面之间热学以及力学的模型,采用了动网格方法对车辆目标在运动后对地面所产生的沉陷现象及在地面上留下的热痕迹进行模拟仿真。基于红外辐射理论,综合考虑自身辐射、反射辐射以及大气传输特性,计算了车辆在3种不同状态下与地面背景之间的热交互作用及红外辐射特征分布,并比较了模拟温度与实验测量温度的误差,验证了模型的精度。仿真结果表明:该方法对地面目标的隐身设计和隐身技术评估具有十分重要的意义。},
+  langid = {chinese},
+  annotation = {foundation: 总装预研项目；\\
+download: 715\\
+album: 信息科技;工程科技II辑\\
+CLC: U469.6;TN219\\
+dbcode: CJFQ\\
+dbname: CJFD2013\\
+filename: HWYJ201301007},
+  file = {C:\Users\EricPu\Zotero\storage\9XZXRQ4I\装甲车辆与地面背景的热交互作用及红外仿真 - 中国知网.pdf}
+}
+
+@phdthesis{LiuMengZhangJiYuWuLiCaiZhiXuanRanHeQuanLianLuHongWaiChengXiangFangZhenDeAnTanMuBiaoYuHuanJingTeXingYanJiu2025,
+  type = {{硕士学位论文}},
+  title = {{基于物理材质渲染和全链路红外成像仿真的岸滩目标与环境特性研究}},
+  author = {{刘梦章}},
+  year = 2025,
+  address = {南京},
+  doi = {10.27241/d.cnki.gnjgu.2023.001282},
+  urldate = {2025-05-24},
+  abstract = {红外成像仿真技术能够模拟多变及多样的战场环境,可为各种场景下红外武器的性能评估提供红外目标样本,具有较高的应用价值。近几年来国家对岸滩技战术演练不断加强投入,岸滩目标场景的红外特性研究对新式清障装备的研制、目标探测与反探测技术的发展都具有重要的现实意义。与此同时,红外仿真目标的真实感对仿真样本的实用性具有重要影响,但现有方法存在仿真目标表面缺少光照变化的问题,目标表面的纹理细节以及真实感有所不足。基于物理材质渲染技术具有材质表达能力强、逼真度高等优点,能较好地提升仿真目标的真实感。因此本文以岸滩目标场景的红外成像仿真作为研究对象,研究基于物理材质渲染在红外仿真中的应用,开展了以下工作: (1)针对红外图像获取困难的问题,基于红外成像原理,建立了全链路红外成像仿真理论模型,包括场景温度场、场景红外辐射、大气辐射传输效应以及红外探测器效应的计算,构建了一种基于GPU的红外成像实时仿真系统,能够有效地生成红外目标样本。 (2)针对现有方法存在对岸滩障碍带目标红外特性研究不足以及红外实时仿真真实感有待提升的问题,建立了一种岸滩障碍带目标的红外特性模型和一种将基于物理材质的渲染算法与Cook-Torance模型相结合的红外光照模型,实现了岸滩目标及海滩背景的红外热像融合。通过对比研究表明,提出的算法能更有效地增强红外仿真目标的纹理细节,提升仿真目标的真实感。为验证仿真模型的可信度,利用实测数据进行了不确定度评估,岸滩障碍带和军用车辆仿真目标的平均不确定度分别为1.75d B和1.34d B,证明了模型的可靠性。 (3)针对海上目标红外图像数据获取困难的问题,构建了一种基于PM谱和RossBRDF的红外海面背景,建立了一种舰船目标的红外特性模型,实现了舰船目标与海面背景的红外热像融合,分析了不同季节、不同时刻以及不同海况下舰船目标和海面背景的红外成像效果。为验证仿真模型的可信度,与实测数据进行比较,舰船仿真目标的平均不确定度为1.09d B,证明了模型的准确性。},
+  collaborator = {{柏连发}},
+  langid = {chinese},
+  school = {南京理工大学},
+  annotation = {major: 电子信息（专业学位）\\
+download: 156\\
+album: 信息科技\\
+CLC: TP391.41;TN219\\
+dbcode: CMFD\\
+dbname: CMFD202501\\
+filename: 1024435053.nh},
+  file = {C:\Users\EricPu\Zotero\storage\ZV94RGNH\刘梦章 - 2025 - 基于物理材质渲染和全链路红外成像仿真的岸滩目标与环境特性研究.pdf}
+}
+
+@article{ShanQingJiYuBianGenZongDianDeHongWaiChangJingFangZhenYuanLiJiGuanJianJiShuYanJiu2020,
+  title = {{基于变跟踪点的红外场景仿真原理及关键技术研究}},
+  author = {{山清}},
+  year = 2020,
+  journal = {激光与红外},
+  volume = {50},
+  number = {7},
+  pages = {825--832},
+  issn = {1001-5078},
+  urldate = {2025-05-25},
+  abstract = {由于基于固定跟踪点的红外场景仿真技术不能真实考核导引头对目标要害部位的识别及跟踪性能,这无法满足第四代红外成像制导空空导弹的新要求。本文针对基于固定跟踪点红外场景仿真存在的问题进行了分析,提出了基于变跟踪点的红外场景仿真原理,并对影响变跟踪点红外场景仿真工程应用的关键误差因素进行建模及定量仿真分析,指出了变跟踪点红外场景仿真误差的敏感因素,可为变跟踪点红外场景仿真的工程化应用提供技术参考。},
+  langid = {chinese},
+  annotation = {download: 125\\
+album: 信息科技;工程科技II辑\\
+CLC: TJ762.23;TP391.41;TN219\\
+dbcode: CJFQ\\
+dbname: CJFDLAST2020\\
+filename: JGHW202007010},
+  file = {C:\Users\EricPu\Zotero\storage\KTJNJBJV\山清 - 2020 - 基于变跟踪点的红外场景仿真原理及关键技术研究.pdf}
+}
+
+@article{XiaoFuWuHuiZhongXiaoLiangTangYangDiMianTanKeMuBiaoHongWaiReChengXiangWuLiMoXingYanJiu2005,
+  title = {{地面坦克目标红外热成像物理模型研究}},
+  author = {{肖甫,吴慧中,肖亮,汤杨}},
+  year = 2005,
+  journal = {系统仿真学报},
+  number = {11},
+  urldate = {2025-05-21},
+  abstract = {根据红外成像的基本流程,研究并建立了地面坦克的红外物理模型。针对复杂场景分别对目标和背景部分建模、求取温度场分布,同时考虑目标和背景之间的相互作用得到完整的场景红外理论模型;考虑红外辐射的大气吸收,建立了大气衰减模型;模拟红外传感器的工作特性建立成像综合响应模型。最后给出了地面坦克目标热成像系统的仿真流程,利用该系统可以在试验环境下进行目标的红外仿真,为红外系统以及武器的研制提供经济快捷的手段。},
+  langid = {chinese},
+  annotation = {foundation: 高等学校博士学科点专项科研基金(20020288024)； 南京理工大学科研发展基金(NJUST200401)；\\
+download: 742\\
+album: 信息科技;工程科技II辑\\
+CLC: TJ811;\\
+dbcode: CJFQ\\
+dbname: CJFD2005\\
+filename: XTFZ200511002},
+  file = {C:\Users\EricPu\Zotero\storage\HGR32P79\地面坦克目标红外热成像物理模型研究_肖甫.pdf}
+}
+
+@inproceedings{balfourSemiempiricalModelbasedApproach1997,
+  title = {Semi-Empirical Model-Based Approach for {{IR}} Scene Simulation},
+  booktitle = {Infrared {{Technology}} and {{Applications XXIII}}},
+  author = {Balfour, Leslie Salem and Bushlin, Yossi},
+  year = 1997,
+  month = aug,
+  volume = {3061},
+  pages = {616--623},
+  publisher = {SPIE},
+  doi = {10.1117/12.280381},
+  urldate = {2025-05-20},
+  abstract = {This paper describes a novel approach of generating radiometric scenes of natural backgrounds that will serve as an input for simulating E-O sensor scene outputs in the thermal band. The methodology is based on segmentation of a measured scene (in any spectral band) into elements that have similar thermal behavior. The thermal radiance value for each thermal element is calculated using a set of four semi empirically determined coefficients that relate the surface temperature to the local meteorological parameters such as solar radiation, longwave sky radiation, air temperature and wind speed. The thermal coefficients are determined using a theoretical model and an experimental data base. The diurnal variations of the scene are thus easily predicted by knowing the meteorological parameters and the individual set of thermal coefficients for the various thermal elements of the scene. Since the approach is based on a real scene image and an experimental database the generated images have a realistic appearance including realistic clutter properties. The generated thermal scene will serve as the input to a sensor model that will calculate the expected image of a thermal camera viewing the scene. The paper describes the methodology of the scene generation, the sensor model and demonstrates the approach by giving some examples.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\VNQ2T8KZ\Balfour和Bushlin - 1997 - Semi-empirical model-based approach for IR scene simulation.pdf}
+}
+
+@article{ben-yosefSimulationIRImages1983,
+  title = {Simulation of {{IR}} Images of Natural Backgrounds},
+  author = {{Ben-Yosef}, N. and Rahat, B. and Feigin, G.},
+  year = 1983,
+  month = jan,
+  journal = {Applied Optics, Vol. 22, Issue 1, Pp. 190-193},
+  publisher = {Optica Publishing Group},
+  doi = {10.1364/AO.22.000190},
+  urldate = {2025-05-20},
+  abstract = {Two schemes for the simulation of IR images of ground terrain are presented. Both preserve the statistics and power spectra of the temperature variation over the scene according to the experimental findings. The first scheme generates the scene directly in the spatial domain, while the second generates it in the spatial-frequency domain. Each is advantageous according to the simulation task needed.},
+  copyright = {\copyright{} 1983 Optical Society of America},
+  langid = {english},
+  keywords = {Fourier transforms,Infrared imaging,Machine vision,Random number generation,Spatial frequency,Transforms},
+  annotation = {TLDR: Two schemes for the simulation of IR images of ground terrain are presented, which preserve the statistics and power spectra of the temperature variation over the scene according to the experimental findings.},
+  file = {C:\Users\EricPu\Zotero\storage\JQI2SVNG\Ben-Yosef 等 - 1983 - Simulation of IR images of natural backgrounds.pdf}
+}
+
+@inproceedings{berkMODTRAN6MajorUpgrade2014,
+  title = {{{MODTRAN6}}: A Major Upgrade of the {{MODTRAN}} Radiative Transfer Code},
+  shorttitle = {Modtran6},
+  booktitle = {Algorithms and {{Technologies}} for {{Multispectral}}, {{Hyperspectral}}, and {{Ultraspectral Imagery XX}}},
+  author = {Berk, Alexander and Conforti, Patrick and Kennett, Rosemary and Perkins, Timothy and Hawes, Frederick and van den Bosch, Jeannette},
+  year = 2014,
+  month = jun,
+  volume = {9088},
+  pages = {113--119},
+  publisher = {SPIE},
+  doi = {10.1117/12.2050433},
+  urldate = {2025-05-24},
+  abstract = {The MODTRAN6 radiative transfer (RT) code is a major advancement over earlier versions of the MODTRAN atmospheric transmittance and radiance model. This version of the code incorporates modern software ar- chitecture including an application programming interface, enhanced physics features including a line-by-line algorithm, a supplementary physics toolkit, and new documentation. The application programming interface has been developed for ease of integration into user applications. The MODTRAN code has been restructured towards a modular, object-oriented architecture to simplify upgrades as well as facilitate integration with other developers' codes. MODTRAN now includes a line-by-line algorithm for high resolution RT calculations as well as coupling to optical scattering codes for easy implementation of custom aerosols and clouds.},
+  langid = {english},
+  annotation = {TLDR: TheMODTRAN6 radiative transfer (RT) code is a major advancement over earlier versions of the MODTRAN atmospheric transmittance and radiance model and includes a line-by-line algorithm for high resolution RT calculations as well as coupling to optical scattering codes for easy implementation of custom aerosols and clouds.},
+  file = {C:\Users\EricPu\Zotero\storage\YZDFTQNQ\Berk 等 - 2014 - MODTRAN6 a major upgrade of the MODTRAN radiative transfer code.pdf}
+}
+
+@inproceedings{bieselRealtimeSimulatedForward1987,
+  title = {Real-Time Simulated Forward Looking Infrared ({{FLIR}}) Imagery for Training},
+  booktitle = {Infrared {{Image Processing}} and {{Enhancement}}},
+  author = {Biesel, Heiner and Rohlfing, Tom},
+  year = 1987,
+  month = sep,
+  volume = {781},
+  pages = {71--80},
+  publisher = {SPIE},
+  doi = {10.1117/12.940535},
+  urldate = {2025-05-20},
+  abstract = {Infrared imagery appears superficially similar to monochrome television imagery. An accurate simulation, however, must not only produce realistic images of self-luminous objects--rather than illuminated scenery--it must also replicate the visual anomalies of the imaging system. These anomalous effects arise from the imperfect nature of infrared imagers; they vary among systems, and they can become the dominant visual aspect of the displayed imagery. A strategy has been developed for producing high-fidelity simulated IR imagery in real time. The approach relies upon modeling techniques, which can create a database of infrared scenery derived from visual data, and upon a post-processor coupled to an existing image generator (IG), which will produce IR system-specific effects. A software emulation of the post-processor (PP) has been developed which permits evaluation of its projected performance, as well as facilitating tuning of system parameters in order to achieve realistic IR imagery. To complement these developments in high-fidelity IR simulation, a set of software tools has been developed to afford an efficient means of generating IR-specific characteristics for inclusion in the IG database. These tools blend the physics of the scene, atmosphere, and sensor with the requirements of the mission to be simulated and the 1G system to be used.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\JVGDQCN3\Biesel和Rohlfing - 1987 - Real-time simulated forward looking infrared (FLIR) imagery for training.pdf}
+}
+
+@article{coiroGlobalIlluminationTechnique2013,
+  title = {Global Illumination Technique for Aircraft Infrared Signature Calculations},
+  author = {Coiro, E.},
+  year = 2013,
+  month = jan,
+  journal = {Journal of Aircraft},
+  volume = {50},
+  number = {1},
+  pages = {103--113},
+  issn = {0021-8669, 1533-3868},
+  doi = {10.2514/1.C031787},
+  urldate = {2025-05-21},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\4QIFIYRK\Coiro - 2013 - Global illumination technique for aircraft infrared signature calculations.pdf}
+}
+
+@inproceedings{curtisDiurnalSeasonalVariation1990,
+  title = {Diurnal and Seasonal Variation of Structural Element Thermal Signatures},
+  booktitle = {Characterization, {{Propagation}}, and {{Simulation}} of {{Infrared Scenes}}},
+  author = {Curtis, John O. and Jr, Salvador Rivera},
+  year = 1990,
+  month = sep,
+  volume = {1311},
+  pages = {136--145},
+  publisher = {SPIE},
+  doi = {10.1117/12.21828},
+  urldate = {2025-05-20},
+  abstract = {A statistical approach is taken to present and analyze large amounts of physical and radiometric temperature data for structural materials as well as weather data collected over a period of several years at sites in both the United States and Europe. Diurnal temperature curves are presented as a function of time-of-year, surface material type, and surface orientation. Empirical temperature prediction models for different surface types as a function of weather parameters are developed for a given set of data to demonstrate the utility of maintaining large temperature/weather data bases in support of first-principles thermal modeling.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\QYALWGTE\Curtis和Jr - 1990 - Diurnal and seasonal variation of structural element thermal signatures.pdf}
+}
+
+@inproceedings{gondaComprehensiveMethodologyThermal1989,
+  title = {A Comprehensive Methodology for Thermal Signature Simulation of Targets and Backgrounds},
+  booktitle = {Aerospace {{Pattern Recognition}}},
+  author = {Gonda, Terry and Gerhart, Grant R.},
+  year = 1989,
+  month = aug,
+  volume = {1098},
+  pages = {23--27},
+  publisher = {SPIE},
+  doi = {10.1117/12.960419},
+  urldate = {2025-05-21},
+  abstract = {For the past several years the U.S. Army Tank-Automotive Command (TACOM) has sponsored the development of computer models to simulate the thermal signature of concept vehicles. The entire simulation process involves the prediction of target and background temperatures, creation of the 3-D graphics database, and the addition of atmospheric and sensor effects to produce a simulated infrared or thermal image. This paper also describes the model integration necessary to create thermal signature animations for concept vehicles. Each model is described in some detail along with the appropriate interface to the other thermal models.},
+  langid = {english},
+  annotation = {TLDR: The model integration necessary to create thermal signature animations for concept vehicles is described and each model is described in some detail along with the appropriate interface to the other thermal models.},
+  file = {C:\Users\EricPu\Zotero\storage\76TEWFT4\Gonda和Gerhart - 1989 - A comprehensive methodology for thermal signature simulation of targets and backgrounds.pdf}
+}
+
+@inproceedings{gondaExplanationVehicleterrainInteraction2003,
+  title = {An Explanation of Vehicle-Terrain Interaction in {{IR}} Synthetic Scenes},
+  booktitle = {{{AeroSense}} 2003},
+  author = {Gonda, Teresa G. and Less, David M. and Filbee, David R. and Polsen, Erik S. and Edwards, Timothy},
+  editor = {Watkins, Wendell R. and Clement, Dieter and Reynolds, William R.},
+  year = 2003,
+  month = sep,
+  pages = {9},
+  address = {Orlando, FL},
+  doi = {10.1117/12.487576},
+  urldate = {2025-05-21},
+  abstract = {IR synthetic scene fidelity improves with each leap ahead in computing capability. Military training, in particular, is reaping the benefits from each improvement in rendering fidelity and speed. However, in order for these synthetic scenes to be useful for signature virtual prototyping or laboratory observer trials, a particularly challenging aspect still needs to be addressed. Synthetic scenes need to have the ability to include robust physically reasonable active source prediction models for vehicles and to include physically reasonable interaction of vehicles with the terrain. Ground heating from exhaust, radiative heating and reflections between the vehicle and terrain, and tracks left on the terrain are just some examples of desired capabilities. For determining the performance of signature treatments, the effects must be more than artistic renderings of vehicle terrain interaction, but physically representative enough to make engineering determinations. This paper will explore the results of a first phase study to include MuSES targets in an existing IR synthetic scene program and the inclusion of exhaust impingement on the terrain.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\D6YWXIUR\Gonda 等 - 2003 - An explanation of vehicle-terrain interaction in IR synthetic scenes.pdf}
+}
+
+@inproceedings{haynesAccurateSceneModeling2003,
+  title = {Accurate Scene Modeling Using Synthetic Imagery},
+  booktitle = {Targets and {{Backgrounds IX}}: {{Characterization}} and {{Representation}}},
+  author = {Haynes, Andrew W. and Gilmore, Marilyn A. and Filbee, David R. and Stroud, Colin A.},
+  year = 2003,
+  month = sep,
+  volume = {5075},
+  pages = {85--96},
+  publisher = {SPIE},
+  doi = {10.1117/12.484921},
+  urldate = {2025-05-21},
+  abstract = {For a variety of training and simulation purposes even photo-realistic synthetic imagery is inadequate because of the impact of subtle effects on the eye and on other sensors. It is essential that the synthetic imagery is a physically accurate representation of the real-world and captures all the inherent variability of different backgrounds. CAMEO-SIM has been developed to meet these requirements. Recent work has improved the atmospheric modelling and thermal shadow simulation. In addition, novel concepts to introduce the three-dimensional spatial and spectral variability required are under consideration. It is essential that the fidelity of the imagery generated is evaluated, to ensure that it is 'fit for purpose'. Therefore a toolset, FIRE, has been developed. This toolset can assess metrics such as 'clutter level' within the image. A range of validation studies have been undertaken throughout the development of CAMEO-SIM. This paper will give an overview of the current capabilities of CAMEO-SIM and describe planned developments. The validation work will be reviewed, especially the recent work on thermal modelling and analysis using FIRE.},
+  langid = {english},
+  annotation = {TLDR: An overview of the current capabilities of CAMEO-SIM is given and planned developments are described, especially the recent work on thermal modelling and analysis using FIRE is reviewed.},
+  file = {C:\Users\EricPu\Zotero\storage\ED2GUPC5\Haynes 等 - 2003 - Accurate scene modeling using synthetic imagery.pdf}
+}
+
+@inproceedings{hindererModelGeneratingSynthetic1982,
+  title = {Model for Generating Synthetic Three-Dimensional ({{3D}}) Images of Small Vehicles},
+  booktitle = {25th {{Annual Technical Symposium}}},
+  author = {Hinderer, Jim},
+  editor = {Narendra, Pat M.},
+  year = 1982,
+  month = mar,
+  pages = {8--13},
+  address = {San Diego},
+  doi = {10.1117/12.932621},
+  urldate = {2025-05-20},
+  langid = {english},
+  annotation = {TLDR: A computer model for generating 3-D images of small vehicles that decomposes components into three-point facets which are the basis for generating an image.},
+  file = {C:\Users\EricPu\Zotero\storage\NKRGCGIV\Hinderer - 1982 - Model for generating synthetic three-dimensional (3D) images of small vehicles.pdf}
+}
+
+@book{jacobsSimulationThermalBehaviour1980,
+  title = {Simulation of the Thermal Behaviour of an Object and Its Nearby Surroundings},
+  author = {Jacobs, P.A.M.},
+  year = 1980,
+  series = {Report / {{Physics Laboratory}}. {{T}}.{{N}}.{{O}}; No. {{PHL}} 1980-08},
+  publisher = {T.N.O.},
+  address = {The Hague},
+  chapter = {95 p. ; 30 cm.},
+  langid = {english}
+}
+
+@inproceedings{johnsonMuSESNewHeat1998,
+  title = {{{MuSES}}: A New Heat and Signature Management Design Tool for Virtual Prototyping},
+  booktitle = {Ninth {{Annual Ground Target Modeling}} \& {{Validation Conference}}},
+  author = {Johnson, Keith and Curran, Allen and Less, David and Levanen, Derrick and Marttila, Eric},
+  year = 1998,
+  address = {Houghton, MI},
+  abstract = {The current Army infrared signature code, PRISM, does not fully meet the needs of vehicle designers. In this age of rapid prototyping and advanced signature and heat management designs, an overhaul of the infrared modeling process is required.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\WU2JZMAA\Johnson 等 - MuSES a new heat and signature management design tool for virtual prototyping.pdf}
+}
+
+@misc{klaassenMIRISimSimulatorMidinfrared2020,
+  title = {{{MIRISim}}: A Simulator for the Mid-Infrared Instrument on {{JWST}}},
+  shorttitle = {{{MIRISim}}},
+  author = {Klaassen, P. D. and Geers, V. C. and Beard, S. M. and O'Brien, A. D. and Cossou, C. and Gastaud, R. and Coulais, A. and Schreiber, J. and Kavanagh, P. J. and Topinka, M. and Azzollini, R. and De Meester, W. and Bouwman, J. and Glasse, A. C. H. and Glauser, A. M. and Law, D. R. and Cracraft, M. and Murray, K. and Sargent, B. and Jones, O. C. and Wright, G. S.},
+  year = 2020,
+  month = oct,
+  journal = {Arxiv.org},
+  doi = {10.1093/mnras/staa3416},
+  urldate = {2025-05-21},
+  abstract = {The Mid-Infrared Instrument (MIRI) on the James Webb Space Telescope (JWST), has imaging, four coronagraphs and both low and medium resolution spectroscopic modes . Being able to simulate MIRI observations will help commissioning of the instrument, as well as get users familiar with representative data. We designed the MIRI instrument simulator (MIRISim) to mimic the on-orbit performance of the MIRI imager and spectrometers using the Calibration Data Products (CDPs) developed by the MIRI instrument team. The software encorporates accurate representations of the detectors, slicers, distortions, and noise sources along the light path including the telescope's radiative background and cosmic rays. The software also includes a module which enables users to create astronomical scenes to simulate. MIRISim is a publicly available Python package that can be run at the command line, or from within Python. The outputs of MIRISim are detector images in the same uncalibrated data format that will be delivered to MIRI users. These contain the necessary metadata for ingestion by the JWST calibration pipeline.},
+  howpublished = {https://arxiv.org/abs/2010.15710v1},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\EIGKR99R\Klaassen 等 - 2020 - MIRISim a simulator for the mid-infrared instrument on JWST.pdf}
+}
+
+@inproceedings{kneizysAtmosphericTransmittanceRadiance1978,
+  title = {Atmospheric Transmittance and Radiance: The Lowtran Code},
+  shorttitle = {Atmospheric Transmittance and Radiance},
+  booktitle = {Optical {{Properties}} of the {{Atmosphere}}},
+  author = {Kneizys, Francis X.},
+  year = 1978,
+  month = aug,
+  volume = {142},
+  pages = {6--8},
+  publisher = {SPIE},
+  doi = {10.1117/12.956522},
+  urldate = {2025-05-24},
+  abstract = {A computer code, LOWTRAN, has been developed for calculating the transmittance and background radiance of the earth\&apos;s atmosphere at moderate spectral resolution (20 cm-1). The code was derived using a single parameter band model for molecular absorption and includes the effects of continuum absorption, molecular scattering, and aerosol extinction. A choice of atmospheric models is provided to the user for any atmospheric slant path. The model is described and application of the code is given by comparisons with atmospheric transmittance and radiance measurements.},
+  langid = {english},
+  annotation = {TLDR: A computer code, LOWTRAN, has been developed for calculating the transmittance and background radiance of the earth's atmosphere at moderate spectral resolution and includes the effects of continuum absorption, molecular scattering, and aerosol extinction.\\
+abstractTranslation: 开发了计算地球透过率和背景辐射的计算机程序LOWTRAN；s大气，中等光谱分辨率（20cm-1）。该程序使用分子吸收的单参数带模型导出，包括连续吸收、分子散射和气溶胶消光的影响。为用户提供任何大气倾斜路径的大气模型选择。通过与大气透过率和辐射测量值的比较，描述了该模型并给出了该代码的应用。},
+  file = {C:\Users\EricPu\Zotero\storage\7HB5WUI6\Kneizys - 1978 - Atmospheric transmittance and radiance the lowtran code.pdf}
+}
+
+@article{kornfeldComputerGenerationInfrared1985,
+  title = {Computer Generation of Infrared Imagery},
+  author = {Kornfeld, Gertrude H.},
+  year = 1985,
+  month = dec,
+  journal = {Applied Optics},
+  volume = {24},
+  number = {24},
+  pages = {4534--4542},
+  publisher = {Optica Publishing Group},
+  issn = {2155-3165},
+  doi = {10.1364/AO.24.004534},
+  urldate = {2025-05-20},
+  abstract = {A practical engineering model that predicts the thermal radiation distributions for a wide variety of scenes and a digital capability to simulate thermal imagery on a medium size computer was originated. Via memory conserving processing techniques the time necessary to computer generate the imagery is drastically reduced compared with standard methods. In certain conditions real-time picture creation (30 frames/sec) might be achieved.},
+  copyright = {\copyright{} 1985 Optical Society of America},
+  langid = {english},
+  keywords = {Attenuation coefficient,Image sensors,Infrared detectors,Infrared sensors,Night vision,Segmentation},
+  annotation = {TLDR: A practical engineering model that predicts the thermal radiation distributions for a wide variety of scenes and a digital capability to simulate thermal imagery on a medium size computer was originated and the time necessary to computer generate the imagery is drastically reduced.},
+  file = {C:\Users\EricPu\Zotero\storage\8UB6GZ6L\Kornfeld - 1985 - Computer generation of infrared imagery.pdf}
+}
+
+@inproceedings{kottlerPhysicallybasedThermalSimulation2019,
+  title = {Physically-Based Thermal Simulation of Large Scenes for Infrared Imaging:},
+  shorttitle = {Physically-Based Thermal Simulation of Large Scenes for Infrared Imaging},
+  booktitle = {Proceedings of the 14th {{International Joint Conference}} on {{Computer Vision}}, {{Imaging}} and {{Computer Graphics Theory}} and {{Applications}}},
+  author = {Kottler, B. and Burkard, E. and Bulatov, D. and Harak{\'e}, L.},
+  year = 2019,
+  pages = {53--64},
+  publisher = {{SCITEPRESS - Science and Technology Publications}},
+  address = {Prague, Czech Republic},
+  doi = {10.5220/0007351400530064},
+  urldate = {2025-05-11},
+  abstract = {Rendering large scenes in the thermal infrared spectrum requires the knowledge of the surface temperature distribution. We developed a workflow starting from raw airborne sensor data yielding to a physically-based thermal simulation, which can be used for rendering in the infrared spectrum. The workflow consists of four steps: material classification, mesh generation, material parameter assignment, and thermal simulation. This paper concerns the heat transfer simulation of large scenes. Our thermal model includes the heat transfer types radiation, convection, and conduction in three dimensions within the object and with its environment, i.e. sun and sky in particular. We show that our model can be solved by finite volume method and it shows good agreement with experimental data of the CUBI object. We demonstrate our workflow for sensor data from the City of Melville and produce reasonable results compared to infrared sensor data. For the large scene, the temperature simulation finished in appropriate time of 252 sec. for five day-night cycles.},
+  isbn = {978-989-758-354-4},
+  langid = {english},
+  annotation = {TLDR: This paper developed a workflow starting from raw airborne sensor data yielding to a physically-based thermal simulation, which can be used for rendering in the infrared spectrum, and shows good agreement with experimental data of the CUBI object.},
+  file = {C:\Users\EricPu\Zotero\storage\5KS7JEU9\Kottler 等 - 2019 - Physically-based thermal simulation of large scenes for infrared imaging.pdf}
+}
+
+@inproceedings{kwanSimulationHyperspectralThermal2008,
+  title = {A Simulation for Hyperspectral Thermal {{IR}} Imaging Sensors},
+  booktitle = {Algorithms and {{Technologies}} for {{Multispectral}}, {{Hyperspectral}}, and {{Ultraspectral Imagery XIV}}},
+  author = {Kwan, Yit-Tsi and Sawtelle, Steven and Bernstein, Uri and Pereira, Wellesley and Less, Dave},
+  year = 2008,
+  month = apr,
+  volume = {6966},
+  pages = {466--476},
+  publisher = {SPIE},
+  doi = {10.1117/12.777845},
+  urldate = {2025-05-21},
+  abstract = {Hyperspectral imaging sensors operating in the visual, near IR, and thermal IR bands are sufficiently advanced to become a standard component of surveillance sensor suites. The output of these sensors contains a wealth of spectral and spatial information that can improve target detection and recognition performance. However, the large volume and complex features of hyperspectral data are challenges to automatic target recognition (ATR) algorithm development, and a simulation of hyperspectral sensing is therefore essential in evaluating algorithm performance. This paper describes the Infrared Hyperspectral Scene Simulation (IRHSS), an accurate, non-real-time large-scene simulation tool for hyperspectral imagers operating in the thermal IR bands. The simulation contains models for target and background spectral radiance, atmospheric propagation, and sensor processing. It uses a new hyperspectral version of the Multi-service Electro-optical Signature (MuSES) model to compute scene temperatures and hyperspectral radiances. IRHSS is able to handle very large terrain and feature databases by selective use of radiation view factors. It provides end-to-end simulation starting with scene models built from COTS simulation databases with faceted terrain and targets, and optional overlays of visual high-resolution texture imagery. IRHSS can be run as a standalone application via its Windows-based graphical user interface (GUI) or as a plug-in to existing software using the IRHSS application programming interface (API). Some screen images of the IRHSS GUI and example hyperspectral image cubes generated by IRHSS are included herein.},
+  langid = {english},
+  annotation = {TLDR: The Infrared Hyperspectral Scene Simulation (IRHSS) is described, an accurate, non-real-time large-scene simulation tool for hyperspectral imagers operating in the thermal IR bands and contains models for target and background spectral radiance, atmospheric propagation, and sensor processing.},
+  file = {C:\Users\EricPu\Zotero\storage\SFKHE2X2\Kwan 等 - 2008 - A simulation for hyperspectral thermal IR imaging sensors.pdf}
+}
+
+@techreport{mcclatcheyAFCRLAtmosphericAbsorption1973,
+  title = {{{AFCRL}} Atmospheric Absorption Line Parameters Compilation},
+  author = {McClatchey, R. A. and Benedict, W. S. and Clough, S. A. and Burch, D. E. and Calfee, R. F. and Fox, K. and Rothman, L. S. and Garing, J. S.},
+  year = 1973,
+  month = jan,
+  journal = {Optical Physics Laboratory},
+  urldate = {2025-05-24},
+  abstract = {The report describes a compilation of the molecular spectroscopic parameters for a number of infrared-active molecules occurring naturally in the terrestrial atmosphere. The following molecules are included in this compilation: water vapor; carbon dioxide; ozone; nitrous oxide; carbon monoxide; methane; and oxygen. The spectral region covered extends from less than 1 {$\mu$}m to the far infrared, and data are presented on more than 100,000 spectral lines. The parameters included in the compilation for each line are: frequency, intensity, half-width, energy of the lower state of the transition, vibrational and rotational identifications of the upper and lower energy states, an isotopic identification, and a molecular identification. A discussion is provided separately for each molecular species, indicating the sources and accuracy of the data and a general discussion of how the data were obtained.},
+  langid = {english},
+  annotation = {ADS Bibcode: 1973aalp.rept.....M\\
+abstractTranslation: 该报告描述了地球大气中自然存在的许多红外活性分子的分子光谱参数的汇编。本汇编包括以下分子：水蒸气；二氧化碳；臭氧；氧化亚氮；一氧化碳；甲烷；和氧气。覆盖的光谱区域从小于1{$\mu$}m扩展到远红外，并且数据在100000多条光谱线上呈现。汇编中包含的每一行的参数是：频率、强度、半宽、低能跃迁态的能量、上能态和下能态的振动和旋转识别、同位素识别和分子识别。分别为每个分子物种提供讨论，指出数据的来源和准确性，并对如何获得数据进行一般性讨论。},
+  file = {C:\Users\EricPu\Zotero\storage\I734G585\McClatchey 等 - 1973 - AFCRL atmospheric absorption line parameters compilation.pdf}
+}
+
+@article{meyersModelingPolarimetricImaging2002,
+  title = {Modeling Polarimetric Imaging Using {{DIRSIG}}},
+  author = {Meyers, Jason},
+  year = 2002,
+  month = jan,
+  journal = {Theses},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\4FADNRP9\Meyers - 2002 - Modeling polarimetric imaging using DIRSIG.pdf}
+}
+
+@article{MODTRANModerateResolution1987,
+  title = {{{MODTRAN}}: A Moderate Resolution Model for {{LOWTRAN}}},
+  shorttitle = {Modtran},
+  year = 1987,
+  month = jul,
+  journal = {CTIT Technical Reports Series},
+  urldate = {2025-05-24},
+  abstract = {: The LOWTRAN computer codes, with LOWTRAN 7 being the most current version, are widely used to calculate atmospheric transmittance and/or radiance in the infrared, visible and near ultraviolet spectral regions; LOWTRAN 7 has been extended to include the microwave spectral region The code is easily used, runs quickly and provides the user with a wide variety of atmospheric models and options Its spectral resolution is 20 1/cm Full Width/Half Maximum (FWHM) with calculations being done in 5 1/cm increments This report describes work done to increase LOWTRAN's spectral resolution from 20 to 2 1/cm (FWHM) Specifically, the technical objectives for this program were: 1) to develop algorithms providing 2 1/cm resolution (FWHM); 2) to model molecular absorption of atmospheric molecules as a function of temperature and pressure; 3) to calculate band model parameters for twelve LOWTRAN molecular species; and 4) to integrate the LOWTRAN 7 capabilities into the new algorithms, maintaining compatibility with the multiple scattering option MODTRAN, the final product of this effort, is a moderate resolution LOWTRAN code Molecular absorption is calculated in 1 1/cm spectral bins, while the other parts of the calculation remain unchanged The molecular species affected are: water vapor, carbon dioxide, ozone, nitrous oxide, carbon monoxide, methane, oxygen, nitric oxide, sulfur dioxide, nitrogen dioxide, ammonia and nitric acid},
+  langid = {english},
+  annotation = {abstractTranslation: ：LOWTRAN计算机代码，其中LOWTRAN7是最新版本，广泛用于计算红外、可见光和近紫外光谱区域的大气透射率和/或辐射率；LOWTRAN 7已扩展到包括微波光谱区域。该代码易于使用，运行迅速，并为用户提供各种大气模型和选项。其光谱分辨率为20 1/cm全宽/半高（FWHM），计算以5 1/cm的增量进行。该报告描述了为将LOWTRAN's光谱分辨率从20提高到2 1/cm（FWHMs）而做的工作。具体而言，该程序的技术目标是：1）开发提供2 1/cm分辨率（FWHM.）的算法；2）将大气分子的分子吸收模拟为温度和压力的函数；3）计算12个LOWTRAN分子物种的能带模型参数；和4）将LOWTRAN 7功能集成到新算法中，保持与多重散射选项MODTRAN的兼容性，这项工作的最终产品是中等分辨率的LOWTRAR代码分子吸收在1 1/cm光谱箱中计算，而计算的其他部分保持不变。受影响的分子种类是：水蒸气、二氧化碳、臭氧、一氧化二氮、一氧化碳、甲烷、氧气、一氧化氮、二氧化硫、二氧化氮、氨和硝酸},
+  file = {C:\Users\EricPu\Zotero\storage\ZLVM3BTV\1987 - MODTRAN a moderate resolution model for LOWTRAN.pdf}
+}
+
+@article{nandhakumarIntegratedAnalysisThermal1988,
+  title = {Integrated Analysis of Thermal and Visual Images for Scene Interpretation},
+  author = {Nandhakumar, N. and Aggarwal, J.K.},
+  year = 1988,
+  month = jul,
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume = {10},
+  number = {4},
+  pages = {469--481},
+  issn = {1939-3539},
+  doi = {10.1109/34.3911},
+  urldate = {2025-07-16},
+  abstract = {An approach for computer perception of outdoor scenes is presented. The approach is based on integrating information extracted from thermal images and visual images, which provides information not available by processing either type of image alone. The thermal image is analyzed to provide estimates of surface temperature. The visual image provides surface absorptivity and relative orientation. These parameters are used together to provide estimates of heat fluxes at the surfaces of viewed objects. The thermal behavior of scene objects is described in terms of surface heat fluxes. Features based on estimated values of surface heat fluxes are shown to be more meaningful and specific in distinguishing scene components.{$<>$}},
+  langid = {english},
+  keywords = {Cameras,Computer vision,Data mining,Heat transfer,Image analysis,Image resolution,Infrared imaging,Layout,Temperature,Yield estimation},
+  annotation = {TLDR: An approach for computer perception of outdoor scenes is presented based on integrating information extracted from thermal images and visual images, which provides information not available by processing either type of image alone.},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\JVGCU8MQ\\Nandhakumar和Aggarwal - 1988 - Integrated analysis of thermal and visual images for scene interpretation.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\UQ4KRD7P\\3911.html}
+}
+
+@inproceedings{naraniyaSceneSimulationModeling2021,
+  title = {Scene Simulation and Modeling of {{InfraRed}} Search and Track Sensor for Air-Borne Long Range Point Targets},
+  booktitle = {2021 2nd {{International Conference}} on {{Range Technology}} ({{ICORT}})},
+  author = {Naraniya, Om Prakash and Kumar, Sandeep and Kumar, Ajay},
+  year = 2021,
+  month = aug,
+  pages = {1--4},
+  doi = {10.1109/ICORT52730.2021.9581635},
+  urldate = {2025-05-21},
+  abstract = {Complexities involved in the state-of-the-art Infrared Search and Track (IRST) systems require comprehensive model for scene simulation in which the interplay between sensor, target, background and atmosphere can be modelled and evaluated for scenarios as maximum as possible. In this paper, we discuss our simplified model of infrared (IR) scene generation which has been developed for long range, air-borne point targets. IRST systems operate in a wide Field-of-Regard (FOR) by continuously scanning the line-of-sight of the sensor. To cover the entire FOR scanning mechanism has been implemented in the module where different scanning speed in the azimuth and elevation directions can be defined. Further, we present our results for point target detection and tracking by implementing different standard algorithms on the generated scenarios using the developed software model.},
+  langid = {english},
+  keywords = {Atmospheric modeling,Azimuth,cloud generation and Tracking,Complexity theory,infrared scene generation,IRST,Object detection,point-target,Software,Software algorithms,Target tracking},
+  annotation = {TLDR: The simplified model of infrared (IR) scene generation which has been developed for long range, air-borne point targets, and results for point target detection and tracking are presented by implementing different standard algorithms on the generated scenarios using the developed software model.},
+  file = {C:\Users\EricPu\Zotero\storage\V4JXWVJM\9581635.html}
+}
+
+@article{priestPolarimetricMicrofacetScattering2002,
+  title = {Polarimetric Microfacet Scattering Theory with Applications to Absorptive and Reflective Surfaces},
+  author = {Priest, Richard G. and Meier, Steven R.},
+  year = 2002,
+  month = may,
+  journal = {Optical Engineering},
+  volume = {41},
+  number = {5},
+  pages = {988--993},
+  publisher = {SPIE},
+  issn = {0091-3286, 1560-2303},
+  doi = {10.1117/1.1467360},
+  urldate = {2025-05-21},
+  abstract = {Optical Engineering is an SPIE journal that publishes peer-reviewed articles reporting on research, development, and applications of optics and photonics.},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\87AWA5TY\Priest和Meier - 2002 - Polarimetric microfacet scattering theory with applications to absorptive and reflective surfaces.pdf}
+}
+
+@inproceedings{schottIncorporationTextureMultispectral1995,
+  title = {Incorporation of Texture in Multispectral Synthetic Image Generation Tools},
+  booktitle = {{{SPIE}}'s 1995 {{Symposium}} on {{OE}}/{{Aerospace Sensing}} and {{Dual Use Photonics}}},
+  author = {Schott, John R. and Salvaggio, Carl and Brown, Scott D. and Rose, R. A.},
+  editor = {Watkins, Wendell R. and Clement, Dieter},
+  year = 1995,
+  month = jun,
+  pages = {189--196},
+  address = {Orlando, FL},
+  doi = {10.1117/12.210590},
+  urldate = {2025-05-21},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\MS28H5VV\Schott 等 - 1995 - Incorporation of texture in multispectral synthetic image generation tools.pdf}
+}
+
+@inproceedings{shefferComputerGeneratedIR1988,
+  title = {Computer Generated {{IR}} Imagery: A First Principles Modeling Approach},
+  shorttitle = {Computer Generated {{IR}} Imagery},
+  booktitle = {Multispectral {{Image Processing}} and {{Enhancement}}},
+  author = {Sheffer, A. D. and Cathcart, J. M.},
+  year = 1988,
+  month = aug,
+  volume = {933},
+  pages = {199--206},
+  publisher = {SPIE},
+  doi = {10.1117/12.968469},
+  urldate = {2025-05-20},
+  abstract = {An ideal approach to computer generation of infrared imagery of synthetic scenes is described in which first principles prediction of thermal signatures is used at all key stages. This is followed by a discussion of current synthetic infrared imagery generation capabilities at Georgia Tech, with emphasis on existing modeling approaches and how they compare with the ideal approach set forth as a paradigm. Finally, example synthetic IR imagery is presented and discussed.},
+  langid = {english},
+  annotation = {TLDR: An ideal approach to computer generation of infrared imagery of synthetic scenes is described in which first principles prediction of thermal signatures is used at all key stages.},
+  file = {C:\Users\EricPu\Zotero\storage\UF5A9Z42\Sheffer和Cathcart - 1988 - Computer generated IR imagery a first principles modeling approach.pdf}
+}
+
+@book{thomasl.altshulerInfraredTransmissionBackground1961,
+  title = {Infrared Transmission and Background Radiation by Clear Atmospheres},
+  shorttitle = {Dtic Ad0401923},
+  author = {{Thomas L.Altshuler}},
+  year = 1961,
+  month = dec,
+  urldate = {2025-05-24},
+  langid = {english},
+  keywords = {*ATMOSPHERIC PHYSICS,*INFRARED RADIATION,ABSORPTION,Altshuler T  L,BACKGROUND,DTIC Archive,GASES,GENERAL ELECTRIC CO PHILADELPHIA PA MISSILE AND SPACE DIV,HAZE,INFRARED DETECTORS,INFRARED PULSES,OZONE,SKY BRIGHTNESS,TABLES(DATA)},
+  file = {C:\Users\EricPu\Zotero\storage\NUP5UK6L\Defense Technical Information Center - 1961 - Dtic ad0401923 infrared transmission and background radiation by clear atmospheres.pdf}
+}
+
+@article{upadhyayComprehensiveSurveySynthetic2025,
+  title = {A Comprehensive Survey on Synthetic Infrared Image Synthesis},
+  author = {Upadhyay, Avinash and Sharma, Manoj and Mukherjee, Prerana and Singhal, Amit and Lall, Brejesh},
+  year = 2025,
+  month = jun,
+  journal = {Infrared Physics and Technology},
+  volume = {147},
+  pages = {105745},
+  issn = {1350-4495},
+  doi = {10.1016/j.infrared.2025.105745},
+  urldate = {2025-05-21},
+  abstract = {Synthetic infrared (IR) scene and target generation is an important computer vision problem as it allows the generation of realistic IR images and targets for training and testing of various applications, such as remote sensing, surveillance, and target recognition. It also helps reduce the cost and risk associated with collecting real-world IR data. This survey paper aims to provide a comprehensive overview of the conventional mathematical modeling-based methods and deep learning-based methods used for generating synthetic IR scenes and targets. The paper discusses the importance of synthetic IR scene and target generation and briefly covers the mathematics of black body and grey body radiations, as well as IR image-capturing methods. The potential use cases of synthetic IR scenes and target generation are also described, highlighting the significance of these techniques in various fields. Additionally, the paper explores possible new ways of developing new techniques to enhance the efficiency and effectiveness of synthetic IR scenes and target generation while highlighting the need for further research to advance this field.},
+  langid = {english},
+  keywords = {Infrared imaging,Infrared synthesis,Synthetic image generation,Synthetic video generation},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\NGNFE62W\\2025 - A comprehensive survey on synthetic infrared image synthesis.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\HPLPUI6Q\\S1350449525000386.html;C\:\\Users\\EricPu\\Zotero\\storage\\R2J4NBE3\\S1350449525000386.html}
+}

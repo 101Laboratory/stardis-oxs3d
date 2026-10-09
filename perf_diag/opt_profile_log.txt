@@ -1,0 +1,103 @@
+8192:
+message: persistent_wavefront DONE: 320x320 spp=32 pool=16384 elapsed=3 mins 31 secs 531 msecs 160 usecs 900 nsecs  steps=481836  rays=12912150630  avg_width=13550.1  (rad=866345306 cond_ds=2490942410(retry=8) shadow=0 enc=9554862906 startup=0 other=0)  done: rad=1558051 temp=1085855 bnd=632883 fail=11  max_depth=278340
+message: persistent wavefront summary:
+  total_steps=481836  total_rays=12912150630  avg_wavefront_width=13550.1
+  refill_phase: rays=12483245112 (96.7%)  wall=186.105s
+  drain_phase:  rays=428893258 (3.3%)  steps=95565  wall=25.426s
+  batch_size: min=2, max=44088
+  rays: radiative=866345306  cond_ds=2490942410(retry=8)  shadow=0  enclosure=9554862906  startup=0  other=0
+  paths: completed=3276800, failed=11, truncated=0, max_depth=278340
+  refills=3260416
+  timing: compact=18.165s  collect=22.387s  trace=33.600s(gpu=10.410s cpu=21.833s)
+          distribute=36.713s  enc_locate=2.213s  cp=2.306s
+          cascade=36.754s
+          harvest+refill=28.615s  housekeeping=1.445s
+          gpu_sync=1.667s  gpu_launch=27.230s
+          total_timed=211.094s  wall=211.531s  coverage=99.8%
+message: cascade profiling: total_iterations=5379253197  total_advances=5379253197
+message: batch trace profiling: calls=481837  avg_batch=26798  min=2  max=44088
+  gpu_kernel:        total=7261.0ms (22.5%)  avg=0.02ms/call
+  d2h_wait:          total=3149.5ms (9.8%)  avg=0.01ms/call
+  cpu_postprocess:   total=21832.6ms (67.7%)  avg=0.05ms/call
+  fallback_retrace:  total=0.0ms (0.0%)  accepted=0  missed=0  rejected=0
+  gpu_throughput: 1778.3 Mrays/s  (kernel only)
+message: Initialisation time = 507 msecs
+message: Computation time = 3 mins 31 secs 666 msecs
+
+10000:
+message: persistent_wavefront DONE: 320x320 spp=32 pool=20000 elapsed=3 mins 28 secs 127 msecs 12 usecs 900 nsecs  steps=411194  rays=12912150630  avg_width=15868.3  (rad=866345306 cond_ds=2490942410(retry=8) shadow=0 enc=9554862906 startup=0 other=0)  done: rad=1558051 temp=1085855 bnd=632883 fail=11  max_depth=278340
+message: persistent wavefront summary:
+  total_steps=411194  total_rays=12912150630  avg_wavefront_width=15868.3
+  refill_phase: rays=12378133251 (95.9%)  wall=179.526s
+  drain_phase:  rays=534002457 (4.1%)  steps=97424  wall=28.601s
+  batch_size: min=2, max=50306
+  rays: radiative=866345306  cond_ds=2490942410(retry=8)  shadow=0  enclosure=9554862906  startup=0  other=0
+  paths: completed=3276800, failed=11, truncated=0, max_depth=278340
+  refills=3256800
+  timing: compact=18.166s  collect=22.240s  trace=37.329s(gpu=13.324s cpu=22.409s)
+          distribute=34.375s  enc_locate=2.153s  cp=2.175s
+          cascade=38.767s
+          harvest+refill=28.636s  housekeeping=1.149s
+          gpu_sync=1.381s  gpu_launch=21.366s
+          total_timed=207.737s  wall=208.127s  coverage=99.8%
+message: cascade profiling: total_iterations=5379253197  total_advances=5379253197
+message: batch trace profiling: calls=411195  avg_batch=31402  min=2  max=50306
+  gpu_kernel:        total=7743.8ms (21.7%)  avg=0.02ms/call
+  d2h_wait:          total=5580.3ms (15.6%)  avg=0.01ms/call
+  cpu_postprocess:   total=22409.3ms (62.7%)  avg=0.05ms/call
+  fallback_retrace:  total=0.0ms (0.0%)  accepted=0  missed=0  rejected=0
+  gpu_throughput: 1667.4 Mrays/s  (kernel only)
+message: Initialisation time = 576 msecs
+message: Computation time = 3 mins 28 secs 276 msecs
+
+12244:
+message: persistent_wavefront DONE: 320x320 spp=32 pool=24576 elapsed=3 mins 46 secs 673 msecs 563 usecs 900 nsecs  steps=353212  rays=12912150630  avg_width=18459.1  (rad=866345306 cond_ds=2490942410(retry=8) shadow=0 enc=9554862906 startup=0 other=0)  done: rad=1558051 temp=1085855 bnd=632883 fail=11  max_depth=278340
+message: persistent wavefront summary:
+  total_steps=353212  total_rays=12912150630  avg_wavefront_width=18459.1
+  refill_phase: rays=12244780450 (94.8%)  wall=194.249s
+  drain_phase:  rays=667351884 (5.2%)  steps=100615  wall=32.425s
+  batch_size: min=2, max=64062
+  rays: radiative=866345306  cond_ds=2490942410(retry=8)  shadow=0  enclosure=9554862906  startup=0  other=0
+  paths: completed=3276800, failed=11, truncated=0, max_depth=278340
+  refills=3252224
+  timing: compact=18.974s  collect=23.769s  trace=41.752s(gpu=14.416s cpu=25.287s)
+          distribute=36.575s  enc_locate=2.198s  cp=2.196s
+          cascade=48.701s
+          harvest+refill=29.819s  housekeeping=1.000s
+          gpu_sync=1.071s  gpu_launch=20.294s
+          total_timed=226.348s  wall=226.674s  coverage=99.9%
+message: cascade profiling: total_iterations=5379253197  total_advances=5379253197
+message: batch trace profiling: calls=353213  avg_batch=36556  min=2  max=64062
+  gpu_kernel:        total=8029.0ms (20.2%)  avg=0.02ms/call
+  d2h_wait:          total=6386.7ms (16.1%)  avg=0.02ms/call
+  cpu_postprocess:   total=25287.2ms (63.7%)  avg=0.07ms/call
+  fallback_retrace:  total=0.0ms (0.0%)  accepted=0  missed=0  rejected=0
+  gpu_throughput: 1608.2 Mrays/s  (kernel only)
+message: Initialisation time = 524 msecs
+message: Computation time = 3 mins 46 secs 815 msecs
+
+16384:
+message: persistent_wavefront DONE: 320x320 spp=32 pool=32768 elapsed=4 mins 17 secs 888 msecs 358 usecs 200 nsecs  steps=290719  rays=12912150630  avg_width=22397.2  (rad=866345306 cond_ds=2490942410(retry=8) shadow=0 enc=9554862906 startup=0 other=0)  done: rad=1558051 temp=1085855 bnd=632883 fail=11  max_depth=278340
+message: persistent wavefront summary:
+  total_steps=290719  total_rays=12912150630  avg_wavefront_width=22397.2
+  refill_phase: rays=11996681334 (92.9%)  wall=217.942s
+  drain_phase:  rays=915444712 (7.1%)  steps=105108  wall=39.946s
+  batch_size: min=2, max=80637
+  rays: radiative=866345306  cond_ds=2490942410(retry=8)  shadow=0  enclosure=9554862906  startup=0  other=0
+  paths: completed=3276800, failed=11, truncated=0, max_depth=278340
+  refills=3244032
+  timing: compact=19.771s  collect=26.539s  trace=50.625s(gpu=18.182s cpu=30.053s)
+          distribute=44.122s  enc_locate=2.127s  cp=2.046s
+          cascade=63.005s
+          harvest+refill=30.985s  housekeeping=0.753s
+          gpu_sync=0.834s  gpu_launch=16.802s
+          total_timed=257.610s  wall=257.888s  coverage=99.9%
+message: cascade profiling: total_iterations=5379253197  total_advances=5379253197
+message: batch trace profiling: calls=290720  avg_batch=44414  min=2  max=80637
+  gpu_kernel:        total=9053.9ms (18.8%)  avg=0.03ms/call
+  d2h_wait:          total=9127.7ms (18.9%)  avg=0.03ms/call
+  cpu_postprocess:   total=30053.4ms (62.3%)  avg=0.10ms/call
+  fallback_retrace:  total=0.0ms (0.0%)  accepted=0  missed=0  rejected=0
+  gpu_throughput: 1426.1 Mrays/s  (kernel only)
+message: Initialisation time = 527 msecs
+message: Computation time = 4 mins 18 secs 44 msecs

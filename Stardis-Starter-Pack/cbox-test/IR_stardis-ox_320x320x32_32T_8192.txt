@@ -1,0 +1,260 @@
+message: MPI is disabled.
+message: Using 32 threads.
+message: Read file 'S_CORNELL_BOX_OUTER_BOX.stl': 36 triangles found.
+message: Read file 'S_CORNELL_BOX_SHORT.stl': 12 triangles found.
+message: Read file 'S_CORNELL_BOX_TALL.stl': 12 triangles found.
+message: Dummy fluid created: (it is medium 3)
+message: Read file 'B_Light.stl': 2 triangles found.
+message: External fluid created: T=300 (it is medium 4)
+message: Read file 'B_BoxSurface.stl': 34 triangles found.
+message: External fluid created: T=300 (it is medium 5)
+message: Read file 'B_ShortSurface.stl': 12 triangles found.
+message: External fluid created: T=300 (it is medium 6)
+message: Read file 'B_TallSurface.stl': 12 triangles found.
+message: Scaling factor is 1
+message: Trad is 300, Trad reference is 300
+message: System Tref range is [300 1000]
+message: Picard order is 1
+message: Read 60 unique triangles.
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+message: Description 0: Solid 'CORNELL_BOX_OUTER_BOX': lambda=0.025 rho=30 cp=1500 delta=inf Tinit=300 (it is medium 0)
+message: Auto delta for solid 'CORNELL_BOX_SHORT' set to 0.00828418
+message: Description 1: Solid 'CORNELL_BOX_SHORT': lambda=0.025 rho=30 cp=1500 delta=0.00828418 Tinit=300 (it is medium 1)
+message: Auto delta for solid 'CORNELL_BOX_TALL' set to 0.00995
+message: Description 2: Solid 'CORNELL_BOX_TALL': lambda=0.025 rho=30 cp=1500 delta=0.00995 Tinit=300 (it is medium 2)
+message: Description 3: T boundary for solid 'Light': T=1000 (using medium 3 as external medium)
+message: Description 4: H boundary for solid 'BoxSurface': ref_temperature=300 emissivity=0.9 specular_fraction=0 hc=0 T=300 (using medium 4 as external medium)
+message: Description 5: H boundary for solid 'ShortSurface': ref_temperature=300 emissivity=0.9 specular_fraction=0 hc=0 T=300 (using medium 5 as external medium)
+message: Description 6: H boundary for solid 'TallSurface': ref_temperature=300 emissivity=0.9 specular_fraction=0 hc=0 T=300 (using medium 6 as external medium)
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+  [UnifiedTracer] RT module created.
+  [UnifiedTracer] NN module created.
+  [UnifiedTracer] 15 program groups created.
+[OptiX Log]: Info: Pipeline statistics
+	module(s)                            :     2
+	entry function(s)                    :    13
+	trace call(s)                        :     5
+	continuation callable call(s)        :     0
+	direct callable call(s)              :     0
+	basic block(s) in entry functions    :   159
+	instruction(s) in entry functions    :  3420
+	non-entry function(s)                :     0
+	basic block(s) in non-entry functions:     0
+	instruction(s) in non-entry functions:     0
+	debug information                    :    no
+
+  [UnifiedTracer] Pipeline created (15 PGs, stack configured).
+  [UnifiedTracer] Base SBTs created (RT + MH + MHF + NN + CP).
+  [UnifiedTracer] Initialized (single pipeline, triple SBT).
+message: Rendering:   0%message: Persistent wavefront solver enabled (Phase B-3).
+message: Persistent wavefront (Phase B-3 M3): 320x320 spp=32, per_view_size=8192 (SM=128), total_tasks=3276800
+message: Cascade OMP: ENABLED, threads=32 (STARDIS_CASCADE_OMP=<unset,default=1>)
+message: persistent_wavefront: dual-buffer pipeline, view_size=8192, views[0].capacity=16384, views[1].capacity=8192
+message: persistent_wavefront: 16384 paths initialised (16384/3276800 tasks consumed), starting wavefront loop
+message: pipeline: starting dual-buffer mode (O13 async submit), half=8192
+message: O11_STARTUP A pre-merge: active=8192 need_ray=0 done=0
+message: O11_STARTUP A post-merge: active=8192 need_ray=0 done=0 rays=8192
+message: O11_STARTUP B pre-merge: active=8192 need_ray=0 done=0
+message: O11_STARTUP B post-merge: active=8192 need_ray=0 done=0 rays=8192
+message: persistent_wavefront pipeline step 1 [A]: 16384/16384 active, 8192 rays (rad=0 ds=0 shd=0 enc=0 st=0), 0/3276800 tasks done, refill
+message: Rendering:   1%message: Rendering:   2%message: Rendering:   3%message: Rendering:   4%message: Rendering:   5%message: Rendering:   6%message: Rendering:   7%message: persistent_wavefront pipeline step 1000 [B]: 16384/16384 active, 8518 rays (rad=0 ds=0 shd=0 enc=0 st=0), 214984/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 1001 [A]: 16384/16384 active, 8427 rays (rad=0 ds=0 shd=0 enc=0 st=0), 215107/3276800 tasks done, refill
+message: Rendering:   8%message: Rendering:   9%message: Rendering:  10%message: Rendering:  11%message: persistent_wavefront pipeline step 2000 [B]: 16384/16384 active, 9014 rays (rad=0 ds=0 shd=0 enc=0 st=0), 357066/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 2001 [A]: 16384/16384 active, 8864 rays (rad=0 ds=0 shd=0 enc=0 st=0), 357259/3276800 tasks done, refill
+message: Rendering:  12%message: Rendering:  13%message: persistent_wavefront pipeline step 3000 [B]: 16384/16384 active, 10367 rays (rad=0 ds=0 shd=0 enc=0 st=0), 421586/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 3001 [A]: 16384/16384 active, 10330 rays (rad=0 ds=0 shd=0 enc=0 st=0), 421633/3276800 tasks done, refill
+message: Rendering:  14%message: persistent_wavefront pipeline step 4000 [B]: 16384/16384 active, 10521 rays (rad=0 ds=0 shd=0 enc=0 st=0), 460294/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 4001 [A]: 16384/16384 active, 10571 rays (rad=0 ds=0 shd=0 enc=0 st=0), 460340/3276800 tasks done, refill
+message: Rendering:  15%message: persistent_wavefront pipeline step 5000 [B]: 16384/16384 active, 10796 rays (rad=0 ds=0 shd=0 enc=0 st=0), 500844/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 5001 [A]: 16384/16384 active, 10689 rays (rad=0 ds=0 shd=0 enc=0 st=0), 500885/3276800 tasks done, refill
+message: Rendering:  16%message: Rendering:  17%message: Rendering:  18%message: Rendering:  19%message: persistent_wavefront pipeline step 6000 [B]: 16384/16384 active, 9926 rays (rad=0 ds=0 shd=0 enc=0 st=0), 609532/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 6001 [A]: 16384/16384 active, 9770 rays (rad=0 ds=0 shd=0 enc=0 st=0), 609632/3276800 tasks done, refill
+message: Rendering:  20%message: Rendering:  21%message: Rendering:  22%message: Rendering:  23%message: persistent_wavefront pipeline step 7000 [B]: 16384/16384 active, 9621 rays (rad=0 ds=0 shd=0 enc=0 st=0), 741499/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 7001 [A]: 16384/16384 active, 9546 rays (rad=0 ds=0 shd=0 enc=0 st=0), 741586/3276800 tasks done, refill
+message: Rendering:  24%message: Rendering:  25%message: persistent_wavefront pipeline step 8000 [B]: 16384/16384 active, 10645 rays (rad=0 ds=0 shd=0 enc=0 st=0), 809347/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 8001 [A]: 16384/16384 active, 10533 rays (rad=0 ds=0 shd=0 enc=0 st=0), 809385/3276800 tasks done, refill
+message: Rendering:  26%message: persistent_wavefront pipeline step 9000 [B]: 16384/16384 active, 10938 rays (rad=0 ds=0 shd=0 enc=0 st=0), 850113/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 9001 [A]: 16384/16384 active, 10798 rays (rad=0 ds=0 shd=0 enc=0 st=0), 850146/3276800 tasks done, refill
+message: Rendering:  27%message: persistent_wavefront pipeline step 10000 [B]: 16384/16384 active, 11194 rays (rad=0 ds=0 shd=0 enc=0 st=0), 893893/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 10001 [A]: 16384/16384 active, 10681 rays (rad=0 ds=0 shd=0 enc=0 st=0), 893941/3276800 tasks done, refill
+message: Rendering:  28%message: persistent_wavefront pipeline step 11000 [B]: 16384/16384 active, 11000 rays (rad=0 ds=0 shd=0 enc=0 st=0), 933541/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 11001 [A]: 16384/16384 active, 10883 rays (rad=0 ds=0 shd=0 enc=0 st=0), 933586/3276800 tasks done, refill
+message: Rendering:  29%message: Rendering:  30%message: persistent_wavefront pipeline step 12000 [B]: 16384/16384 active, 10888 rays (rad=0 ds=0 shd=0 enc=0 st=0), 970290/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 12001 [A]: 16384/16384 active, 10975 rays (rad=0 ds=0 shd=0 enc=0 st=0), 970318/3276800 tasks done, refill
+message: Rendering:  31%message: persistent_wavefront pipeline step 13000 [B]: 16384/16384 active, 10856 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1010781/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 13001 [A]: 16384/16384 active, 10729 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1010820/3276800 tasks done, refill
+message: Rendering:  32%message: Rendering:  33%message: persistent_wavefront pipeline step 14000 [B]: 16384/16384 active, 10271 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1082378/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 14001 [A]: 16384/16384 active, 10177 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1082512/3276800 tasks done, refill
+message: Rendering:  34%message: Rendering:  35%message: Rendering:  36%message: persistent_wavefront pipeline step 15000 [B]: 16384/16384 active, 10700 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1194390/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 15001 [A]: 16384/16384 active, 10565 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1194433/3276800 tasks done, refill
+message: Rendering:  37%message: Rendering:  38%message: persistent_wavefront pipeline step 16000 [B]: 16384/16384 active, 12334 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1234763/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 16001 [A]: 16384/16384 active, 12205 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1234802/3276800 tasks done, refill
+message: Rendering:  39%message: persistent_wavefront pipeline step 17000 [B]: 16384/16384 active, 12197 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1269130/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 17001 [A]: 16384/16384 active, 12141 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1269161/3276800 tasks done, refill
+message: Rendering:  40%message: persistent_wavefront pipeline step 18000 [B]: 16384/16384 active, 12180 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1317602/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 18001 [A]: 16384/16384 active, 12290 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1317707/3276800 tasks done, refill
+message: Rendering:  41%message: Rendering:  42%message: Rendering:  43%message: Rendering:  44%message: persistent_wavefront pipeline step 19000 [B]: 16384/16384 active, 11274 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1442971/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 19001 [A]: 16384/16384 active, 11211 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1443003/3276800 tasks done, refill
+message: Rendering:  45%message: persistent_wavefront pipeline step 20000 [B]: 16384/16384 active, 12581 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1470846/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 20001 [A]: 16384/16384 active, 12601 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1470881/3276800 tasks done, refill
+message: Rendering:  46%message: persistent_wavefront pipeline step 21000 [B]: 16384/16384 active, 12851 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1504846/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 21001 [A]: 16384/16384 active, 12674 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1504867/3276800 tasks done, refill
+message: Rendering:  47%message: persistent_wavefront pipeline step 22000 [B]: 16384/16384 active, 12402 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1534458/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 22001 [A]: 16384/16384 active, 12405 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1534480/3276800 tasks done, refill
+message: Rendering:  48%message: persistent_wavefront pipeline step 23000 [B]: 16384/16384 active, 12389 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1574621/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 23001 [A]: 16384/16384 active, 12374 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1574656/3276800 tasks done, refill
+message: Rendering:  49%message: Rendering:  50%message: persistent_wavefront pipeline step 24000 [B]: 16384/16384 active, 12033 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1623424/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 24001 [A]: 16384/16384 active, 11901 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1623465/3276800 tasks done, refill
+message: Rendering:  51%message: persistent_wavefront pipeline step 25000 [B]: 16384/16384 active, 13880 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1670914/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 25001 [A]: 16384/16384 active, 13734 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1670959/3276800 tasks done, refill
+message: Rendering:  52%message: persistent_wavefront pipeline step 26000 [B]: 16384/16384 active, 11996 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1707897/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 26001 [A]: 16384/16384 active, 12147 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1707933/3276800 tasks done, refill
+message: Rendering:  53%message: persistent_wavefront pipeline step 27000 [B]: 16384/16384 active, 11623 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1747838/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 27001 [A]: 16384/16384 active, 11459 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1747871/3276800 tasks done, refill
+message: Rendering:  54%message: Rendering:  55%message: persistent_wavefront pipeline step 28000 [B]: 16384/16384 active, 11584 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1786790/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 28001 [A]: 16384/16384 active, 11522 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1786827/3276800 tasks done, refill
+message: Rendering:  56%message: persistent_wavefront pipeline step 29000 [B]: 16384/16384 active, 11474 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1823992/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 29001 [A]: 16384/16384 active, 11585 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1824032/3276800 tasks done, refill
+message: Rendering:  57%message: persistent_wavefront pipeline step 30000 [B]: 16384/16384 active, 15487 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1868985/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 30001 [A]: 16384/16384 active, 15491 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1869037/3276800 tasks done, refill
+message: Rendering:  58%message: Rendering:  59%message: persistent_wavefront pipeline step 31000 [B]: 16384/16384 active, 15651 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1922170/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 31001 [A]: 16384/16384 active, 15234 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1922222/3276800 tasks done, refill
+message: Rendering:  60%message: Rendering:  61%message: persistent_wavefront pipeline step 32000 [B]: 16384/16384 active, 16623 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1988146/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 32001 [A]: 16384/16384 active, 16669 rays (rad=0 ds=0 shd=0 enc=0 st=0), 1988221/3276800 tasks done, refill
+message: Rendering:  62%message: persistent_wavefront pipeline step 33000 [B]: 16384/16384 active, 12898 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2025015/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 33001 [A]: 16384/16384 active, 12758 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2025050/3276800 tasks done, refill
+message: Rendering:  63%message: persistent_wavefront pipeline step 34000 [B]: 16384/16384 active, 12911 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2072873/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 34001 [A]: 16384/16384 active, 13029 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2072905/3276800 tasks done, refill
+message: Rendering:  64%message: Rendering:  65%message: persistent_wavefront pipeline step 35000 [B]: 16384/16384 active, 11026 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2140982/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 35001 [A]: 16384/16384 active, 11115 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2141135/3276800 tasks done, refill
+message: Rendering:  66%message: Rendering:  67%message: Rendering:  68%message: Rendering:  69%message: Rendering:  70%message: persistent_wavefront pipeline step 36000 [B]: 16384/16384 active, 9775 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2294525/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 36001 [A]: 16384/16384 active, 9933 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2294659/3276800 tasks done, refill
+message: Rendering:  71%message: Rendering:  72%message: Rendering:  73%message: Rendering:  74%message: Rendering:  75%message: persistent_wavefront pipeline step 37000 [B]: 16384/16384 active, 9714 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2442697/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 37001 [A]: 16384/16384 active, 9872 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2442807/3276800 tasks done, refill
+message: Rendering:  76%message: Rendering:  77%message: Rendering:  78%message: Rendering:  79%message: persistent_wavefront pipeline step 38000 [B]: 16384/16384 active, 10073 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2581556/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 38001 [A]: 16384/16384 active, 10163 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2581676/3276800 tasks done, refill
+message: Rendering:  80%message: Rendering:  81%message: Rendering:  82%message: Rendering:  83%message: Rendering:  84%message: persistent_wavefront pipeline step 39000 [B]: 16384/16384 active, 8898 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2764342/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 39001 [A]: 16384/16384 active, 8836 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2764563/3276800 tasks done, refill
+message: Rendering:  85%message: Rendering:  86%message: Rendering:  87%message: Rendering:  88%message: Rendering:  89%message: Rendering:  90%message: Rendering:  91%message: persistent_wavefront pipeline step 40000 [B]: 16384/16384 active, 8478 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2977098/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 40001 [A]: 16384/16384 active, 8399 rays (rad=0 ds=0 shd=0 enc=0 st=0), 2977336/3276800 tasks done, refill
+message: Rendering:  92%message: Rendering:  93%message: Rendering:  94%message: Rendering:  95%message: Rendering:  96%message: Rendering:  97%message: Rendering:  98%message: persistent_wavefront pipeline step 41000 [B]: 16384/16384 active, 8209 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3196926/3276800 tasks done, refill
+message: persistent_wavefront pipeline step 41001 [A]: 16384/16384 active, 8252 rays (rad=0 ds=0 shd=0 enc=0 st=0), 3197174/3276800 tasks done, refill
+message: Rendering:  99%message: Rendering: 100%message: persistent_wavefront: entering drain phase at step 41335, 16310 active paths remain, refill_wall=8.432s
+warning: O11_MERGE step=41494 v0_active=1023 v0_size=8192 v1_active=1049 v1_size=8192 thresh=1024 tasks=3276800/3276800
+message: pipeline: merging to single-pool at step 41494 (A.active=1023, B.active=1049)
+message: run_pool: merged to single-buffer at step 41494
+message: pipeline stats: wall=8.457s, gpu_wait=1.011s, cpu_between=7.203s, submit=2.362s(async), steps=41494
+message: persistent_wavefront step 41834: 114/16384 active, 346 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288695/3276800 tasks done, DRAIN
+message: persistent_wavefront step 42000: 87/16384 active, 260 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288723/3276800 tasks done, DRAIN
+message: persistent_wavefront step 42334: 40/16384 active, 119 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288771/3276800 tasks done, DRAIN
+message: persistent_wavefront step 42834: 17/16384 active, 64 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288799/3276800 tasks done, DRAIN
+message: persistent_wavefront step 43000: 13/16384 active, 50 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288803/3276800 tasks done, DRAIN
+message: persistent_wavefront step 43334: 4/16384 active, 14 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288812/3276800 tasks done, DRAIN
+message: persistent_wavefront step 43834: 2/16384 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288814/3276800 tasks done, DRAIN
+message: persistent_wavefront step 44000: 2/16384 active, 2 rays this step (rad=0 ds=0 shd=0 enc=0 st=0), 3288814/3276800 tasks done, DRAIN
+message: persistent_wavefront DONE: 320x320 spp=32 pool=16384 elapsed=8 secs 803 msecs 922 usecs 200 nsecs  steps=44028  rays=471787873  avg_width=15410.3  (rad=294503331 cond_ds=41637842(retry=76688) shadow=0 enc=135570012 startup=0 other=0)  done: rad=224770 temp=2605549 bnd=434465 fail=12016  max_depth=17887
+message: persistent wavefront summary:
+  total_steps=44028  total_rays=471787873  avg_wavefront_width=15410.3
+  refill_phase: rays=470806164 (99.8%)  wall=8.432s
+  drain_phase:  rays=965325 (0.2%)  steps=2694  wall=0.372s
+  batch_size: min=1, max=16949
+  rays: radiative=294503331  cond_ds=41637842(retry=76688)  shadow=0  enclosure=135570012  startup=0  other=0
+  paths: completed=3276800, failed=12016, truncated=0, max_depth=17887
+  refills=3260416
+message:   timing (pipeline phases):
+    submit       =   2.487s [28.3%] (async thread, overlapped)
+    wait_d2h     =   1.145s [13.0%]  (trace=1.046s  enc=0.001s  cp=0.001s)
+      trace_stall=   0.189s           (device: kern=0.078s d2h=0.174s, 25% hidden)
+      trace_post =   0.857s           (host: post=0.857s retrace=0.000s)
+    merged_pass  =   6.029s [68.5%]
+    compact+rfill=   1.256s [14.3%]
+    housekeeping =   0.090s [ 1.0%]
+    total=  11.007s  wall=8.804s  coverage=125.0%
+message:     submit breakdown: sync_kernel=0.000s  start_d2h+launch=0.126s
+message: cascade profiling: total_iterations=625845834  total_advances=625845834
+message: batch trace profiling: calls=44028  avg_batch=10716  min=1  max=16949
+  gpu_kernel:        total=78.3ms (7.1%)  avg=0.00ms/call
+  d2h_wait:          total=173.8ms (15.7%)  avg=0.00ms/call
+  cpu_postprocess:   total=856.7ms (77.3%)  avg=0.02ms/call
+  fallback_retrace:  total=0.0ms (0.0%)  accepted=0  missed=0  rejected=0
+  gpu_throughput: 6024.2 Mrays/s  (kernel only)
+message: Initialisation time = 421 msecs
+message: Computation time = 8 secs 970 msecs
+[RSYS-DEBUG] mem_shutdown_proxy_allocator called, proxy=0000004ECD35E0F0
+[RSYS-DEBUG] proxy_data=0000019844204A30
+[RSYS-DEBUG] node_list=0000000000000000
+[RSYS-DEBUG] About to assert node_list == NULL

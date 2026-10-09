@@ -1,0 +1,207 @@
+[
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/A2.csv",
+    "sha256": "a39f4c2f179e0444c04fde5466fed2564e4cc30f244bf41ebba5e4f0d43d8c08"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/A3.csv",
+    "sha256": "eafbec786e887ec37311ea294e6fe1ad2fac04fd418b0808c44ccd64c20fbc47"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/A7.csv",
+    "sha256": "310ba7b89420630585e7decd0cb1a1d264b06aec9f47ae58146630200ba96fc3"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/B3.csv",
+    "sha256": "be2953b192d5a94e18dcdeec2095091eaf0e58e1053c92a935e8fea8e8f8f868"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/B5.csv",
+    "sha256": "d321bdae4b11a3e7dd84ad49dfc23e1b6e677a46b48d7d6686d1648c9c273bd0"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/C3.csv",
+    "sha256": "c0dfe9c8e0eb3e9a8b230f7b7a6f667500fe91ca58a70bc00e3490effa8ac04a"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/D1.csv",
+    "sha256": "217db729ea9676a302b6ba898fd1d1833e4d2b85f043ee288ecd5892557dbf51"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/D2.csv",
+    "sha256": "df09aa7b4ecea9264884aad2aa2f7dc63458c10a2fee00ccb49c4dc9ce90c00e"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/E3.csv",
+    "sha256": "27f57f6d79aef141280f20e593572025fc2f2328335bb5bba7f26853ed152d2c"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/E5.csv",
+    "sha256": "35d9280fae746949a8dd5a9bca512949fc3ea3400065b054df04f8f8f0cb2927"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/F1.csv",
+    "sha256": "20ed316afdac2964188348160ceb0f18d70c06daee48c8bf3713acb53cb55c6d"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/F2.csv",
+    "sha256": "6a1752f1a4da98c646fd56d27bb13c2a3693627a437d2bd562077bf3a3bfe836"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/cpu/I1.csv",
+    "sha256": "8fb5d13c2097f38cc65d9edacda8dc962438bd4d3237ed049ddcbc148a59d265"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/A2.csv",
+    "sha256": "467615992e6296461b16d59e1332fd91a472137a8be1341821a72c108174d909"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/A3.csv",
+    "sha256": "186b2de5c4ddcebe22b7d257784c077a55781ba0391bfaa067904f9640ae946d"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/A7.csv",
+    "sha256": "1cfe6e97d9d8ba97b1b524cf3706d43b1cae4ff4f35f2cddb6b74a120476dc64"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/B3.csv",
+    "sha256": "b77831cfce3bf3df73f09372e663fb663a340f7e65efe833b0336cdf919567be"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/B5.csv",
+    "sha256": "bbd772aa45ea2528ec8d49c989f23db1364371bc511f2227560e3af2f7371af6"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/C3.csv",
+    "sha256": "b5de8def86bad1a85a7f27d61119203a42109f4afdab548585d9795ac359ce38"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/D1.csv",
+    "sha256": "ce4927397eb2242ebe09d404c3e2b01b025aff65848bd00cf3f199ecb88f88b2"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/D2.csv",
+    "sha256": "a8b2122ed2b5c23f29a511aa1e240ac6daf2a04cb7e0797da913cf5f33df20d1"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/E3.csv",
+    "sha256": "56dd2432b006ac1265bcb0f178145198d15b40c82aaa3a72e367fbead1d0b6e2"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/E5.csv",
+    "sha256": "db7be503226382a28d726c73afc77ad4d0a0ad9d6de202ad13710a4c88b8df3b"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/F1.csv",
+    "sha256": "85340cffd355d47bfc4a2d28463f28e91702ec32755ddc823fc369803182dbf9"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/F2.csv",
+    "sha256": "994a65b84222223a526d6e949fe408cbba6600b6966e1755188324722e230f13"
+  },
+  {
+    "root": "D:\\Stardis-GPU",
+    "path": "physical_consistency_stats/gpu/I1.csv",
+    "sha256": "de309449567ecf0994bc3ee651862428f56e2b7986ed709799884df5546ab927"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/0_0_Abstract.tex",
+    "sha256": "cd2440db5c8d6ead36ed56ffb53021a02afd6d83b120ba71b2539ae2cd7ce082"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/0_1_Abbreviations.tex",
+    "sha256": "f19516e420c7d7185d20ca27e332b03bd523d7e24e1b84484c51d0154a2f0cb8"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/0_2_Symbols.tex",
+    "sha256": "61af639a8a657c53035b78264c276004f1ae035f98eea3739975e9abb3f56356"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/1_Introduction.tex",
+    "sha256": "11241d9adb994a6465cfc52d2c9de2a926593d4fd6785c1e3300246e08e367a4"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/2_Research.tex",
+    "sha256": "6ef776368f921e28efd79006fdbffa7cb6c9e9b95f5b3a3180e22d7e3130096d"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/3_ParallelizedSolver.tex",
+    "sha256": "58fb3e40207edea23b37524eb3ef0016e80834b27b94b8322b8377a88271fb8c"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/4_RTBackend.tex",
+    "sha256": "2729ebae6074d5ffbf7a735c00f392b982a86db273566c48dd7e5fb331727271"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/5_GUI.tex",
+    "sha256": "2f22ea7a720098167dd1c5ee3394ff87c17c13474e3c906e18b8f7cf8b5f672c"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/6_Conclusion.tex",
+    "sha256": "83a853caa2e570a8076d66835ae33114d51e808ae068ffc835e9bb77be405e76"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/Achievements.tex",
+    "sha256": "3dce8e3bf81cdb4ab9d3848f5bfae62713d217e53f0e61e8af8a053261fc4ac1"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/CopyrightAuthorization.tex",
+    "sha256": "482d16c31ee2aa98fcd5d2d2b6b276adc818ff45bf94b4e041ac1fce14c48051"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/Statement.tex",
+    "sha256": "859469718ba91ba2c39ef95d71c2a5b75ab9f2ab26e779bf89f306dd24aa00ef"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "Chapters/Thanks.tex",
+    "sha256": "7a02f4d7cdddf859dabe403f4d7a777e3ba2f65234ab2ba357964c1337db09e7"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "MainBody.tex",
+    "sha256": "2c7bcb3a98d36182432587e9f018b3d7ab323da56edf4ad5fb89b144172a1a97"
+  },
+  {
+    "root": "D:\\thesis",
+    "path": "ReferenceBase.bib",
+    "sha256": "e6a5e36556afca744759ded463e45c77f77680b2ffe3bcad608c5f12ee5a153b"
+  }
+]

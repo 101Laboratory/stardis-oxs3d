@@ -1,0 +1,2 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+F2,Ldiff=50,cpu_df,DS,0,0,0,inf,1,10000,325.8236679,2.581087e-01,325.4709945,1.3664,1

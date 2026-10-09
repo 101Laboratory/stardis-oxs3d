@@ -1,0 +1,320 @@
+% 第二章 理论基础 — 蒙卡热输运方法、热输运理论
+% 来源子集合: 蒙卡热输运方法, 热输运理论
+% 共 16 篇
+
+@article{batiCouplingConductionConvection2023,
+  title = {Coupling Conduction, Convection and Radiative Transfer in a Single Path-Space: Application to Infrared Rendering},
+  shorttitle = {Coupling Conduction, Convection and Radiative Transfer in a Single Path-Space},
+  author = {Bati, M{\'e}gane and Blanco, St{\'e}phane and Coustet, Christophe and Eymet, Vincent and Forest, Vincent and Fournier, Richard and Gautrais, Jacques and Mellado, Nicolas and Paulin, Mathias and Piaud, Benjamin},
+  year = 2023,
+  month = aug,
+  journal = {ACM Transactions on Graphics},
+  volume = {42},
+  number = {4},
+  pages = {1--20},
+  issn = {0730-0301, 1557-7368},
+  doi = {10.1145/3592121},
+  urldate = {2025-05-11},
+  abstract = {In the past decades, Monte Carlo methods have shown their ability to solve PDEs, independently of the dimensionality of the integration domain and for different use-cases (e.g. light transport, geometry processing, physics simulation). Specifically, the path-space formulation of transport equations is a key ingredient to define tractable and scalable solvers, and we observe nowadays a strong interest in the definition of simulation systems based on Monte Carlo algorithms. We also observe that, when simulating combined physics (e.g. thermal rendering from a heat transfer simulation), there is a lack of coupled Monte Carlo algorithms allowing to solve all the physics at once, in the same path space, rather than combining several independent MC estimators, a combination that would make the global solver critically sensitive to the complexity of each simulation space. This brings to our proposal: a coupled, single path-space, Monte Carlo algorithm for efficient multi-physics problems solving.             In this work, we combine our understanding and knowledge of Physics and Computer Graphics to demonstrate how to formulate and arrange different simulation spaces into a single path space. We define a tractable formalism for coupled heat transfer simulation using Monte Carlo, and we leverage the path-space construction to interactively compute multiple simulations with different conditions in the same scene, in terms of boundary conditions and observation time. We validate our proposal in the context of infrared rendering with different thermal simulation scenarios: e.g., room temperature simulation, visualization of heat paths within materials (detection of thermal bridges), heat diffusion capacity of thermal exchanger. We expect that our theoretical framework will foster collaboration and multidisciplinary studies. The perspectives this framework opens are detailed and we suggest a research agenda towards the resolution of coupled PDEs at the interface of Physics and Computer Graphics.},
+  langid = {english},
+  annotation = {TLDR: This work defines a tractable formalism for coupled heat transfer simulation using Monte Carlo, and leverages the path-space construction to interactively compute multiple simulations with different conditions in the same scene, in terms of boundary conditions and observation time.\\
+abstractTranslation: 在过去的几十年中，蒙特卡洛方法显示了其独立于集成域的维数并针对不同用例（例如，光传输、几何处理、物理模拟）求解PDE的能力。具体地说，传输方程的路径空间公式是定义可处理和可扩展解算器的关键因素，我们现在对基于蒙特卡洛算法的模拟系统的定义产生了浓厚的兴趣。我们还观察到，当模拟组合物理（例如，来自热传输模拟的热渲染）时，缺乏耦合的蒙特卡洛算法，允许在同一路径空间中一次性求解所有物理，而不是组合几个独立的MC估计量，这种组合将使全局解算器对每个模拟空间的复杂性非常敏感。这就提出了我们的建议：一种用于有效解决多物理问题的耦合、单路径空间蒙特卡洛算法。在这项工作中，我们结合了我们对物理学和计算机图形学的理解和知识，来演示如何将不同的模拟空间表示和安排为单个路径空间。我们使用蒙特卡洛（Monte Carlo）为耦合传热模拟定义了一种易于处理的形式，并利用路径空间构造在同一场景中交互计算具有不同条件的多个模拟，包括边界条件和观察时间。我们在不同热模拟场景的红外渲染背景下验证了我们的建议：例如，室温模拟、材料内热路径的可视化（热桥检测）、热交换器的热扩散容量。我们期望我们的理论框架将促进协作和多学科研究。该框架打开的视角是详细的，我们建议一个研究议程，以解决物理和计算机图形学界面上的耦合PDE。},
+  file = {C:\Users\EricPu\Zotero\storage\9Z74QPAZ\Bati 等 - 2023 - Coupling conduction, convection and radiative transfer in a single path-space application to infrar.pdf}
+}
+
+@article{caliotCoupledHeatTransfers2024,
+  title = {Coupled Heat Transfers Resolution by Monte Carlo in Urban Geometry Including Direct and Diffuse Solar Irradiations},
+  author = {Caliot, Cyril and {d'Alen{\c c}on}, Louis and Blanco, St{\'e}phane and Forest, Vincent and Fournier, Richard and Hourdin, Fr{\'e}d{\'e}ric and Retailleau, Florent and Schoetter, Robert and Villefranque, Najda},
+  year = 2024,
+  month = may,
+  journal = {International Journal of Heat and Mass Transfer},
+  volume = {222},
+  pages = {125139},
+  issn = {00179310},
+  doi = {10.1016/j.ijheatmasstransfer.2023.125139},
+  urldate = {2025-05-11},
+  abstract = {Modelling transient combined heat transfer in complex urban geometry is a key step to predict human exposure or energy consumption and to quantify the effect of climate change mitigation and adaptation measures. A difficulty lies in the possibility for a model to scale up and integrate large and complex urban morphology. We develop a probabilistic approach to solve heat transfers with the Monte Carlo method that is insensitive to the complexity of both the urban geometry and the boundary conditions. The integral formulation that includes random walks for each heat transfer mode is presented and the computation of absorbed solar irradiations at walls with the double randomization technique is detailed. Numerical validations are given through comparisons with deterministic method results for single and two-layer slabs, but also a three-dimensional thermal bridge geometry. The developed probabilistic heat transfer model is then used in a demonstration heat wave scenario where are computed: the outdoor mean radiant temperature showing the influence of trees; and the indoor average wall temperature showing the influence of solar gains through windows.},
+  langid = {english},
+  annotation = {abstractTranslation: 对复杂城市几何结构中的瞬态组合传热进行建模是预测人类暴露或能源消耗以及量化气候变化缓解和适应措施的影响的关键步骤。一个困难在于模型是否可能放大和整合大型复杂的城市形态。我们开发了一种用蒙特卡洛方法求解传热的概率方法，该方法对城市几何和边界条件的复杂性都不敏感。给出了包含每个传热模式的随机游动的积分公式，并详细介绍了用双随机化技术计算墙体吸收太阳辐射的方法。通过与确定性方法结果的比较，对单层和双层板以及三维热桥几何结构进行了数值验证。然后将开发的概率传热模型用于演示热浪场景，其中计算：显示树木影响的室外平均辐射温度；室内平均壁温显示了通过窗户的太阳能增益的影响。},
+  file = {C:\Users\EricPu\Zotero\storage\MNVS5IQ7\Caliot 等 - 2024 - Coupled heat transfers resolution by monte carlo in urban geometry including direct and diffuse sola.pdf}
+}
+
+@incollection{erturkMonteCarloMethods2017,
+  title = {Monte Carlo Methods for Radiative Transfer},
+  booktitle = {Handbook of {{Thermal Science}} and {{Engineering}}},
+  author = {Ert{\"u}rk, Hakan and Howell, John R.},
+  editor = {Kulacki, Francis A.},
+  year = 2017,
+  pages = {1--43},
+  publisher = {Springer International Publishing},
+  address = {Cham},
+  doi = {10.1007/978-3-319-32003-8_57-1},
+  urldate = {2025-05-25},
+  abstract = {The solution of the radiative transfer equation is challenging, especially in the presence of a participating medium, wavelength- and direction-dependent properties, or a complex geometry. The Monte Carlo method that relies on statistical sampling of photon bundles using pseudorandom numbers and probability distributions which are derived based on physical laws is a powerful and robust approach to solving the radiative transfer equation. While the method is computationally demanding even for simple surface exchange problems, introducing complex phenomena does not significantly increase formulation complexity or the required computational power. Therefore, the method has become one of the most widely adopted solution techniques with the increasing computation capacity in the last decades. This chapter introduces the method, presenting general guidelines to adopt it for solution of radiative transfer problems, discussing how to introduce further phenomena such as wavelength- or direction-dependent properties, and improving computational performance. The method is known for its flexibility and can be applied in many different ways. Different strategies are discussed, considering advantages or disadvantages of each for different problems.},
+  isbn = {978-3-319-32003-8},
+  langid = {english},
+  annotation = {abstractTranslation: 辐射传输方程的解是具有挑战性的，特别是在存在参与介质、波长和方向相关特性或复杂几何体的情况下。蒙特卡洛方法依赖于使用基于物理定律导出的伪随机数和概率分布对光子束进行统计采样，是求解辐射传输方程的强大而稳健的方法。虽然该方法即使对于简单的表面交换问题也需要计算，但引入复杂现象不会显著增加公式复杂性或所需的计算能力。因此，随着近几十年来计算量的增加，该方法已成为应用最广泛的求解技术之一。本章介绍了该方法，给出了采用该方法来解决辐射传输问题的一般准则，讨论了如何引入波长或方向相关特性等其他现象，以及改进计算性能。该方法以其灵活性而闻名，并且可以以许多不同的方式应用。讨论了不同的策略，考虑了每个策略对于不同问题的优缺点。},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\F48NP4G6\\Ertürk和Howell - 2017 - Monte carlo methods for radiative transfer.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\FFRH3RV9\\Ertürk和Howell - 2018 - Monte carlo methods for radiative transfer.pdf}
+}
+
+@article{fanMontecarlobasedSimulationsRadiative2025,
+  title = {Monte-Carlo-Based Simulations of Radiative Transfer in Photovoltaic Solar Farms: Towards Fast and Accurate Parameterizations in Weather and Climate Models},
+  shorttitle = {Monte-Carlo-Based Simulations of Radiative Transfer in Photovoltaic Solar Farms},
+  author = {Fan, Chongxing and Huang, Xianglei},
+  year = 2025,
+  month = jun,
+  journal = {Journal of Quantitative Spectroscopy \& Radiative Transfer},
+  volume = {338},
+  pages = {109417},
+  issn = {00224073},
+  doi = {10.1016/j.jqsrt.2025.109417},
+  urldate = {2025-05-11},
+  abstract = {Photovoltaic (PV) solar farms, composed of arrays of photovoltaic panels, play a vital role in our effort to reduce the reliance on fossil fuels and mitigate global warming. Meanwhile, these panels alter surface radiative properties and can affect the local surface energy budget. To assess the influence of PV solar farms on the climate, previous modeling studies simply assumed flat solar panels lying on the ground and modified surface albedo to mimic the radiative effect of large-scale solar farm deployments. Here, we developed a Monte-Carlo-based radiative transfer model that can more accurately capture the role of the complex geometry of a real-world PV solar farm in 3-D radiative transfer. Specifically, solar panels are separated from the ground, tilted and elevated, with their own surface reflectance and emissivity. In this way, the scheme inherently accounts for the radiative transfer between panel and ground and between panel arrays. The model can be tailored to specific PV solar farm configurations through six adjustable input parameters, including panel tilt angle and spacing. A sensitivity analysis of both shortwave and longwave radiative processes within the farm reveals that front panel albedo (emissivity), ground albedo (emissivity), and panel area fraction determine the overall reflectivity (emissivity) of the entire solar farm site. Based on such Monte-Carlo calculations, a set of lookup tables was then constructed for fast parameterizations in the numerical weather models or climate models with desired computational efficiency.},
+  langid = {english},
+  annotation = {abstractTranslation: 由光伏板阵列组成的光伏（PV）太阳能农场在我们减少对化石燃料的依赖和缓解全球变暖的努力中发挥着至关重要的作用。同时，这些面板改变了表面辐射特性，并可能影响局部表面能量收支。为了评估光伏太阳能发电场对气候的影响，以前的建模研究简单地假设平躺在地面上的太阳能电池板和修改的表面反照率，以模拟大规模太阳能发电场部署的辐射效应。在这里，我们开发了一个基于蒙特卡洛的辐射传输模型，该模型可以更准确地捕获真实世界光伏太阳能场的复杂几何结构在三维辐射传输中的作用。具体来说，太阳能电池板与地面分离、倾斜和升高，具有自己的表面反射率和发射率。通过这种方式，该方案内在地考虑了面板和地面之间以及面板阵列之间的辐射传输。该模型可以通过六个可调输入参数（包括面板倾角和间距）定制为特定的光伏太阳能农场配置。农场内短波和长波辐射过程的敏感性分析表明，前面板反射率（发射率）、地面反射率（辐射率）和面板面积分数决定了整个太阳能农场场地的总反射率（放射率）。基于这种蒙特卡洛计算，然后构造一组查找表，用于在具有所需计算效率的数值天气模型或气候模型中快速参数化。},
+  file = {C:\Users\EricPu\Zotero\storage\FSX8SS8X\Fan和Huang - 2025 - Monte-carlo-based simulations of radiative transfer in photovoltaic solar farms towards fast and ac.pdf}
+}
+
+@article{fournierRadiativeConductiveConvective2016,
+  title = {Radiative, Conductive and Convective Heat-Transfers in a Single Monte Carlo Algorithm},
+  author = {Fournier, Richard and Blanco, St{\'e}phane and Eymet, Vincent and Hafi, Mouna El and Spiesser, Christophe},
+  year = 2016,
+  month = jan,
+  journal = {Journal of Physics: Conference Series},
+  volume = {676},
+  number = {1},
+  pages = {12007},
+  publisher = {IOP Publishing},
+  issn = {1742-6596},
+  doi = {10.1088/1742-6596/676/1/012007},
+  urldate = {2025-05-24},
+  abstract = {It was recently shown that null-collision algorithms could lead to grid-free radiative- transfer Monte Carlo algorithms that immediately benefit of computer-graphics tools for an efficient handling of complex geometries [1, 2]. We here explore the idea of extending the approach to heat transfer problems combining radiation, conduction and convection. This is possible as soon as the model can be given the form of a second-kind Fredholm equation. In the following pages, we show that this is quite straightforward at the stationnary limit in the linear case. The oral presentation will provide corresponding simulation examples. Perspectives will then be drawn concerning the extension to non-stationnary cases and non-linear coupling.},
+  langid = {english},
+  annotation = {TLDR: It is shown that this approach to heat transfer problems combining radiation, conduction and convection can be extended as soon as the model can be given the form of a second-kind Fredholm equation at the stationnary limit in the linear case.\\
+abstractTranslation: 最近的研究表明，零碰撞算法可以导致无网格辐射传输蒙特卡洛算法，该算法立即受益于计算机图形工具，用于有效处理复杂几何[1,2]。我们在这里探索了将该方法扩展到辐射、传导和对流相结合的传热问题的思想。只要模型可以给出第二类Fredholm方程的形式，这是可能的。在接下来的几页中，我们展示了在线性情况下的统计极限下这是相当简单的。口头演示将提供相应的模拟示例。然后将绘制关于扩展到非平稳情况和非线性耦合的观点。},
+  file = {C:\Users\EricPu\Zotero\storage\K93TQIHX\Fournier 等 - 2016 - Radiative, conductive and convective heat-transfers in a single monte carlo algorithm.pdf}
+}
+
+@article{galtierIntegralFormulationNullcollision2013,
+  title = {Integral Formulation of Null-Collision Monte Carlo Algorithms},
+  author = {Galtier, M. and Blanco, S. and Caliot, C. and Coustet, C. and Dauchet, J. and El Hafi, M. and Eymet, V. and Fournier, R. and Gautrais, J. and Khuong, A. and Piaud, B. and Terr{\'e}e, G.},
+  year = 2013,
+  month = aug,
+  journal = {Journal of Quantitative Spectroscopy \& Radiative Transfer},
+  volume = {125},
+  pages = {57--68},
+  issn = {0022-4073},
+  doi = {10.1016/j.jqsrt.2013.04.001},
+  urldate = {2025-05-25},
+  abstract = {At the kinetic level, the meaning of null-collisions is straightforward: they correspond to pure-forward scattering events. We here discuss their technical significance in integral terms. We first consider a most standard null-collision Monte Carlo algorithm and show how it can be rigorously justified starting from a Fredholm equivalent to the radiative transfer equation. Doing so, we also prove that null-collision algorithms can be slightly modified so that they deal with unexpected occurrences of negative values of the null-collision coefficient (when the upper bound of the heterogeneous extinction coefficient is nonstrict). We then describe technically, in full details, the resulting algorithm, when applied to the evaluation of the local net-power density within a bounded, heterogeneous, multiple scattering and emitting/absorbing medium. The corresponding integral formulation is then explored theoretically in order to distinguish the statistical significance of introducing null-collisions from that of the integral-structure underlying modification.},
+  langid = {english},
+  keywords = {Heterogeneous media,Integral formulation,Monte Carlo,Null-collision},
+  annotation = {abstractTranslation: 在动力学水平上，零碰撞的意义很简单：它们对应于纯前向散射事件。我们在这里以积分形式讨论它们的技术意义。我们首先考虑一个最标准的零碰撞蒙特卡洛算法，并展示如何从辐射传输方程的Fredholm等价物开始严格证明它。这样做，我们还证明了零碰撞算法可以稍微修改，以便它们处理零碰撞系数负值的意外出现（当异质消光系数的上界是非严格的）。然后，我们在技术上详细描述了当应用于有界、非均匀、多次散射和发射/吸收介质内的局部净功率密度的评估时产生的算法。然后从理论上探讨了相应的积分公式，以区分引入零碰撞的统计意义和修正后的积分结构的统计意义。},
+  file = {C:\Users\EricPu\Zotero\storage\FA9B9GY7\Galtier 等 - 2013 - Integral formulation of null-collision monte carlo algorithms.pdf}
+}
+
+@incollection{howellApplicationMonteCarlo1969,
+  title = {Application of Monte Carlo to Heat Transfer Problems},
+  booktitle = {Advances in {{Heat Transfer}}},
+  author = {Howell, John R.},
+  editor = {Irvine, Thomas F. and Hartnett, James P.},
+  year = 1969,
+  month = jan,
+  volume = {5},
+  pages = {1--54},
+  publisher = {Elsevier},
+  doi = {10.1016/S0065-2717(08)70128-X},
+  urldate = {2025-05-21},
+  abstract = {This chapter presents a view of the problems that have been solved by Monte Carlo in certain areas of heat transfer, and the techniques used in their solution. Only the straightforward Monte Carlo approach has been given. The machine running time of Monte Carlo programs have been discussed. No definitive method of predicting running time exists for most problems. The time used will depend, of course, on the machine used, and perhaps more strongly on the ability of the programmer to pick methods and shortcuts that will reduce the burden on the machine. An example of such a shortcut is the use of special subroutines for computation of such functions as sine and cosine. These routines sacrifice some accuracy to a gain in speed. If problem answers accurate to a few per cent are desired, then the use of eight-place functions from a relatively slow subroutine is a needless luxury, especially if the subroutine is to be used tens of thousands of times. The chapter discusses the fruitless argument as to whether Monte Carlo or some other method is a ``better'' way of attacking a given problem.},
+  langid = {english},
+  annotation = {abstractTranslation: 本章介绍了蒙特卡洛在某些传热领域解决的问题，以及在解决这些问题时使用的技术。只给出了简单的蒙特卡洛方法。讨论了蒙特卡洛程序的机器运行时间。对于大多数问题，没有明确的运行时间预测方法。当然，所用的时间将取决于所使用的机器，也许更强烈地取决于程序员选择方法和快捷方式的能力，这将减轻机器的负担。这种快捷方式的一个例子是使用特殊的子程序来计算正弦和余弦等函数。这些例行程序牺牲了一些准确性以提高速度。如果需要精确到百分之几的问题答案，那么使用相对较慢的子程序中的八位函数是不必要的奢侈，特别是如果子程序要使用数万次。本章讨论了关于蒙特卡洛或其他方法是否是处理给定问题的``更好''方法的徒劳争论。},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\4BRKW4YA\\Howell - 1969 - Application of monte carlo to heat transfer problems.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\BJH8HMQV\\S006527170870128X.html}
+}
+
+@article{howellMonteCarloSolution1964,
+  title = {Monte Carlo Solution of Thermal Transfer through Radiant Media between Gray Walls},
+  author = {Howell, J. R. and Perlmutter, M.},
+  year = 1964,
+  month = feb,
+  journal = {Journal of Heat Transfer},
+  volume = {86},
+  number = {1},
+  pages = {116--122},
+  issn = {0022-1481},
+  doi = {10.1115/1.3687044},
+  urldate = {2025-05-25},
+  abstract = {The Monte Carlo method is applied to the problem of radiant heat transfer to a nonisothermal absorbing and emitting gray gas between gray walls. The solutions are compared to limiting cases of black walls and large optical thickness available in the literature. The Monte Carlo procedure was found to be simply and quickly formulated for complex cases which cannot be readily attacked by standard analytical techniques. The numerical results were quickly obtained with the use of a high speed electronic computer. This method also gives greater physical insight into the behavior of the system.},
+  langid = {english},
+  annotation = {abstractTranslation: 将蒙特卡洛方法应用于灰壁间非等温吸收和发射灰色气体的辐射传热问题。将这些解决方案与文献中可用的黑壁和大光学厚度的极限情况进行了比较。蒙特卡洛程序被发现是简单和快速的公式化复杂的情况下，不能轻易攻击的标准分析技术。利用高速电子计算机快速获得了数值结果。该方法还提供了对系统行为的更深入的物理见解。},
+  file = {C:\Users\EricPu\Zotero\storage\I8DKMLHT\Howell和Perlmutter - 1964 - Monte carlo solution of thermal transfer through radiant media between gray walls.pdf}
+}
+
+@article{kacRandomWalkTheory1947,
+  title = {Random Walk and the Theory of Brownian Motion},
+  author = {Kac, Mark},
+  year = 1947,
+  month = aug,
+  journal = {American Mathematical Monthly},
+  volume = {54},
+  number = {7P1},
+  pages = {369--391},
+  publisher = {Taylor \& Francis},
+  issn = {0002-9890},
+  doi = {10.1080/00029890.1947.11990189},
+  urldate = {2025-05-25},
+  langid = {english},
+  file = {C:\Users\EricPu\Zotero\storage\TR87TAVK\Kac - 1947 - Random walk and the theory of brownian motion.pdf}
+}
+
+@article{mourtadayMonteCarloSimulation2024,
+  title = {Monte Carlo Simulation of Atmospheric Radiative Forcings Using a Path-Integral Formulation Approach for Spectro-Radiative Sensitivities},
+  author = {Mourtaday, Nada and Bati, M{\'e}gane and Blanco, St{\'e}phane and Dufresne, Jean-Louis and El Hafi, Mouna and Eymet, Vincent and Forest, Vincent and Fournier, Richard and Gautrais, Jacques and Lapeyre, Paule and {Nyffenegger-P{\'e}r{\'e}}, Yaniss and Villefranque, Najda},
+  year = 2024,
+  month = nov,
+  journal = {Journal of Quantitative Spectroscopy \& Radiative Transfer},
+  volume = {327},
+  pages = {109123},
+  issn = {0022-4073},
+  doi = {10.1016/j.jqsrt.2024.109123},
+  urldate = {2025-05-21},
+  abstract = {We present recent advances in path-integral formulations designed for unbiased Monte Carlo sensitivity estimation (in the form of partial derivatives) within a coupled physics model. We establish the theoretical foundation and illustrate the approach by estimating instantaneous atmospheric radiative forcings. In climate studies, these quantities amount for the change in top-of-atmosphere (TOA) net radiative flux induced by an isolated change in surface or atmospheric constitution. Based on a path-integral framework, our approach results in estimations consistent with well-established radiative forcings in the climate community. We highlight how physics coupling through path-integral formulations yields unbiased sensitivity estimation of a radiative quantity (integrated TOA flux) to a spectroscopic parameter (fraction change in gas concentration). Furthermore, we emphasize the method's scalability, demonstrating its compatibility with computer science acceleration techniques. These latter play a key role in rendering the computational time weakly sensitive to the system's multidimensional and multiphysics complexity.},
+  langid = {english},
+  keywords = {HITRAN database,Line-by-line sampling,Monte Carlo,Radiative forcing,Radiative transfer,TOA flux sensitivity},
+  annotation = {abstractTranslation: 我们介绍了在耦合物理模型中设计用于无偏蒙特卡洛灵敏度估计（以偏导数的形式）的路径积分公式的最新进展。通过估算瞬时大气辐射强迫，建立了该方法的理论基础，并对该方法进行了说明。在气候研究中，这些量相当于由地面或大气组成的孤立变化引起的大气顶部（TOA）净辐射通量的变化。基于路径积分框架，我们的方法得到了与气候群落中公认的辐射强迫一致的估计。我们强调了通过路径积分公式的物理耦合如何产生辐射量（积分TOA通量）对光谱参数（气体浓度的分数变化）的无偏灵敏度估计。此外，我们强调了该方法的可扩展性，展示了其与计算机科学加速技术的兼容性。后者在使计算时间对系统的多维和多物理复杂性弱敏感方面发挥了关键作用。},
+  file = {C\:\\Users\\EricPu\\Zotero\\storage\\M45JYIQ6\\Mourtaday 等 - 2024 - Monte carlo simulation of atmospheric radiative forcings using a path-integral formulation approach.pdf;C\:\\Users\\EricPu\\Zotero\\storage\\DE9WIX4M\\S0022407324002309.html}
+}
+
+@article{treganCouplingRadiativeConductive2023,
+  title = {Coupling Radiative, Conductive and Convective Heat-Transfers in a Single Monte Carlo Algorithm: A General Theoretical Framework for Linear Situations},
+  shorttitle = {Coupling Radiative, Conductive and Convective Heat-Transfers in a Single Monte Carlo Algorithm},
+  author = {Tregan, Jean Marc and Amestoy, Jean Luc and Bati, Megane and Bezian, Jean-Jacques and Blanco, St{\'e}phane and Brunel, Laurent and Caliot, Cyril and Charon, Julien and Cornet, Jean-Francois and Coustet, Christophe and {d'Alen{\c c}on}, Louis and Dauchet, Jeremi and Dutour, Sebastien and Eibner, Simon and El Hafi, Mouna and Eymet, Vincent and Farges, Olivier and Forest, Vincent and Fournier, Richard and Galtier, Mathieu and Gattepaille, Victor and Gautrais, Jacques and He, Zili and Hourdin, Fr{\'e}d{\'e}ric and Ibarrart, Loris and Joly, Jean-Louis and Lapeyre, Paule and Lavieille, Pascal and Lecureux, Marie-Helene and Lluc, Jacques and Miscevic, Marc and Mourtaday, Nada and {Nyffenegger-P{\'e}r{\'e}}, Yaniss and Pelissier, Lionel and Penazzi, Lea and Piaud, Benjamin and {Rodrigues-Viguier}, Cl{\'e}ment and Roques, Gisele and Roger, Maxime and Saez, Thomas and Terr{\'e}e, Guillaume and Villefranque, Najda and Vourc'h, Thomas and Yaacoub, Daniel},
+  editor = {Nawaz, Rab},
+  year = 2023,
+  month = apr,
+  journal = {PLOS One},
+  volume = {18},
+  number = {4},
+  pages = {e0283681},
+  issn = {1932-6203},
+  doi = {10.1371/journal.pone.0283681},
+  urldate = {2025-05-11},
+  abstract = {It was recently shown that radiation, conduction and convection can be combined within a single Monte Carlo algorithm and that such an algorithm immediately benefits from state-of-the-art computer-graphics advances when dealing with complex geometries. The theoretical foundations that make this coupling possible are fully exposed for the first time, supporting the intuitive pictures of continuous thermal paths that run through the different physics at work. First, the theoretical frameworks of propagators and Green's functions are used to demonstrate that a coupled model involving different physical phenomena can be probabilized. Second, they are extended and made operational using the Feynman-Kac theory and stochastic processes. Finally, the theoretical framework is supported by a new proposal for an approximation of coupled Brownian trajectories compatible with the algorithmic design required by ray-tracing acceleration techniques in highly refined geometry.},
+  langid = {english},
+  annotation = {titleTranslation: 在单个蒙特卡洛算法中耦合辐射、传导和对流传热：线性情况的一般理论框架\\
+abstractTranslation: 最近的研究表明，辐射、传导和对流可以在单个蒙特卡洛算法中结合，并且在处理复杂几何体时，这种算法立即受益于最先进的计算机图形学进步。首次完全揭示了使这种耦合成为可能的理论基础，支持了在工作中贯穿不同物理的连续热路径的直观图像。首先，使用传播子和格林函数的理论框架来证明涉及不同物理现象的耦合模型可以被概率化。其次，利用费曼-卡克理论和随机过程对它们进行了扩展并使其具有可操作性。最后，该理论框架得到了一个新的提议的支持，该提议是关于耦合布朗轨迹的近似，与高度精细几何中的光线跟踪加速技术所需的算法设计兼容。},
+  file = {C:\Users\EricPu\Zotero\storage\5QPTSKHD\Tregan 等 - 2023 - Coupling radiative, conductive and convective heat-transfers in a single monte carlo algorithm a ge.pdf}
+}
+
+@article{villefranquePathtracingMonteCarlo2019,
+  title = {A Path-Tracing Monte Carlo Library for 3-{{D}} Radiative Transfer in Highly Resolved Cloudy Atmospheres},
+  author = {Villefranque, Najda and Fournier, Richard and Couvreux, Fleur and Blanco, St{\'e}phane and Cornet, C{\'e}line and Eymet, Vincent and Forest, Vincent and Tregan, Jean-Marc},
+  year = 2019,
+  journal = {Journal of Advances in Modeling Earth Systems},
+  volume = {11},
+  number = {8},
+  pages = {2449--2473},
+  issn = {1942-2466},
+  doi = {10.1029/2018MS001602},
+  urldate = {2025-05-25},
+  abstract = {Interactions between clouds and radiation are at the root of many difficulties in numerically predicting future weather and climate and in retrieving the state of the atmosphere from remote sensing observations. The broad range of issues related to these interactions, and to three-dimensional interactions in particular, has motivated the development of accurate radiative tools able to compute all types of radiative metrics, from monochromatic, local, and directional observables to integrated energetic quantities. Building on this community effort, we present here an open-source library for general use in Monte Carlo algorithms. This library is devoted to the acceleration of ray tracing in complex data, typically high-resolution large-domain grounds and clouds. The main algorithmic advances embedded in the library are related to the construction and traversal of hierarchical grids accelerating the tracing of paths through heterogeneous fields in null-collision (maximum cross-section) algorithms. We show that with these hierarchical grids, the computing time is only weakly sensitive to the refinement of the volumetric data. The library is tested with a rendering algorithm that produces synthetic images of cloud radiances. Other examples of implementation are provided to demonstrate potential uses of the library in the context of 3-D radiation studies and parameterization development, evaluation, and tuning.},
+  copyright = {\copyright 2019. The Authors.},
+  langid = {english},
+  keywords = {3-D radiative transfer,cloud-radiation interactions,complexity,image rendering,large-eddy simulations,Monte Carlo},
+  annotation = {TLDR: This library is devoted to the acceleration of path-tracing in complex data, typically high-resolution large-domain grounds and clouds, and it is shown that with these hierarchical grids, the computing time is only weakly sensitivive to the refinement of the volumetric data.\\
+abstractTranslation: 云和辐射之间的相互作用是数值预测未来天气和气候以及从遥感观测中恢复大气状态的许多困难的根源。与这些相互作用，特别是与三维相互作用相关的广泛问题，推动了能够计算从单色、局部和定向观测到积分能量量的所有类型的辐射度量的精确辐射工具的发展。在这个社区努力的基础上，我们在这里提出了一个用于蒙特卡洛算法的通用开源库。该库致力于加速复杂数据中的光线跟踪，通常是高分辨率大域地面和云。库中嵌入的主要算法进步与分层网格的构建和遍历有关，在零碰撞（最大截面）算法中加速了通过异质场的路径跟踪。我们表明，在这些分层网格中，计算时间对体积数据的细化仅是弱敏感的。该库使用生成云辐射合成图像的渲染算法进行了测试。还提供了其他实现示例，以展示该库在三维辐射研究和参数化开发、评估和调谐方面的潜在用途。},
+  file = {C:\Users\EricPu\Zotero\storage\ASI7VSDW\Villefranque 等 - 2019 - A path-tracing monte carlo library for 3-D radiative transfer in highly resolved cloudy atmospheres.pdf}
+}
+
+@article{villefranqueTeapotCityParadigm2022,
+  title = {The "Teapot in a City": A Paradigm Shift in Urban Climate Modeling},
+  shorttitle = {The "Teapot in a City"},
+  author = {Villefranque, Najda and Hourdin, Fr{\'e}d{\'e}ric and {d'Alen{\c c}on}, Louis and Blanco, St{\'e}phane and Boucher, Olivier and Caliot, Cyril and Coustet, Christophe and Dauchet, J{\'e}r{\'e}mi and El Hafi, Mouna and Eymet, Vincent and Farges, Olivier and Forest, Vincent and Fournier, Richard and Gautrais, Jacques and Masson, Val{\'e}ry and Piaud, Benjamin and Schoetter, Robert},
+  year = 2022,
+  month = jul,
+  journal = {Science Advances},
+  volume = {8},
+  number = {27},
+  pages = {eabp8934},
+  issn = {2375-2548},
+  doi = {10.1126/sciadv.abp8934},
+  abstract = {Urban areas are a high-stake target of climate change mitigation and adaptation measures. To understand, predict, and improve the energy performance of cities, the scientific community develops numerical models that describe how they interact with the atmosphere through heat and moisture exchanges at all scales. In this review, we present recent advances that are at the origin of last decade's revolution in computer graphics, and recent breakthroughs in statistical physics that extend well-established path-integral formulations to nonlinear coupled models. We argue that this rare conjunction of scientific advances in mathematics, physics, computer, and engineering sciences opens promising avenues for urban climate modeling and illustrate this with coupled heat transfer simulations in complex urban geometries under complex atmospheric conditions. We highlight the potential of these approaches beyond urban climate modeling for the necessary appropriation of the issues at the heart of the energy transition by societies.},
+  langid = {english},
+  pmcid = {PMC9258812},
+  pmid = {35857481},
+  annotation = {TLDR: This review presents recent advances that are at the origin of last decade's revolution in computer graphics, and recent breakthroughs in statistical physics that extend well-established path-integral formulations to nonlinear coupled models and highlights the potential of these approaches beyond urban climate modeling for the necessary appropriation of the issues at the heart of the energy transition by societies.\\
+abstractTranslation: 城市地区是减缓和适应气候变化措施的一个高利害关系目标。为了理解、预测和改善城市的能源绩效，科学界开发了数字模型，描述它们如何通过所有尺度的热量和水分交换与大气相互作用。在这篇综述中，我们介绍了过去十年计算机图形学革命的最新进展，以及统计物理学的最新突破，这些突破将成熟的路径积分公式扩展到非线性耦合模型。我们认为，数学、物理学、计算机和工程科学的这种罕见的科学进步结合为城市气候建模开辟了有希望的途径，并通过复杂大气条件下复杂城市几何结构中的耦合传热模拟来说明这一点。我们强调了这些方法在城市气候建模之外的潜力，以便社会对能源转型的核心问题进行必要的分配。},
+  file = {C:\Users\EricPu\Zotero\storage\RWXDLHJ6\Villefranque 等 - 2022 - The teapot in a city a paradigm shift in urban climate modeling.pdf}
+}
+
+@article{WangTingJiYuMonteCarloFangFaDeWuHongWaiChuanShuFangZhenJiFenXi2018,
+  title = {{基于Monte Carlo方法的雾红外传输仿真及分析}},
+  author = {{王婷} and {徐军} and {赵选科} and {孙红辉} and {高旸} and {孙琦云}},
+  year = 2018,
+  journal = {光子学报},
+  volume = {47},
+  number = {12},
+  pages = {122--131},
+  issn = {1004-4213},
+  urldate = {2025-05-25},
+  abstract = {为了研究多次散射效果下红外辐射在雾中的传输衰减特性,基于Mie散射理论,计算了1.064{$\mu$}m、3.8{$\mu$}m和10.6{$\mu$}m激光在平流雾和辐射雾中的消光参量和多粒子散射相位函数.利用Monte Carlo法建立了辐射传输模型,分析了多次散射效应下接收屏、能见度和传输距离对透过率的影响,并与Lambert-Beer定律计算结果进行了比较.结果表明:当能见度和传输距离均为1km时,1.064{$\mu$}m激光在平流雾中的接收屏粒子数随接收屏边长的增加而显著增加;相同的能见度和传输距离下,激光在辐射雾中的衰减小于在平流雾中的衰减;10.6{$\mu$}m激光在平流雾中具有很好的传输性;当粒子散射能力越强、前向散射概率越大时,多次散射对透过率的贡献越明显;激光在雾中的传输衰减特性不仅与消光系数有关,还与散射系数密切相关;能见度和传输距离存在最佳组合,使得此传输条件下多次散射对透过率的贡献最大.},
+  langid = {chinese},
+  keywords = {,Monte Carlo},
+  annotation = {foundation: 国家自然科学基金(No.61701505)； 陕西省自然科学基金(No.2018JQ6080)资助\textasciitilde\textasciitilde ；\\
+download: 318\\
+album: 基础科学;信息科技\\
+CLC: TN21\\
+CNKICite: (\\
+dbcode: CJFQ\\
+dbname: CJFDLAST2019\\
+filename: GZXB201812018},
+  file = {C:\Users\EricPu\Zotero\storage\AKLC2HIT\王婷 等 - 2018 - 基于Monte Carlo方法的雾红外传输仿真及分析.pdf}
+}
+
+@phdthesis{YuLiangYuJiYuLuJingZhuiZongDeSanWeiHongWaiChangJingFangZhenSuanFaJiShiXian2020,
+  type = {{硕士学位论文}},
+  title = {{基于路径追踪的三维红外场景仿真算法及实现}},
+  author = {{喻良瑜}},
+  year = 2020,
+  address = {武汉},
+  doi = {10.27157/d.cnki.ghzku.2020.000777},
+  urldate = {2026-02-04},
+  abstract = {红外成像系统,无论在民用还是军事领域都得到了广泛的应用。而要对红外成像系统,以及其上搭载的其他功能进行测试,往往需要使用红外仿真技术,其逼真度直接影响测试的可靠性。所以在三维场景仿真中常使用光线追踪作为渲染框架。路径追踪是光线追踪框架的一种实现方式,使用了蒙特卡洛方法,随机跟踪多条光线,随后根据这些光线的贡献计算该点的颜色值。利用蒙特卡洛方法的无偏性和一致性,生成照片级真实的图像。大多数成熟的渲染器也使用的是路径追踪作为渲染基础算法。基于路径追踪的红外仿真系统,可以展现更多的场景细节,对场景细节的表现也更趋近于真实。该论文针对红外辐射传输特性以及路径追踪的原理,将路径追踪中用于计算渲染方程的蒙特卡洛积分,同样应用于辐亮度计算公式中红外波谱的积分以及大气传输的路径积分上,得到一种与路径追踪框架高度融合的红外辐射传输计算模型。通过不断的迭代计算得到的红外场景渲染结果将具有更高的逼真度。考虑到路径追踪算法有极大的计算量,但又是可以完全并行化的,所以使用OpenGL的着色器对其原渲染管线进行改造,使其适应路径追踪算法。利用GPU的强大并行计算能力,使渲染耗时大幅缩短的同时得到高逼真度的红外场景仿真图像。并综合使用如基于空间分割的层次包围盒以及循环自动编码器等优化算法进一步加快渲染速度,之后利用QT框架将其扩展为一款有一定实用性以及易用性的软件。最后,通过实验验证了使用融合路径追踪的红外辐射传输模型能够较准确、真实地模拟各种红外传输过程中的现象。同时,通过测试软件的时间性能,验证了GPU渲染管线对渲染耗时有较大的降低,以及其余优化算法在特定条件下对时间性能也有一定提升。},
+  collaborator = {{杨卫东}},
+  langid = {chinese},
+  school = {华中科技大学},
+  keywords = {,GPU,OpenGL},
+  annotation = {album: 信息科技\\
+CLC: TP391.41;TN219\\
+dbcode: CMFD\\
+dbname: CMFD202201\\
+download: 372\\
+filename: 1020349940.nh\\
+major: 控制工程（专业学位）},
+  file = {C:\Users\EricPu\Zotero\storage\ADASWWFE\喻良瑜 - 2020 - 基于路径追踪的三维红外场景仿真算法及实现.pdf}
+}
+
+@article{YuYangJiYuMengTeQiaLuoFaDeHongWaiTanKeFangZhen2010,
+  title = {{基于蒙特卡洛法的红外坦克仿真}},
+  author = {{于洋} and {汤心溢} and {高思莉}},
+  year = 2010,
+  journal = {半导体光电},
+  volume = {31},
+  number = {2},
+  pages = {325--327, 332},
+  issn = {1001-5868},
+  doi = {10.16818/j.issn1001-5868.2010.02.042},
+  urldate = {2026-02-22},
+  abstract = {蒙特卡洛法求解红外辐射温度场正成为一个新兴热点。该方法最大的不足是计算量大、耗时过长,且其中大部分时间花费在统计每个单元发出的能束归宿上。文章引入层次包围盒技术,将目标划分为多个功能模块,再将每个模块分解成若干子区域。在统计每个单元发出能束的归宿时,首先判断能束是否与各级包围盒相交,如果相交再进行下一级包围盒或者单元的相交测试,否则直接跳过。这种方法可以极大地减轻运算量,提高运算速度。另外,文章还描述了采用的随机发射点产生算法,并分析了性能特点。在此基础上,进行了坦克目标的红外可视化建模与仿真,并给出了仿真结果。},
+  langid = {chinese},
+  annotation = {original-container-title: Semiconductor Optoelectronics\\
+AIF: 0.585\\
+album: 信息科技;基础科学\\
+CIF: 0.92\\
+CLC: O242.2;TN219\\
+dbcode: CJFQ\\
+dbname: CJFD2010\\
+download: 260\\
+filename: BDTG201002043\\
+publicationTag: 北大核心, CAS, JST, WJCI},
+  file = {C:\Users\EricPu\Zotero\storage\U4SAW52A\于洋 等 - 2010 - 基于蒙特卡洛法的红外坦克仿真.pdf}
+}

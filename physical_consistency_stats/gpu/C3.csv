@@ -1,0 +1,7 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+C3,Picard1 const-Tref,gpu_wf,WoS,0.05,0,0,inf,1,10000,314.811,3.499949e-01,315,0.5400,1
+C3,Picard1 T4-ref,gpu_wf,DS,0.05,0,0,inf,1,10000,319.998,3.464130e-01,320.3712647,1.0775,1
+C3,Picard2 const-Tref,gpu_wf,WoS,0.05,0,0,inf,2,10000,319.914,3.465332e-01,320.3712647,1.3195,1
+C3,Picard3 large-dT,gpu_wf,WoS,0.05,0,0,inf,3,10000,416.39,1.345079e+00,416.4023,0.0091,1
+C3,Picard1+P const-Tref,gpu_wf,DS,0.05,0,0,inf,1,10000,324.1119016,3.593460e-01,324.2526642,0.3917,1
+C3,Picard1+P T4-ref,gpu_wf,WoS,0.05,0,0,inf,1,10000,327.6730274,3.542601e-01,327.9598105,0.8095,1

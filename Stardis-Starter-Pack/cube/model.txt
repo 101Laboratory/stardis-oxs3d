@@ -1,0 +1,7 @@
+#medium
+SOLID    CUBE   0.1   25    2   0.01    300    UNKNOWN    10   FRONT solid.stl
+
+#boundary conditions
+T_BOUNDARY_FOR_SOLID    LTEMP  300               left_bc.stl
+F_BOUNDARY_FOR_SOLID     ADIA    0               center_bc.stl
+T_BOUNDARY_FOR_SOLID    RTEMP  300               right_bc.stl

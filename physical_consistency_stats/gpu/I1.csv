@@ -1,0 +1,3 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+I1,y=0.65,gpu_wf,DS,0,0.65,0,inf,1,10000,533.3424411,2.149057e+00,520.24,6.0968,0
+I1,y=0.45,gpu_wf,DS,0,0.45,0,inf,1,10000,557.7782169,2.177780e+00,581.57,10.9248,0

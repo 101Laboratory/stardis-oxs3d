@@ -1,0 +1,7 @@
+Stardis-Starter-Pack: verified 101 files
+cuda-duplex-validation: verified 8 files
+debug_issues: verified 5 files
+optimization: verified 26 files
+perf_diag: verified 4 files
+profiling: verified 2766 files
+thesis-materials: verified 71 files

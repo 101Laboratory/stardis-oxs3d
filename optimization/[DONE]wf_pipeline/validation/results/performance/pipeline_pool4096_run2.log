@@ -1,0 +1,52 @@
+message: MPI is disabled.
+message: Using 4 threads.
+message: Read file 'S_porous.stl': 12998 triangles found.
+message: External fluid created: T=300 (it is medium 1)
+message: Read file 'B_lateral.stl': 12994 triangles found.
+message: Dummy fluid created: (it is medium 2)
+message: Read file 'B_T0.stl': 2 triangles found.
+message: Read file 'B_T1.stl': 2 triangles found.
+message: Scaling factor is 1
+message: Trad is 680, Trad reference is 800
+message: System Tref range is [300 850]
+message: Picard order is 1
+message: Read 12998 unique triangles.
+warning: User delta for solid 'FOAM' seems too big: 0.0002; auto delta would have set it to 5.76629e-05.
+message: Description 0: Solid 'FOAM': lambda=237 rho=2700 cp=890 delta=0.0002 Tinit=800 (it is medium 0)
+message: Description 1: H boundary for solid 'LAT': ref_temperature=300 emissivity=0.9 specular_fraction=0.5 hc=0 T=300 (using medium 1 as external medium)
+message: Description 2: T boundary for solid 'T0': T=750 (using medium 2 as external medium)
+message: Description 3: T boundary for solid 'T1': T=850 (using medium 2 as external medium)
+message: Rendering:   0%message: Persistent wavefront solver enabled (Phase B-3).
+message: Persistent wavefront (Phase B-3 M3): 256x256 spp=4, pool_size=4096 (SM=128), total_tasks=262144
+message: persistent_wavefront: 4096 paths initialised (4096/262144 tasks consumed), starting wavefront loop
+message: persistent_wavefront: PIPELINE mode enabled (buf_curr=0, buf_prev=1)
+message: Rendering:   2%message: Rendering:   3%message: Rendering:   5%message: Rendering:   6%message: Rendering:   8%message: Rendering:   9%message: Rendering:  11%message: Rendering:  13%message: Rendering:  14%message: Rendering:  15%message: Rendering:  17%message: Rendering:  18%message: Rendering:  19%message: Rendering:  20%message: Rendering:  21%message: Rendering:  22%warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00340331, -0.00311252, 0.00187531)
+message: persistent_wavefront step 1000: 4096/4096 active, 16154 rays this step (rad=2 ds=4206 shd=0 st=0), 56828/262144 tasks done, refill
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-2.42916e-05, -0.00343925, 0.00226015)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.000253806, -0.00157809, 0.00199796)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00367943, -0.00543278, 0.00223488)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.000354926, -0.00522732, 0.0022476)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00174719, -0.00524472, 0.00369306)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.000417324, -0.00516673, 0.00209628)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00349864, -0.000920698, 0.00217019)
+message: persistent_wavefront step 2000: 4096/4096 active, 16326 rays this step (rad=2 ds=4120 shd=0 st=0), 58634/262144 tasks done, refill
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00332122, -0.00233631, -0.000555473)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.0022392, -0.0035791, -5.97281e-06)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00234567, -0.00381214, -0.00320468)
+message: Rendering:  23%warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00213156, -0.00348834, 0.00392612)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.000996414, -0.00434274, 0.00219771)
+message: persistent_wavefront step 3000: 4096/4096 active, 16016 rays this step (rad=0 ds=4280 shd=0 st=0), 59381/262144 tasks done, refill
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00148808, 0.00334755, 0.00366795)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00403903, -0.00154372, 0.00299869)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00467738, -0.00447805, -0.00201958)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00439246, -0.00422784, 0.0021357)
+message: persistent_wavefront step 4000: 4096/4096 active, 16056 rays this step (rad=0 ds=4260 shd=0 st=0), 59935/262144 tasks done, refill
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00116558, -0.00252506, 0.000260985)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00403568, -0.00346185, 0.00195586)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.000412539, -0.00119478, 0.00209088)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00448111, 0.00100022, 0.000598428)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00315578, -0.0018632, 0.0033719)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (-0.00183709, -0.00122176, 0.00370177)
+warning: wavefront: conductive delta_sphere robust exceeded 100 attempts at (0.00328745, -0.00444495, 0.00229304)
+message: persistent_wavefront step 5000: 4096/4096 active, 15967 rays this step (rad=1 ds=4302 shd=0 st=0), 60442/262144 tasks done, refill
+^C

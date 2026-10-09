@@ -1,0 +1,30 @@
+# This summary is last commit using custar-3d rt backend, which is numerically consistent with origin cpu version.
+message: persistent_wavefront DONE: 320x320 spp=32 pool=8192 elapsed=18 mins 49 secs 194 msecs 777 usecs  steps=463741  rays=4179135598  avg_width=6980.0  (rad=3618369 cond_ds=2458183998 ds_retry=7712874)  done: rad=1558002 temp=1085641 bnd=626336 fail=6821  max_depth=284722
+message: persistent wavefront summary:
+  total_steps=463741  total_rays=4179135598  avg_wavefront_width=6980.0
+  refill_phase: rays=3980539376 (98.4%)  wall=1088.904s
+  drain_phase:  rays=198596222 (1.6%)  steps=74752  wall=40.290s
+  batch_size: min=2, max=37795
+  ray_buckets: radiative=3618369, step_pair=2458183998, shadow=0, startup=0
+  paths: completed=3276800, failed=6821, truncated=0, max_depth=284722
+  refills=3268608
+  timing: compact=27.686s  collect=140.360s  trace=642.830s  distribute=199.740s  cascade=53.507s  harvest+refill=40.624s
+message:   enc_escalation: query_fb->m10=403  m10_degenerate_null=403
+message: cascade profiling: total_iterations=1021025394  total_advances=1021023126
+message:   cascade phase[38]: count=1232282214  time= 234.511s  avg=0.190us  (438.3% of cascade)
+message:   cascade phase[34]: count=1234000930  time= 223.861s  avg=0.181us  (418.4% of cascade)
+message:   cascade phase[16]: count= 849472757  time= 139.966s  avg=0.165us  (261.6% of cascade)
+message:   cascade phase[ 3]: count= 425310839  time= 114.443s  avg=0.269us  (213.9% of cascade)
+message:   cascade phase[37]: count= 892707899  time=  96.776s  avg=0.108us  (180.9% of cascade)
+message:   cascade phase[ 5]: count= 340630345  time=  33.290s  avg=0.098us  (62.2% of cascade)
+message:   cascade phase[15]: count= 341415610  time=  26.864s  avg=0.079us  (50.2% of cascade)
+message:   cascade phase[18]: count=    135250  time=   0.039s  avg=0.286us  (0.1% of cascade)
+message:   cascade phase[10]: count=     34795  time=   0.002s  avg=0.050us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=      1648  time=   0.001s  avg=0.316us  (0.0% of cascade)
+message: batch trace profiling: calls=463741  avg_batch=27535  min=2  max=37795
+  gpu_kernel+upload: total=512025.2ms (79.8%)  avg=1.10ms/call
+  cpu_postprocess:   total=124503.9ms (19.4%)  avg=0.27ms/call
+  fallback_retrace:  total=4888.4ms (0.8%)  accepted=158  missed=111  rejected=469014
+  gpu_throughput: 24.9 Mrays/s  (kernel+upload only)
+message: Initialisation time = 300 msecs
+message: Computation time = 18 mins 49 secs 314 msecs

@@ -1,0 +1,212 @@
+[
+  {
+    "path": "aw/2.1",
+    "commit": "e12349b3416ec25db978ced64316ddfed7665041",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree a560f5dc8ac316b896d59331ca076fb081e8cfc3\taw/2.1",
+    "current_tracked_file_count": 15
+  },
+  {
+    "path": "htpp/0.5",
+    "commit": "e5d3a827b1722505a8b10326c1326b16810e17fa",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 6fa81ac98e64dfee49aee34722899dc86bb8214e\thtpp/0.5",
+    "current_tracked_file_count": 8
+  },
+  {
+    "path": "polygon/0.2",
+    "commit": "43c254bc5602ee50e8d4bd36528fd94b56b9ad07",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 3ab6ab43eb64f3e617d1a6a30087376bd6318c04\tpolygon/0.2",
+    "current_tracked_file_count": 12
+  },
+  {
+    "path": "random123/v1.14.0",
+    "commit": "726a093cd9a73f3ec3c8d7a70ff10ed8efec8d13",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree e205efacb912ee2058c25c3b02d78e458b734db2\trandom123/v1.14.0",
+    "current_tracked_file_count": 105
+  },
+  {
+    "path": "rsys/0.15",
+    "commit": "b199eec9ef1ffb5685fa65f718c774965aa5e3ef",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 5aefbd9ffebb00d1e479fec65d78052a8b7fbc9a\trsys/0.15",
+    "current_tracked_file_count": 129
+  },
+  {
+    "path": "star-2d/0.7",
+    "commit": "a8a4bf1a1e953845ad3978246d632c021b7914b7",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 186d6853d3e15612f1ffa7d854fb15f4785987ff\tstar-2d/0.7",
+    "current_tracked_file_count": 33
+  },
+  {
+    "path": "star-3d/0.10",
+    "commit": "a747de24ed69332241e65167f91c04b43dd22994",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 18bb397705a178b17c3829f5444dd840ad5ad00b\tstar-3d/0.10",
+    "current_tracked_file_count": 46
+  },
+  {
+    "path": "star-3daw/0.5",
+    "commit": "d48d59237be82a6e052d7fe33a2cc7faae8b8625",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree fbc0583662c172822e7d898028ff5df9e6a31517\tstar-3daw/0.5",
+    "current_tracked_file_count": 10
+  },
+  {
+    "path": "star-3dstl/0.5",
+    "commit": "386f259c6b8a5108d998a93cbd8206d12ca25d7e",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 6eb4705fd673dbec3af5b89f9354adc39e7506f2\tstar-3dstl/0.5",
+    "current_tracked_file_count": 9
+  },
+  {
+    "path": "star-3dut/0.4",
+    "commit": "3e2a892220a1ddfa53406677eb9f9b0c21c7386e",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 8054b1e0bd796d453ceded503817ff0a0d3ebd5a\tstar-3dut/0.4",
+    "current_tracked_file_count": 25
+  },
+  {
+    "path": "star-4v_s/0.6",
+    "commit": "f4adc9d04cd58c08072c5fc9c9cc63b3db9413cc",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree f6f5d2a7baaa1fecf82cf9297caa01ae534ac0b4\tstar-4v_s/0.6",
+    "current_tracked_file_count": 11
+  },
+  {
+    "path": "star-blackbody/0.0",
+    "commit": "c9d002f6e7f95748eac5e60cf1adad25b2e33deb",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 03163e1531e6c135fef8fc8d19bf1343aa96d1fa\tstar-blackbody/0.0",
+    "current_tracked_file_count": 13
+  },
+  {
+    "path": "star-camera/0.2",
+    "commit": "0faa11715666845baa9bf27977073f6a84730a1f",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 03cf3b4decfc33ae66aa125233fcaba0941bc618\tstar-camera/0.2",
+    "current_tracked_file_count": 20
+  },
+  {
+    "path": "star-cmap/0.1",
+    "commit": "9c883fce6f889aeabaa4efca853c9c08c601662f",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree ee25517efb07f20be70bfd1afa92eeb97fb8bb41\tstar-cmap/0.1",
+    "current_tracked_file_count": 9
+  },
+  {
+    "path": "star-enclosures-2d/0.6",
+    "commit": "133ed02422e744681e4e0cc7f42ee07202dd04bb",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree acb17bac2f23c2d42949f31ba5aa6b2788f5c72a\tstar-enclosures-2d/0.6",
+    "current_tracked_file_count": 36
+  },
+  {
+    "path": "star-enclosures-3d/0.7.2",
+    "commit": "8e023fde7b0b4f0c3c22046d2c83c6e649396713",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree bfd1bbcde1189021d516a4cf48a1c3c97c31224f\tstar-enclosures-3d/0.7.2",
+    "current_tracked_file_count": 41
+  },
+  {
+    "path": "star-geometry-3d/0.2",
+    "commit": "96814e24f568a9a7a5603db303a174df7beae6b4",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree e5b73aa07e8a06af7619f689de3281e029b5b7d1\tstar-geometry-3d/0.2",
+    "current_tracked_file_count": 29
+  },
+  {
+    "path": "star-mc/0.6",
+    "commit": "4fc48d71308874321f437a52e9bda02e87965bbf",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree a5131966043938bdd35b91d369fa51790f96e855\tstar-mc/0.6",
+    "current_tracked_file_count": 21
+  },
+  {
+    "path": "star-mesh/0.2",
+    "commit": "dcd5347ba86979bb53978c38b60875177e83f141",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 7ff01b5015d871522026f74abb798a5cab43c55a\tstar-mesh/0.2",
+    "current_tracked_file_count": 20
+  },
+  {
+    "path": "star-sf/0.10",
+    "commit": "26b77240c345a800963ef7b1c6ef8bbde4fde688",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 20e65bbebd6cedc3df9137330042b21ffc4b66ad\tstar-sf/0.10",
+    "current_tracked_file_count": 55
+  },
+  {
+    "path": "star-sp/0.15",
+    "commit": "1137cd50d8ff5bc38cba497529182ec3fe80059f",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 241689e5085622ae7e5e0a420bdfe9910cbdb681\tstar-sp/0.15",
+    "current_tracked_file_count": 40
+  },
+  {
+    "path": "star-stl/0.7",
+    "commit": "f975c37d1a26b4c05e98d6243d20b2d48bf7e5a7",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 3b9a06e073a57c298f73ebd29f6ba7554537a270\tstar-stl/0.7",
+    "current_tracked_file_count": 19
+  },
+  {
+    "path": "star-uniq/0.0",
+    "commit": "01a129940172f59ddafb354ccf0a7c852e4e2b37",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 606872e8ee2666dab3e03a5d89d3bace580a5e4e\tstar-uniq/0.0",
+    "current_tracked_file_count": 9
+  },
+  {
+    "path": "star-uvm/0.4",
+    "commit": "10f346872dba1c6fc3cde3a6bc1c97f87b3aa5c0",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 63484a9f8a8d45e7f1a1b4412e29a0066aaa5f26\tstar-uvm/0.4",
+    "current_tracked_file_count": 24
+  },
+  {
+    "path": "star-vx/0.3.1",
+    "commit": "ecb8a72413df303862c10c09fb293dfda425f7a0",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree d4710169996c4a717673abf0d1b654a4127927ef\tstar-vx/0.3.1",
+    "current_tracked_file_count": 26
+  },
+  {
+    "path": "star-wf/0.0",
+    "commit": "2fb6234a142d9b76e26a36c068661985c18c9790",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree cdb4fc8c7c649bbf84836f13df5f626fa17bf1cf\tstar-wf/0.0",
+    "current_tracked_file_count": 12
+  },
+  {
+    "path": "stardis-solver/0.16.2",
+    "commit": "126da4ebe36becfe0669bcf7b03393d591c465f8",
+    "object_in_cpu_repository": true,
+    "current_tree_entry": "040000 tree dea11618bb682b0fada894a4d5a34fa735de69f9\tstardis-solver/0.16.2",
+    "current_tracked_file_count": 129
+  },
+  {
+    "path": "stardis/0.12",
+    "commit": "32f5d5d05281567626cb77589266622bd4a22868",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree 6de4faa4733fc98c94f9c9cccb8088966df78505\tstardis/0.12",
+    "current_tracked_file_count": 68
+  },
+  {
+    "path": "thirdparty/random123/v1.14.0",
+    "commit": "726a093cd9a73f3ec3c8d7a70ff10ed8efec8d13",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "040000 tree f5d9a39911e875e0eb9e731d1b14db8da3c4398f\tthirdparty/random123/v1.14.0",
+    "current_tracked_file_count": 105
+  },
+  {
+    "path": "aw/rsys/0.15",
+    "commit": "b199eec9ef1ffb5685fa65f718c774965aa5e3ef",
+    "object_in_cpu_repository": false,
+    "current_tree_entry": "",
+    "current_tracked_file_count": 0
+  }
+]

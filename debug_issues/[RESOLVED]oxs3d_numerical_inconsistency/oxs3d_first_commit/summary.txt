@@ -1,0 +1,153 @@
+# This summary is a first crash-free version of oxstar-3d, which introduced unsolved numerical inconsistency. 
+message: persistent_wavefront DONE: 320x320 spp=32 pool=8192 elapsed=19 mins 51 secs 110 msecs 774 usecs 600 nsecs  steps=368570  rays=1122735263  avg_width=6719.5  (rad=3618530 cond_ds=1835697366 ds_retry=4)  done: rad=1558038 temp=1086257 bnd=629718 fail=2787  max_depth=244532
+message: persistent wavefront summary:
+  total_steps=368570  total_rays=1122735263  avg_wavefront_width=6719.5
+  refill_phase: rays=994787496 (98.7%)  wall=1159.309s
+  drain_phase:  rays=127947767 (1.3%)  steps=70230  wall=31.802s
+  batch_size: min=2, max=38030
+  ray_buckets: radiative=3618530, step_pair=1835697366, shadow=0, startup=0
+  paths: completed=3276800, failed=2787, truncated=0, max_depth=244532
+  refills=3268608
+  timing: compact=23.570s  collect=114.319s  trace=776.303s  distribute=164.326s  cascade=41.854s  harvest+refill=33.817s
+message:   enc_escalation: query_fb->m10=62  m10_degenerate_null=3
+message: cascade profiling: total_iterations=4107833825  total_advances=4107833819
+message:   cascade phase[38]: count= 917848683  time= 181.586s  avg=0.198us  (433.9% of cascade)
+message:   cascade phase[34]: count= 918901002  time= 169.976s  avg=0.185us  (406.1% of cascade)
+message:   cascade phase[16]: count= 719698428  time= 121.082s  avg=0.168us  (289.3% of cascade)
+message:   cascade phase[ 3]: count= 360432050  time=  96.699s  avg=0.268us  (231.0% of cascade)
+message:   cascade phase[37]: count= 649950144  time=  72.693s  avg=0.112us  (173.7% of cascade)
+message:   cascade phase[ 5]: count= 268950856  time=  26.915s  avg=0.100us  (64.3% of cascade)
+message:   cascade phase[15]: count= 271889726  time=  23.765s  avg=0.087us  (56.8% of cascade)
+message:   cascade phase[18]: count=    126570  time=   0.036s  avg=0.281us  (0.1% of cascade)
+message:   cascade phase[10]: count=     35122  time=   0.002s  avg=0.053us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=      1182  time=   0.000s  avg=0.368us  (0.0% of cascade)
+message: batch trace profiling: calls=368570  avg_batch=26352  min=2  max=38030
+  gpu_kernel+upload: total=549138.5ms (74.3%)  avg=1.49ms/call
+  cpu_postprocess:   total=136570.7ms (18.5%)  avg=0.37ms/call
+  fallback_retrace:  total=53199.3ms (7.2%)  accepted=240306311  missed=137701  rejected=240444012
+  gpu_throughput: 17.7 Mrays/s  (kernel+upload only)
+message: Initialisation time = 552 msecs
+message: Computation time = 19 mins 51 secs 219 msecs
+
+# without %lu problem(numbers correct)
+message: persistent_wavefront DONE: 320x320 spp=32 pool=8192 elapsed=19 mins 24 secs 381 msecs 403 usecs 100 nsecs  steps=368570  rays=9712669855  avg_width=6719.5  (rad=3618530 cond_ds=1835697366 ds_retry=4)  done: rad=1558038 temp=1086257 bnd=629718 fail=2787  max_depth=244532
+message: persistent wavefront summary:
+  total_steps=368570  total_rays=9712669855  avg_wavefront_width=6719.5
+  refill_phase: rays=9584722088 (98.7%)  wall=1133.948s
+  drain_phase:  rays=127947767 (1.3%)  steps=70230  wall=30.434s
+  batch_size: min=2, max=38030
+  ray_buckets: radiative=3618530, step_pair=1835697366, shadow=0, startup=0
+  paths: completed=3276800, failed=2787, truncated=0, max_depth=244532
+  refills=3268608
+  timing: compact=21.447s  collect=107.983s  trace=771.520s  distribute=160.011s  cascade=41.497s  harvest+refill=31.893s
+message:   enc_escalation: query_fb->m10=62  m10_degenerate_null=3
+message: cascade profiling: total_iterations=4107833825  total_advances=4107833819
+message:   cascade phase[38]: count= 917848683  time= 181.425s  avg=0.198us  (437.2% of cascade)
+message:   cascade phase[34]: count= 918901002  time= 172.322s  avg=0.188us  (415.3% of cascade)
+message:   cascade phase[16]: count= 719698428  time= 120.934s  avg=0.168us  (291.4% of cascade)
+message:   cascade phase[ 3]: count= 360432050  time=  96.845s  avg=0.269us  (233.4% of cascade)
+message:   cascade phase[37]: count= 649950144  time=  72.326s  avg=0.111us  (174.3% of cascade)
+message:   cascade phase[ 5]: count= 268950856  time=  26.721s  avg=0.099us  (64.4% of cascade)
+message:   cascade phase[15]: count= 271889726  time=  23.168s  avg=0.085us  (55.8% of cascade)
+message:   cascade phase[18]: count=    126570  time=   0.037s  avg=0.290us  (0.1% of cascade)
+message:   cascade phase[10]: count=     35122  time=   0.002s  avg=0.053us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=      1182  time=   0.000s  avg=0.340us  (0.0% of cascade)
+message: batch trace profiling: calls=368570  avg_batch=26352  min=2  max=38030
+  gpu_kernel+upload: total=544071.3ms (74.6%)  avg=1.48ms/call
+  cpu_postprocess:   total=132965.5ms (18.2%)  avg=0.36ms/call
+  fallback_retrace:  total=52246.0ms (7.2%)  accepted=240306311  missed=137701  rejected=240444012
+  gpu_throughput: 17.9 Mrays/s  (kernel+upload only)
+message: Initialisation time = 541 msecs
+message: Computation time = 19 mins 24 secs 498 msecs
+
+# after D1 fix(uv clamp)
+message: persistent_wavefront DONE: 320x320 spp=32 pool=8192 elapsed=19 mins 17 secs 763 msecs 499 usecs 700 nsecs  steps=368570  rays=9712669855  avg_width=6719.5  (rad=3618530 cond_ds=1835697366 ds_retry=4)  done: rad=1558038 temp=1086257 bnd=629718 fail=2787  max_depth=244532
+message: persistent wavefront summary:
+  total_steps=368570  total_rays=9712669855  avg_wavefront_width=6719.5
+  refill_phase: rays=9584722088 (98.7%)  wall=1127.160s
+  drain_phase:  rays=127947767 (1.3%)  steps=70230  wall=30.603s
+  batch_size: min=2, max=38030
+  ray_buckets: radiative=3618530, step_pair=1835697366, shadow=0, startup=0
+  paths: completed=3276800, failed=2787, truncated=0, max_depth=244532
+  refills=3268608
+  timing: compact=21.431s  collect=108.081s  trace=763.558s  distribute=161.109s  cascade=41.675s  harvest+refill=31.816s
+message:   enc_escalation: query_fb->m10=62  m10_degenerate_null=3
+message: cascade profiling: total_iterations=4107833825  total_advances=4107833819
+message:   cascade phase[38]: count= 917848683  time= 183.111s  avg=0.200us  (439.4% of cascade)
+message:   cascade phase[34]: count= 918901002  time= 172.628s  avg=0.188us  (414.2% of cascade)
+message:   cascade phase[16]: count= 719698428  time= 122.481s  avg=0.170us  (293.9% of cascade)
+message:   cascade phase[ 3]: count= 360432050  time=  96.865s  avg=0.269us  (232.4% of cascade)
+message:   cascade phase[37]: count= 649950144  time=  72.606s  avg=0.112us  (174.2% of cascade)
+message:   cascade phase[ 5]: count= 268950856  time=  26.655s  avg=0.099us  (64.0% of cascade)
+message:   cascade phase[15]: count= 271889726  time=  23.766s  avg=0.087us  (57.0% of cascade)
+message:   cascade phase[18]: count=    126570  time=   0.039s  avg=0.310us  (0.1% of cascade)
+message:   cascade phase[10]: count=     35122  time=   0.002s  avg=0.051us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=      1182  time=   0.000s  avg=0.325us  (0.0% of cascade)
+message: batch trace profiling: calls=368570  avg_batch=26352  min=2  max=38030
+  gpu_kernel+upload: total=540420.2ms (74.3%)  avg=1.47ms/call
+  cpu_postprocess:   total=134115.5ms (18.4%)  avg=0.36ms/call
+  fallback_retrace:  total=52866.7ms (7.3%)  accepted=240306311  missed=137701  rejected=240444012
+  gpu_throughput: 18.0 Mrays/s  (kernel+upload only)
+message: Initialisation time = 582 msecs
+message: Computation time = 19 mins 17 secs 888 msecs
+
+# Before D1, with D0, newest oxs3d version(2-pool solver)
+message: persistent_wavefront DONE: 320x320 spp=32 pool=16384 elapsed=6 mins 35 secs 816 msecs 134 usecs 600 nsecs  steps=375790  rays=9712669855  avg_width=13146.5  (rad=3618530 cond_ds=1835698196 ds_retry=4)  done: rad=1558038 temp=1086257 bnd=629718 fail=2787  max_depth=244532
+message: persistent wavefront summary:
+  total_steps=375790  total_rays=9712669855  avg_wavefront_width=13146.5
+  refill_phase: rays=9423670208 (97.0%)  wall=363.558s
+  drain_phase:  rays=288987405 (3.0%)  steps=82466  wall=32.259s
+  batch_size: min=2, max=43640
+  ray_buckets: radiative=3618530, step_pair=1835698196, shadow=0, startup=0
+  paths: completed=3276800, failed=2787, truncated=0, max_depth=244532
+  refills=3260416
+  timing: compact=12.686s  collect=17.369s  trace=178.979s  distribute=26.395s  cascade=47.410s  harvest+refill=17.190s
+message:   enc_escalation: query_fb->m10=62  m10_degenerate_null=3
+message: cascade profiling: total_iterations=4107833825  total_advances=4107833819
+message:   cascade phase[38]: count= 917848683  time= 252.188s  avg=0.275us  (531.9% of cascade)
+message:   cascade phase[34]: count= 918901002  time= 189.480s  avg=0.206us  (399.7% of cascade)
+message:   cascade phase[16]: count= 719698428  time= 152.328s  avg=0.212us  (321.3% of cascade)
+message:   cascade phase[ 3]: count= 360432050  time= 101.350s  avg=0.281us  (213.8% of cascade)
+message:   cascade phase[37]: count= 649950144  time=  79.916s  avg=0.123us  (168.6% of cascade)
+message:   cascade phase[15]: count= 271889726  time=  37.417s  avg=0.138us  (78.9% of cascade)
+message:   cascade phase[ 5]: count= 268950856  time=  29.342s  avg=0.109us  (61.9% of cascade)
+message:   cascade phase[18]: count=    126570  time=   0.043s  avg=0.339us  (0.1% of cascade)
+message:   cascade phase[10]: count=     35122  time=   0.002s  avg=0.067us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=      1182  time=   0.000s  avg=0.308us  (0.0% of cascade)
+message: batch trace profiling: calls=375791  avg_batch=25846  min=2  max=43640
+  gpu_kernel+upload: total=99790.0ms (56.4%)  avg=0.27ms/call
+  cpu_postprocess:   total=25748.3ms (14.5%)  avg=0.07ms/call
+  fallback_retrace:  total=51505.6ms (29.1%)  accepted=240306311  missed=137701  rejected=240444012
+  gpu_throughput: 97.3 Mrays/s  (kernel+upload only)
+message: Initialisation time = 536 msecs
+message: Computation time = 6 mins 35 secs 940 msecs
+
+# with D3(anyhit fix)
+message: persistent_wavefront DONE: 320x320 spp=32 pool=16384 elapsed=8 mins 9 secs 678 msecs 705 usecs 300 nsecs  steps=481618  rays=12913258262  avg_width=13556.4  (rad=3618713 cond_ds=2491155480 ds_retry=8)  done: rad=1558051 temp=1085851 bnd=632898 fail=0  max_depth=278340
+message: persistent wavefront summary:
+  total_steps=481618  total_rays=12913258262  avg_wavefront_width=13556.4
+  refill_phase: rays=12484340710 (96.7%)  wall=451.242s
+  drain_phase:  rays=428905458 (3.3%)  steps=95313  wall=38.437s
+  batch_size: min=2, max=44088
+  ray_buckets: radiative=3618713, step_pair=2491155480, shadow=0, startup=0
+  paths: completed=3276800, failed=0, truncated=0, max_depth=278340
+  refills=3260416
+  timing: compact=17.030s  collect=23.677s  trace=198.680s  distribute=39.827s  cascade=61.683s  harvest+refill=22.515s
+message: cascade profiling: total_iterations=5379719838  total_advances=5379719838
+message:   cascade phase[38]: count=1245577310  time= 332.806s  avg=0.267us  (539.5% of cascade)
+message:   cascade phase[34]: count=1246629886  time= 249.989s  avg=0.201us  (405.3% of cascade)
+message:   cascade phase[16]: count= 862763662  time= 180.941s  avg=0.210us  (293.3% of cascade)
+message:   cascade phase[ 3]: count= 431962347  time= 123.757s  avg=0.287us  (200.6% of cascade)
+message:   cascade phase[37]: count= 900680422  time= 110.296s  avg=0.122us  (178.8% of cascade)
+message:   cascade phase[15]: count= 345983695  time=  45.739s  avg=0.132us  (74.2% of cascade)
+message:   cascade phase[ 5]: count= 345949461  time=  37.755s  avg=0.109us  (61.2% of cascade)
+message:   cascade phase[18]: count=    136307  time=   0.048s  avg=0.350us  (0.1% of cascade)
+message:   cascade phase[10]: count=     35013  time=   0.002s  avg=0.071us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=      1735  time=   0.001s  avg=0.348us  (0.0% of cascade)
+message: batch trace profiling: calls=481619  avg_batch=26812  min=2  max=44088
+  gpu_kernel+upload: total=124031.3ms (63.1%)  avg=0.26ms/call
+  cpu_postprocess:   total=29381.1ms (15.0%)  avg=0.06ms/call
+  fallback_retrace:  total=43014.3ms (21.9%)  accepted=1582200  missed=129364  rejected=1711564
+  gpu_throughput: 104.1 Mrays/s  (kernel+upload only)
+message: Initialisation time = 753 msecs
+message: Computation time = 8 mins 9 secs 796 msecs

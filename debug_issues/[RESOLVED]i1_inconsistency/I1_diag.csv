@@ -1,0 +1,3 @@
+probe_y,ss_hits,ss_chose_frt,ss_chose_bck,ss_retry,ss_avg_proba,ss_avg_lambda_frt,ss_avg_lambda_bck,ds_steps,ds_enc_mismatch,ds_enc_query,ds_mismatch_rate,vp_ds_accum,vp_ds_pw_steps,vp_reinject_accum,vp_reinject_count,boundary_hits,paths_total,paths_done
+0.65,4380121,3999981,380140,0,0.912987,10.000000,1.000000,382446473,3,376043125,0.000000,1.659460e+06,107008730,1.841463e+05,4380121,6734623,10000,10000
+0.45,5001086,4565978,435108,0,0.912944,10.000000,1.000000,428364534,1,421093868,0.000000,1.923492e+06,123930283,2.103570e+05,5001086,7647501,10000,10000

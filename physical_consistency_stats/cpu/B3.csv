@@ -1,0 +1,5 @@
+test_id,sub_id,solver,diff_algo,probe_x,probe_y,probe_z,time,picard_order,nrealisations,E,SE,ref,sigma,pass
+B3,box_probe,cpu_df,DS,1,0.60000002,0.69999999,inf,1,100000,295.455,1.158811e-01,295.5378179,0.7147,1
+B3,square_probe,cpu_df,DS,1,0.5,0,inf,1,100000,295.62,1.137900e-01,295.5378179,0.7222,1
+B3,box_avg_right,cpu_df,DS,1,0.5,0.5,inf,1,100000,295.425,1.162570e-01,295.5378179,0.9704,1
+B3,square_avg_right,cpu_df,DS,1,0.5,0,inf,1,100000,295.524,1.150115e-01,295.5378179,0.1201,1

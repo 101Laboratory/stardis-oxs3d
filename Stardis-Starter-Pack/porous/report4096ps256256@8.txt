@@ -1,0 +1,28 @@
+message: persistent_wavefront DONE: 256x256 spp=8 pool=4096 elapsed=4 mins 3 secs 567 msecs 32 usecs 900 nsecs  steps=164079  rays=1687687055  avg_width=2608.0  (rad=533828 cond_ds=325374978 ds_retry=1077540)  done: rad=438235 temp=840 bnd=84238 fail=975  max_depth=239865
+message: persistent wavefront summary:
+  total_steps=164079  total_rays=1687687055  avg_wavefront_width=2608.0
+  refill_phase: rays=1597955071 (94.7%)  wall=217.014s
+  drain_phase:  rays=89731984 (5.3%)  steps=65156  wall=26.553s
+  batch_size: min=2, max=19476
+  ray_buckets: radiative=533828, step_pair=325374978, shadow=0, startup=0
+  paths: completed=524288, failed=975, truncated=0, max_depth=239865
+  refills=520192
+  timing: compact=3.340s  collect=11.741s  trace=126.187s  distribute=19.888s  cascade=74.124s  harvest+refill=4.707s
+message: cascade profiling: total_iterations=702422107  total_advances=702421730
+message:   cascade phase[34]: count= 163226259  time=  14.716s  avg=0.090us  (19.9% of cascade)
+message:   cascade phase[38]: count= 163142779  time=  14.138s  avg=0.087us  (19.1% of cascade)
+message:   cascade phase[ 3]: count=  56037594  time=   8.482s  avg=0.151us  (11.4% of cascade)
+message:   cascade phase[16]: count= 111911165  time=   8.467s  avg=0.076us  (11.4% of cascade)
+message:   cascade phase[37]: count= 118288007  time=   6.654s  avg=0.056us  (9.0% of cascade)
+message:   cascade phase[ 5]: count=  44855298  time=   2.185s  avg=0.049us  (2.9% of cascade)
+message:   cascade phase[15]: count=  44954746  time=   2.118s  avg=0.047us  (2.9% of cascade)
+message:   cascade phase[18]: count=      5167  time=   0.002s  avg=0.317us  (0.0% of cascade)
+message:   cascade phase[10]: count=       966  time=   0.000s  avg=0.049us  (0.0% of cascade)
+message:   cascade phase[ 9]: count=       126  time=   0.000s  avg=0.196us  (0.0% of cascade)
+message: batch trace profiling: calls=164079  avg_batch=10286  min=2  max=19476
+  gpu_kernel+upload: total=113790.6ms (90.3%)  avg=0.69ms/call
+  cpu_postprocess:   total=11710.7ms (9.3%)  avg=0.07ms/call
+  fallback_retrace:  total=464.7ms (0.4%)  accepted=11  missed=18  rejected=100209
+  gpu_throughput: 14.8 Mrays/s  (kernel+upload only)
+message: Initialisation time = 234 msecs
+message: Computation time = 4 mins 3 secs 617 msecs

@@ -1,0 +1,4 @@
+H2D time: 11.470880 ms
+D2H time: 21.656704 ms
+Total span: 21.658752 ms
+OVERLAP DETECTED (full duplex)

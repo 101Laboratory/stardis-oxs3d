@@ -1,0 +1,484 @@
+[
+  {
+    "path": "D:/Stardis-GPU/stardis-cpu",
+    "historical_gitlink_changes": [
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 e12349b3416ec25db978ced64316ddfed7665041 0000000000000000000000000000000000000000 D\taw/2.1"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 e5d3a827b1722505a8b10326c1326b16810e17fa 0000000000000000000000000000000000000000 D\thtpp/0.5"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 43c254bc5602ee50e8d4bd36528fd94b56b9ad07 0000000000000000000000000000000000000000 D\tpolygon/0.2"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 726a093cd9a73f3ec3c8d7a70ff10ed8efec8d13 0000000000000000000000000000000000000000 D\trandom123/v1.14.0"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 b199eec9ef1ffb5685fa65f718c774965aa5e3ef 0000000000000000000000000000000000000000 D\trsys/0.15"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 a8a4bf1a1e953845ad3978246d632c021b7914b7 0000000000000000000000000000000000000000 D\tstar-2d/0.7"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 a747de24ed69332241e65167f91c04b43dd22994 0000000000000000000000000000000000000000 D\tstar-3d/0.10"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 d48d59237be82a6e052d7fe33a2cc7faae8b8625 0000000000000000000000000000000000000000 D\tstar-3daw/0.5"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 386f259c6b8a5108d998a93cbd8206d12ca25d7e 0000000000000000000000000000000000000000 D\tstar-3dstl/0.5"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 3e2a892220a1ddfa53406677eb9f9b0c21c7386e 0000000000000000000000000000000000000000 D\tstar-3dut/0.4"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 f4adc9d04cd58c08072c5fc9c9cc63b3db9413cc 0000000000000000000000000000000000000000 D\tstar-4v_s/0.6"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 c9d002f6e7f95748eac5e60cf1adad25b2e33deb 0000000000000000000000000000000000000000 D\tstar-blackbody/0.0"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 0faa11715666845baa9bf27977073f6a84730a1f 0000000000000000000000000000000000000000 D\tstar-camera/0.2"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 9c883fce6f889aeabaa4efca853c9c08c601662f 0000000000000000000000000000000000000000 D\tstar-cmap/0.1"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 133ed02422e744681e4e0cc7f42ee07202dd04bb 0000000000000000000000000000000000000000 D\tstar-enclosures-2d/0.6"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 8e023fde7b0b4f0c3c22046d2c83c6e649396713 0000000000000000000000000000000000000000 D\tstar-enclosures-3d/0.7.2"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 96814e24f568a9a7a5603db303a174df7beae6b4 0000000000000000000000000000000000000000 D\tstar-geometry-3d/0.2"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 4fc48d71308874321f437a52e9bda02e87965bbf 0000000000000000000000000000000000000000 D\tstar-mc/0.6"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 dcd5347ba86979bb53978c38b60875177e83f141 0000000000000000000000000000000000000000 D\tstar-mesh/0.2"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 26b77240c345a800963ef7b1c6ef8bbde4fde688 0000000000000000000000000000000000000000 D\tstar-sf/0.10"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 1137cd50d8ff5bc38cba497529182ec3fe80059f 0000000000000000000000000000000000000000 D\tstar-sp/0.15"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 f975c37d1a26b4c05e98d6243d20b2d48bf7e5a7 0000000000000000000000000000000000000000 D\tstar-stl/0.7"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 01a129940172f59ddafb354ccf0a7c852e4e2b37 0000000000000000000000000000000000000000 D\tstar-uniq/0.0"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 10f346872dba1c6fc3cde3a6bc1c97f87b3aa5c0 0000000000000000000000000000000000000000 D\tstar-uvm/0.4"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 ecb8a72413df303862c10c09fb293dfda425f7a0 0000000000000000000000000000000000000000 D\tstar-vx/0.3.1"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 2fb6234a142d9b76e26a36c068661985c18c9790 0000000000000000000000000000000000000000 D\tstar-wf/0.0"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 126da4ebe36becfe0669bcf7b03393d591c465f8 0000000000000000000000000000000000000000 D\tstardis-solver/0.16.2"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 32f5d5d05281567626cb77589266622bd4a22868 0000000000000000000000000000000000000000 D\tstardis/0.12"
+      },
+      {
+        "commit": "COMMIT 5a5252f4157808ee79f3885eb964efa82951c23a absorb nested repos",
+        "change": ":160000 000000 726a093cd9a73f3ec3c8d7a70ff10ed8efec8d13 0000000000000000000000000000000000000000 D\tthirdparty/random123/v1.14.0"
+      },
+      {
+        "commit": "COMMIT 3df1a7c17123a3e8f7333b587002bf00c091e837 chore: absorb nested git repositories",
+        "change": ":160000 000000 b199eec9ef1ffb5685fa65f718c774965aa5e3ef 0000000000000000000000000000000000000000 D\taw/rsys/0.15"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 e12349b3416ec25db978ced64316ddfed7665041 A\taw/2.1"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 b199eec9ef1ffb5685fa65f718c774965aa5e3ef A\taw/rsys/0.15"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 e5d3a827b1722505a8b10326c1326b16810e17fa A\thtpp/0.5"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 43c254bc5602ee50e8d4bd36528fd94b56b9ad07 A\tpolygon/0.2"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 726a093cd9a73f3ec3c8d7a70ff10ed8efec8d13 A\trandom123/v1.14.0"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 b199eec9ef1ffb5685fa65f718c774965aa5e3ef A\trsys/0.15"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 a8a4bf1a1e953845ad3978246d632c021b7914b7 A\tstar-2d/0.7"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 a747de24ed69332241e65167f91c04b43dd22994 A\tstar-3d/0.10"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 d48d59237be82a6e052d7fe33a2cc7faae8b8625 A\tstar-3daw/0.5"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 386f259c6b8a5108d998a93cbd8206d12ca25d7e A\tstar-3dstl/0.5"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 3e2a892220a1ddfa53406677eb9f9b0c21c7386e A\tstar-3dut/0.4"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 f4adc9d04cd58c08072c5fc9c9cc63b3db9413cc A\tstar-4v_s/0.6"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 c9d002f6e7f95748eac5e60cf1adad25b2e33deb A\tstar-blackbody/0.0"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 0faa11715666845baa9bf27977073f6a84730a1f A\tstar-camera/0.2"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 9c883fce6f889aeabaa4efca853c9c08c601662f A\tstar-cmap/0.1"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 133ed02422e744681e4e0cc7f42ee07202dd04bb A\tstar-enclosures-2d/0.6"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 8e023fde7b0b4f0c3c22046d2c83c6e649396713 A\tstar-enclosures-3d/0.7.2"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 96814e24f568a9a7a5603db303a174df7beae6b4 A\tstar-geometry-3d/0.2"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 4fc48d71308874321f437a52e9bda02e87965bbf A\tstar-mc/0.6"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 dcd5347ba86979bb53978c38b60875177e83f141 A\tstar-mesh/0.2"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 26b77240c345a800963ef7b1c6ef8bbde4fde688 A\tstar-sf/0.10"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 1137cd50d8ff5bc38cba497529182ec3fe80059f A\tstar-sp/0.15"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 f975c37d1a26b4c05e98d6243d20b2d48bf7e5a7 A\tstar-stl/0.7"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 01a129940172f59ddafb354ccf0a7c852e4e2b37 A\tstar-uniq/0.0"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 10f346872dba1c6fc3cde3a6bc1c97f87b3aa5c0 A\tstar-uvm/0.4"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 ecb8a72413df303862c10c09fb293dfda425f7a0 A\tstar-vx/0.3.1"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 2fb6234a142d9b76e26a36c068661985c18c9790 A\tstar-wf/0.0"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 126da4ebe36becfe0669bcf7b03393d591c465f8 A\tstardis-solver/0.16.2"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 32f5d5d05281567626cb77589266622bd4a22868 A\tstardis/0.12"
+      },
+      {
+        "commit": "COMMIT e0fb43cde4f41df547cff5c15fb9ced31d5adaf8 finish win-cmake migration",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 726a093cd9a73f3ec3c8d7a70ff10ed8efec8d13 A\tthirdparty/random123/v1.14.0"
+      }
+    ],
+    "root_commits": {
+      "ok": true,
+      "text": "c468b48393f72e6ad92c9dd79d39d169fe7bac70",
+      "error": ""
+    },
+    "log_ok": true
+  },
+  {
+    "path": "D:/Stardis-GPU/stardis-oxs3d",
+    "historical_gitlink_changes": [],
+    "root_commits": {
+      "ok": true,
+      "text": "c9b40d4f0453321ae09ba80527a0a0b404df4ce9",
+      "error": ""
+    },
+    "log_ok": true
+  },
+  {
+    "path": "D:/stardis-editor",
+    "historical_gitlink_changes": [],
+    "root_commits": {
+      "ok": true,
+      "text": "1e5e1ca0e308f12fc45ba4a1d66d2d40c87d170d",
+      "error": ""
+    },
+    "log_ok": true
+  },
+  {
+    "path": "D:/thesis",
+    "historical_gitlink_changes": [
+      {
+        "commit": "COMMIT 72306b4be707ecfd5e92c26b1a51b57524e7f68a response blind check",
+        "change": ":160000 160000 9d007116ab86165561dc2c0e7609e75037ce82c1 7429516a52d7a086d3842831f5af7943c406a168 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT cb988e170e2dd4b5c0cf52eb10d70e7f9c0cd385 update",
+        "change": ":160000 160000 ccde1e893f6a0d76360ac672aed35c877d74aceb 9d007116ab86165561dc2c0e7609e75037ce82c1 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT be65f9b661cf4e69e7440e7305ef5d68bc467968 [update] 更新默认字体库，统一为fandol",
+        "change": ":160000 160000 5c67983a0e30d7a0ccc986b5802372a323bcd36a ccde1e893f6a0d76360ac672aed35c877d74aceb M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 698a2cd4d20dae2eb67f666d4069e5791194bc37 [release] v2022.03.03 升级行内引用命令\\incite",
+        "change": ":160000 160000 748ef6488d78286d425e696c2115f57c97b414b1 5c67983a0e30d7a0ccc986b5802372a323bcd36a M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 332678729051f5ce46f230c63ae802e0fd96b332 [update]拉取新样式，增加对新版v2.5以上ctex的兼容性，修复问题#11",
+        "change": ":160000 160000 0834c3f4631b29a7ebd5d1880c2edc7528df487e 748ef6488d78286d425e696c2115f57c97b414b1 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 7ba88c47a7dbacb1557c0ddbd740e1eff0bc5700 [UPDATE]增加图表标题大小，与规范示例保持一致",
+        "change": ":160000 160000 c78de9e60f7187fa1c63bebd4a88ed02d47fa88a 0834c3f4631b29a7ebd5d1880c2edc7528df487e M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 7ce0c20aedc061af07f08d06e6847d6ba8aa07c9 [UPDATE] 签字年份间隙",
+        "change": ":160000 160000 c51955450b067c211c7908793b6a72a3a5b42a24 c78de9e60f7187fa1c63bebd4a88ed02d47fa88a M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 435e0e84103473ce36d04c2803c1a2edaa645b7f [UPDATE] 图表目录引用顺序问题",
+        "change": ":160000 160000 ec0f80bbdcca0bcf95ceb156431947716ff3e87a c51955450b067c211c7908793b6a72a3a5b42a24 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 3fda7884c9f6ef5a360de0a5f56a38dea0991c50 [UPDATE] 图表目录引用顺序问题",
+        "change": ":160000 160000 2f8facaf9018dc0fe30d081b6fbbfffce11dedbb ec0f80bbdcca0bcf95ceb156431947716ff3e87a M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 141bd8619704ce286d504f9dd7207bccbddf9af6 [UPDATE] fix gbt7714-2015 更新注意复制相关文件",
+        "change": ":160000 160000 683f04126e69a4ec02fc078a66c31361b0667639 2f8facaf9018dc0fe30d081b6fbbfffce11dedbb M\tTemplate"
+      },
+      {
+        "commit": "COMMIT fe88fc6ec4e40fbe4b4a3cbabe1d251111d2f170 [UPDATE] 2020.05.13",
+        "change": ":160000 160000 8bf0bb8b1fe212c48637a4cc18eacdfdfc6e49e6 683f04126e69a4ec02fc078a66c31361b0667639 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 2724aea3839cf0cfb00a630b2db7fa1ee1a9a0ed [UPDATE] 2020.05.13",
+        "change": ":160000 160000 57ba9e7582ecc77a3a65d5ec9d78dcd81b2d16cf 8bf0bb8b1fe212c48637a4cc18eacdfdfc6e49e6 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 58e189f9873b2bc27a54ea4c9099aaf2379480f3 [UPDATE] reference",
+        "change": ":160000 160000 d54ecf20671a94e7ebd1e5883fb67f18d0e57b43 57ba9e7582ecc77a3a65d5ec9d78dcd81b2d16cf M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 1d4d040eabc665a1abb37be71177a9d64bdff34b [UPDATE] README",
+        "change": ":160000 160000 37a439bdbf95d8bf76931b0e606f86459779fefe d54ecf20671a94e7ebd1e5883fb67f18d0e57b43 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 6218e3fe048177f595dcb3cd3c96f7c9ab900fdf [UPDATE] 封面注意事项&README",
+        "change": ":160000 160000 f2b296088832e656b9359814621450379c0b3d2c 37a439bdbf95d8bf76931b0e606f86459779fefe M\tTemplate"
+      },
+      {
+        "commit": "COMMIT febf58406cd143a27b1bdbeaf3e2075c8cdb578a [UPDATE] 封面注意事项",
+        "change": ":160000 160000 db176a4f0e8d877044c42f7040b53d0a832dbeaa f2b296088832e656b9359814621450379c0b3d2c M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 7e28b7154411ca4324480d1b47c474f42134232b [UPDATE] fix natbib",
+        "change": ":160000 160000 6d3cc4a893f337c1765c6aec0477111b0ae4709f db176a4f0e8d877044c42f7040b53d0a832dbeaa M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 2a4fb31f7f371be0e35ca2c7297fc3d0c345bd9a [UPDATE] clean the code",
+        "change": ":160000 160000 aa067f7e88da23626cf2f90a9a1c3717b7263b94 6d3cc4a893f337c1765c6aec0477111b0ae4709f M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 4535a2f4897f312daa7a0200f4fab4ba7c84390c [UPDATE] enumerate",
+        "change": ":160000 160000 083a3ac122f5cf3c0e43069bf64ddc5e623cd415 aa067f7e88da23626cf2f90a9a1c3717b7263b94 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 6e11460d72dc7d268801c75a1df900084aac7f4e [UPDATE] 修改enumerate列表间距",
+        "change": ":160000 160000 d1078ed7b6f3b26f9c82823ca6de11ae2ee35050 083a3ac122f5cf3c0e43069bf64ddc5e623cd415 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 13767c42ea888b8d7da8a7c9465926957ac6ed51 [UPDATE] clean the code",
+        "change": ":160000 160000 1dff73c8238521b5ed18fd133b7f1b15f44636b6 d1078ed7b6f3b26f9c82823ca6de11ae2ee35050 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 83e1905393868174cd98cfe1fa7f99ac5a9e433a [UPDATE] 增加图题和正文间距备选项",
+        "change": ":160000 160000 ccf72b3dbad8c620e3c12f09e26c8d3fa32f0ec3 1dff73c8238521b5ed18fd133b7f1b15f44636b6 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 319401b4477f8db1645ec73e958387ed9c85cf91 [UPDATE] 手动判别系统和字体设置，中文声明去除页码显示",
+        "change": ":160000 160000 b4a04527ac9704e2cf7cd3d268089088d2b20c68 ccf72b3dbad8c620e3c12f09e26c8d3fa32f0ec3 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 399f85633bd7477bb2b5c73957e4ea8b9258d473 [FIX] caption font",
+        "change": ":160000 160000 fb8d48a2a4f58f0566792ffcf0ffcfbc3f9b49b6 b4a04527ac9704e2cf7cd3d268089088d2b20c68 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT dcf262727552dc0cfa43f41688c4c45695f0f434 [FIX] caption font",
+        "change": ":160000 160000 21dc4e879b1a669f838f96ef2e4d7057fc49a75b fb8d48a2a4f58f0566792ffcf0ffcfbc3f9b49b6 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT c9f3098ba8ed4bb4f0228b1436f3c30c40cb555b [UPDATE] caption",
+        "change": ":160000 160000 4ffcf8dd28a0b57f91381221d1238f7350625253 21dc4e879b1a669f838f96ef2e4d7057fc49a75b M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 91af11e891651e40938a23f0b1e09d2579b1dd2c [FIX] 修改小节和次小节的标号字体",
+        "change": ":160000 160000 35a44792588f94914ba30b300137c4ae8daa1a21 4ffcf8dd28a0b57f91381221d1238f7350625253 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 1e68fd0b80c16847fecdf7a49e128b42f7d9bf12 [UPDATE] t",
+        "change": ":160000 160000 36fb155b5b63f1ae05970bdf01f4e6aa72cd3560 35a44792588f94914ba30b300137c4ae8daa1a21 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT ee86ebc8b2197ac4ad3b1eea5f70c0cc81d91ae0 [UPDATE] README",
+        "change": ":160000 160000 b133302e8d2f31aaff6fd0882b7f540a8f31c707 36fb155b5b63f1ae05970bdf01f4e6aa72cd3560 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 6e007d73b8414c93f88646218f78d96a9cd28066 [UPDATE] 更新子图写法，以更好支持跨页子图",
+        "change": ":160000 160000 edc7072d3d202373b4c2d3d81f3af27055bba7a4 b133302e8d2f31aaff6fd0882b7f540a8f31c707 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT afabfd511846a0b2c799dd697944ecf8bec59c0f [UPDATE]",
+        "change": ":160000 160000 7eeac84cd317ec4c99b08645aee4b6cd5c01a167 edc7072d3d202373b4c2d3d81f3af27055bba7a4 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT cc4abfa89cbdb987c01ef0fcbd9de00535b576a0 [UPDATE]",
+        "change": ":160000 160000 40578dcf59c4ea7db558649439985baae05c29c8 7eeac84cd317ec4c99b08645aee4b6cd5c01a167 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 48c9b436d64468053184e1985e325d7d4dd3c0b8 [UPDATE] 独立中文声明，一定注意修改！",
+        "change": ":160000 160000 25b2a22ae5594951f309b34e9690946ec58879b7 40578dcf59c4ea7db558649439985baae05c29c8 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 0c4f790424b6c408d85ce577ae1d4d1505de5ec9 [UPDATE] 修改论文偶数页页眉",
+        "change": ":160000 160000 ba92a83171f7d5f7b77113d491a275e5ad35b34c 25b2a22ae5594951f309b34e9690946ec58879b7 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 2b4b4eb6a1163401dfbd8235586851d2e2a61e27 [UPDATE] subtitle",
+        "change": ":160000 160000 7c25ce63b0e002a1dda61bbcd571fce444564fe4 ba92a83171f7d5f7b77113d491a275e5ad35b34c M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 76b41353dcee305cc4f4de021c0b6573a6b254fc [UPDATE] README.md",
+        "change": ":160000 160000 fb1439d44e75a7ee865de9887300d6775063c2a7 7c25ce63b0e002a1dda61bbcd571fce444564fe4 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 9ae509634b1c0fc1f8c110bb9ce1a42af134efed [UPDATE] code format",
+        "change": ":160000 160000 9a21e74949c3bb1f165e1eadfeae5a79fce0840c fb1439d44e75a7ee865de9887300d6775063c2a7 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 3ea4f18761c1198217bc13b404bd155aa1f0baa3 [UPDATE] README",
+        "change": ":160000 160000 8a04dd79b89bd9ac6d5ba3da1b6e7d71a33a28ea 9a21e74949c3bb1f165e1eadfeae5a79fce0840c M\tTemplate"
+      },
+      {
+        "commit": "COMMIT a5f7e8c110589835bd8ac2733ea13f6e782c15c5 [UPDATE] README",
+        "change": ":160000 160000 87660635f234945d48c7b3f1fa6e0e11c9d9e67a 8a04dd79b89bd9ac6d5ba3da1b6e7d71a33a28ea M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 9d73437a22199845dccebf769106cd4455ed8315 [UPDATE] README",
+        "change": ":160000 160000 8f6bd7983ad96ebd68165b173943b9d9c561a6dc 87660635f234945d48c7b3f1fa6e0e11c9d9e67a M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 9039be7c9b9ffa45cb4b7edb994cae3fbae11bbf [UPDATE] README",
+        "change": ":160000 160000 83f96abe06f752e646f58a085f793560dfc3fd79 8f6bd7983ad96ebd68165b173943b9d9c561a6dc M\tTemplate"
+      },
+      {
+        "commit": "COMMIT bcef22c27040b27ff2f623ecc16a62c1af88fef8 [ADD] chinese dash for equation description",
+        "change": ":160000 160000 2c156b9e6a307957762253a7587ac0984599008a 83f96abe06f752e646f58a085f793560dfc3fd79 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 608a1623fe3454257e6eb29eb46c62bbb4c5066b [U]",
+        "change": ":160000 160000 b42dd7da019dc436624c98b72d0db9e70e6c7fa3 2c156b9e6a307957762253a7587ac0984599008a M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 0ec39b4291f9b860c4d9cb90d80cbd39266c43e1 [FIX]",
+        "change": ":160000 160000 8b04d0d88eb86212ef4cfc8f1d366b888e089269 b42dd7da019dc436624c98b72d0db9e70e6c7fa3 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT d8ad189a80d4782e2f634c46f648cddd9e108153 [UPDATE] PDF",
+        "change": ":160000 160000 0e2704b0be382fcc5642bde6efc734409088449c 8b04d0d88eb86212ef4cfc8f1d366b888e089269 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 3de8b837f81af4358cb0fdb27f1afd38ada40e77 [UPDATE] appendix centering",
+        "change": ":160000 160000 7db9e8e600660a33a363c064ff61586f90a41e68 0e2704b0be382fcc5642bde6efc734409088449c M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 12746533bcf338f870f7aa51756d6581812476c9 [UPDATE] 附录环境",
+        "change": ":160000 160000 e65e1d351571c537d5b16d8a0979466a3ad6449c 7db9e8e600660a33a363c064ff61586f90a41e68 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT d882a1200392caf1d4681ba92681edef62de3a25 [UPDATE] 更新缩略词页的顺序在目录之后",
+        "change": ":160000 160000 465f63d20587ad188de6f0a7a0e309c32e9b4483 e65e1d351571c537d5b16d8a0979466a3ad6449c M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 30cdae4698dd83cfb799244f1f80da2a806f28f0 [UPDATE] TEX",
+        "change": ":160000 160000 9c156f87aa4b45a09b2a79714370f62b52b7d2ae 465f63d20587ad188de6f0a7a0e309c32e9b4483 M\tTemplate"
+      },
+      {
+        "commit": "COMMIT 0b2fe98e495f4b50b0fc00196506d36c9b4560be [UPDATE] 添加子模块",
+        "change": ":000000 160000 0000000000000000000000000000000000000000 9c156f87aa4b45a09b2a79714370f62b52b7d2ae A\tTemplate"
+      }
+    ],
+    "root_commits": {
+      "ok": true,
+      "text": "03cff0a075137b5f2aeb1d7cc3bc217a6e065cf4",
+      "error": ""
+    },
+    "log_ok": true
+  }
+]

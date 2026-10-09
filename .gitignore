@@ -21,3 +21,8 @@ CTestTestfile.cmake
 
 # ===== LLM local work log =====
 CHANGE_LOG
+
+/data/.downloads/
+**/__pycache__/
+**/*.pyc
+.worktree-state

@@ -1,0 +1,592 @@
+{
+  "url": "https://api.github.com/repos/EricSolshkov/stardis/git/trees/84c43566c01c?recursive=1",
+  "ok": true,
+  "data": {
+    "sha": "84c43566c01ce70fe68240f410afe0143173c6ef",
+    "url": "https://api.github.com/repos/EricSolshkov/stardis/git/trees/84c43566c01ce70fe68240f410afe0143173c6ef",
+    "tree": [
+      {
+        "path": ".devin",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b355a5c2cc4ede7aae8daa6ebb6d69de552af7d2",
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/trees/b355a5c2cc4ede7aae8daa6ebb6d69de552af7d2"
+      },
+      {
+        "path": ".devin/wiki.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6865627f5bd28b7cef1032d6a1c1ea1bcbdd29f0",
+        "size": 7943,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/6865627f5bd28b7cef1032d6a1c1ea1bcbdd29f0"
+      },
+      {
+        "path": ".gitignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dc06122533168d09a32b1beff1e7df163ef6c4c3",
+        "size": 226,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/dc06122533168d09a32b1beff1e7df163ef6c4c3"
+      },
+      {
+        "path": "COPYING",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "94a9ed024d3859793618152ea559a168bbcbb5e2",
+        "size": 35147,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/94a9ed024d3859793618152ea559a168bbcbb5e2"
+      },
+      {
+        "path": "Makefile",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "23dd0e766eacbe30eb08169df047cebc383a5ca5",
+        "size": 8993,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/23dd0e766eacbe30eb08169df047cebc383a5ca5"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "445e1ebc1fd2b0ede5d52ae458f6e0617a347ac2",
+        "size": 15858,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/445e1ebc1fd2b0ede5d52ae458f6e0617a347ac2"
+      },
+      {
+        "path": "ai.prompt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "17aee8a3a4133fb8f4bdcbe46c5ac1f135fa16e4",
+        "size": 122,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/17aee8a3a4133fb8f4bdcbe46c5ac1f135fa16e4"
+      },
+      {
+        "path": "config.mk",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1d517ccba4cc9b3333209f14306a5fd55162f6f4",
+        "size": 3593,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/1d517ccba4cc9b3333209f14306a5fd55162f6f4"
+      },
+      {
+        "path": "doc",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c3628a51fa586ba481ea27895502ebf328eb8b3e",
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/trees/c3628a51fa586ba481ea27895502ebf328eb8b3e"
+      },
+      {
+        "path": "doc/stardis-input.5.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3c14857dcae1d74a793bbc4cc48f3eaef5105766",
+        "size": 17092,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/3c14857dcae1d74a793bbc4cc48f3eaef5105766"
+      },
+      {
+        "path": "doc/stardis-output.5",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0e1aed2eadab7286952fcecfb56790077d16decf",
+        "size": 36171,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/0e1aed2eadab7286952fcecfb56790077d16decf"
+      },
+      {
+        "path": "doc/stardis.1.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "80402617c59e5e345ee39d759e31058d85cd1f6b",
+        "size": 22914,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/80402617c59e5e345ee39d759e31058d85cd1f6b"
+      },
+      {
+        "path": "make.sh",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "585e047802392227a08996f3e7f9d432531bd783",
+        "size": 1001,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/585e047802392227a08996f3e7f9d432531bd783"
+      },
+      {
+        "path": "src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "151df4fe21fe27c78f5a2b39b0506ebc59b0d25b",
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/trees/151df4fe21fe27c78f5a2b39b0506ebc59b0d25b"
+      },
+      {
+        "path": "src/stardis-app.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "77861e12f20e4ee915f4160900f4db7911af7949",
+        "size": 32294,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/77861e12f20e4ee915f4160900f4db7911af7949"
+      },
+      {
+        "path": "src/stardis-app.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1d749be50e15b251de1a58de4f7e4eefc78ce3c5",
+        "size": 7730,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/1d749be50e15b251de1a58de4f7e4eefc78ce3c5"
+      },
+      {
+        "path": "src/stardis-args.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5a8bff2d361ef30d5966b487be6e2cd9dfbbf0b7",
+        "size": 33349,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/5a8bff2d361ef30d5966b487be6e2cd9dfbbf0b7"
+      },
+      {
+        "path": "src/stardis-args.h.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3db40071e70ff514ac3219a45cb906ee193c81c7",
+        "size": 5581,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/3db40071e70ff514ac3219a45cb906ee193c81c7"
+      },
+      {
+        "path": "src/stardis-compute-probe-boundary.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ce8c843aeb6ccf40c69b1d569d643688d6b6fc39",
+        "size": 35321,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/ce8c843aeb6ccf40c69b1d569d643688d6b6fc39"
+      },
+      {
+        "path": "src/stardis-compute.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c987d151f8bb2b88e0cce5f01bc377dbeee2663a",
+        "size": 39898,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/c987d151f8bb2b88e0cce5f01bc377dbeee2663a"
+      },
+      {
+        "path": "src/stardis-compute.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a1ec393e4322192f2a25d92eb8ab82d3888ebbe4",
+        "size": 2993,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/a1ec393e4322192f2a25d92eb8ab82d3888ebbe4"
+      },
+      {
+        "path": "src/stardis-default.h.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "97fa20f6fd9517095837b876da89d9cccecc446f",
+        "size": 2106,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/97fa20f6fd9517095837b876da89d9cccecc446f"
+      },
+      {
+        "path": "src/stardis-description.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f5f753d49d8e61c9043b90a398213fa299ca95d4",
+        "size": 8767,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/f5f753d49d8e61c9043b90a398213fa299ca95d4"
+      },
+      {
+        "path": "src/stardis-description.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f68e379917cab5e007c25f2bd86a8d076667b0de",
+        "size": 4956,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/f68e379917cab5e007c25f2bd86a8d076667b0de"
+      },
+      {
+        "path": "src/stardis-extern-source.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fb9acbba23672fe140e1adb7ff0b86a56f8535ab",
+        "size": 7128,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/fb9acbba23672fe140e1adb7ff0b86a56f8535ab"
+      },
+      {
+        "path": "src/stardis-extern-source.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "115694df7e6be953cc5e0aa831f9164777bd54fa",
+        "size": 3026,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/115694df7e6be953cc5e0aa831f9164777bd54fa"
+      },
+      {
+        "path": "src/stardis-fbound-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "85347497e1210a1c1359bfcb596f79ca677d7096",
+        "size": 2871,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/85347497e1210a1c1359bfcb596f79ca677d7096"
+      },
+      {
+        "path": "src/stardis-fbound-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "36f4bc5d8de4366d661abb93fdab43756b7af9a3",
+        "size": 1858,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/36f4bc5d8de4366d661abb93fdab43756b7af9a3"
+      },
+      {
+        "path": "src/stardis-fbound.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "92c8225ad860056211ee0ffa97c9a93df48f4b4e",
+        "size": 2198,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/92c8225ad860056211ee0ffa97c9a93df48f4b4e"
+      },
+      {
+        "path": "src/stardis-fbound.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9cd27ce3bec6e345dc1c158cfaf7a2be0649e5e9",
+        "size": 1365,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/9cd27ce3bec6e345dc1c158cfaf7a2be0649e5e9"
+      },
+      {
+        "path": "src/stardis-fluid-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5b48dea00b9594d3ec7a083ca82e6625229de90b",
+        "size": 6495,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/5b48dea00b9594d3ec7a083ca82e6625229de90b"
+      },
+      {
+        "path": "src/stardis-fluid-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bae6d1290f7cb2b19f91dab882a2e1341719f637",
+        "size": 2219,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/bae6d1290f7cb2b19f91dab882a2e1341719f637"
+      },
+      {
+        "path": "src/stardis-fluid.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cdd4df7f913e9e0eb2e7c819023b5b4ff38402fd",
+        "size": 5097,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/cdd4df7f913e9e0eb2e7c819023b5b4ff38402fd"
+      },
+      {
+        "path": "src/stardis-fluid.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5672bf3b07620b81e0b5bcbe81129cc65e148000",
+        "size": 1717,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/5672bf3b07620b81e0b5bcbe81129cc65e148000"
+      },
+      {
+        "path": "src/stardis-green-types.h.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "147d3bc95a83c357ee29c32429a196a07b6d25ef",
+        "size": 3493,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/147d3bc95a83c357ee29c32429a196a07b6d25ef"
+      },
+      {
+        "path": "src/stardis-hbound-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "97a09afc165045832db66fd3e6490e71e75e4ddf",
+        "size": 3304,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/97a09afc165045832db66fd3e6490e71e75e4ddf"
+      },
+      {
+        "path": "src/stardis-hbound-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aeb4cef4a91cdbd0ab54e95ab54b3c4478a07ea9",
+        "size": 2508,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/aeb4cef4a91cdbd0ab54e95ab54b3c4478a07ea9"
+      },
+      {
+        "path": "src/stardis-hbound.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fdf48a280439acfa2cf29486eecfef4247c773bc",
+        "size": 2572,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/fdf48a280439acfa2cf29486eecfef4247c773bc"
+      },
+      {
+        "path": "src/stardis-hbound.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "66f6247a083cd2eec0e3fc5f6cb4a9ad8dd17c5b",
+        "size": 1556,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/66f6247a083cd2eec0e3fc5f6cb4a9ad8dd17c5b"
+      },
+      {
+        "path": "src/stardis-hfbound-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "42ae7d55e061dd33e9f45ad776a73bc00d133a9c",
+        "size": 3320,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/42ae7d55e061dd33e9f45ad776a73bc00d133a9c"
+      },
+      {
+        "path": "src/stardis-hfbound-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0cd746cf10bddd732c0515659d52c75ae579ec21",
+        "size": 2587,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/0cd746cf10bddd732c0515659d52c75ae579ec21"
+      },
+      {
+        "path": "src/stardis-hfbound.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a21357e989d26334d0a5e3cd2221275ed4f910bc",
+        "size": 2612,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/a21357e989d26334d0a5e3cd2221275ed4f910bc"
+      },
+      {
+        "path": "src/stardis-hfbound.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "04e6fa72585d8b42c15f284be1ccace7d3e549b0",
+        "size": 1589,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/04e6fa72585d8b42c15f284be1ccace7d3e549b0"
+      },
+      {
+        "path": "src/stardis-intface.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "05d4bee603ab9816456ebe1110f4dd16473c1b76",
+        "size": 29208,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/05d4bee603ab9816456ebe1110f4dd16473c1b76"
+      },
+      {
+        "path": "src/stardis-intface.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "633399fe48cdaa56e6af722eade40d5fda2e395b",
+        "size": 2757,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/633399fe48cdaa56e6af722eade40d5fda2e395b"
+      },
+      {
+        "path": "src/stardis-main.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d92b458d8305c0078f50310f31fb2e4426039dd4",
+        "size": 4694,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/d92b458d8305c0078f50310f31fb2e4426039dd4"
+      },
+      {
+        "path": "src/stardis-output.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "277737141bffc8b1b20a9fe4840256b0d951ed4e",
+        "size": 76782,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/277737141bffc8b1b20a9fe4840256b0d951ed4e"
+      },
+      {
+        "path": "src/stardis-output.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0141743b987aeb63c75b26f33cf8d5224e8f8c52",
+        "size": 3421,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/0141743b987aeb63c75b26f33cf8d5224e8f8c52"
+      },
+      {
+        "path": "src/stardis-parsing.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c82789a63584892e916cdc14196473ab64a9e48b",
+        "size": 84391,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/c82789a63584892e916cdc14196473ab64a9e48b"
+      },
+      {
+        "path": "src/stardis-parsing.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4601da174f85e5458b6dfb4dfc0bd9d85df1ec76",
+        "size": 2028,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/4601da174f85e5458b6dfb4dfc0bd9d85df1ec76"
+      },
+      {
+        "path": "src/stardis-prog-properties.h.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e43134ed8a6b4fd41c10bde6963dac5d6aa00fc6",
+        "size": 27220,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/e43134ed8a6b4fd41c10bde6963dac5d6aa00fc6"
+      },
+      {
+        "path": "src/stardis-program.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bd77e8d6b65b90534c2093b6eaf7fed10b9cedc4",
+        "size": 2383,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/bd77e8d6b65b90534c2093b6eaf7fed10b9cedc4"
+      },
+      {
+        "path": "src/stardis-program.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "620371cfef3b06cacf70a8e72a67df9aec7a2a8e",
+        "size": 1735,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/620371cfef3b06cacf70a8e72a67df9aec7a2a8e"
+      },
+      {
+        "path": "src/stardis-radiative-env.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8cad56884890f7db17404a1a8c0439a92b4a827f",
+        "size": 6362,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/8cad56884890f7db17404a1a8c0439a92b4a827f"
+      },
+      {
+        "path": "src/stardis-radiative-env.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2e12a6e54cdc11e18a79b1b15c933369ec5cf4a2",
+        "size": 3351,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/2e12a6e54cdc11e18a79b1b15c933369ec5cf4a2"
+      },
+      {
+        "path": "src/stardis-sfconnect-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2a9fcbe218231fc67cfd666b96af36125937a381",
+        "size": 3006,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/2a9fcbe218231fc67cfd666b96af36125937a381"
+      },
+      {
+        "path": "src/stardis-sfconnect-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5a5c62ac544d2602f08a60a41e8c78dca7af7641",
+        "size": 2614,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/5a5c62ac544d2602f08a60a41e8c78dca7af7641"
+      },
+      {
+        "path": "src/stardis-sfconnect.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "959f4a7aefccad94488568c4c219c4ab00a748e6",
+        "size": 2270,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/959f4a7aefccad94488568c4c219c4ab00a748e6"
+      },
+      {
+        "path": "src/stardis-sfconnect.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1db464ed251f9004de89cba6232000986d56883b",
+        "size": 1527,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/1db464ed251f9004de89cba6232000986d56883b"
+      },
+      {
+        "path": "src/stardis-solid-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "84d53259e79248b6069b0d4ea83fbe2c7e3dd100",
+        "size": 7911,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/84d53259e79248b6069b0d4ea83fbe2c7e3dd100"
+      },
+      {
+        "path": "src/stardis-solid-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0517d5cf369c1f5d1e55593f2c8cd17c49ac1b65",
+        "size": 2498,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/0517d5cf369c1f5d1e55593f2c8cd17c49ac1b65"
+      },
+      {
+        "path": "src/stardis-solid.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7ca1310f099b0f9425bac1ecef866142d3ac6134",
+        "size": 6517,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/7ca1310f099b0f9425bac1ecef866142d3ac6134"
+      },
+      {
+        "path": "src/stardis-solid.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7edcd0dec8f6ea20bddf355e2103b5d719e07779",
+        "size": 1872,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/7edcd0dec8f6ea20bddf355e2103b5d719e07779"
+      },
+      {
+        "path": "src/stardis-ssconnect-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "43f8bd0473927567f6e207fbc3fe51d3623851e2",
+        "size": 2910,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/43f8bd0473927567f6e207fbc3fe51d3623851e2"
+      },
+      {
+        "path": "src/stardis-ssconnect-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "544d540b110a3c81bb7c51c618c22f99e6b258bf",
+        "size": 1996,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/544d540b110a3c81bb7c51c618c22f99e6b258bf"
+      },
+      {
+        "path": "src/stardis-ssconnect.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "16f8af474a94083521e9579439f55626cdae27f9",
+        "size": 2109,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/16f8af474a94083521e9579439f55626cdae27f9"
+      },
+      {
+        "path": "src/stardis-ssconnect.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "40da8b7509a661f92ac302eedd852b9548444fcb",
+        "size": 1424,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/40da8b7509a661f92ac302eedd852b9548444fcb"
+      },
+      {
+        "path": "src/stardis-tbound-prog.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8e2e5c786a59d3b28d11dd93c62a5f1dc6fd009a",
+        "size": 2870,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/8e2e5c786a59d3b28d11dd93c62a5f1dc6fd009a"
+      },
+      {
+        "path": "src/stardis-tbound-prog.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "27c831a22d7c1669a2bd34be974e911562a53422",
+        "size": 1862,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/27c831a22d7c1669a2bd34be974e911562a53422"
+      },
+      {
+        "path": "src/stardis-tbound.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "724383f7cd0cf3023117652115ba39415dcb892d",
+        "size": 2195,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/724383f7cd0cf3023117652115ba39415dcb892d"
+      },
+      {
+        "path": "src/stardis-tbound.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9dfb8207165f6add44a1478f332f35c029e4767f",
+        "size": 1372,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/9dfb8207165f6add44a1478f332f35c029e4767f"
+      },
+      {
+        "path": "src/stardis-version.h.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a92f227f5a397055f4d08b9e2fd601ad7b296d53",
+        "size": 974,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/a92f227f5a397055f4d08b9e2fd601ad7b296d53"
+      },
+      {
+        "path": "stardis.pc.in",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "edb5c70e5ad1805317adbd1ee06da50b316a97f3",
+        "size": 124,
+        "url": "https://api.github.com/repos/EricSolshkov/stardis/git/blobs/edb5c70e5ad1805317adbd1ee06da50b316a97f3"
+      }
+    ],
+    "truncated": false
+  }
+}

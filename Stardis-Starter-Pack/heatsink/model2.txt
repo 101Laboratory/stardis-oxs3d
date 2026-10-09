@@ -1,0 +1,13 @@
+
+SOLID     AL   0.02   2700   890    0.2   300  UNKNOWN     0   FRONT S_heatsink.stl
+SOLID     SI   0.01   2330   700    0.1   300  UNKNOWN     0   FRONT S_tim.stl
+SOLID   SIPw   0.01   2330   700    0.1   300  UNKNOWN   2e8   FRONT S_chip.stl
+
+H_BOUNDARY_FOR_SOLID   CL       0.9     0.3   5.51  300  Boundary.stl
+
+SCALE 0.001 # model is in mm
+
+#  stardis -V 3 -M model.txt -P -21,23,1.5,inf -n 100
+#  stardis -V 3 -M model.txt -s cl.stl,inf -n 100
+# time stardis -V 3 -M model.txt -R spp=1:img=64x48:fov=30:pos=50,35,30:tgt=-60,20,-20:up=0,0,-1 > img.ht
+#  htpp -f -o  img.pgn -v -m default img.ht
