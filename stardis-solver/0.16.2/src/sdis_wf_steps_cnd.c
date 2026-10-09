@@ -554,6 +554,18 @@ step_cnd_wos_check_temp(struct path_state* p, struct path_hot* hot, struct sdis_
       / (p->locals.cnd_wos.props_ref.rho * p->locals.cnd_wos.props_ref.cp);
     p->locals.cnd_wos.green_power_term = 0;
     d3_set(p->locals.cnd_wos.position_start, p->rwalk.vtx.P);
+
+    /* Compute scene AABB diagonal for bounded CP search radius */
+    {
+      double lower[3], upper[3], diag[3];
+      if(sdis_scene_get_aabb(scn, lower, upper) == RES_OK) {
+        d3_sub(diag, upper, lower);
+        p->locals.cnd_wos.scene_diag = (float)d3_len(diag);
+      } else {
+        p->locals.cnd_wos.scene_diag = (float)HUGE_VAL;
+      }
+    }
+
     p->locals.cnd_wos.wos_initialized = 1;
   } else {
     /* Re-entry: fetch properties at new position */
@@ -619,7 +631,7 @@ step_cnd_wos_closest(struct path_state* p, struct path_hot* hot)
   p->locals.cnd_wos.query_pos[0] = p->rwalk.vtx.P[0];
   p->locals.cnd_wos.query_pos[1] = p->rwalk.vtx.P[1];
   p->locals.cnd_wos.query_pos[2] = p->rwalk.vtx.P[2];
-  p->locals.cnd_wos.query_radius = (float)HUGE_VAL;
+  p->locals.cnd_wos.query_radius = p->locals.cnd_wos.scene_diag;
   p->locals.cnd_wos.batch_cp_idx = (uint32_t)-1;
 
   hot->needs_ray = 0;  /* NOT a ray request — closest_point has its own batch */

@@ -275,8 +275,8 @@ test_wos_closest_submit(void)
   CHK(fabsf(p.locals.cnd_wos.new_pos[1] - 0.4f) < 1.e-5f);
   CHK(fabsf(p.locals.cnd_wos.new_pos[2] - 0.6f) < 1.e-5f);
 
-  /* query_radius = HUGE_VAL (infinite search) */
-  CHK(p.locals.cnd_wos.query_radius > 1.e30f);
+  /* query_radius = scene_diag (bounded search) */
+  CHK(p.locals.cnd_wos.query_radius == p.locals.cnd_wos.scene_diag);
 
   /* batch_cp_idx = (uint32_t)-1 (not yet assigned by pool) */
   CHK(p.locals.cnd_wos.batch_cp_idx == (uint32_t)-1);
@@ -327,13 +327,13 @@ test_wos_closest_result_epsilon_shell(void)
   res = step_cnd_wos_closest_result(&p, g_scn);
   /* In epsilon-shell, setup_hit_wos is called (may fail on edge case).
    * If it succeeds, phase = TIME_TRAVEL.
-   * If the enclosure side doesn't match, it may fail â€?that's OK for this
+   * If the enclosure side doesn't match, it may fail ï¿½?that's OK for this
    * unit test; we just check the state machine flow. */
   if(res == RES_OK) {
     CHK(p.phase == PATH_CND_WOS_TIME_TRAVEL);
     printf("    epsilon-shell hit -> TIME_TRAVEL  PASS\n");
   } else {
-    /* wf_setup_hit_wos failed due to side mismatch â€?error path is also valid */
+    /* wf_setup_hit_wos failed due to side mismatch ï¿½?error path is also valid */
     CHK(p.phase == PATH_DONE);
     CHK(p.done_reason == -1);
     printf("    epsilon-shell hit -> error path (side mismatch)  PASS\n");
