@@ -1,0 +1,15 @@
+# Preserve archival research bytes across Windows and Linux checkouts.
+/guide/** -text
+/debug_issues/** -text
+/optimization/** -text
+/GPU_WF_Validation/** -text
+/Stardis-Starter-Pack/** -text
+/cuda-duplex-validation/** -text
+/optix-throughput-validation/** -text
+/perf_diag/** -text
+/physical_consistency_stats/** -text
+/profiling/** -text
+/scripts/** -text
+/thesis-materials/** -text
+/manifests/** -text
+/publication-validation/** -text

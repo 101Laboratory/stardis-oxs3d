@@ -1,0 +1,34 @@
+cmake_minimum_required(VERSION 3.25)
+
+project(Workspace LANGUAGES C CXX)
+
+# ---------- 工程级 CMake 模块路径 ----------
+list(APPEND CMAKE_MODULE_PATH
+    ${CMAKE_SOURCE_DIR}/cmake
+)
+
+# ---------- 加载工程基础设施 ----------
+include(ProjectOptions)
+include(CompilerPolicy)
+include(RuntimeDeps)
+include(ThirdPartyRegistry)
+
+# ---------- 第三方依赖注册（工程级唯一位置） ----------
+register_runtime_dependency(
+    NAME Random123
+    ROOT ${CMAKE_SOURCE_DIR}/third_party/random123
+    TYPE HEADER_ONLY
+)
+
+# 示例：带运行时的第三方
+# register_runtime_dependency(
+#     NAME Embree
+#     ROOT ${CMAKE_SOURCE_DIR}/third_party/embree
+#     TYPE SHARED
+#     DLLS ${CMAKE_SOURCE_DIR}/third_party/embree/bin/embree3.dll
+# )
+
+# ---------- 加载项目（显式列出，推荐） ----------
+add_subdirectory(ProjectA/1.0/ProjectA)
+add_subdirectory(ProjectB/2.1/ProjectB)
+```

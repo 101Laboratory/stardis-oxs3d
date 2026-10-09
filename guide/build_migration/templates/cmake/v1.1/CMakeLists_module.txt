@@ -1,0 +1,172 @@
+# ====================================================================
+# <MODULE_NAME> Library - CMake Build Configuration (Template v1.1)
+# ====================================================================
+# Version: <VERSION>
+# Description: <DESCRIPTION>
+# Dependencies: <DEPENDENCIES>
+# Template: cmake v1.1.0 (2026-01-21)
+# ====================================================================
+
+cmake_minimum_required(VERSION 3.25)
+project(<MODULE_NAME>
+    VERSION <VERSION>
+    DESCRIPTION "<MODULE_NAME>: <DESCRIPTION>"
+    LANGUAGES C
+)
+
+# ====================================================================
+# Load Helper Functions
+# ====================================================================
+
+if(NOT COMMAND add_module_tests)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/HelperFunctions.cmake")
+        include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/HelperFunctions.cmake")
+    else()
+        message(FATAL_ERROR "Cannot find HelperFunctions.cmake - must build from workspace root")
+    endif()
+endif()
+
+# ====================================================================
+# Options (Standalone Build Support)
+# ====================================================================
+
+if(NOT DEFINED ENABLE_TESTS)
+    option(ENABLE_TESTS "Enable building tests" ON)
+endif()
+
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    option(BUILD_SHARED_LIBS "Build shared library" ON)
+endif()
+
+# ====================================================================
+# Source Files
+# ====================================================================
+
+# OPTION 1: Explicit list (RECOMMENDED)
+set(<LIB_PREFIX>_SOURCES
+    src/<module>_device.c
+    src/<module>_geometry.c
+    src/<module>_scene.c
+)
+
+# OPTION 2: Use helper macro (automatically excludes test_*.c)
+# glob_library_sources(<LIB_PREFIX>_SOURCES)
+
+# CRITICAL: Validate no test files mixed in
+validate_library_sources(<LIB_PREFIX>_SOURCES)
+
+# ====================================================================
+# Library Target
+# ====================================================================
+
+if(BUILD_SHARED_LIBS)
+    add_library(<target_name> SHARED ${<LIB_PREFIX>_SOURCES})
+    target_compile_definitions(<target_name> PRIVATE <LIB_PREFIX>_SHARED_BUILD)
+else()
+    add_library(<target_name> STATIC ${<LIB_PREFIX>_SOURCES})
+endif()
+
+add_library(<namespace>::<target_name> ALIAS <target_name>)
+
+set_target_properties(<target_name> PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 0
+    OUTPUT_NAME "<target_name>"
+)
+
+# ====================================================================
+# Generate Namespace Headers (star/ or rsys/)
+# ====================================================================
+
+# Define public headers to expose
+set(<LIB_PREFIX>_PUBLIC_HEADERS
+    src/<module>.h
+    # IMPORTANT: Include ALL public headers:
+    #   - Main header: <module>.h
+    #   - Template headers: <module>X2d.h, <module>X3d.h
+    #   - Undefs: <module>_undefs.h, <module>X*_undefs.h
+    #   - C API headers: <module>_c.h (if needed)
+)
+
+# Filter out test headers (if using glob)
+# filter_test_headers(<LIB_PREFIX>_PUBLIC_HEADERS ${<LIB_PREFIX>_PUBLIC_HEADERS})
+
+# Generate namespace structure
+generate_namespace_headers(
+    TARGET <target_name>
+    NAMESPACE <namespace>  # "star" or "rsys"
+    HEADERS ${<LIB_PREFIX>_PUBLIC_HEADERS}
+)
+
+# ====================================================================
+# Include Directories
+# ====================================================================
+
+target_include_directories(<target_name>
+    PUBLIC
+        # Generated namespace headers
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+        # Source directory (internal use)
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include>
+)
+
+# ====================================================================
+# Dependencies
+# ====================================================================
+
+# Internal dependencies (PUBLIC/PRIVATE/INTERFACE)
+target_link_libraries(<target_name> PUBLIC <dependency1>)
+
+# External dependencies (example: Embree, OpenMP)
+# if(TARGET embree)
+#     target_link_libraries(<target_name> PRIVATE embree)
+# endif()
+
+# Math library (Unix only)
+if(UNIX AND NOT APPLE)
+    target_link_libraries(<target_name> PRIVATE m)
+endif()
+
+# ====================================================================
+# Tests
+# ====================================================================
+
+if(ENABLE_TESTS)
+    enable_testing()
+    
+    # Discover test sources
+    file(GLOB <LIB_PREFIX>_TEST_SOURCES src/test_*.c)
+    
+    if(<LIB_PREFIX>_TEST_SOURCES)
+        add_module_tests(
+            SOURCES ${<LIB_PREFIX>_TEST_SOURCES}
+            LIBRARIES <target_name>
+        )
+    endif()
+endif()
+
+# ====================================================================
+# Installation
+# ====================================================================
+
+# Install library targets
+install(TARGETS <target_name>
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+# Install public headers to include/<namespace>/
+install(FILES ${<LIB_PREFIX>_PUBLIC_HEADERS}
+    DESTINATION include/<namespace>
+)
+
+# CRITICAL: Exclude test headers from installation
+install(DIRECTORY src/
+    DESTINATION include/<namespace>
+    FILES_MATCHING PATTERN "*.h"
+    PATTERN "test_*.h" EXCLUDE
+    PATTERN "windows" EXCLUDE
+    PATTERN "pthread" EXCLUDE
+)

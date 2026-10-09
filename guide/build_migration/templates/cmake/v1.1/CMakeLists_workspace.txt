@@ -1,0 +1,166 @@
+# ====================================================================
+# STARDIS-CPU Workspace CMakeLists.txt (Template v1.1)
+# ====================================================================
+# 说明：工作区级 CMake 配置，使用数组+循环减少重复代码
+# 版本：1.1.0
+# 日期：2026-01-21
+# 改进：基于 cmake_template_audit.md 反馈
+# ====================================================================
+
+cmake_minimum_required(VERSION 3.25)
+
+# ====================================================================
+# 1. 工程定义
+# ====================================================================
+project(STARDIS_CPU_Workspace
+    VERSION 0.16.2
+    DESCRIPTION "STARDIS Monte Carlo Radiative Transfer Solver - CPU Edition"
+    LANGUAGES C CXX
+)
+
+# ====================================================================
+# 2. 工程级 CMake 模块路径
+# ====================================================================
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+# ====================================================================
+# 3. 加载工程基础设施（按顺序）
+# ====================================================================
+include(ProjectOptions)       # 编译选项、输出目录、全局开关
+include(CompilerPolicy)       # 编译器检查、生成器验证
+include(RuntimeDeps)          # 运行时依赖管理（DLL 复制等）
+include(ThirdPartyRegistry)   # 第三方库注册
+include(HelperFunctions)      # 辅助函数（v1.1）
+
+# ====================================================================
+# 4. 第三方依赖注册
+# ====================================================================
+# 注意：由 ThirdPartyRegistry.cmake 处理
+# 如需添加额外依赖（Embree/CUDA/DX12），在此注册
+
+# ====================================================================
+# 5. 内部模块加载（数组+循环模式）
+# ====================================================================
+message(STATUS "=== Loading Internal Project Modules ===")
+
+# --------------------------------------------------------------------
+# 5.1 定义模块列表（按依赖层次分组）
+# --------------------------------------------------------------------
+# 格式：<module_path>;<display_name>;<is_required>
+# is_required: REQUIRED (必需) | OPTIONAL (可选)
+
+# 基础库层（无外部依赖）
+set(MODULES_BASE
+    "rsys/0.15;rsys/0.15;REQUIRED"
+    "polygon/0.2;polygon/0.2;OPTIONAL"
+)
+
+# 几何库层（依赖 rsys）
+set(MODULES_GEOMETRY
+    "star-2d/0.7;star-2d/0.7 (s2d);REQUIRED"
+    "star-3d/0.10;star-3d/0.10 (s3d);REQUIRED"
+    "star-geometry-3d/0.2;star-geometry-3d/0.2;OPTIONAL"
+    "star-stl/0.7;star-stl/0.7;OPTIONAL"
+)
+
+# 包壳库层（依赖几何库）
+set(MODULES_ENCLOSURES
+    "star-enclosures-2d/0.6;star-enclosures-2d/0.6 (senc2d);REQUIRED"
+    "star-enclosures-3d/0.7.2;star-enclosures-3d/0.7.2 (senc3d);REQUIRED"
+)
+
+# 采样与蒙特卡洛层
+set(MODULES_SAMPLING
+    "star-sp/0.15;star-sp/0.15 (star-sp);REQUIRED"
+)
+
+# 波长与辐射层
+set(MODULES_RADIOMETRY
+    "star-wf/0.0;star-wf/0.0 (swf);REQUIRED"
+    "star-cmap/0.1;star-cmap/0.1;OPTIONAL"
+)
+
+# 求解器核心层
+set(MODULES_SOLVER
+    "stardis-solver/0.16.2;stardis-solver/0.16.2 (CORE);REQUIRED"
+)
+
+# 主应用层
+set(MODULES_APPLICATIONS
+    "stardis/0.12;stardis/0.12 (MAIN APP);REQUIRED"
+    "htpp/0.5;htpp/0.5;OPTIONAL"
+)
+
+# --------------------------------------------------------------------
+# 5.2 模块加载辅助函数
+# --------------------------------------------------------------------
+function(load_modules module_list category_name)
+    message(STATUS "")
+    message(STATUS "--- ${category_name} ---")
+    
+    foreach(module_entry ${module_list})
+        # 解析模块条目：path;display_name;requirement
+        string(REPLACE ";" "|" module_entry_escaped "${module_entry}")
+        string(REPLACE "|" ";" module_parts "${module_entry_escaped}")
+        
+        list(GET module_parts 0 module_path)
+        list(GET module_parts 1 module_display)
+        list(GET module_parts 2 module_requirement)
+        
+        # 检查模块是否存在
+        set(cmake_file "${CMAKE_SOURCE_DIR}/${module_path}/CMakeLists.txt")
+        
+        if(EXISTS ${cmake_file})
+            add_subdirectory(${module_path})
+            message(STATUS "  [+] ${module_display}")
+        else()
+            if(module_requirement STREQUAL "REQUIRED")
+                message(WARNING "  [!] ${module_display} not found (REQUIRED)")
+            else()
+                message(STATUS "  [ ] ${module_display} (not found, optional)")
+            endif()
+        endif()
+    endforeach()
+endfunction()
+
+# --------------------------------------------------------------------
+# 5.3 按层次加载所有模块
+# --------------------------------------------------------------------
+load_modules("${MODULES_BASE}" "Base Libraries Layer")
+load_modules("${MODULES_GEOMETRY}" "Geometry Libraries Layer")
+load_modules("${MODULES_ENCLOSURES}" "Enclosures Libraries Layer")
+load_modules("${MODULES_SAMPLING}" "Sampling & Monte Carlo Layer")
+load_modules("${MODULES_RADIOMETRY}" "Radiometry Libraries Layer")
+load_modules("${MODULES_SOLVER}" "Solver Core Layer")
+load_modules("${MODULES_APPLICATIONS}" "Applications Layer")
+
+# ====================================================================
+# 6. 构建后处理
+# ====================================================================
+message(STATUS "")
+message(STATUS "=== CTest Enabled ===")
+message(STATUS "Run tests with: ctest --build-config ${CMAKE_BUILD_TYPE}")
+message(STATUS "")
+
+# ====================================================================
+# 7. 工作区配置摘要
+# ====================================================================
+message(STATUS "=======================================================")
+message(STATUS "STARDIS-CPU Workspace Configuration Summary")
+message(STATUS "=======================================================")
+message(STATUS "Project:          ${PROJECT_NAME}")
+message(STATUS "Version:          ${PROJECT_VERSION}")
+message(STATUS "Build Type:       ${CMAKE_BUILD_TYPE}")
+message(STATUS "Generator:        ${CMAKE_GENERATOR}")
+message(STATUS "C Compiler:       ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+message(STATUS "CXX Compiler:     ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "C Standard:       ${CMAKE_C_STANDARD}")
+message(STATUS "CXX Standard:     ${CMAKE_CXX_STANDARD}")
+message(STATUS "Enable Tests:     ${ENABLE_TESTS}")
+message(STATUS "Enable MPI:       ${ENABLE_MPI}")
+message(STATUS "Output Dirs:")
+message(STATUS "  - Libraries:    ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+message(STATUS "  - Executables:  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+message(STATUS "  - Tests:        ${CMAKE_TEST_OUTPUT_DIRECTORY}")
+message(STATUS "=======================================================")
+message(STATUS "")
